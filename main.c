@@ -295,11 +295,13 @@ int find_highest_priority_bundle()
   return highest_priority_bundle;
 }
 
+char *servald_server="";
+char *credential="";
 char *prefix="";
 
 char *token=NULL;
 
-int load_rhizome_db(char *servald_server,char *credential, int timeout)
+int load_rhizome_db(int timeout)
 {
   CURL *curl;
   CURLcode result_code;
@@ -414,8 +416,83 @@ int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
   return 0;
 }
 
+char *bid_of_cached_bundle=NULL;
+long long cached_version=0;
+unsigned char *cached_manifest=NULL;
+unsigned char *cached_body=NULL;
+
 int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *msg)
 {
+  fprintf(stderr,"Preparing to announce a piece of bundle #%d\n",
+	  bundle_number);
+  
+  if ((!bid_of_cached_bundle)
+      ||strcasecmp(bundles[bundle_number].bid,bid_of_cached_bundle)) {
+    // Cache is invalid - release
+    if (bid_of_cached_bundle) {
+      free(bid_of_cached_bundle); bid_of_cached_bundle=NULL;
+      free(cached_manifest);
+      free(cached_body);
+    }
+
+    // Load bundle into cache
+    char url[8192];
+    char filename[1024];
+    CURL *curl;
+    CURLcode result_code;
+    curl=curl_easy_init();
+    if (!curl) return -1;
+    curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+    curl_easy_setopt(curl, CURLOPT_USERPWD, credential);  
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 5000);
+
+    snprintf(url,8192,"http://%s/restful/rhizome/%s.rhm",
+	     servald_server,bundles[bundle_number].bid);
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    snprintf(filename,1024,"%smanifest",prefix);
+    unlink(filename);
+    FILE *f=fopen(filename,"w");
+    if (!f) {
+      curl_easy_cleanup(curl);
+      fprintf(stderr,"could not open output file.\n");
+      return -1;
+    }
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
+    result_code=curl_easy_perform(curl);
+    fclose(f);
+    if(result_code!=CURLE_OK) {
+      curl_easy_cleanup(curl);
+      fprintf(stderr,"curl request failed. URL:%s\n",url);
+      fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
+      return -1;
+    }
+
+    snprintf(url,8192,"http://%s/restful/rhizome/%s/raw.bin",
+	     servald_server,bundles[bundle_number].bid);
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    snprintf(filename,1024,"%sraw",prefix);
+    unlink(filename);
+    f=fopen(filename,"w");
+    if (!f) {
+      curl_easy_cleanup(curl);
+      fprintf(stderr,"could not open output file.\n");
+      return -1;
+    }
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
+    result_code=curl_easy_perform(curl);
+    fclose(f);
+    if(result_code!=CURLE_OK) {
+      curl_easy_cleanup(curl);
+      fprintf(stderr,"curl request failed. URL:%s\n",url);
+      fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
+      return -1;
+    }
+
+    fprintf(stderr,"Obtained manifest and body for %s\n",
+	    bundles[bundle_number].bid);
+  }
+  
   return 0;
 }
 
@@ -642,9 +719,11 @@ int main(int argc, char **argv)
     }
   }
 
+  if (argc>2) credential=argv[2];
+  if (argc>1) servald_server=argv[1];
+
   while(1) {
-    if (argc>2) load_rhizome_db(argv[1],argv[2],
-				message_update_interval
+    if (argc>2) load_rhizome_db(message_update_interval
 				-(time(0)-last_message_update_time));
 
     unsigned char msg_out[BTNAME_MTU];
