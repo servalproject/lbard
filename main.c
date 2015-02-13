@@ -36,17 +36,65 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <arpa/inet.h>
 #include <curl/curl.h>
 #include <dirent.h>
+#include <assert.h>
 
 struct peer_state {
-  char *sid;
+  char *sid_prefix;
   
   unsigned char *last_message;
   time_t last_message_time;
+  int last_message_number;
 
   int bundle_count;
-  char **bids;
+#define MAX_PEER_BUNDLES 100000
+  int bundle_count_alloc;
+  char **bid_prefixes;
   long long *versions;
 };
+
+int free_peer(struct peer_state *p)
+{
+  if (p->sid_prefix) free(p->sid_prefix); p->sid_prefix=NULL;
+  for(int i=0;i<p->bundle_count;i++) {
+    if (p->bid_prefixes[i]) free(p->bid_prefixes[i]);    
+  }
+  free(p->bid_prefixes); p->bid_prefixes=NULL;
+  free(p->versions); p->versions=NULL;
+  free(p);
+  return 0;
+}
+
+int peer_note_bar(struct peer_state *p,
+		  char *bid_prefix,long long version, char *recipient_prefix)
+{
+  int b=-1;
+  // XXX Argh! Another linear search! Replace with something civilised
+  for(int i=0;i<p->bundle_count;i++)
+    if (!strcmp(p->bid_prefixes[i],bid_prefix)) { b=i; break; }
+  if (b==-1) {
+    // New bundle.
+    if (p->bundle_count>=MAX_PEER_BUNDLES) {
+      // BID list too full -- random replacement.
+      b=random()%p->bundle_count;
+      free(p->bid_prefixes[b]); p->bid_prefixes[b]=NULL;
+    }
+    if (p->bundle_count>=p->bundle_count_alloc) {
+      // Allocate new list space
+      p->bundle_count_alloc+=1000;
+      p->bid_prefixes=realloc(p->bid_prefixes,sizeof(char *)*p->bundle_count_alloc);
+      assert(p->bid_prefixes);
+      p->versions=realloc(p->versions,sizeof(long long)*p->bundle_count_alloc);
+      assert(p->versions);
+      
+      b=p->bundle_count;
+    }
+    p->bid_prefixes[b]=strdup(bid_prefix);
+    if (b>=p->bundle_count) p->bundle_count++;
+  }
+  p->versions[b]=version;
+  
+  return 0;
+}
 
 #define MAX_PEERS 1024
 struct peer_state *peer_records[MAX_PEERS];
@@ -201,7 +249,9 @@ int find_highest_priority_bundle()
     // Is bundle addressed to a peer?
     int j;
     for(j=0;j<peer_count;j++) {
-      if (!strcmp(bundles[i].recipient,peer_records[j]->sid)) {
+      if (!strncmp(bundles[i].recipient,
+		   peer_records[j]->sid_prefix,
+		   (8*2))) {
 	// Bundle is addressed to a peer.
 	// Increase priority if we do not have positive confirmation that peer
 	// has this version of this bundle.
@@ -209,7 +259,8 @@ int find_highest_priority_bundle()
 
 	int k;
 	for(k=0;k<peer_records[j]->bundle_count;k++) {
-	  if (!strcmp(peer_records[j]->bids[k],bundles[i].bid)) {
+	  if (!strncmp(peer_records[j]->bid_prefixes[k],bundles[i].bid,
+		       8*2)) {
 	    // Peer knows about this bundle, but which version?
 	    if (peer_records[j]->versions[k]<bundles[i].version) {
 	      // They only know about an older version.
@@ -478,10 +529,36 @@ int saw_message(unsigned char *msg,int len)
   char bid_prefix[8*2+1];
   long long version;
   char recipient_prefix[4*2+1];
+
+  // Find or create peer structure for this.
+  struct peer_state *p=NULL;
+  for(int i=0;i<peer_count;i++) {
+    if (!strcasecmp(peer_records[i]->sid_prefix,peer_prefix)) {
+      p=peer_records[i]; break;
+    }
+  }
+  if (!p) {
+    p=calloc(sizeof(struct peer_state),1);
+    p->sid_prefix=strdup(peer_prefix);
+    p->last_message_number=-1;
+    if (peer_count<MAX_PEERS) {
+      peer_records[peer_count++]=p;
+    } else {
+      // Peer table full.  Do random replacement.
+      int n=random()%MAX_PEERS;
+      free_peer(peer_records[n]);
+      peer_records[n]=p;
+    }
+  }
+
+  // Update time stamp and most recent message from peer
+  p->last_message_time=time(0);
+  if (!is_retransmission) p->last_message_number=msg_number;
   
   while(offset<len) {
     switch(msg[offset]) {
     case 'B':
+
       offset++;
       if (len-offset<BAR_LENGTH) return -2;
       // BAR announcement
@@ -497,6 +574,7 @@ int saw_message(unsigned char *msg,int len)
       offset+=4;
       fprintf(stderr,"Saw BAR: BID=%s*:v=%lld:->%s\n",
 	      bid_prefix,version,recipient_prefix);
+      peer_note_bar(p,bid_prefix,version,recipient_prefix);
 
       break;
     default:
