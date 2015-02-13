@@ -77,6 +77,22 @@ int parse_json_line(char *line,char fields[][8192],int num_fields)
   return field_count;
 }
 
+struct bundle_record {
+  char *service;
+  char *bid;
+  long long version;
+  char *author;
+  int originated_here_p;
+  long long length;
+  char *filehash;
+  char *sender;
+  char *recipient;
+};
+
+#define MAX_BUNDLES 10000
+struct bundle_record bundles[MAX_BUNDLES];
+int bundle_count=0;
+
 int register_bundle(char *service,
 		    char *bid,
 		    char *version,
@@ -87,6 +103,41 @@ int register_bundle(char *service,
 		    char *sender,
 		    char *recipient)
 {
+  int i;
+  // XXX - Linear search through bundles!
+  // Use a hash table or something so that it doesn't cost O(n^2) with number
+  // of bundles.
+  int bundle_number=bundle_count;
+  for(i=0;i<bundle_count;i++) {
+    if (!strcmp(bundles[i].bid,bid)) {
+      // Updating an existing bundle
+      bundle_number=i; break;
+    }
+  }
+
+  if (bundle_number>=MAX_BUNDLES) return -1;
+  
+  if (bundle_number<bundle_count) {
+    // Replace old bundle values
+    free(bundles[bundle_number].service);
+    free(bundles[bundle_number].author);
+    free(bundles[bundle_number].filehash);
+    free(bundles[bundle_number].sender);
+    free(bundles[bundle_number].recipient);
+  } else {    
+    // New bundle
+    bundles[bundle_number].bid=strdup(bid);
+  }
+  
+  bundles[bundle_number].service=strdup(service);
+  bundles[bundle_number].version=strtoll(version,NULL,10);
+  bundles[bundle_number].author=strdup(author);
+  bundles[bundle_number].originated_here_p=atoi(originated_here);
+  bundles[bundle_number].length=length;
+  bundles[bundle_number].filehash=strdup(filehash);
+  bundles[bundle_number].sender=strdup(sender);
+  bundles[bundle_number].recipient=strdup(recipient);
+  
   return 0;
 }
 
