@@ -150,6 +150,7 @@ int register_bundle(char *service,
     bundles[bundle_number].last_offset_announced=0;
     bundles[bundle_number].last_version_of_manifest_announced=0;
     bundles[bundle_number].last_announced_time=0;
+    bundle_count++;
   }
   
   bundles[bundle_number].service=strdup(service);
@@ -229,7 +230,9 @@ int find_highest_priority_bundle()
 
     // Indicate this bundle as highes priority, unless we have found another one that
     // is higher priority.
-    if (this_bundle_priority>highest_priority_bundle) {
+    // Replace if priority is equal, so that newer bundles take priorty over older
+    // ones.
+    if (this_bundle_priority>=highest_priority_bundle) {
       highest_bundle_priority=this_bundle_priority;
       highest_priority_bundle=i;
     }
@@ -348,6 +351,9 @@ int update_my_message()
 	without terribly upsetting the whole thing, unless the transport is known to be
 	reliable.
   */
+
+  int bundle_to_announce=find_highest_priority_bundle();
+  fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
   
   return 0;
 }
