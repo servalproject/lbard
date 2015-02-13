@@ -243,15 +243,24 @@ int find_highest_priority_bundle()
 
 char *prefix="";
 
-int load_rhizome_db(char *servald_server,char *credential)
+char *token=NULL;
+
+int load_rhizome_db(char *servald_server,char *credential, int timeout)
 {
   CURL *curl;
   CURLcode result_code;
   curl=curl_easy_init();
   if (!curl) return -1;
   char url[8192];
-  snprintf(url,8192,"http://%s/restful/rhizome/bundlelist.json",
-	   servald_server);
+  // XXX We should use the new-since-time version once we have a token
+  // to make this much faster.
+  if (!token)
+    snprintf(url,8192,"http://%s/restful/rhizome/bundlelist.json",
+	     servald_server);
+  else
+    snprintf(url,8192,"http://%s/restful/rhizome/newsince/%s/bundlelist.json",
+	     servald_server,token);
+    
   curl_easy_setopt(curl, CURLOPT_URL, url);
   char filename[1024];
   snprintf(filename,1024,"%sbundle.list",prefix);
@@ -264,6 +273,7 @@ int load_rhizome_db(char *servald_server,char *credential)
   curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
   curl_easy_setopt(curl, CURLOPT_USERPWD, credential);  
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout*1000);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
   result_code=curl_easy_perform(curl);
   fclose(f);
@@ -292,6 +302,9 @@ int load_rhizome_db(char *servald_server,char *credential)
       if (strcmp(fields[0],"null")) {
 	// We have a token that will allow us to ask for only newer bundles in a
 	// future call. Remember it and use it.
+	if (token) free(token);
+	token=strdup(fields[0]);
+	fprintf(stderr,"Saw rhizome progressive fetch token '%s'\n",token);
       }
       
       // Now we have the fields, so register the bundles into our internal list.
@@ -439,8 +452,6 @@ int update_my_message(int mtu,unsigned char *msg_out)
   fwrite(msg_out,1,offset,f);
   fclose(f);
   
-
-  
   return offset;
 }
 
@@ -449,6 +460,9 @@ int update_my_message(int mtu,unsigned char *msg_out)
 // using only the lower 7 bits. It would be possible to use 7.something
 // with a lot of effort, but it doesn't really seem justified.
 #define BTNAME_MTU (248*7/8)
+// The time it takes for a Bluetooth scan
+int message_update_interval=12;
+time_t last_message_update_time=0;
 
 int main(int argc, char **argv)
 {
@@ -466,13 +480,17 @@ int main(int argc, char **argv)
   }
 
   while(1) {
-    if (argc>2) load_rhizome_db(argv[1],argv[2]);
+    if (argc>2) load_rhizome_db(argv[1],argv[2],
+				message_update_interval
+				-(time(0)-last_message_update_time));
 
     unsigned char msg_out[BTNAME_MTU];
+
+    if ((time(0)-last_message_update_time)>=message_update_interval) {
+      update_my_message(BTNAME_MTU,msg_out);
+      last_message_update_time=time(0);
+    }
     
-    update_my_message(BTNAME_MTU,msg_out);
-    
-    // The time it takes for a Bluetooth scan
-    sleep(12);
+    sleep(1);
   }
 }
