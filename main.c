@@ -424,11 +424,8 @@ unsigned char *cached_manifest=NULL;
 int cached_body_len=0;
 unsigned char *cached_body=NULL;
 
-int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *msg)
+int prime_bundle_cache(int bundle_number)
 {
-  fprintf(stderr,"Preparing to announce a piece of bundle #%d\n",
-	  bundle_number);
-  
   if ((!bid_of_cached_bundle)
       ||strcasecmp(bundles[bundle_number].bid,bid_of_cached_bundle)) {
     // Cache is invalid - release
@@ -515,6 +512,17 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   }
   
   return 0;
+}
+
+int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *msg)
+{
+  fprintf(stderr,"Preparing to announce a piece of bundle #%d\n",
+	  bundle_number);
+
+  if (prime_bundle_cache(bundle_number)) return -1;
+
+  return 0;
+
 }
 
 int message_counter=0;
