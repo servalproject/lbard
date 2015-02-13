@@ -313,7 +313,7 @@ int load_rhizome_db(char *servald_server,char *credential)
   return 0;
 }
 
-int update_my_message()
+int update_my_message(int mtu,unsigned char *msg_out)
 {
   /* There are a few possible options here.
      1. We have no peers. In which case, there is little point doing anything.
@@ -358,12 +358,20 @@ int update_my_message()
   return 0;
 }
 
+// Bluetooth names can be 248 bytes long. In Android the string
+// must be a valid UTF-8 string, so we will restrict ourselves to
+// using only the lower 7 bits. It would be possible to use 7.something
+// with a lot of effort, but it doesn't really seem justified.
+#define BTNAME_MTU (248*7/8)
+
 int main(int argc, char **argv)
 {
   while(1) {
     if (argc>2) load_rhizome_db(argv[1],argv[2]);
+
+    unsigned char msg_out[BTNAME_MTU];
     
-    update_my_message();
+    update_my_message(BTNAME_MTU,msg_out);
     // The time it takes for a Bluetooth scan
     sleep(12);
   }
