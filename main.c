@@ -423,8 +423,12 @@ int update_my_message(int mtu,unsigned char *msg_out)
     
   // Increment message counter
   message_counter++;
+
+  fprintf(stderr,"This message (hex): ");
+  for(int i=0;i<offset;i++) fprintf(stderr,"%02x",msg_out[i]);
+  fprintf(stderr,"\n");
   
-  return mtu;
+  return offset;
 }
 
 // Bluetooth names can be 248 bytes long. In Android the string
