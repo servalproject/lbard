@@ -413,12 +413,13 @@ int update_my_message(int mtu,unsigned char *msg_out)
   fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
 
   // Fill up spare space with BARs
-    while (bundle_count&&(mtu-offset)>=BAR_LENGTH) {
-      bundle_bar_counter++;
-      if (bundle_bar_counter>=bundle_count) bundle_bar_counter=0;
-      msg_out[offset++]='B'; // indicates a BAR follows
-      append_bar(bundle_bar_counter,&offset,mtu,msg_out);
-    }
+  while (bundle_count&&(mtu-offset)>=BAR_LENGTH) {
+    bundle_bar_counter++;
+    if (bundle_bar_counter>=bundle_count) bundle_bar_counter=0;
+    msg_out[offset++]='B'; // indicates a BAR follows
+    append_bar(bundle_bar_counter,&offset,mtu,msg_out);
+  }
+  fprintf(stderr,"bundle_bar_counter=%d\n",bundle_bar_counter);
     
   // Increment message counter
   message_counter++;
