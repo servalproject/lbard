@@ -238,8 +238,9 @@ int find_highest_priority_bundle()
       if (bundles[i].last_announced_time
 	  <bundles[highest_priority_bundle].last_announced_time)
 	this_bundle_priority|=BUNDLE_PRIORITY_SENT_LESS_RECENTLY;
-      if (bundles[i].length
-	  <bundles[highest_priority_bundle].length)
+      // XXX Only consider bundles upto 1MB in size.
+      if ((bundles[i].length<(1024*1024))
+	  &&(bundles[i].length<bundles[highest_priority_bundle].length))
 	this_bundle_priority|=BUNDLE_PRIORITY_FILE_SIZE_SMALLER;
     }
 
