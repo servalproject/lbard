@@ -375,6 +375,9 @@ int update_my_message(int mtu,unsigned char *msg_out)
   int bundle_to_announce=find_highest_priority_bundle();
   fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
 
+  // Increment message counter
+  message_counter++;
+  
   return mtu;
 }
 
