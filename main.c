@@ -431,6 +431,15 @@ int update_my_message(int mtu,unsigned char *msg_out)
   fprintf(stderr,"This message (hex): ");
   for(int i=0;i<offset;i++) fprintf(stderr,"%02x",msg_out[i]);
   fprintf(stderr,"\n");
+
+  char filename[1024];
+  snprintf(filename,1024,"%slbard-message",prefix);
+  unlink(filename);
+  FILE *f=fopen(filename,"w");
+  fwrite(msg_out,1,offset,f);
+  fclose(f);
+  
+
   
   return offset;
 }
@@ -462,6 +471,7 @@ int main(int argc, char **argv)
     unsigned char msg_out[BTNAME_MTU];
     
     update_my_message(BTNAME_MTU,msg_out);
+    
     // The time it takes for a Bluetooth scan
     sleep(12);
   }
