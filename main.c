@@ -418,7 +418,9 @@ int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
 
 char *bid_of_cached_bundle=NULL;
 long long cached_version=0;
+int cached_manifest_len=0;
 unsigned char *cached_manifest=NULL;
+int cached_body_len=0;
 unsigned char *cached_body=NULL;
 
 int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *msg)
@@ -468,6 +470,14 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
       return -1;
     }
 
+    f=fopen(filename,"r");
+    cached_manifest=malloc(8192);
+    cached_manifest_len=fread(cached_manifest,1,8192,f);
+    cached_manifest=realloc(cached_manifest,cached_manifest_len);    
+    fclose(f);
+    fprintf(stderr,"  manifest is %d bytes long.\n",cached_manifest_len);
+
+    
     snprintf(url,8192,"http://%s/restful/rhizome/%s/raw.bin",
 	     servald_server,bundles[bundle_number].bid);
     curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -489,7 +499,17 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
       return -1;
     }
 
-    fprintf(stderr,"Obtained manifest and body for %s\n",
+    // XXX - This transport only allows bundles upto 1MB!
+    f=fopen(filename,"r");
+    cached_body=malloc(1024*1024);
+    cached_body_len=fread(cached_body,1,1024*1024,f);
+    cached_body=realloc(cached_body,cached_body_len);    
+    fclose(f);
+    fprintf(stderr,"  body is %d bytes long.\n",cached_body_len);
+
+    bid_of_cached_bundle=strdup(bundles[bundle_number].bid);
+    
+    fprintf(stderr,"Cached manifest and body for %s\n",
 	    bundles[bundle_number].bid);
   }
   
