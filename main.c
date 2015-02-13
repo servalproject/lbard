@@ -313,7 +313,36 @@ int load_rhizome_db(char *servald_server,char *credential)
   return 0;
 }
 
+int hex_byte_value(char *hexstring)
+{
+  char hex[3];
+  hex[0]=hexstring[0];
+  hex[1]=hexstring[1];
+  hex[2]=0;
+  return strtoll(hex,NULL,16);
+}
+
 unsigned char my_sid[32];
+
+int bundle_bar_counter=0;
+int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
+{
+  // BAR consists of:
+  // 8 bytes : BID prefix
+  // 8 bytes : version
+  // 4 bytes : recipient prefix
+#define BAR_LENGTH (8+8+4)
+
+  for(int i=0;i<8;i++)
+    msg_out[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);
+  for(int i=0;i<8;i++)
+    msg_out[(*offset)++]=(bundles[bundle_number].version>>(i*8))&0xff;
+  for(int i=0;i<4;i++)
+    msg_out[(*offset)++]=hex_byte_value(&bundles[bundle_number].recipient[i*2]);
+  
+  return 0;
+}
+
 
 int message_counter=0;
 int update_my_message(int mtu,unsigned char *msg_out)
@@ -369,12 +398,28 @@ int update_my_message(int mtu,unsigned char *msg_out)
   msg_out[6]=message_counter&0xff;
   msg_out[7]=(message_counter>>8)&0xff;
 
+  int offset=8;
+  
   // Put one or more BARs
+  bundle_bar_counter++;
+  if (bundle_bar_counter>=bundle_count) bundle_bar_counter=0;
+  if (bundle_count&&((mtu-offset)>=BAR_LENGTH)) {
+    msg_out[offset++]='B'; // indicates a BAR follows
+    append_bar(bundle_bar_counter,&offset,mtu,msg_out);
+  }
 
   // Announce a bundle, if any are due.
   int bundle_to_announce=find_highest_priority_bundle();
   fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
 
+  // Fill up spare space with BARs
+    while (bundle_count&&(mtu-offset)>=BAR_LENGTH) {
+      bundle_bar_counter++;
+      if (bundle_bar_counter>=bundle_count) bundle_bar_counter=0;
+      msg_out[offset++]='B'; // indicates a BAR follows
+      append_bar(bundle_bar_counter,&offset,mtu,msg_out);
+    }
+    
   // Increment message counter
   message_counter++;
   
