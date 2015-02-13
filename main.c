@@ -521,6 +521,30 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 
   if (prime_bundle_cache(bundle_number)) return -1;
 
+  /*
+    We need to prefix any piece with the BID prefix, BID version, the offset
+    of the content, which will also include a flag to indicate if it is content
+    from the manifest or body.  This entails the following:
+    BID prefix - 8 bytes
+    bundle version - 8 bytes
+    offset & manifest/body flag & length - 4 bytes
+    (20 bits length, 1 bit manifest/body flag, 11 bits length)
+
+    Total = 20 bytes.
+  */
+
+  // Thus if we can't announce even one byte, we should just give up.
+  if ((mtu-(*offset))<21) return -1;
+  
+  if (bundles[bundle_number].last_manifest_offset_announced<cached_manifest_len) {
+    // Send some manifest
+    
+  } else if (bundles[bundle_number].last_offset_announced<cached_body_len) {
+    // Send some body
+    
+  }
+
+  
   return 0;
 
 }
