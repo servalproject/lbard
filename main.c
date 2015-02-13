@@ -456,6 +456,11 @@ int update_my_message(int mtu,unsigned char *msg_out)
   return offset;
 }
 
+int saw_message(unsigned char *msg,int len)
+{
+  return 0;
+}
+
 int scan_for_incoming_messages()
 {
   DIR *d;
@@ -468,7 +473,11 @@ int scan_for_incoming_messages()
     if (len>strlen(".lbard-message")) {
       if (!strcmp(".lbard-message",&de->d_name[len-strlen(".lbard-message")])) {
 	// Found a message
-	fprintf(stderr,"Found message file '%s'\n",de->d_name);
+	FILE *f=fopen(de->d_name,"r");
+	unsigned char msg_body[8192];
+	int len=fread(msg_body,1,8192,f);
+	saw_message(msg_body,len);
+	fclose(f);
       }
     }
   }
