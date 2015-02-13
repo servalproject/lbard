@@ -35,6 +35,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <curl/curl.h>
+#include <dirent.h>
 
 struct peer_state {
   char *sid;
@@ -455,6 +456,27 @@ int update_my_message(int mtu,unsigned char *msg_out)
   return offset;
 }
 
+int scan_for_incoming_messages()
+{
+  DIR *d;
+  struct dirent *de;
+
+  d=opendir(".");
+
+  while((de=readdir(d))!=NULL) {
+    int len=strlen(de->d_name);
+    if (len>strlen(".lbard-message")) {
+      if (!strcmp(".lbard-message",&de->d_name[len-strlen(".lbard-message")])) {
+	// Found a message
+	fprintf(stderr,"Found message file '%s'\n",de->d_name);
+      }
+    }
+  }
+
+  closedir(d);
+  return 0;
+}
+
 // Bluetooth names can be 248 bytes long. In Android the string
 // must be a valid UTF-8 string, so we will restrict ourselves to
 // using only the lower 7 bits. It would be possible to use 7.something
@@ -490,7 +512,9 @@ int main(int argc, char **argv)
       update_my_message(BTNAME_MTU,msg_out);
       last_message_update_time=time(0);
     }
+
+    scan_for_incoming_messages();
     
-    sleep(1);
+    usleep(100000);
   }
 }
