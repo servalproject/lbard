@@ -45,6 +45,12 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
     return written;
 }
 
+int parse_json_line(char *line,char fields[][8192],int num_fields)
+{
+  
+  return 0;
+}
+
 int load_rhizome_db(char *servald_server,char *credential)
 {
   CURL *curl;
@@ -76,6 +82,30 @@ int load_rhizome_db(char *servald_server,char *credential)
 
   curl_easy_cleanup(curl);
   fprintf(stderr,"Read bundle list.\n");
+
+  // Now read database into memory.
+  f=fopen("bundle.list","r");
+  if (!f) return -1;
+  char line[8192];
+  int count=0;
+
+  char fields[14][8192];
+  
+  line[0]=0; fgets(line,8192,f);
+  while(line[0]) {
+    int n=parse_json_line(line,fields,14);
+    if (n==14) {
+      count++;
+    } else {
+      fprintf(stderr,"n=%d\n%s\n",n,line);
+    }
+
+    line[0]=0; fgets(line,8192,f);
+  }
+
+  fprintf(stderr,"Found %d bundles.\n",count);
+  fclose(f);
+  
   return 0;
 }
 
