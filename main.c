@@ -45,7 +45,7 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
     return written;
 }
 
-int load_rhizome_db(char *servald_server)
+int load_rhizome_db(char *servald_server,char *credential)
 {
   CURL *curl;
   CURLcode result_code;
@@ -54,22 +54,28 @@ int load_rhizome_db(char *servald_server)
   char url[8192];
   snprintf(url,8192,"http://%s/restful/rhizome/bundlelist.json",
 	   servald_server);
-  curl_easy_setopt(curl, CURLOPT_URL, "http://example.com");
+  curl_easy_setopt(curl, CURLOPT_URL, url);
   FILE *f=fopen("bundle.list","w");
   if (!f) {
     curl_easy_cleanup(curl);
+    fprintf(stderr,"could not open output file.\n");
     return -1;
   }
+  curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+  curl_easy_setopt(curl, CURLOPT_USERPWD, credential);  
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
   result_code=curl_easy_perform(curl);
   fclose(f);
   if(result_code!=CURLE_OK) {
     curl_easy_cleanup(curl);
+    fprintf(stderr,"curl request failed. URL:%s\n",url);
+    fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
     return -1;
   }
 
   curl_easy_cleanup(curl);
+  fprintf(stderr,"Read bundle list.\n");
   return 0;
 }
 
@@ -81,6 +87,8 @@ int update_my_message()
 int main(int argc, char **argv)
 {
   while(1) {
+    if (argc>2) load_rhizome_db(argv[1],argv[2]);
+    
     update_my_message();
     // The time it takes for a Bluetooth scan
     sleep(12);
