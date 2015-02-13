@@ -155,6 +155,8 @@ struct bundle_record {
   // attempt at announcing it (which may be interrupted by the presence of bundles
   // with a higher priority).
   long long last_offset_announced;
+  // Similarly for the manifest
+  long long last_manifest_offset_announced;
 };
 
 #define MAX_BUNDLES 10000
@@ -412,6 +414,10 @@ int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
   return 0;
 }
 
+int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *msg)
+{
+  return 0;
+}
 
 int message_counter=0;
 int update_my_message(int mtu,unsigned char *msg_out)
@@ -483,6 +489,7 @@ int update_my_message(int mtu,unsigned char *msg_out)
   // Announce a bundle, if any are due.
   int bundle_to_announce=find_highest_priority_bundle();
   fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
+  announce_bundle_piece(bundle_to_announce,&offset,mtu,msg_out);
 
   // Fill up spare space with BARs
   while (bundle_count&&(mtu-offset)>=BAR_LENGTH) {
