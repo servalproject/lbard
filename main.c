@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <time.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <strings.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <curl/curl.h>
@@ -74,6 +75,19 @@ int parse_json_line(char *line,char fields[][8192],int num_fields)
   }
   
   return field_count;
+}
+
+int register_bundle(char *service,
+		    char *bid,
+		    char *version,
+		    char *author,
+		    char *originated_here,
+		    long long length,
+		    char *filehash,
+		    char *sender,
+		    char *recipient)
+{
+  return 0;
 }
 
 int load_rhizome_db(char *servald_server,char *credential)
@@ -120,6 +134,22 @@ int load_rhizome_db(char *servald_server,char *credential)
   while(line[0]) {
     int n=parse_json_line(line,fields,14);
     if (n==14) {
+      if (strcmp(fields[0],"null")) {
+	// We have a token that will allow us to ask for only newer bundles in a
+	// future call. Remember it and use it.
+      }
+      
+      // Now we have the fields, so register the bundles into our internal list.
+      register_bundle(fields[2] // service (file/meshms1/meshsm2)
+		      ,fields[3] // bundle id (BID)
+		      ,fields[4] // version
+		      ,fields[7] // author
+		      ,fields[8] // originated here
+		      ,strtoll(fields[9],NULL,10) // size of data/file
+		      ,fields[10] // file hash
+		      ,fields[11] // sender
+		      ,fields[12] // recipient
+		      );
       count++;
     }
 
