@@ -412,9 +412,12 @@ int update_my_message(int mtu,unsigned char *msg_out)
   // Put prefix of our SID in first 6 bytes.
   for(int i=0;i<6;i++) msg_out[i]=my_sid[i];
   
-  // Put 2-byte message counter
+  // Put 2-byte message counter.
+  // lower 15 bits is message counter.
+  // the 16th bit indicates if this message is a retransmission
+  // (always clear when constructing the message).
   msg_out[6]=message_counter&0xff;
-  msg_out[7]=(message_counter>>8)&0xff;
+  msg_out[7]=(message_counter>>8)&0x7f;
 
   int offset=8;
   
@@ -458,6 +461,50 @@ int update_my_message(int mtu,unsigned char *msg_out)
 
 int saw_message(unsigned char *msg,int len)
 {
+  /*
+    Parse message and act on it.    
+  */
+
+  // All valid messages must be at least 8 bytes long.
+  if (len<8) return -1;
+  char peer_prefix[6*2+1];
+  snprintf(peer_prefix,6*2+1,"%02x%02x%02x%02x%02x%02x",
+	   msg[0],msg[1],msg[2],msg[3],msg[4],msg[5]);
+  int msg_number=msg[6]+256*(msg[7]&0x7f);
+  int is_retransmission=msg[7]&0x80;
+
+  int offset=8; 
+
+  char bid_prefix[8*2+1];
+  long long version;
+  char recipient_prefix[4*2+1];
+  
+  while(offset<len) {
+    switch(msg[offset]) {
+    case 'B':
+      offset++;
+      if (len-offset<BAR_LENGTH) return -2;
+      // BAR announcement
+      snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
+	       msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
+	       msg[offset+4],msg[offset+5],msg[offset+6],msg[offset+7]);
+      offset+=8;
+      version=0;
+      for(int i=0;i<8;i++) version|=((long long)msg[offset+i])<<(i*8LL);
+      offset+=8;
+      snprintf(recipient_prefix,4*2+1,"%02x%02x%02x%02x",
+	       msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3]);
+      offset+=4;
+      fprintf(stderr,"Saw BAR: BID=%s*:v=%lld:->%s\n",
+	      bid_prefix,version,recipient_prefix);
+
+      break;
+    default:
+      // invalid message field.
+      return -1;
+    }
+  }
+  
   return 0;
 }
 
