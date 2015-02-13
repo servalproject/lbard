@@ -241,6 +241,8 @@ int find_highest_priority_bundle()
   return highest_priority_bundle;
 }
 
+char *prefix="";
+
 int load_rhizome_db(char *servald_server,char *credential)
 {
   CURL *curl;
@@ -251,7 +253,9 @@ int load_rhizome_db(char *servald_server,char *credential)
   snprintf(url,8192,"http://%s/restful/rhizome/bundlelist.json",
 	   servald_server);
   curl_easy_setopt(curl, CURLOPT_URL, url);
-  FILE *f=fopen("bundle.list","w");
+  char filename[1024];
+  snprintf(filename,1024,"%sbundle.list",prefix);
+  FILE *f=fopen(filename,"w");
   if (!f) {
     curl_easy_cleanup(curl);
     fprintf(stderr,"could not open output file.\n");
@@ -274,7 +278,7 @@ int load_rhizome_db(char *servald_server,char *credential)
   fprintf(stderr,"Read bundle list.\n");
 
   // Now read database into memory.
-  f=fopen("bundle.list","r");
+  f=fopen(filename,"r");
   if (!f) return -1;
   char line[8192];
   int count=0;
@@ -439,6 +443,8 @@ int update_my_message(int mtu,unsigned char *msg_out)
 
 int main(int argc, char **argv)
 {
+  if (argc>4) prefix=strdup(argv[4]);
+  
   if (argc>3) {
     // set my_sid from argv[3]
     for(int i=0;i<32;i++) {
