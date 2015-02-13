@@ -313,6 +313,9 @@ int load_rhizome_db(char *servald_server,char *credential)
   return 0;
 }
 
+unsigned char my_sid[32];
+
+int message_counter=0;
 int update_my_message(int mtu,unsigned char *msg_out)
 {
   /* There are a few possible options here.
@@ -352,10 +355,27 @@ int update_my_message(int mtu,unsigned char *msg_out)
 	reliable.
   */
 
+  // Build output message
+
+  if (mtu<64) return -1;
+  
+  // Clear message
+  bzero(msg_out,mtu);
+
+  // Put prefix of our SID in first 6 bytes.
+  for(int i=0;i<6;i++) msg_out[i]=my_sid[i];
+  
+  // Put 2-byte message counter
+  msg_out[6]=message_counter&0xff;
+  msg_out[7]=(message_counter>>8)&0xff;
+
+  // Put one or more BARs
+
+  // Announce a bundle, if any are due.
   int bundle_to_announce=find_highest_priority_bundle();
   fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
-  
-  return 0;
+
+  return mtu;
 }
 
 // Bluetooth names can be 248 bytes long. In Android the string
@@ -366,6 +386,17 @@ int update_my_message(int mtu,unsigned char *msg_out)
 
 int main(int argc, char **argv)
 {
+  if (argc>3) {
+    // set my_sid from argv[3]
+    for(int i=0;i<32;i++) {
+      char hex[3];
+      hex[0]=argv[3][i*2];
+      hex[1]=argv[3][i*2+1];
+      hex[2]=0;
+      my_sid[i]=strtoll(hex,NULL,16);
+    }
+  }
+
   while(1) {
     if (argc>2) load_rhizome_db(argv[1],argv[2]);
 
