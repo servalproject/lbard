@@ -188,7 +188,12 @@ int register_bundle(char *service,
   if (bundle_number>=MAX_BUNDLES) return -1;
   
   if (bundle_number<bundle_count) {
-    // Replace old bundle values
+    // Replace old bundle values, ...
+
+    // ... unless we already hold a newer version
+    if (bundles[bundle_number].version>=strtoll(version,NULL,10))
+      return 0;
+    
     free(bundles[bundle_number].service);
     free(bundles[bundle_number].author);
     free(bundles[bundle_number].filehash);
@@ -202,6 +207,13 @@ int register_bundle(char *service,
     bundles[bundle_number].last_version_of_manifest_announced=0;
     bundles[bundle_number].last_announced_time=0;
     bundle_count++;
+  }
+
+  // Clear latest announcement time for bundles that get updated with a new version
+  if (bundles[bundle_number].version<strtoll(version,NULL,10)) {
+    bundles[bundle_number].last_offset_announced=0;
+    bundles[bundle_number].last_version_of_manifest_announced=0;
+    bundles[bundle_number].last_announced_time=0;
   }
   
   bundles[bundle_number].service=strdup(service);
@@ -474,7 +486,7 @@ int prime_bundle_cache(int bundle_number)
     cached_manifest=realloc(cached_manifest,cached_manifest_len);    
     fclose(f);
     fprintf(stderr,"  manifest is %d bytes long.\n",cached_manifest_len);
-
+    
     
     snprintf(url,8192,"http://%s/restful/rhizome/%s/raw.bin",
 	     servald_server,bundles[bundle_number].bid);
@@ -506,6 +518,8 @@ int prime_bundle_cache(int bundle_number)
     fprintf(stderr,"  body is %d bytes long.\n",cached_body_len);
 
     bid_of_cached_bundle=strdup(bundles[bundle_number].bid);
+
+    cached_version=bundles[bundle_number].version;
     
     fprintf(stderr,"Cached manifest and body for %s\n",
 	    bundles[bundle_number].bid);
@@ -571,13 +585,22 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   if (is_manifest) offset_compound|=0x80000000;
 
   // Now write the 20 byte header and actual bytes into output message
-
+  
 
   // Update offset announced
   if (is_manifest) {
-    bundles[bundle_number].last_manifest_offset_announced+=actual_bytes;    
+    bundles[bundle_number].last_manifest_offset_announced+=actual_bytes;
   } else {
     bundles[bundle_number].last_offset_announced+=actual_bytes;
+
+    // If we have reached the end, then mark this bundle as having been announced.
+    bundles[bundle_number].last_announced_time=time(0);
+    // XXX - Race condition exists where bundle version could be updated while we
+    // are announcing it.  By caching the version number, we reduce, but do not
+    // eliminate this risk, but at least the recipient will realise if they are being
+    // given a mix of pieces.
+    bundles[bundle_number].last_version_of_manifest_announced=
+      cached_version;
   }
   
   return 0;
