@@ -539,18 +539,20 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
     We need to prefix any piece with the BID prefix, BID version, the offset
     of the content, which will also include a flag to indicate if it is content
     from the manifest or body.  This entails the following:
+    Piece header - 1 byte
     BID prefix - 8 bytes
     bundle version - 8 bytes
     offset & manifest/body flag & length - 4 bytes
     (20 bits length, 1 bit manifest/body flag, 11 bits length)
 
-    Total = 20 bytes.
+    Total = 21 bytes.
   */
 
   // Thus if we can't announce even one byte, we should just give up.
-  if ((mtu-(*offset))<21) return -1;
+  if ((mtu-(*offset))<22) return -1;
 
-  int max_bytes=(*offset)-mtu-20;
+  int max_bytes=mtu-(*offset)-21;
+  assert(max_bytes>0);
   int is_manifest=0;
   unsigned char *p=NULL;
   int actual_bytes=0;
@@ -584,8 +586,9 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   offset_compound|=((actual_bytes&0x7ff)<<20);
   if (is_manifest) offset_compound|=0x80000000;
 
-  // Now write the 20 byte header and actual bytes into output message
+  // Now write the 21 byte header and actual bytes into output message
   // BID prefix (8 bytes)
+  msg[(*offset)++]='P';
   for(int i=0;i<8;i++)
     msg[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);
   // Bundle version (8 bytes)
@@ -594,6 +597,7 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   // offset_compound (4 bytes)
   for(int i=0;i<4;i++)
     msg[(*offset)++]=(offset_compound>>(i*8))&0xff;
+
   bcopy(p,&msg[(*offset)],actual_bytes);
   (*offset)+=actual_bytes;
 
