@@ -585,7 +585,17 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   if (is_manifest) offset_compound|=0x80000000;
 
   // Now write the 20 byte header and actual bytes into output message
-  
+  // BID prefix (8 bytes)
+  for(int i=0;i<8;i++)
+    msg[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);
+  // Bundle version (8 bytes)
+  for(int i=0;i<8;i++)
+    msg[(*offset)++]=(cached_version>>(i*8))&0xff;
+  // offset_compound (4 bytes)
+  for(int i=0;i<4;i++)
+    msg[(*offset)++]=(offset_compound>>(i*8))&0xff;
+  bcopy(p,&msg[(*offset)],actual_bytes);
+  (*offset)+=actual_bytes;
 
   // Update offset announced
   if (is_manifest) {
