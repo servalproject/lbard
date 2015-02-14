@@ -607,14 +607,21 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   } else {
     bundles[bundle_number].last_offset_announced+=actual_bytes;
 
-    // If we have reached the end, then mark this bundle as having been announced.
-    bundles[bundle_number].last_announced_time=time(0);
-    // XXX - Race condition exists where bundle version could be updated while we
-    // are announcing it.  By caching the version number, we reduce, but do not
-    // eliminate this risk, but at least the recipient will realise if they are being
-    // given a mix of pieces.
-    bundles[bundle_number].last_version_of_manifest_announced=
-      cached_version;
+    if (bundles[bundle_number].last_offset_announced==cached_body_len) {
+      // If we have reached the end, then mark this bundle as having been announced.
+      bundles[bundle_number].last_announced_time=time(0);
+      // XXX - Race condition exists where bundle version could be updated while we
+      // are announcing it.  By caching the version number, we reduce, but do not
+      // eliminate this risk, but at least the recipient will realise if they are being
+      // given a mix of pieces.
+      bundles[bundle_number].last_version_of_manifest_announced=
+	cached_version;
+
+      // Then reset offsets for announcing next time
+      bundles[bundle_number].last_offset_announced=0;
+      bundles[bundle_number].last_manifest_offset_announced=0;
+    }
+
   }
   
   return 0;
