@@ -643,6 +643,8 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
       bundles[bundle_number].last_offset_announced=first_byte;
     }
   }
+
+  int end_of_item=0;
   
   if (bundles[bundle_number].last_manifest_offset_announced<cached_manifest_len) {
     // Send some manifest
@@ -660,8 +662,10 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   }
 
   // Work out number of bytes to include in announcement
-  if (bytes_available<max_bytes) actual_bytes=bytes_available;
-  else actual_bytes=max_bytes;
+  if (bytes_available<max_bytes) {
+    actual_bytes=bytes_available;
+    end_of_item=1;
+  } else actual_bytes=max_bytes;
   // Make sure byte count fits in 11 bits.
   if (actual_bytes>0x7ff) actual_bytes=0x7ff;
 
@@ -673,7 +677,8 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 
   // Now write the 21 byte header and actual bytes into output message
   // BID prefix (8 bytes)
-  msg[(*offset)++]='P';
+  msg[(*offset)++]='p'+end_of_item;
+  
   for(int i=0;i<8;i++)
     msg[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);
   // Bundle version (8 bytes)
@@ -888,7 +893,7 @@ int saw_message(unsigned char *msg,int len)
       peer_note_bar(p,bid_prefix,version,recipient_prefix);
 
       break;
-    case 'P':
+    case 'P': case 'p': case 'Q': case 'q':
       // Skip header character
       offset++;
       if (len-offset<(1+8+8+4+1)) return -3;
@@ -905,7 +910,10 @@ int saw_message(unsigned char *msg,int len)
       piece_offset=(offset_compound&0xfffff);
       piece_bytes=(offset_compound>>20)&0x7ff;
       piece_is_manifest=offset_compound&0x80000000;
-      offset+=piece_bytes;      
+      offset+=piece_bytes;
+
+      // XXX - Get extra offset bytes if 'P' or 'Q'
+      // XXX - Note end of manifest/body if 'q' or 'Q'
 
       fprintf(stderr,"Saw bytes %d..%d of %s of %s*\n",
 	      piece_offset,piece_offset+piece_bytes-1,
