@@ -584,6 +584,27 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 	}
       }
     }
+    if (!first_byte) {
+      // Recipient has no bytes or is not a peer, so now do the overall scan to see
+      // if all our peers have at least some bytes, and if so skip them.
+      first_byte=cached_body_len;
+      for(j=0;j<peer_count;j++) {
+	int k;
+	for(k=0;k<peer_records[j]->bundle_count;k++) {
+	  if (!strncmp(peer_records[j]->bid_prefixes[k],bundles[bundle_number].bid,
+		       8*2)) {
+	    // Peer knows about this bundle, but which version?
+	    if (peer_records[j]->versions[k]<first_byte)
+	      first_byte=peer_records[j]->versions[k];
+	    break;
+	  }
+	}
+	if (k==peer_records[j]->bundle_count) {
+	  // Peer does not have this bundle, so we must start from the beginning.
+	  first_byte=0;
+	}	
+      }
+    }
     if (bundles[bundle_number].last_offset_announced<first_byte) {
       fprintf(stderr,"Skipping from byte %lld straight to %lld, because recipient or all peers have the intervening bytes\n",
 	      bundles[bundle_number].last_offset_announced,first_byte);
