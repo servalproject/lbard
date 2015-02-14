@@ -559,6 +559,33 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   int bytes_available=0;
   int start_offset=0;
   
+  // For journaled bundles, update the first body announced offset to begin at the
+  // first byte that the recipient (if they are a peer) has received.
+  // If the recipient is not a peer, then we send from the first byte that any of
+  // our peers has yet to receive.
+  // By checking this each time we send a piece, we will automatically skip bytes
+  // that we have just heard about a peer having received.
+
+  // Is the bundle a journalled bundle?
+  if (cached_version<0x100000000LL) {
+    int first_byte=0;
+    int j;
+    for(j=0;j<peer_count;j++) {
+      if (!strncmp(bundles[bundle_number].recipient,
+		   peer_records[j]->sid_prefix,(8*2))) {
+	// Bundle is address to a peer.
+	int k;
+	for(k=0;k<peer_records[j]->bundle_count;k++) {
+	  if (!strncmp(peer_records[j]->bid_prefixes[k],bundles[bundle_number].bid,
+		       8*2)) {
+	    // Peer knows about this bundle, but which version?
+	    
+	  }
+	}
+      }
+    }
+  }
+  
   if (bundles[bundle_number].last_manifest_offset_announced<cached_manifest_len) {
     // Send some manifest
     bytes_available=cached_manifest_len-
