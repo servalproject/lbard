@@ -568,7 +568,7 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 
   // Is the bundle a journalled bundle?
   if (cached_version<0x100000000LL) {
-    int first_byte=0;
+    long long first_byte=0;
     int j;
     for(j=0;j<peer_count;j++) {
       if (!strncmp(bundles[bundle_number].recipient,
@@ -579,10 +579,15 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 	  if (!strncmp(peer_records[j]->bid_prefixes[k],bundles[bundle_number].bid,
 		       8*2)) {
 	    // Peer knows about this bundle, but which version?
-	    
+	    first_byte=peer_records[j]->versions[k];
 	  }
 	}
       }
+    }
+    if (bundles[bundle_number].last_offset_announced<first_byte) {
+      fprintf(stderr,"Skipping from byte %lld straight to %lld, because recipient or all peers have the intervening bytes\n",
+	      bundles[bundle_number].last_offset_announced,first_byte);
+      bundles[bundle_number].last_offset_announced=first_byte;
     }
   }
   
