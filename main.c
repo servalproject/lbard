@@ -38,6 +38,25 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <dirent.h>
 #include <assert.h>
 
+struct segment_list {
+  unsigned char *data;
+  int start_offset;
+  int length;
+  struct segment_list *next;
+};
+
+struct partial_bundle {
+  // Data from the piece headers for keeping track
+  char *bid_prefix;
+  long long bundle_version;
+  
+  struct segment_list *manifest_segments;
+  int manifest_length;
+
+  struct segment_list *body_segments;
+  int body_length;    
+};
+
 struct peer_state {
   char *sid_prefix;
   
@@ -45,12 +64,25 @@ struct peer_state {
   time_t last_message_time;
   int last_message_number;
 
+  // BARs we have seen from them.
   int bundle_count;
 #define MAX_PEER_BUNDLES 100000
   int bundle_count_alloc;
   char **bid_prefixes;
   long long *versions;
-};
+
+  // Bundles this peer is transferring.
+  // The bundle prioritisation algorithm means that the peer may announce pieces
+  // of several bundles interspersed, e.g., a large bundle may be temporarily
+  // deferred due to the arrival of a smaller bundle, or the arrival of a peer
+  // for whom that peer has bundles with the new peer as the recipient.
+  // So we need to carry state for some plurality of bundles being announced.
+  // Note that we don't (currently) build bundles from announcements by multiple
+  // peers, as a small protection against malicious nodes offering fake bundle
+  // pieces that will result in the crypto checksums failing at the end.
+#define MAX_BUNDLES_IN_FLIGHT 16
+  struct partial_bundle partials[MAX_BUNDLES_IN_FLIGHT];  
+}; 
 
 int free_peer(struct peer_state *p)
 {
