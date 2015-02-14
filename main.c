@@ -692,6 +692,12 @@ int update_my_message(int mtu,unsigned char *msg_out)
   int bundle_to_announce=find_highest_priority_bundle();
   fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
   announce_bundle_piece(bundle_to_announce,&offset,mtu,msg_out);
+  // If including a bundle piece leaves space, then try announcing another piece.
+  // This basically addresses the situation where the last few bytes of a manifest
+  // are included, and there is space to start sending the body.
+  if ((offset+21)<mtu) {
+    announce_bundle_piece(bundle_to_announce,&offset,mtu,msg_out);
+  }
 
   // Fill up spare space with BARs
   while (bundle_count&&(mtu-offset)>=BAR_LENGTH) {
