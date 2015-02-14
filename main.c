@@ -535,15 +535,50 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 
   // Thus if we can't announce even one byte, we should just give up.
   if ((mtu-(*offset))<21) return -1;
+
+  int max_bytes=(*offset)-mtu-20;
+  int is_manifest=0;
+  unsigned char *p=NULL;
+  int actual_bytes=0;
+  int bytes_available=0;
+  int start_offset=0;
   
   if (bundles[bundle_number].last_manifest_offset_announced<cached_manifest_len) {
     // Send some manifest
-    
+    bytes_available=cached_manifest_len-
+      bundles[bundle_number].last_manifest_offset_announced;
+    is_manifest=1;
+    start_offset=bundles[bundle_number].last_manifest_offset_announced;
+    p=&cached_manifest[bundles[bundle_number].last_manifest_offset_announced];
   } else if (bundles[bundle_number].last_offset_announced<cached_body_len) {
     // Send some body
-    
+    bytes_available=cached_body_len-
+      bundles[bundle_number].last_offset_announced;
+    p=&cached_body[bundles[bundle_number].last_offset_announced];    
+    start_offset=bundles[bundle_number].last_offset_announced;
   }
 
+  // Work out number of bytes to include in announcement
+  if (bytes_available<max_bytes) actual_bytes=bytes_available;
+  else actual_bytes=max_bytes;
+  // Make sure byte count fits in 11 bits.
+  if (actual_bytes>0x7ff) actual_bytes=0x7ff;
+
+  // Generate 4 byte offset block
+  unsigned int offset_compound=0;
+  offset_compound=(start_offset&0xfffff);
+  offset_compound|=((actual_bytes&0x7ff)<<20);
+  if (is_manifest) offset_compound|=0x80000000;
+
+  // Now write the 20 byte header and actual bytes into output message
+
+
+  // Update offset announced
+  if (is_manifest) {
+    bundles[bundle_number].last_manifest_offset_announced+=actual_bytes;    
+  } else {
+    bundles[bundle_number].last_offset_announced+=actual_bytes;
+  }
   
   return 0;
 
