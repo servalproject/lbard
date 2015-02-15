@@ -358,7 +358,7 @@ int load_rhizome_db(int timeout)
   curl=curl_easy_init();
   if (!curl) return -1;
   char url[8192];
-  // XXX We should use the new-since-time version once we have a token
+  // We use the new-since-time version once we have a token
   // to make this much faster.
   if (!token)
     snprintf(url,8192,"http://%s/restful/rhizome/bundlelist.json",
@@ -750,6 +750,44 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
   // XXX - Flag this BAR as needing announcing (this might happen automatically due
   // to the Rhizome bundle being updated, and so coming out as a high-priority bundle.
 
+  // /restful/rhizome/insert
+
+  CURL *curl;
+  CURLcode result_code;
+  curl=curl_easy_init();
+
+  struct curl_httppost* post = NULL;
+  struct curl_httppost* last = NULL;
+  
+  curl_formadd(&post, &last, CURLFORM_COPYNAME, "manifest",
+               CURLFORM_PTRCONTENTS, manifest_data,
+               CURLFORM_CONTENTSLENGTH, manifest_length,
+               CURLFORM_CONTENTTYPE, "binary/data", CURLFORM_END);
+  curl_formadd(&post, &last, CURLFORM_COPYNAME, "payload",
+               CURLFORM_PTRCONTENTS, body_data,
+               CURLFORM_CONTENTSLENGTH, body_length,
+               CURLFORM_CONTENTTYPE, "binary/data", CURLFORM_END);
+
+  char url[8192];
+  snprintf(url,8192,"http://%s/restful/rhizome/insert",servald_server);
+    
+  curl_easy_setopt(curl, CURLOPT_URL, url);
+  curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+  curl_easy_setopt(curl, CURLOPT_USERPWD, credential);  
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+  // 2 minute timeout, since inserting a big file can take a long time
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 120000);
+  curl_easy_setopt(curl, CURLOPT_HTTPPOST, post);
+
+  result_code=curl_easy_perform(curl);
+  if(result_code!=CURLE_OK) {
+    curl_easy_cleanup(curl);
+    fprintf(stderr,"curl request failed. URL:%s\n",url);
+    fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
+    return -1;
+  }
+
+  curl_easy_cleanup(curl);
   
   return 0;
 }
