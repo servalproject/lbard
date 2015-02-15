@@ -43,7 +43,7 @@ struct segment_list {
   unsigned char *data;
   int start_offset;
   int length;
-  struct segment_list *next;
+  struct segment_list *prev,*next;
 };
 
 struct partial_bundle {
@@ -904,12 +904,14 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     peer_records[peer]->partials[i].bundle_version=version;
   }
 
+  int piece_end=piece_offset+piece_bytes-1;
+
   // Note stream length if this is an end piece.
   if (is_end_piece) {
     if (is_manifest_piece)
-      peer_records[peer]->partials[i].manifest_length=piece_offset+piece_bytes-1;
+      peer_records[peer]->partials[i].manifest_length=piece_end;
     else
-      peer_records[peer]->partials[i].body_length=piece_offset+piece_bytes-1;
+      peer_records[peer]->partials[i].body_length=piece_end;
   }
   
   // Now we have the right partial, we need to look for the right segment to add this
@@ -917,6 +919,37 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
   struct segment_list **s;
   if (is_manifest_piece) s=&peer_records[peer]->partials[i].manifest_segments;
   else s=&peer_records[peer]->partials[i].body_segments;
+
+  /*
+    The segment lists are maintained in reverse order, since pieces will generally
+    arrive in ascending address order.
+  */
+  while(1) {
+    if ((!(*s))||(((*s)->start_offset+(*s)->length)<piece_offset)) {
+      // Create a new segment before the current one
+      struct segment_list *ns=calloc(sizeof(struct segment_list),1);
+      assert(ns);
+      // Link into the list
+      ns->next=*s;
+      ns->prev=(*s)->prev;
+      (*s)->prev=ns;
+
+      // Set start and ends and allocate and copy in piece data
+      ns->start_offset=piece_offset;
+      ns->length=piece_bytes;
+      ns->data=malloc(piece_bytes);
+      ns->data_alloc=piece_bytes;
+      bcopy(piece,ns->data,piece_bytes);      
+      break;
+    } else if ((*s)->start_offset==(piece_end+1)) {
+      // Piece sticks to leading edge of this segment
+      break;
+    } else if (((*s)->start_offset+(*s)->length)==piece_offset) {
+      // Piece sticks to trailing edge of this segment
+      // (this is the most common case)
+      break;
+    } else s=&(*s)->next;
+  }
   
   return 0;
 }
