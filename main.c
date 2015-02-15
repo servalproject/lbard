@@ -738,6 +738,17 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 
 }
 
+int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
+			  unsigned char *body_data,int body_length)
+{
+  // XXX - Push to rhizome.
+  // XXX - Flag this BAR as needing announcing (this might happen automatically due
+  // to the Rhizome bundle being updated, and so coming out as a high-priority bundle.
+
+  
+  return 0;
+}
+
 int message_counter=0;
 int update_my_message(int mtu,unsigned char *msg_out)
 {
@@ -939,6 +950,9 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
   if (peer<0) return -1;
 
   fprintf(stderr,"Saw a bundle piece from SID=%s*\n",peer_prefix);
+
+  // XXX - Schedule BAR for announcement if we already have this version of this
+  // bundle, so that the sender knows that they can start sending something else.
   
   int i;
   int spare_record=random()%MAX_BUNDLES_IN_FLIGHT;
@@ -1094,6 +1108,12 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       // We have a single segment for body and manifest that span the complete
       // size.
       fprintf(stderr,">>> We have the entire bundle now.\n");
+      rhizome_update_bundle(peer_records[peer]->partials[i].manifest_segments->data,
+			    peer_records[peer]->partials[i].manifest_length,
+			    peer_records[peer]->partials[i].body_segments->data,
+			    peer_records[peer]->partials[i].body_length);
+      // Now release this partial.
+      clear_partial(&peer_records[peer]->partials[i]);
     }
   
   return 0;
