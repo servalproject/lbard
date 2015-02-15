@@ -839,7 +839,8 @@ int update_my_message(int mtu,unsigned char *msg_out)
 }
 
 int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
-	      long long piece_offset,int piece_bytes,unsigned char *piece)
+	      long long piece_offset,int piece_bytes,int is_end_piece,
+	      unsigned char *piece)
 {
   return 0;
 }
@@ -868,7 +869,8 @@ int saw_message(unsigned char *msg,int len)
   long long piece_offset;
   int piece_bytes;
   int piece_is_manifest;
-  int above_1mb=0;
+  int above_1mb;
+  int is_end_piece;
 
   // Find or create peer structure for this.
   struct peer_state *p=NULL;
@@ -920,7 +922,9 @@ int saw_message(unsigned char *msg,int len)
     case 'P': case 'p': case 'Q': case 'q':
       // Skip header character
       above_1mb=0;
+      is_end_piece=0;
       if (!(msg[offset]&0x20)) above_1mb=1;
+      if (!(msg[offset]&0x01)) is_end_piece=1;
       offset++;
       if (len-offset<(1+8+8+4+1)) return -3;
       snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
@@ -939,15 +943,8 @@ int saw_message(unsigned char *msg,int len)
       piece_is_manifest=offset_compound&0x80000000;
       offset+=piece_bytes;
 
-      // XXX - Get extra offset bytes if 'P' or 'Q'
-      // XXX - Note end of manifest/body if 'q' or 'Q'
-
-      fprintf(stderr,"Saw bytes %lld..%lld of %s of %s*\n",
-	      piece_offset,piece_offset+piece_bytes-1,
-	      piece_is_manifest ? "manifest" : "body",
-	      bid_prefix);
-
-      saw_piece(peer_prefix,bid_prefix,version,piece_offset,piece_bytes,&msg[offset]);
+      saw_piece(peer_prefix,bid_prefix,version,piece_offset,piece_bytes,is_end_piece,
+		&msg[offset]);
       
       break;
     default:
