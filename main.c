@@ -39,7 +39,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <assert.h>
 
 struct segment_list {
-  int data_alloc;
   unsigned char *data;
   int start_offset;
   int length;
@@ -904,7 +903,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     peer_records[peer]->partials[i].bundle_version=version;
   }
 
-  int piece_end=piece_offset+piece_bytes-1;
+  int piece_end=piece_offset+piece_bytes;
 
   // Note stream length if this is an end piece.
   if (is_end_piece) {
@@ -924,8 +923,15 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     The segment lists are maintained in reverse order, since pieces will generally
     arrive in ascending address order.
   */
+  int segment_start;
+  int segment_end;
   while(1) {
-    if ((!(*s))||(((*s)->start_offset+(*s)->length)<piece_offset)) {
+    if (*s) {
+      segment_start=(*s)->start_offset;
+      segment_end=segment_start+(*s)->length;
+    }
+    
+    if ((!(*s))||(segment_end<piece_offset)) {
       // Create a new segment before the current one
       struct segment_list *ns=calloc(sizeof(struct segment_list),1);
       assert(ns);
@@ -938,18 +944,49 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       ns->start_offset=piece_offset;
       ns->length=piece_bytes;
       ns->data=malloc(piece_bytes);
-      ns->data_alloc=piece_bytes;
       bcopy(piece,ns->data,piece_bytes);      
       break;
-    } else if ((*s)->start_offset==(piece_end+1)) {
-      // Piece sticks to leading edge of this segment
+    } else if ((segment_start<=piece_offset)&&(segment_end>=piece_end)) {
+      // Piece fits entirely within a current segment, i.e., is not new data
       break;
-    } else if (((*s)->start_offset+(*s)->length)==piece_offset) {
-      // Piece sticks to trailing edge of this segment
-      // (this is the most common case)
+    } else {
+      // Segment should abutt or overlap with new piece.
+      // Pieces can be different sizes, so it is possible to extend both directions
+      // at once.
+
+      // New piece and existing segment should overlap or adjoin.  Otherwise abort.
+      int piece_start=piece_offset;
+      assert( ((segment_start>=piece_start)&&(segment_start<=piece_end))
+	      ||((segment_end>=piece_start)&&(segment_end<=piece_end))
+	      );      
+      
+      if (piece_start<segment_start) {
+	// Need to stick bytes on the start
+	int extra_bytes=segment_start-piece_start;
+	int new_length=(*s)->length+extra_bytes;
+	unsigned char *d=malloc(new_length);
+        assert(d);
+	bcopy(piece,d,extra_bytes);
+	bcopy((*s)->data,&d[extra_bytes],(*s)->length);
+	(*s)->start_offset=piece_start;
+	(*s)->length=new_length;
+	free((*s)->data); (*s)->data=d;
+      }
+      if (piece_end>segment_end) {
+	// Need to sick bytes on the end
+	int extra_bytes=piece_end-segment_end;
+	int new_length=(*s)->length+extra_bytes;
+	(*s)->data=realloc((*s)->data,new_length);
+        assert((*s)->data);
+	bcopy(&piece[piece_bytes-extra_bytes],&(*s)->data[(*s)->length],
+	      extra_bytes);
+	(*s)->length=new_length;
+      }
       break;
-    } else s=&(*s)->next;
+    } 
   }
+
+  
   
   return 0;
 }
