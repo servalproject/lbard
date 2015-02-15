@@ -838,6 +838,13 @@ int update_my_message(int mtu,unsigned char *msg_out)
   return offset;
 }
 
+int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
+	      long long piece_offset,int piece_bytes,unsigned char *piece)
+{
+  return 0;
+}
+
+
 int saw_message(unsigned char *msg,int len)
 {
   /*
@@ -858,7 +865,7 @@ int saw_message(unsigned char *msg,int len)
   long long version;
   char recipient_prefix[4*2+1];
   unsigned int offset_compound;
-  int piece_offset;
+  long long piece_offset;
   int piece_bytes;
   int piece_is_manifest;
   int above_1mb=0;
@@ -935,10 +942,12 @@ int saw_message(unsigned char *msg,int len)
       // XXX - Get extra offset bytes if 'P' or 'Q'
       // XXX - Note end of manifest/body if 'q' or 'Q'
 
-      fprintf(stderr,"Saw bytes %d..%d of %s of %s*\n",
+      fprintf(stderr,"Saw bytes %lld..%lld of %s of %s*\n",
 	      piece_offset,piece_offset+piece_bytes-1,
 	      piece_is_manifest ? "manifest" : "body",
 	      bid_prefix);
+
+      saw_piece(peer_prefix,bid_prefix,version,piece_offset,piece_bytes,&msg[offset]);
       
       break;
     default:
