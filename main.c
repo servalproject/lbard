@@ -39,6 +39,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <assert.h>
 
 struct segment_list {
+  int data_alloc;
   unsigned char *data;
   int start_offset;
   int length;
@@ -838,10 +839,75 @@ int update_my_message(int mtu,unsigned char *msg_out)
   return offset;
 }
 
+int find_peer_by_prefix(char *peer_prefix)
+{
+  for(int i=0;i<peer_count;i++)
+    if (!strcasecmp(peer_records[i]->sid_prefix,peer_prefix))
+      return i;
+  
+  return -1;
+}
+
+int clear_partial(struct partial_bundle *p)
+{
+  while(p->manifest_segments) {
+    struct segment_list *s=p->manifest_segments;
+    p->manifest_segments=s->next;
+    if (s->data) free(s->data);
+    free(s);    
+  }
+  while(p->body_segments) {
+    struct segment_list *s=p->body_segments;
+    p->body_segments=s->next;
+    if (s->data) free(s->data);
+    free(s);    
+  }
+
+  bzero(p,sizeof(struct partial_bundle));
+  return -1;
+}
+
 int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      long long piece_offset,int piece_bytes,int is_end_piece,
 	      unsigned char *piece)
 {
+  int peer=find_peer_by_prefix(peer_prefix);
+  if (peer<0) return -1;
+
+  fprintf(stderr,"Saw a bundle piece from SID=%s*\n",peer_prefix);
+  
+  int i;
+  int spare_record=random()%MAX_BUNDLES_IN_FLIGHT;
+  for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
+    if (!peer_records[peer]->partials[i].bid_prefix) {
+      if (spare_record==-1) spare_record=i;
+    } else {
+      if (!strcasecmp(peer_records[peer]->partials[i].bid_prefix,bid_prefix))
+	{
+	  fprintf(stderr,"Saw another piece for BID=%s* from SID=%s*\n",
+		  bid_prefix,peer_prefix);
+	  break;
+	}
+    }
+  }
+  if (i==MAX_BUNDLES_IN_FLIGHT) {
+    // Didn't find bundle in the progress list.
+    // Abort one of the ones in the list at random, and replace, unless there is
+    // a spare record slot to use.
+    if (spare_record==-1) {
+      i=random()%MAX_BUNDLES_IN_FLIGHT;
+      clear_partial(&peer_records[peer]->partials[i]);
+    } else i=spare_record;
+
+    // Now prepare the partial record
+    peer_records[peer]->partials[i].bid_prefix=strdup(bid_prefix);
+    peer_records[peer]->partials[i].bundle_version=version;
+  }
+
+  // Now we have the right partial, we need to look for the right segment to add this
+  // piece to, if any.
+  
+  
   return 0;
 }
 
