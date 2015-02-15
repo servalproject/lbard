@@ -904,9 +904,19 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     peer_records[peer]->partials[i].bundle_version=version;
   }
 
+  // Note stream length if this is an end piece.
+  if (is_end_piece) {
+    if (is_manifest_piece)
+      peer_records[peer]->partials[i].manifest_length=piece_offset+piece_bytes-1;
+    else
+      peer_records[peer]->partials[i].body_length=piece_offset+piece_bytes-1;
+  }
+  
   // Now we have the right partial, we need to look for the right segment to add this
   // piece to, if any.
-  
+  struct segment_list **s;
+  if (is_manifest_piece) s=&peer_records[peer]->partials[i].manifest_segments;
+  else s=&peer_records[peer]->partials[i].body_segments;
   
   return 0;
 }
