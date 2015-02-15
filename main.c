@@ -891,7 +891,45 @@ int dump_partial(struct partial_bundle *p)
   dump_segment_list(p->body_segments);
   return 0;
 }
-  
+
+int merge_segments(struct segment_list **s)
+{
+  if (!s) return -1;
+  if (!(*s)) return -1;
+
+  // Segments are sorted in descending order
+  while((*s)->next) {
+    struct segment_list *me=*s;
+    struct segment_list *next=(*s)->next;
+    if (me->start_offset<(next->start_offset+next->length)) {
+      // Merge this piece onto the end of the next piece
+      fprintf(stderr,"Merging [%d..%d) and [%d..%d)\n",
+	      me->start_offset,me->start_offset+me->length,
+	      next->start_offset,next->start_offset+next->length);
+      int extra_bytes
+	=(me->start_offset+me->length)-(next->start_offset+next->length);
+      int new_length=next->length+extra_bytes;
+      next->data=realloc(next->data,new_length);
+      assert(next->data);
+      bcopy(&me->data[me->length-extra_bytes],&next->data[next->length],
+	    extra_bytes);
+      next->length=new_length;
+
+      // Excise redundant segment from list
+      *s=next;
+      next->prev=me->prev;
+      if (me->prev) me->prev->next=next;
+
+      // Free redundant segment.
+      free(me->data);
+      free(me);
+    }
+    s=&(*s)->next;
+  }
+  return 0;
+}
+
+
 int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      long long piece_offset,int piece_bytes,int is_end_piece,
 	      int is_manifest_piece,unsigned char *piece)
@@ -1014,10 +1052,14 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      extra_bytes);
 	(*s)->length=new_length;
       }
+      
       break;
     } 
   }
 
+  merge_segments(&peer_records[peer]->partials[i].manifest_segments);
+  merge_segments(&peer_records[peer]->partials[i].body_segments);
+  
   dump_partial(&peer_records[peer]->partials[i]);
   
   return 0;
