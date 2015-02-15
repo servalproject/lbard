@@ -1078,6 +1078,23 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
   merge_segments(&peer_records[peer]->partials[i].body_segments);
   
   dump_partial(&peer_records[peer]->partials[i]);
+
+  // Check if we have the whole bundle now
+  if (peer_records[peer]->partials[i].manifest_segments
+      &&peer_records[peer]->partials[i].body_segments
+      &&(!peer_records[peer]->partials[i].manifest_segments->next)
+      &&(!peer_records[peer]->partials[i].body_segments->next)
+      &&(peer_records[peer]->partials[i].manifest_segments->start_offset==0)
+      &&(peer_records[peer]->partials[i].body_segments->start_offset==0)
+      &&(peer_records[peer]->partials[i].manifest_segments->length
+	 ==peer_records[peer]->partials[i].manifest_length)
+      &&(peer_records[peer]->partials[i].body_segments->length
+	 ==peer_records[peer]->partials[i].body_length))
+    {
+      // We have a single segment for body and manifest that span the complete
+      // size.
+      fprintf(stderr,">>> We have the entire bundle now.\n");
+    }
   
   return 0;
 }
