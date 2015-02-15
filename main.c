@@ -899,10 +899,10 @@ int merge_segments(struct segment_list **s)
   if (!(*s)) return -1;
 
   // Segments are sorted in descending order
-  while((*s)->next) {
+  while((*s)&&(*s)->next) {
     struct segment_list *me=*s;
     struct segment_list *next=(*s)->next;
-    if (me->start_offset<(next->start_offset+next->length)) {
+    if (me->start_offset<=(next->start_offset+next->length)) {
       // Merge this piece onto the end of the next piece
       fprintf(stderr,"Merging [%d..%d) and [%d..%d)\n",
 	      me->start_offset,me->start_offset+me->length,
@@ -924,8 +924,8 @@ int merge_segments(struct segment_list **s)
       // Free redundant segment.
       free(me->data);
       free(me);
-    }
-    s=&(*s)->next;
+    } else 
+      s=&(*s)->next;
   }
   return 0;
 }
@@ -996,10 +996,18 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     if (*s) {
       segment_start=(*s)->start_offset;
       segment_end=segment_start+(*s)->length;
+    } else {
+      segment_start=-1; segment_end=-1;
     }
     
     if ((!(*s))||(segment_end<piece_offset)) {
       // Create a new segment before the current one
+
+      fprintf(stderr,"Inserting piece [%lld..%lld) before [%d..%d)\n",
+	      piece_offset,piece_offset+piece_bytes,
+	      segment_start,segment_end);
+
+      
       struct segment_list *ns=calloc(sizeof(struct segment_list),1);
       assert(ns);
       // Link into the list
@@ -1019,7 +1027,11 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       break;
     } else if (piece_end<segment_start) {
       // Piece ends before this segment starts, so proceed down the list further.
-      (*s)=(*s)->next;
+      fprintf(stderr,"Piece [%lld..%lld) comes before [%d..%d)\n",
+	      piece_offset,piece_offset+piece_bytes,
+	      segment_start,segment_end);
+
+      s=&(*s)->next;
     } else {
       // Segment should abutt or overlap with new piece.
       // Pieces can be different sizes, so it is possible to extend both directions
