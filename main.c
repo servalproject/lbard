@@ -937,8 +937,8 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       assert(ns);
       // Link into the list
       ns->next=*s;
-      ns->prev=(*s)->prev;
-      (*s)->prev=ns;
+      if (*s) ns->prev=(*s)->prev; else ns->prev=NULL;
+      if (*s) (*s)->prev=ns;
 
       // Set start and ends and allocate and copy in piece data
       ns->start_offset=piece_offset;
