@@ -441,6 +441,7 @@ int hex_byte_value(char *hexstring)
 }
 
 unsigned char my_sid[32];
+char *my_sid_hex=NULL;
 
 int bundle_bar_counter=0;
 int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
@@ -1029,6 +1030,9 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       assert( ((segment_start>=piece_start)&&(segment_start<=piece_end))
 	      ||((segment_end>=piece_start)&&(segment_end<=piece_end))
 	      );      
+
+      fprintf(stderr,"Before extending segment:\n");
+      dump_partial(&peer_records[peer]->partials[i]);
       
       if (piece_start<segment_start) {
 	// Need to stick bytes on the start
@@ -1080,6 +1084,9 @@ int saw_message(unsigned char *msg,int len)
   int msg_number=msg[6]+256*(msg[7]&0x7f);
   int is_retransmission=msg[7]&0x80;
 
+  // Ignore messages from ourselves
+  if (!bcmp(msg,my_sid,6)) return -1;
+  
   int offset=8; 
 
   char bid_prefix[8*2+1];
@@ -1223,6 +1230,7 @@ int main(int argc, char **argv)
       hex[2]=0;
       my_sid[i]=strtoll(hex,NULL,16);
     }
+    my_sid_hex=argv[3];
   }
 
   if (argc>2) credential=argv[2];
