@@ -1031,7 +1031,8 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      ||((segment_end>=piece_start)&&(segment_end<=piece_end))
 	      );      
 
-      fprintf(stderr,"Before extending segment:\n");
+      fprintf(stderr,"Before extending segment with [%d..%d):\n",
+	      piece_start,piece_end);
       dump_partial(&peer_records[peer]->partials[i]);
       
       if (piece_start<segment_start) {
