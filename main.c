@@ -869,6 +869,29 @@ int clear_partial(struct partial_bundle *p)
   return -1;
 }
 
+int dump_segment_list(struct segment_list *s)
+{
+  if (!s) return 0;
+  while(s) {
+    fprintf(stderr,"    [%d,%d)\n",s->start_offset,s->start_offset+s->length);
+    s=s->next;
+  }
+  return 0;
+}
+
+int dump_partial(struct partial_bundle *p)
+{
+  fprintf(stderr,"Progress receiving BID=%s* version %lld:\n",
+	  p->bid_prefix,p->bundle_version);
+  fprintf(stderr,"  manifest is %d bytes long, and body %d bytes long.\n",
+	  p->manifest_length,p->body_length);
+  fprintf(stderr,"  Manifest pieces received:\n");
+  dump_segment_list(p->manifest_segments);
+  fprintf(stderr,"  Body pieces received:\n");
+  dump_segment_list(p->body_segments);
+  return 0;
+}
+  
 int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      long long piece_offset,int piece_bytes,int is_end_piece,
 	      int is_manifest_piece,unsigned char *piece)
