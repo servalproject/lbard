@@ -746,11 +746,13 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 			  unsigned char *body_data,int body_length)
 {
-  // XXX - Push to rhizome.
-  // XXX - Flag this BAR as needing announcing (this might happen automatically due
-  // to the Rhizome bundle being updated, and so coming out as a high-priority bundle.
+  /* Push to rhizome.
 
-  // /restful/rhizome/insert
+     We don't need to mark the associated bundle as needing immediate announcement,
+     as this will happen as a natural consequence of the Rhizome database being 
+     updated.  Similarly, if the insert fails for some reason, then the sender will
+     automatically keep trying to send it according to its regular rotation.
+   */
 
   CURL *curl;
   CURLcode result_code;
