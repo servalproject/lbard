@@ -861,6 +861,7 @@ int saw_message(unsigned char *msg,int len)
   int piece_offset;
   int piece_bytes;
   int piece_is_manifest;
+  int above_1mb=0;
 
   // Find or create peer structure for this.
   struct peer_state *p=NULL;
@@ -911,6 +912,8 @@ int saw_message(unsigned char *msg,int len)
       break;
     case 'P': case 'p': case 'Q': case 'q':
       // Skip header character
+      above_1mb=0;
+      if (!(msg[offset]&0x20)) above_1mb=1;
       offset++;
       if (len-offset<(1+8+8+4+1)) return -3;
       snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
@@ -921,9 +924,10 @@ int saw_message(unsigned char *msg,int len)
       for(int i=0;i<8;i++) version|=((long long)msg[offset+i])<<(i*8LL);
       offset+=8;
       offset_compound=0;
-      for(int i=0;i<4;i++) offset_compound|=((long long)msg[offset+i])<<(i*8LL);
+      for(int i=0;i<6;i++) offset_compound|=((long long)msg[offset+i])<<(i*8LL);
       offset+=4;
-      piece_offset=(offset_compound&0xfffff);
+      if (above_1mb) offset+=2;
+      piece_offset=(offset_compound&0xfffff)|((offset_compound>>12LL)&0xfff00000LL);
       piece_bytes=(offset_compound>>20)&0x7ff;
       piece_is_manifest=offset_compound&0x80000000;
       offset+=piece_bytes;
