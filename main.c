@@ -289,9 +289,7 @@ int find_highest_priority_bundle()
       if (bundles[i].last_announced_time
 	  <bundles[highest_priority_bundle].last_announced_time)
 	this_bundle_priority|=BUNDLE_PRIORITY_SENT_LESS_RECENTLY;
-      // XXX Only consider bundles upto 1MB in size.
-      if ((bundles[i].length<(1024*1024))
-	  &&(bundles[i].length<bundles[highest_priority_bundle].length))
+      if (bundles[i].length<bundles[highest_priority_bundle].length)
 	this_bundle_priority|=BUNDLE_PRIORITY_FILE_SIZE_SMALLER;
     }
 
@@ -958,6 +956,8 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 
   fprintf(stderr,"Saw a bundle piece from SID=%s*\n",peer_prefix);
 
+  int bundle_number=-1;
+  
   // Schedule BAR for announcement immediately if we already have this version of this
   // bundle, so that the sender knows that they can start sending something else.
   // This in effect provides a positive ACK for reception of a new bundle.
@@ -972,12 +972,18 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       if (version<=bundles[i].version) {
 	// We have this version already
 	bundles[i].announce_now=1;
+      } else {
+	// We have an older version.
+	// Remember the bundle number so that we can pre-fetch the body we have
+	// for incremental journal transfers
+	if (version<0x100000000LL) {
+	  bundle_number=i;
+	}
+	
       }
     }
   }
 
-  // XXX - If we have an older version of this bundle, and it is a journal bundle,
-  // then fetch the body bytes that we already have and insert as the first segment.
   
   int i;
   int spare_record=random()%MAX_BUNDLES_IN_FLIGHT;
@@ -1018,6 +1024,29 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     else
       peer_records[peer]->partials[i].body_length=piece_end;
   }
+
+  if ((bundle_number>-1)
+      &&(!peer_records[peer]->partials[i].body_segments)) {
+    // This is a bundle that for which we already have a previous version, and
+    // for which we as yet have no body segments.  So fetch from Rhizome the content
+    // that we do have, and prepopulate the body segment.
+    if (!prime_bundle_cache(bundle_number)) {
+      struct segment_list *s=calloc(sizeof(struct segment_list),1);
+      assert(s);
+      s->data=malloc(cached_body_len);
+      assert(s->data);
+      bcopy(cached_body,s->data,cached_body_len);
+      s->start_offset=0;
+      s->length=cached_body_len;
+      peer_records[peer]->partials[i].body_segments=s;
+      fprintf(stderr,"Preloaded %d bytes from old version of journal bundle.\n",
+	      cached_body_len);
+    } else {
+      fprintf(stderr,"Failed to preload bytes from old version of journal bundle. XFER will likely fail due to far end thinking it can skip the bytes we already have, so ignoring current piece.\n");
+      return -1;
+    }
+  }
+
   
   // Now we have the right partial, we need to look for the right segment to add this
   // piece to, if any.
