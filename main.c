@@ -476,6 +476,8 @@ unsigned char *cached_body=NULL;
 
 int prime_bundle_cache(int bundle_number)
 {
+  if (bundle_number<0) return -1;
+  
   if ((!bid_of_cached_bundle)
       ||strcasecmp(bundles[bundle_number].bid,bid_of_cached_bundle)) {
     // Cache is invalid - release
@@ -754,6 +756,17 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
      automatically keep trying to send it according to its regular rotation.
    */
 
+  char filename[1024];
+  snprintf(filename,1024,"%08lx.manifest",time(0));
+  fprintf(stderr,">>> Writing manifest to %s\n",filename);
+  FILE *f=fopen(filename,"w");
+  fwrite(manifest_data,manifest_length,1,f);
+  fclose(f);
+  snprintf(filename,1024,"%08lx.payload",time(0));
+  f=fopen(filename,"w");
+  fwrite(body_data,body_length,1,f);
+  fclose(f);
+  
   CURL *curl;
   CURLcode result_code;
   curl=curl_easy_init();
@@ -763,11 +776,12 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
   
   curl_formadd(&post, &last, CURLFORM_COPYNAME, "manifest",
                CURLFORM_PTRCONTENTS, manifest_data,
-               CURLFORM_CONTENTSLENGTH, manifest_length,
-               CURLFORM_CONTENTTYPE, "binary/data", CURLFORM_END);
+               CURLFORM_CONTENTSLENGTH, (long)manifest_length,
+               CURLFORM_CONTENTTYPE, "rhizome/manifest",
+	       CURLFORM_END);
   curl_formadd(&post, &last, CURLFORM_COPYNAME, "payload",
                CURLFORM_PTRCONTENTS, body_data,
-               CURLFORM_CONTENTSLENGTH, body_length,
+               CURLFORM_CONTENTSLENGTH, (long)body_length,
                CURLFORM_CONTENTTYPE, "binary/data", CURLFORM_END);
 
   char url[8192];
@@ -776,11 +790,13 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
   curl_easy_setopt(curl, CURLOPT_URL, url);
   curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
   curl_easy_setopt(curl, CURLOPT_USERPWD, credential);  
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
   // 2 minute timeout, since inserting a big file can take a long time
   curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 120000);
   curl_easy_setopt(curl, CURLOPT_HTTPPOST, post);
 
+  fprintf(stderr,"Submitting rhizome bundle: manifest len=%d, body len=%d\n",
+	  manifest_length,body_length);
+  
   result_code=curl_easy_perform(curl);
   if(result_code!=CURLE_OK) {
     curl_easy_cleanup(curl);
@@ -864,12 +880,14 @@ int update_my_message(int mtu,unsigned char *msg_out)
   // Announce a bundle, if any are due.
   int bundle_to_announce=find_highest_priority_bundle();
   fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
-  announce_bundle_piece(bundle_to_announce,&offset,mtu,msg_out);
+  if (bundle_to_announce!=-1)
+    announce_bundle_piece(bundle_to_announce,&offset,mtu,msg_out);
   // If including a bundle piece leaves space, then try announcing another piece.
   // This basically addresses the situation where the last few bytes of a manifest
   // are included, and there is space to start sending the body.
   if ((offset+21)<mtu) {
-    announce_bundle_piece(bundle_to_announce,&offset,mtu,msg_out);
+    if (bundle_to_announce!=-1)
+      announce_bundle_piece(bundle_to_announce,&offset,mtu,msg_out);
   }
 
   // Fill up spare space with BARs
@@ -1312,11 +1330,12 @@ int saw_message(unsigned char *msg,int len)
       piece_offset=(offset_compound&0xfffff)|((offset_compound>>12LL)&0xfff00000LL);
       piece_bytes=(offset_compound>>20)&0x7ff;
       piece_is_manifest=offset_compound&0x80000000;
-      offset+=piece_bytes;
 
       saw_piece(peer_prefix,bid_prefix,version,piece_offset,piece_bytes,is_end_piece,
 		piece_is_manifest,&msg[offset]);
-      
+
+      offset+=piece_bytes;
+
       break;
     default:
       // invalid message field.
@@ -1358,7 +1377,8 @@ int scan_for_incoming_messages()
 // with a lot of effort, but it doesn't really seem justified.
 #define BTNAME_MTU (248*7/8)
 // The time it takes for a Bluetooth scan
-int message_update_interval=12;
+//int message_update_interval=12;
+int message_update_interval=2;      // faster for debugging
 time_t last_message_update_time=0;
 
 int main(int argc, char **argv)
