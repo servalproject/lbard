@@ -671,8 +671,11 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   // Work out number of bytes to include in announcement
   if (bytes_available<max_bytes) {
     actual_bytes=bytes_available;
+    end_of_item=0;
+  } else {
+    actual_bytes=max_bytes;
     end_of_item=1;
-  } else actual_bytes=max_bytes;
+  }
   // Make sure byte count fits in 11 bits.
   if (actual_bytes>0x7ff) actual_bytes=0x7ff;
 
@@ -901,6 +904,8 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     // Now prepare the partial record
     peer_records[peer]->partials[i].bid_prefix=strdup(bid_prefix);
     peer_records[peer]->partials[i].bundle_version=version;
+    peer_records[peer]->partials[i].manifest_length=-1;
+    peer_records[peer]->partials[i].body_length=-1;
   }
 
   int piece_end=piece_offset+piece_bytes;
@@ -939,6 +944,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       ns->next=*s;
       if (*s) ns->prev=(*s)->prev; else ns->prev=NULL;
       if (*s) (*s)->prev=ns;
+      *s=ns;
 
       // Set start and ends and allocate and copy in piece data
       ns->start_offset=piece_offset;
@@ -989,7 +995,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     } 
   }
 
-  
+  dump_partial(&peer_records[peer]->partials[i]);
   
   return 0;
 }
