@@ -869,7 +869,7 @@ int clear_partial(struct partial_bundle *p)
 
 int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      long long piece_offset,int piece_bytes,int is_end_piece,
-	      unsigned char *piece)
+	      int is_manifest_piece,unsigned char *piece)
 {
   int peer=find_peer_by_prefix(peer_prefix);
   if (peer<0) return -1;
@@ -1010,7 +1010,7 @@ int saw_message(unsigned char *msg,int len)
       offset+=piece_bytes;
 
       saw_piece(peer_prefix,bid_prefix,version,piece_offset,piece_bytes,is_end_piece,
-		&msg[offset]);
+		piece_is_manifest,&msg[offset]);
       
       break;
     default:
