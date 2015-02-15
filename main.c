@@ -174,6 +174,7 @@ struct bundle_record {
   long long version;
   char *author;
   int originated_here_p;
+  int announce_now;
   long long length;
   char *filehash;
   char *sender;
@@ -277,6 +278,12 @@ int find_highest_priority_bundle()
 #define BUNDLE_PRIORITY_FILE_SIZE_SMALLER    0x00000100
 #define BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER  0x00000200
 #define BUNDLE_PRIORITY_IS_MESHMS            0x00000400
+#define BUNDLE_PRIORITY_ANNOUNCE_NOW         0x40000000
+
+    if (bundles[i].announce_now) {
+      this_bundle_priority|=BUNDLE_PRIORITY_ANNOUNCE_NOW;
+      bundles[i].announce_now=0;
+    }
     
     if (highest_priority_bundle>=0) {
       if (bundles[i].last_announced_time
@@ -951,8 +958,26 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 
   fprintf(stderr,"Saw a bundle piece from SID=%s*\n",peer_prefix);
 
-  // XXX - Schedule BAR for announcement if we already have this version of this
+  // Schedule BAR for announcement immediately if we already have this version of this
   // bundle, so that the sender knows that they can start sending something else.
+  // This in effect provides a positive ACK for reception of a new bundle.
+  // XXX - If the sender depends on the ACK to start sending the next bundle, then
+  // an adversary could purposely refuse to acknowledge bundles (that it might have
+  // introduced for this special purpose) addressed to itself, so that the priority
+  // scheme gets stuck trying to send these bundles to them forever.
+  for(int i=0;i<bundle_count;i++) {
+    if (!strncasecmp(bid_prefix,bundles[i].bid,strlen(bid_prefix))) {
+      fprintf(stderr,"We have version %lld of BID=%s*.  %s is offering us version %lld\n",
+	      bundles[i].version,bid_prefix,peer_prefix,version);
+      if (version<=bundles[i].version) {
+	// We have this version already
+	bundles[i].announce_now=1;
+      }
+    }
+  }
+
+  // XXX - If we have an older version of this bundle, and it is a journal bundle,
+  // then fetch the body bytes that we already have and insert as the first segment.
   
   int i;
   int spare_record=random()%MAX_BUNDLES_IN_FLIGHT;
