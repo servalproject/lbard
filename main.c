@@ -949,6 +949,9 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     } else if ((segment_start<=piece_offset)&&(segment_end>=piece_end)) {
       // Piece fits entirely within a current segment, i.e., is not new data
       break;
+    } else if (piece_end<segment_start) {
+      // Piece ends before this segment starts, so proceed down the list further.
+      (*s)=(*s)->next;
     } else {
       // Segment should abutt or overlap with new piece.
       // Pieces can be different sizes, so it is possible to extend both directions
