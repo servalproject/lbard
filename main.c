@@ -578,10 +578,11 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
     (20 bits length, 1 bit manifest/body flag, 11 bits length)
 
     Total = 21 bytes.
-  */
 
-  // Thus if we can't announce even one byte, we should just give up.
-  if ((mtu-(*offset))<22) return -1;
+    If start_offset>0xfffff, then 2 extra bytes are used for the upper bytes of the
+    starting offset.    
+
+  */
 
   int max_bytes=mtu-(*offset)-21;
   assert(max_bytes>0);
@@ -661,6 +662,12 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
     start_offset=bundles[bundle_number].last_offset_announced;
   }
 
+  // If we can't announce even one byte, we should just give up.
+  if (start_offset>0xfffff) {
+    max_bytes-=2; if (max_bytes<0) max_bytes=0;
+  }
+  if (max_bytes<1) return -1;
+
   // Work out number of bytes to include in announcement
   if (bytes_available<max_bytes) {
     actual_bytes=bytes_available;
@@ -669,15 +676,20 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   // Make sure byte count fits in 11 bits.
   if (actual_bytes>0x7ff) actual_bytes=0x7ff;
 
-  // Generate 4 byte offset block
-  unsigned int offset_compound=0;
+  // Generate 4 byte offset block (and option 2-byte extension for big bundles)
+  long long offset_compound=0;
   offset_compound=(start_offset&0xfffff);
   offset_compound|=((actual_bytes&0x7ff)<<20);
   if (is_manifest) offset_compound|=0x80000000;
+  offset_compound|=((start_offset>>20LL)&0xffffLL)<<32LL;
 
-  // Now write the 21 byte header and actual bytes into output message
+  // Now write the 21/23 byte header and actual bytes into output message
   // BID prefix (8 bytes)
-  msg[(*offset)++]='p'+end_of_item;
+  if (start_offset>0xfffff)
+    msg[(*offset)++]='P'+end_of_item;
+  else 
+    msg[(*offset)++]='p'+end_of_item;
+  
   
   for(int i=0;i<8;i++)
     msg[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);
@@ -687,6 +699,10 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   // offset_compound (4 bytes)
   for(int i=0;i<4;i++)
     msg[(*offset)++]=(offset_compound>>(i*8))&0xff;
+  if (start_offset>0xfffff) {
+  for(int i=4;i<6;i++)
+    msg[(*offset)++]=(offset_compound>>(i*8))&0xff;
+  }
 
   bcopy(p,&msg[(*offset)],actual_bytes);
   (*offset)+=actual_bytes;
