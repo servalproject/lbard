@@ -37,8 +37,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <curl/curl.h>
 #include <dirent.h>
 #include <assert.h>
+#include <fcntl.h>
 
 #include "lbard.h"
+#include "serial.h"
 
 unsigned char my_sid[32];
 char *my_sid_hex=NULL;
@@ -92,7 +94,25 @@ time_t last_message_update_time=0;
 
 int main(int argc, char **argv)
 {
-  if (argc>4) prefix=strdup(argv[4]);
+  if (argc!=5) {
+    fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <serial port>\n");
+    exit(-1);
+  }
+
+  int serialfd=-1;
+  char *serial_port = argv[4];
+  serialfd = open(serial_port,O_RDWR);
+  if (serialfd<0) {
+    perror("Opening serial port");
+    exit(-1);
+  }
+  if (serial_setup_port(serialfd))
+    {
+      fprintf(stderr,"Failed to setup serial port. Exiting.\n");
+      exit(-1);
+    }
+  
+  prefix=strdup(argv[3]); prefix[6]=0;
   
   if (argc>3) {
     // set my_sid from argv[3]
