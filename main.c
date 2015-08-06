@@ -74,11 +74,17 @@ int scan_for_incoming_messages()
   return 0;
 }
 
-// Bluetooth names can be 248 bytes long. In Android the string
-// must be a valid UTF-8 string, so we will restrict ourselves to
-// using only the lower 7 bits. It would be possible to use 7.something
-// with a lot of effort, but it doesn't really seem justified.
-#define BTNAME_MTU (248*7/8)
+/*
+  RFD900 has 255 byte maximum frames, but some bytes get taken in overhead.
+  We then Reed-Solomon the body we supply, which consumes a further 32 bytes.
+  This leaves a practical limit of somewhere around 200 bytes.
+  Fortunately, they are 8-bit bytes, so we can get quite a bit of information
+  in a single frame. 
+  We have to keep to single frames, because we will have a number of radios
+  potentially transmitting in rapid succession, without a robust collision
+  avoidance system.
+*/
+#define LINK_MTU 100
 // The time it takes for a Bluetooth scan
 //int message_update_interval=12;
 int message_update_interval=2;      // faster for debugging
@@ -108,11 +114,11 @@ int main(int argc, char **argv)
 				-(time(0)-last_message_update_time),
 				prefix, servald_server,credential,&token);
 
-    unsigned char msg_out[BTNAME_MTU];
+    unsigned char msg_out[LINK_MTU];
 
     if ((time(0)-last_message_update_time)>=message_update_interval) {
       update_my_message(my_sid_hex,
-			BTNAME_MTU,msg_out,
+			LINK_MTU,msg_out,
 			servald_server,credential);
       last_message_update_time=time(0);
     }
