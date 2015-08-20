@@ -111,6 +111,7 @@ int main(int argc, char **argv)
       fprintf(stderr,"Failed to setup serial port. Exiting.\n");
       exit(-1);
     }
+  fprintf(stderr,"Serial port open as fd %d\n",serialfd);
   
   prefix=strdup(argv[3]); prefix[6]=0;
   
@@ -137,13 +138,14 @@ int main(int argc, char **argv)
     unsigned char msg_out[LINK_MTU];
 
     if ((time(0)-last_message_update_time)>=message_update_interval) {
+      fprintf(stderr,"Updating my message...\n");
+      scan_for_incoming_messages();
       update_my_message(my_sid_hex,
 			LINK_MTU,msg_out,
 			servald_server,credential);
+      write_all(serialfd,msg_out,LINK_MTU);
       last_message_update_time=time(0);
     }
-
-    scan_for_incoming_messages();
     
     usleep(100000);
   }
