@@ -13,3 +13,6 @@ HRdS=	lbard.h serial.h Makefile
 lbard:	$(SRCS) $(HRDS)
 	cc -g -Wall -o lbard $(SRCS) -lcurl
 
+echotest:	Makefile echotest.c
+	cc -g -Wall -o echotest echotest.c
+
