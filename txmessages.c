@@ -239,7 +239,8 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 }
 
 int message_counter=0;
-int update_my_message(char *my_sid, int mtu,unsigned char *msg_out,
+int update_my_message(int serialfd,
+		      char *my_sid, int mtu,unsigned char *msg_out,
 		      char *servald_server,char *credential)
 {
   /* There are a few possible options here.
@@ -339,7 +340,7 @@ int update_my_message(char *my_sid, int mtu,unsigned char *msg_out,
   for(int i=0;i<offset;i++) fprintf(stderr,"%02x",msg_out[i]);
   fprintf(stderr,"\n");
 
-  radio_send_message(msg_out,offset);
+  radio_send_message(serialfd,msg_out,offset);
   
   return offset;
 }

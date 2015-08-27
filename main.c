@@ -140,7 +140,8 @@ int main(int argc, char **argv)
     if ((time(0)-last_message_update_time)>=message_update_interval) {
       fprintf(stderr,"Updating my message...\n");
       scan_for_incoming_messages();
-      update_my_message(my_sid_hex,
+      update_my_message(serialfd,
+			my_sid_hex,
 			LINK_MTU,msg_out,
 			servald_server,credential);
       write_all(serialfd,msg_out,LINK_MTU);

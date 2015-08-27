@@ -118,7 +118,9 @@ int peer_note_bar(struct peer_state *p,
 		  char *bid_prefix,long long version, char *recipient_prefix);
 int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *msg,
 			  char *prefix,char *servald_server, char *credential);
-int update_my_message(char *my_sid, int mtu,unsigned char *msg_out,
+int update_my_message(int serialfd,
+		      char *my_sid, int mtu,unsigned char *msg_out,
 		      char *servald_server,char *credential);
 size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
-int radio_send_message(unsigned char *msg_out,int offset);
+int radio_send_message(int serialfd, unsigned char *msg_out,int offset);
+ssize_t write_all(int fd, const void *buf, size_t len);
