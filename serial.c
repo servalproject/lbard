@@ -110,13 +110,6 @@ int serial_setup_port(int fd)
   t.c_oflag &= ~OPOST;
 
   tcsetattr(fd, TCSANOW, &t);
-
-  // Ask radio to report RSSI
-  write(fd,"\r",1);
-  usleep(1200000);
-  write(fd,"+++",3);
-  usleep(1200000);
-  write(fd,"\rAT&T\rAT&T=RSSI\rATO\r",20);
     
   set_nonblock(fd);
 

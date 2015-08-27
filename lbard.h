@@ -121,3 +121,4 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 int update_my_message(char *my_sid, int mtu,unsigned char *msg_out,
 		      char *servald_server,char *credential);
 size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
+int radio_send_message(unsigned char *msg_out,int offset);

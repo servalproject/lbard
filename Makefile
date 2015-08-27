@@ -1,7 +1,7 @@
 all:	lbard
 
 SRCS=	main.c rhizome.c txmessages.c rxmessages.c bundle_cache.c json.c peers.c \
-	serial.c \
+	serial.c radio.c golay.c \
 	fec-3.0.1/ccsds_tables.c \
 	fec-3.0.1/encode_rs_8.c \
 	fec-3.0.1/init_rs_char.c \

@@ -339,12 +339,7 @@ int update_my_message(char *my_sid, int mtu,unsigned char *msg_out,
   for(int i=0;i<offset;i++) fprintf(stderr,"%02x",msg_out[i]);
   fprintf(stderr,"\n");
 
-  char filename[1024];
-  snprintf(filename,1024,"%slbard-message",prefix);
-  unlink(filename);
-  FILE *f=fopen(filename,"w");
-  fwrite(msg_out,1,offset,f);
-  fclose(f);
+  radio_send_message(msg_out,offset);
   
   return offset;
 }
