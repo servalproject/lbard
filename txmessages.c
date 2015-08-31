@@ -240,7 +240,7 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 
 int message_counter=0;
 int update_my_message(int serialfd,
-		      char *my_sid, int mtu,unsigned char *msg_out,
+		      unsigned char *my_sid, int mtu,unsigned char *msg_out,
 		      char *servald_server,char *credential)
 {
   /* There are a few possible options here.
@@ -291,7 +291,7 @@ int update_my_message(int serialfd,
   char prefix[7];
   for(int i=0;i<6;i++) { msg_out[i]=my_sid[i]; prefix[i]=my_sid[i]; }
   prefix[6]=0;
-  
+
   // Put 2-byte message counter.
   // lower 15 bits is message counter.
   // the 16th bit indicates if this message is a retransmission

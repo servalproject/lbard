@@ -127,6 +127,10 @@ int main(int argc, char **argv)
     my_sid_hex=argv[3];
   }
 
+  printf("My SID prefix is %02X%02X%02X%02X%02X%02X\n",
+	 my_sid[0],my_sid[1],my_sid[2],my_sid[3],my_sid[4],my_sid[5]);
+  
+  
   if (argc>2) credential=argv[2];
   if (argc>1) servald_server=argv[1];
 
@@ -142,14 +146,16 @@ int main(int argc, char **argv)
       scan_for_incoming_messages();
       radio_read_bytes(serialfd);
       update_my_message(serialfd,
-			my_sid_hex,
+			my_sid,
 			LINK_MTU,msg_out,
 			servald_server,credential);
       // sending the bytes is now handled in txmessages.c and radio.c
       //      write_all(serialfd,msg_out,LINK_MTU);
       last_message_update_time=time(0);
     }
-    
+
     usleep(100000);
+
+    
   }
 }

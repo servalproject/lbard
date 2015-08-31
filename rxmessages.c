@@ -312,6 +312,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
     p=calloc(sizeof(struct peer_state),1);
     p->sid_prefix=strdup(peer_prefix);
     p->last_message_number=-1;
+    fprintf(stderr,"Registering peer %s*\n",p->sid_prefix);
     if (peer_count<MAX_PEERS) {
       peer_records[peer_count++]=p;
     } else {
