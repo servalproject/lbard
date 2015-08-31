@@ -42,6 +42,8 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
 {
   unsigned char out[3+FEC_MAX_BYTES+FEC_LENGTH+3];
   int offset=0;
+
+  fprintf(stderr,"CHECKPOINT: %s:%d %s()\n",__FILE__,__LINE__,__FUNCTION__);
   
   // Encapsulate message in Reed-Solomon wrapper and send.
   unsigned char parity[FEC_LENGTH];
@@ -106,6 +108,7 @@ int radio_receive_bytes(unsigned char *bytes,int count)
     // Decode end of packet length field
     int golay_end_errors;
     int end_length=golay_decode(&golay_end_errors,&radio_rx_buffer[RADIO_RXBUFFER_SIZE-3])-(FEC_MAX_BYTES+1);
+
     // Ignore packet if it does not satisfy !((n-FEC_MAX_BYTES-1)%13)
     if (end_length%13) continue;
     // Get actual length of packet
@@ -116,8 +119,10 @@ int radio_receive_bytes(unsigned char *bytes,int count)
     int golay_start_errors=0;
     int start_length=golay_decode(&golay_start_errors,
 				  &radio_rx_buffer[candidate_start_offset]);
+
+    
     // Ignore packet if the two length fields do not agree.
-    if (start_length!=end_length) continue;
+    if (start_length!=length) continue;
 
     printf("Candidate RX packet of %d bytes (%d & %d golay errors).\n",
 	   length,golay_start_errors,golay_end_errors);
