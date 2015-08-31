@@ -206,6 +206,10 @@ int load_rhizome_db(int timeout,
   curl=curl_easy_init();
   if (!curl) return -1;
   char url[8192];
+
+  // A timeout of zero means forever. Never do this.
+  if (!timeout) timeout=1;
+  
   // We use the new-since-time version once we have a token
   // to make this much faster.
   if (!*token)
