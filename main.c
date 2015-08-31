@@ -87,9 +87,9 @@ int scan_for_incoming_messages()
   avoidance system.
 */
 #define LINK_MTU 100
-// The time it takes for a Bluetooth scan
-//int message_update_interval=12;
-int message_update_interval=2;      // faster for debugging
+// One message per second on RFD900
+// XXX - Randomise, and allow for fractional second delays.
+int message_update_interval=1;
 time_t last_message_update_time=0;
 
 int main(int argc, char **argv)
