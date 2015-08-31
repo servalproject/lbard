@@ -341,7 +341,7 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
                CURLFORM_CONTENTTYPE, "binary/data", CURLFORM_END);
 
   char url[8192];
-  snprintf(url,8192,"http://%s/restful/rhizome/insert",servald_server);
+  snprintf(url,8192,"http://%s/rhizome/import",servald_server);
     
   curl_easy_setopt(curl, CURLOPT_URL, url);
   curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
