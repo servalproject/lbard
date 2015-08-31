@@ -239,7 +239,7 @@ int load_rhizome_db(int timeout,
   }
 
   curl_easy_cleanup(curl);
-  fprintf(stderr,"Read bundle list.\n");
+  // fprintf(stderr,"Read bundle list.\n");
 
   // Now read database into memory.
   f=fopen(filename,"r");
@@ -278,7 +278,7 @@ int load_rhizome_db(int timeout,
     line[0]=0; fgets(line,8192,f);
   }
 
-  fprintf(stderr,"Found %d bundles.\n",count);
+  //  fprintf(stderr,"Found %d bundles.\n",count);
   fclose(f);
   
   return 0;
