@@ -7,9 +7,14 @@ foreach radio ( /dev/cu.usbserial-* )
  # Start relevant servald instance if required
  cd serval$n
  setenv SERVALINSTANCE_PATH `pwd`
+ rm rhizome.db
  ~/g/serval-dna/servald start
  sleep 1
  ~/g/serval-dna/servald id self | tail -1 > self.sid
+
+ # Repopulate rhizome with test bundles.
+ ~/g/serval-dna/servald rhizome add file `cat self.sid` file$n
+
  cd ..
 
  @ n = $n + 1
