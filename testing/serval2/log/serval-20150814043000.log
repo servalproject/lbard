@@ -1,0 +1,28 @@
+INFO: [10251] 04:57:33.837 Local date/time: 2015-08-14 04:57:33 +0930
+INFO: [10251] 04:57:33.837 Serval DNA version: START-3281-g2802f75+paul-20150215192952
+WARN: [10251] 04:57:33.837 conf.c:66:reload()  config file /Users/gardners/g/lbard/testing/serval2/serval.conf does not exist -- using all defaults
+INFO: [10251] 04:57:33.838 Local date/time: 2015-08-14 04:57:33 +0930
+INFO: [10251] 04:57:33.838 Serval DNA version: START-3281-g2802f75+paul-20150215192952
+INFO: [10251] 04:57:33.838 Current configuration:
+INFO: [10251] 04:57:33.838    (empty)
+INFO: [10251] 04:57:33.838 Logging to /Users/gardners/g/lbard/testing/serval2/log/serval-20150814043000.log (fd 3)
+INFO: [10251] 04:57:33.838 instance.c:219:create_serval_instance_dir()  mkdir `/Users/gardners/g/lbard/testing/serval2/log` (mode 0700)
+WARN: [10251] 04:57:33.839 No network interfaces configured (empty 'interfaces' config option)
+INFO: [10251] 04:57:33.839 server.c:533:app_server_start()  Starting background server without exec
+INFO: [10251] 04:57:33.847 keyring.c:2006:keyring_seed()  Seeded keyring with identity: did=53012134062 name=`` sid=B65A9A179A16B5610FEF28DC4FF8E994624334F6B1EB16895CCEA6419150FD52
+INFO: [10253] 04:57:33.848 Local date/time: 2015-08-14 04:57:33 +0930
+INFO: [10253] 04:57:33.848 Serval DNA version: START-3281-g2802f75+paul-20150215192952
+INFO: [10253] 04:57:33.848 Current configuration:
+INFO: [10253] 04:57:33.848    (empty)
+INFO: [10253] 04:57:33.848 Logging to /Users/gardners/g/lbard/testing/serval2/log/serval-20150814043000.log (fd 7)
+INFO: [10253] 04:57:33.848 overlay_mdp.c:162:mdp_bind_socket()  Socket mdp.socket: fd=3 AF_UNIX:"/Users/gardners/g/lbard/testing/serval2/mdp.socket\0"
+INFO: [10253] 04:57:33.849 overlay_mdp.c:162:mdp_bind_socket()  Socket mdp.2.socket: fd=8 AF_UNIX:"/Users/gardners/g/lbard/testing/serval2/mdp.2.socket\0"
+INFO: [10253] 04:57:33.849 monitor.c:134:monitor_setup_sockets()  Monitor socket: fd=9 AF_UNIX:"/Users/gardners/g/lbard/testing/serval2/monitor.socket\0"
+INFO: [10253] 04:57:33.849 server.c:235:server_write_proc_state()  mkdir `/Users/gardners/g/lbard/testing/serval2/proc` (mode 0700)
+INFO: [10253] 04:57:33.849 httpd.c:222:httpd_server_start()  HTTP SERVER START port=4111 fd=10 services=RESTful,Rhizome
+INFO: [10253] 04:57:33.849 dna_helper.c:185:dna_helper_start()  DNAHELPER none configured
+INFO: [10253] 04:57:33.849 rhizome_database.c:41:create_rhizome_store_dir()  Rhizome datastore path = `/Users/gardners/g/lbard/testing/serval2/`
+INFO: [10253] 04:57:33.849 rhizome_database.c:198:rhizome_opendb()  mkdir `/Users/gardners/g/lbard/testing/serval2/blob` (mode 0700)
+INFO: [10253] 04:57:33.850 rhizome_database.c:203:rhizome_opendb()  mkdir `/Users/gardners/g/lbard/testing/serval2/sqlite3tmp` (mode 0700)
+INFO: [10253] 04:57:33.872 rhizome_database.c:349:rhizome_opendb()  Opened Rhizome database /Users/gardners/g/lbard/testing/serval2/rhizome.db, UUID=77cc4c6b-9658-4b2d-bbd6-fb4dbd009bdd
+INFO: [10253] 04:57:33.873 server.c:173:server()  Server initialised, entering main loop

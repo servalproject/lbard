@@ -1,0 +1,16 @@
+#!/bin/csh -f
+
+set n=1
+foreach radio ( /dev/cu.usbserial-* )
+ echo "Radio $n is $radio"
+
+ # Start relevant servald instance if required
+ cd serval$n
+ setenv SERVALINSTANCE_PATH `pwd`
+ ~/g/serval-dna/servald start
+ sleep 1
+ ~/g/serval-dna/servald id self | tail -1 > self.sid
+ cd ..
+
+ @ n = $n + 1
+end 

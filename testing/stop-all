@@ -1,0 +1,11 @@
+#!/bin/csh -f
+
+foreach instance ( serval? )
+ # Stop relevant servald instance
+
+ cd $instance
+ setenv SERVALINSTANCE_PATH `pwd`
+ ~/g/serval-dna/servald stop
+ cd ..
+
+end 
