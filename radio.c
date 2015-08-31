@@ -102,7 +102,20 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
 
   assert( offset <= (3+FEC_MAX_BYTES+FEC_LENGTH+3) );
 
-  write_all(serialfd,out,offset);
+  // Now escape any ! characters, and append !! to the end for the RFD900 CSMA
+  // packetised firmware.
+
+  unsigned char escaped[offset*2+2];
+  int elen=0;
+  for(int i=0;i<offset;i++) {
+    if (out[i]=='!') {
+      escaped[elen++]='!'; escaped[elen++]='.';
+    } else escaped[elen++]=out[i];
+  }
+  escaped[elen++]='!'; escaped[elen++]='!';
+  
+  
+  write_all(serialfd,escaped,elen);
   
   return -1;
 }

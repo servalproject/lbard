@@ -81,8 +81,8 @@ int serial_setup_port(int fd)
 
   tcgetattr(fd, &t);
   // XXX Speed and options should be configurable
-  cfsetispeed(&t, B115200);
-  cfsetospeed(&t, B115200);
+  cfsetispeed(&t, B230400);
+  cfsetospeed(&t, B230400);
   // 8N1
   t.c_cflag &= ~PARENB;
   t.c_cflag &= ~CSTOPB;
