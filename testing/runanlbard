@@ -7,6 +7,7 @@ foreach radio ( /dev/cu.usbserial-* )
  if ( $n == $1 ) then
     set theradio=$radio
  endif
+ @ n = $n + 1
 end
 
 echo ./lbard 127.0.0.1:`cat testing/serval${1}/proc/http_port` lbard:lbard `cat testing/serval${1}/self.sid` $theradio
