@@ -89,8 +89,11 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     } else {
       if (!strcasecmp(peer_records[peer]->partials[i].bid_prefix,bid_prefix))
 	{
-	  fprintf(stderr,"Saw another piece for BID=%s* from SID=%s*\n",
+	  fprintf(stderr,"Saw another piece for BID=%s* from SID=%s: ",
 		  bid_prefix,peer_prefix);
+	  fprintf(stderr,"[%lld..%lld)\n",
+		  piece_offset,piece_offset+piece_bytes);
+
 	  break;
 	}
     }
@@ -167,9 +170,9 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     if ((!(*s))||(segment_end<piece_offset)) {
       // Create a new segment before the current one
 
-      fprintf(stderr,"Inserting piece [%lld..%lld) before [%d..%d)\n",
-	      piece_offset,piece_offset+piece_bytes,
-	      segment_start,segment_end);
+      if (0) fprintf(stderr,"Inserting piece [%lld..%lld) before [%d..%d)\n",
+		     piece_offset,piece_offset+piece_bytes,
+		     segment_start,segment_end);
 
       
       struct segment_list *ns=calloc(sizeof(struct segment_list),1);

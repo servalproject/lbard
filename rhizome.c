@@ -236,9 +236,9 @@ int load_rhizome_db(int timeout,
   result_code=curl_easy_perform(curl);
   fclose(f);
   if(result_code!=CURLE_OK) {
-    curl_easy_cleanup(curl);
-    fprintf(stderr,"curl request failed. URL:%s\n",url);
-    fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
+    curl_easy_cleanup(curl);    
+    // fprintf(stderr,"curl request failed. URL:%s\n",url);
+    // fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
     return -1;
   }
 
@@ -310,6 +310,8 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
      automatically keep trying to send it according to its regular rotation.
    */
 
+  fprintf(stderr,"CHECKPOINT: %s:%d %s()\n",__FILE__,__LINE__,__FUNCTION__);
+  
   char filename[1024];
   snprintf(filename,1024,"%08lx.manifest",time(0));
   fprintf(stderr,">>> Writing manifest to %s\n",filename);
@@ -354,8 +356,8 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
   result_code=curl_easy_perform(curl);
   if(result_code!=CURLE_OK) {
     curl_easy_cleanup(curl);
-    fprintf(stderr,"curl request failed. URL:%s\n",url);
-    fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
+    // fprintf(stderr,"curl request failed. URL:%s\n",url);
+    // fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
     return -1;
   }
 

@@ -336,9 +336,11 @@ int update_my_message(int serialfd,
   // Increment message counter
   message_counter++;
 
-  fprintf(stderr,"This message (hex): ");
-  for(int i=0;i<offset;i++) fprintf(stderr,"%02x",msg_out[i]);
-  fprintf(stderr,"\n");
+  if (0) { 
+    fprintf(stderr,"This message (hex): ");
+    for(int i=0;i<offset;i++) fprintf(stderr,"%02x",msg_out[i]);
+    fprintf(stderr,"\n");
+  }
 
   radio_send_message(serialfd,msg_out,offset);
   

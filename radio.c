@@ -60,8 +60,6 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   unsigned char out[3+FEC_MAX_BYTES+FEC_LENGTH+3];
   int offset=0;
 
-  fprintf(stderr,"CHECKPOINT: %s:%d %s()\n",__FILE__,__LINE__,__FUNCTION__);
-  
   // Encapsulate message in Reed-Solomon wrapper and send.
   unsigned char parity[FEC_LENGTH];
 
@@ -115,6 +113,8 @@ unsigned char radio_rx_buffer[RADIO_RXBUFFER_SIZE];
 
 int radio_receive_bytes(unsigned char *bytes,int count)
 {
+  fprintf(stderr,"CHECKPOINT: %s:%d %s()\n",__FILE__,__LINE__,__FUNCTION__);
+  
   for(int i=0;i<count;i++) {
     bcopy(&radio_rx_buffer[1],&radio_rx_buffer[0],RADIO_RXBUFFER_SIZE-1);
     radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]=bytes[i];
@@ -141,16 +141,11 @@ int radio_receive_bytes(unsigned char *bytes,int count)
     // Now do RS check on packet contents
     unsigned char *body = &radio_rx_buffer[candidate_start_offset+3];
     int rs_error_count = decode_rs_8(body,NULL,0,FEC_MAX_BYTES-length);
-
-    printf("Body is %02X%02X%02X...\n",
-	   body[0],body[1],body[2]);
     
-    printf("Candidate RX packet of %d bytes (%d & %d golay errors, RS says %d).\n",
-	   length,golay_start_errors,golay_end_errors,rs_error_count);
-    
+    fprintf(stderr,"CHECKPOINT: %s:%d %s()\n",__FILE__,__LINE__,__FUNCTION__);
     saw_message(body,length,
 		my_sid_hex,prefix,servald_server,credential);
-
+    
   }
 
   return 0;
