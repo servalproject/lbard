@@ -38,6 +38,23 @@ int decode_rs_8(data_t *data, int *eras_pos, int no_eras, int pad);
 #define FEC_LENGTH 32
 #define FEC_MAX_BYTES 223
 
+extern unsigned char my_sid[32];
+extern char *my_sid_hex;
+extern char *servald_server;
+extern char *credential;
+extern char *prefix;
+
+int radio_read_bytes(int serialfd)
+{
+  unsigned char buf[8192];
+  ssize_t count =
+    read_nonblock(serialfd,buf,8192);
+
+  if (count>0)
+    radio_receive_bytes(buf,count);
+  return count;
+}
+
 int radio_send_message(int serialfd, unsigned char *buffer,int length)
 {
   unsigned char out[3+FEC_MAX_BYTES+FEC_LENGTH+3];
@@ -88,9 +105,6 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   assert( offset <= (3+FEC_MAX_BYTES+FEC_LENGTH+3) );
 
   write_all(serialfd,out,offset);
-
-  // Feed bytes written to reading side for debugging
-  radio_receive_bytes(out,offset);
   
   return -1;
 }
@@ -134,6 +148,8 @@ int radio_receive_bytes(unsigned char *bytes,int count)
     printf("Candidate RX packet of %d bytes (%d & %d golay errors, RS says %d).\n",
 	   length,golay_start_errors,golay_end_errors,rs_error_count);
     
+    saw_message(body,length,
+		my_sid_hex,prefix,servald_server,credential);
 
   }
 
