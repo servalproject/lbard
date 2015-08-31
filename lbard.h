@@ -123,4 +123,5 @@ int update_my_message(int serialfd,
 		      char *servald_server,char *credential);
 size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
 int radio_send_message(int serialfd, unsigned char *msg_out,int offset);
+int radio_receive_bytes(unsigned char *buffer, int bytes);
 ssize_t write_all(int fd, const void *buf, size_t len);
