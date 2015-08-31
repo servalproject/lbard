@@ -47,7 +47,7 @@ unsigned char *cached_manifest=NULL;
 int cached_body_len=0;
 unsigned char *cached_body=NULL;
 
-int prime_bundle_cache(int bundle_number,char *prefix,
+int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
 		       char *servald_server, char *credential)
 {
   if (bundle_number<0) return -1;
@@ -76,7 +76,7 @@ int prime_bundle_cache(int bundle_number,char *prefix,
     snprintf(url,8192,"http://%s/restful/rhizome/%s.rhm",
 	     servald_server,bundles[bundle_number].bid);
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    snprintf(filename,1024,"%smanifest",prefix);
+    snprintf(filename,1024,"%smanifest",sid_prefix_hex);
     unlink(filename);
     FILE *f=fopen(filename,"w");
     if (!f) {
@@ -99,13 +99,14 @@ int prime_bundle_cache(int bundle_number,char *prefix,
     cached_manifest_len=fread(cached_manifest,1,8192,f);
     cached_manifest=realloc(cached_manifest,cached_manifest_len);    
     fclose(f);
+    unlink(filename);
     fprintf(stderr,"  manifest is %d bytes long.\n",cached_manifest_len);
     
     
     snprintf(url,8192,"http://%s/restful/rhizome/%s/raw.bin",
 	     servald_server,bundles[bundle_number].bid);
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    snprintf(filename,1024,"%sraw",prefix);
+    snprintf(filename,1024,"%sraw",sid_prefix_hex);
     unlink(filename);
     f=fopen(filename,"w");
     if (!f) {
@@ -123,12 +124,16 @@ int prime_bundle_cache(int bundle_number,char *prefix,
       return -1;
     }
 
-    // XXX - This transport only allows bundles upto 1MB!
+    // XXX - This transport only allows bundles upto 5MB!
+    // (and that is probably pushing it a bit for a mesh extender with only 32MB RAM
+    // for everything!)
     f=fopen(filename,"r");
-    cached_body=malloc(1024*1024);
-    cached_body_len=fread(cached_body,1,1024*1024,f);
+    cached_body=malloc(5*1024*1024);
+    // XXX - Should check that we read all the bytes
+    cached_body_len=fread(cached_body,1,5*1024*1024,f);
     cached_body=realloc(cached_body,cached_body_len);    
     fclose(f);
+    unlink(filename);
     fprintf(stderr,"  body is %d bytes long.\n",cached_body_len);
 
     bid_of_cached_bundle=strdup(bundles[bundle_number].bid);

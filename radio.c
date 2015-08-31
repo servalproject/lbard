@@ -142,9 +142,11 @@ int radio_receive_bytes(unsigned char *bytes,int count)
     unsigned char *body = &radio_rx_buffer[candidate_start_offset+3];
     int rs_error_count = decode_rs_8(body,NULL,0,FEC_MAX_BYTES-length);
     
-    fprintf(stderr,"CHECKPOINT: %s:%d %s()\n",__FILE__,__LINE__,__FUNCTION__);
-    saw_message(body,length,
-		my_sid_hex,prefix,servald_server,credential);
+    if (rs_error_count>=0&&rs_error_count<8) {
+      fprintf(stderr,"CHECKPOINT: %s:%d %s()\n",__FILE__,__LINE__,__FUNCTION__);
+      saw_message(body,length,
+		  my_sid_hex,prefix,servald_server,credential);
+    }
     
   }
 

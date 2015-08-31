@@ -284,6 +284,7 @@ int load_rhizome_db(int timeout,
 
   //  fprintf(stderr,"Found %d bundles.\n",count);
   fclose(f);
+  unlink(filename);
   
   return 0;
 }
@@ -311,7 +312,8 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
    */
 
   fprintf(stderr,"CHECKPOINT: %s:%d %s()\n",__FILE__,__LINE__,__FUNCTION__);
-  
+
+#ifdef NOT_DEFINED
   char filename[1024];
   snprintf(filename,1024,"%08lx.manifest",time(0));
   fprintf(stderr,">>> Writing manifest to %s\n",filename);
@@ -322,6 +324,7 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
   f=fopen(filename,"w");
   fwrite(body_data,body_length,1,f);
   fclose(f);
+#endif
   
   CURL *curl;
   CURLcode result_code;

@@ -40,6 +40,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "lbard.h"
 
+extern char *my_sid_hex;
 
 int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      long long piece_offset,int piece_bytes,int is_end_piece,
@@ -129,7 +130,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     // This is a bundle that for which we already have a previous version, and
     // for which we as yet have no body segments.  So fetch from Rhizome the content
     // that we do have, and prepopulate the body segment.
-    if (!prime_bundle_cache(bundle_number,prefix,servald_server,credential)) {
+    if (!prime_bundle_cache(bundle_number,my_sid_hex,servald_server,credential)) {
       struct segment_list *s=calloc(sizeof(struct segment_list),1);
       assert(s);
       s->data=malloc(cached_body_len);
