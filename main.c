@@ -85,8 +85,9 @@ int scan_for_incoming_messages()
   We have to keep to single frames, because we will have a number of radios
   potentially transmitting in rapid succession, without a robust collision
   avoidance system.
+ 
 */
-#define LINK_MTU 100
+#define LINK_MTU 200
 // One message per second on RFD900
 // XXX - Randomise, and allow for fractional second delays.
 int message_update_interval=1;
