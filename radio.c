@@ -64,13 +64,13 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   out[offset++]=(len>>8)>>0;
   out[offset++]=(len>>16)>>0;
   
-  // Next comes the RS parity bytes
-  bcopy(parity,&out[offset],FEC_LENGTH);
-  offset+=FEC_LENGTH;
-
   // Then, the packet body
   bcopy(buffer,&out[offset],length);
   offset+=length;
+
+  // Next comes the RS parity bytes
+  bcopy(parity,&out[offset],FEC_LENGTH);
+  offset+=FEC_LENGTH;
 
   // Finally, we encode the length again, so that we can more easily verify
   // that we have a complete and uninterrupted packet.  To avoid ambiguity, we
@@ -124,10 +124,17 @@ int radio_receive_bytes(unsigned char *bytes,int count)
     // Ignore packet if the two length fields do not agree.
     if (start_length!=length) continue;
 
-    printf("Candidate RX packet of %d bytes (%d & %d golay errors).\n",
-	   length,golay_start_errors,golay_end_errors);
-    
     // Now do RS check on packet contents
+    unsigned char *body = &radio_rx_buffer[candidate_start_offset+3];
+    int rs_error_count = decode_rs_8(body,NULL,0,FEC_MAX_BYTES-length);
+
+    printf("Body is %02X%02X%02X...\n",
+	   body[0],body[1],body[2]);
+    
+    printf("Candidate RX packet of %d bytes (%d & %d golay errors, RS says %d).\n",
+	   length,golay_start_errors,golay_end_errors,rs_error_count);
+    
+
   }
 
   return 0;
