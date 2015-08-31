@@ -311,7 +311,7 @@ int update_my_message(int serialfd,
 
   // Announce a bundle, if any are due.
   int bundle_to_announce=find_highest_priority_bundle();
-  fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
+  // fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
   if (bundle_to_announce!=-1)
     announce_bundle_piece(bundle_to_announce,&offset,mtu,msg_out,
 			  prefix,servald_server,credential);
@@ -331,7 +331,7 @@ int update_my_message(int serialfd,
     msg_out[offset++]='B'; // indicates a BAR follows
     append_bar(bundle_bar_counter,&offset,mtu,msg_out);
   }
-  fprintf(stderr,"bundle_bar_counter=%d\n",bundle_bar_counter);
+  // fprintf(stderr,"bundle_bar_counter=%d\n",bundle_bar_counter);
     
   // Increment message counter
   message_counter++;
