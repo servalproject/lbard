@@ -57,11 +57,26 @@ int peer_note_bar(struct peer_state *p,
 		  char *bid_prefix,long long version, char *recipient_prefix)
 {
   int b=-1;
+
+  for(int i=0;i<p->bundle_count;i++)
+    fprintf(stderr,"  bundle #%d/%d: %s* version %lld\n",
+	    i,p->bundle_count,
+	    p&&p->bid_prefixes&&p->bid_prefixes[i]?p->bid_prefixes[i]:"<bad>",
+	    p&&p->versions&&p->versions[i]?p->versions[i]:-1);
+  fprintf(stderr,"  bundle list end.\n");
+  
   // XXX Argh! Another linear search! Replace with something civilised
   for(int i=0;i<p->bundle_count;i++)
-    if (!strcmp(p->bid_prefixes[i],bid_prefix)) { b=i; break; }
+    if (!strcmp(p->bid_prefixes[i],bid_prefix)) {
+      b=i;
+      fprintf(stderr,"Peer %s* has bundle %s* version %lld (we already knew that they have version %lld)\n",
+	      p->sid_prefix,bid_prefix,version,p->versions[b]);
+      break;
+    }
   if (b==-1) {
     // New bundle.
+    fprintf(stderr,"Peer %s* has bundle %s* version %lld, which we haven't seen before\n",
+	    p->sid_prefix,bid_prefix,version);
     if (p->bundle_count>=MAX_PEER_BUNDLES) {
       // BID list too full -- random replacement.
       b=random()%p->bundle_count;
@@ -74,9 +89,10 @@ int peer_note_bar(struct peer_state *p,
       assert(p->bid_prefixes);
       p->versions=realloc(p->versions,sizeof(long long)*p->bundle_count_alloc);
       assert(p->versions);
-      
-      b=p->bundle_count;
     }
+    b=p->bundle_count;
+    fprintf(stderr,"Peer %s* bundle %s* will go in index %d (current count = %d)\n",
+	    p->sid_prefix,bid_prefix,b,p->bundle_count);
     p->bid_prefixes[b]=strdup(bid_prefix);
     if (b>=p->bundle_count) p->bundle_count++;
   }
