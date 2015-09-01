@@ -206,7 +206,7 @@ int load_rhizome_db(int timeout,
   curl=curl_easy_init();
   if (!curl) return -1;
   char url[8192];
-
+  
   // A timeout of zero means forever. Never do this.
   if (!timeout) timeout=1;
   
@@ -222,6 +222,7 @@ int load_rhizome_db(int timeout,
   curl_easy_setopt(curl, CURLOPT_URL, url);
   char filename[1024];
   snprintf(filename,1024,"%sbundle.list",prefix);
+  unlink(filename);
   FILE *f=fopen(filename,"w");
   if (!f) {
     curl_easy_cleanup(curl);
@@ -235,12 +236,13 @@ int load_rhizome_db(int timeout,
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
   result_code=curl_easy_perform(curl);
   fclose(f);
-  if(result_code!=CURLE_OK) {
-    curl_easy_cleanup(curl);    
-    // fprintf(stderr,"curl request failed. URL:%s\n",url);
-    // fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
-    return -1;
-  }
+  if (0)
+    if(result_code!=CURLE_OK) {
+      curl_easy_cleanup(curl);    
+      fprintf(stderr,"curl request failed. URL:%s\n",url);
+      fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
+      return -1;
+    }
 
   curl_easy_cleanup(curl);
   // fprintf(stderr,"Read bundle list.\n");
@@ -282,7 +284,7 @@ int load_rhizome_db(int timeout,
     line[0]=0; fgets(line,8192,f);
   }
 
-  //  fprintf(stderr,"Found %d bundles.\n",count);
+  fprintf(stderr,"Rhizome contains %d new bundles (token = %s). We now know about %d bundles.\n",count,*token,bundle_count);
   fclose(f);
   unlink(filename);
   
@@ -447,4 +449,3 @@ int merge_segments(struct segment_list **s)
   }
   return 0;
 }
-
