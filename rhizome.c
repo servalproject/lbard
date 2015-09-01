@@ -113,36 +113,79 @@ int register_bundle(char *service,
   return 0;
 }
 
+int peer_has_this_bundle_or_newer(int peer,char *bid_or_bidprefix, long long version)
+{
+  // XXX - Another horrible linear search!
+  // XXX - Bundle lists need to be stored in a hash table or similar.
+  for(int bundle=0;bundle<peer_records[peer]->bundle_count;bundle++)
+    {
+      // Check version first, because it is faster.
+      if (version<=peer_records[peer]->versions[bundle])
+	if (!strncasecmp(bid_or_bidprefix,peer_records[peer]->bid_prefixes[bundle],
+			 strlen(peer_records[peer]->bid_prefixes[bundle])))
+	  return 1;
+    }
+  
+  return 0;
+}
+
+int bundle_bar_counter=0;
+int find_highest_priority_bar()
+{
+  int bar_number;
+  for(bar_number=0;bar_number<bundle_count;bar_number++) 
+    if (bundles[bar_number].announce_bar_now) {
+      bundles[bar_number].announce_bar_now=0;
+      return bar_number;
+    }
+  
+  bundle_bar_counter++;
+  if (bundle_bar_counter>=bundle_count) bundle_bar_counter=0;
+  return bundle_bar_counter;
+}
+
 int find_highest_priority_bundle()
 {
+  long long this_bundle_priority=0;
+  long long highest_bundle_priority=0;
   int i;
-  int highest_bundle_priority=-1;
   int highest_priority_bundle=-1;
+  int highest_priority_bundle_peers_dont_have_it=0;
 
-  int this_bundle_priority;
   for(i=0;i<bundle_count;i++) {
 
     this_bundle_priority=0;
 
     // Bigger values in this list means that factor is more important in selecting
     // which bundle to announce next.
-#define BUNDLE_PRIORITY_SENT_LESS_RECENTLY   0x00000080
-#define BUNDLE_PRIORITY_FILE_SIZE_SMALLER    0x00000100
-#define BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER  0x00000200
-#define BUNDLE_PRIORITY_IS_MESHMS            0x00000400
-#define BUNDLE_PRIORITY_ANNOUNCE_NOW         0x40000000
+#define BUNDLE_PRIORITY_SENT_LESS_RECENTLY    0x00000080
+#define BUNDLE_PRIORITY_FILE_SIZE_SMALLER     0x00000100
+#define BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER   0x00000200
+#define BUNDLE_PRIORITY_IS_MESHMS             0x00000400
+#define BUNDLE_PRIORITY_LESS_PEERS_HAVE_IT    0x00010000
+#define BUNDLE_PRIORITY_TRANSMIT_NOW          0x40000000
 
-    if (bundles[i].announce_now) {
-      this_bundle_priority|=BUNDLE_PRIORITY_ANNOUNCE_NOW;
-      bundles[i].announce_now=0;
+    if (bundles[i].transmit_now) {
+      this_bundle_priority|=BUNDLE_PRIORITY_TRANSMIT_NOW;
+      bundles[i].transmit_now=0;
     }
+
+    long long time_delta=0;
     
     if (highest_priority_bundle>=0) {
-      if (bundles[i].last_announced_time
-	  <bundles[highest_priority_bundle].last_announced_time)
-	this_bundle_priority|=BUNDLE_PRIORITY_SENT_LESS_RECENTLY;
+      time_delta=bundles[highest_priority_bundle].last_announced_time
+	-bundles[i].last_announced_time;
+      
       if (bundles[i].length<bundles[highest_priority_bundle].length)
 	this_bundle_priority|=BUNDLE_PRIORITY_FILE_SIZE_SMALLER;
+    } 
+
+    if (time_delta>0) {
+      // XXX Consider having the time delta influence the priority in a
+      // smoother way, so that very large files will still get sent from time
+      // to time.
+      
+      this_bundle_priority|=BUNDLE_PRIORITY_SENT_LESS_RECENTLY;
     }
 
     if ((!strcasecmp("MeshMS1",bundles[i].service))
@@ -184,14 +227,41 @@ int find_highest_priority_bundle()
       }
     }
 
-    // Indicate this bundle as highes priority, unless we have found another one that
+    int num_peers_that_dont_have_it=0;
+    for(int peer=0;peer<peer_count;peer++) {
+      if (!peer_has_this_bundle_or_newer(peer,
+					 bundles[i].bid,
+					 bundles[i].version))
+	num_peers_that_dont_have_it++;
+    }
+    // Don't bother sending anything out if all of our peers already have it.
+    if (num_peers_that_dont_have_it==0) this_bundle_priority=0;
+    if (num_peers_that_dont_have_it>highest_priority_bundle_peers_dont_have_it)
+      this_bundle_priority|=BUNDLE_PRIORITY_LESS_PEERS_HAVE_IT;
+
+
+    if (0)
+      fprintf(stderr,"  bundle %s was last announced %ld seconds ago.  "
+	      "Priority = 0x%llx, %d peers don't have it.\n",
+	      bundles[i].bid,time(0)-bundles[i].last_announced_time,
+	      this_bundle_priority,num_peers_that_dont_have_it);
+
+    // Indicate this bundle as highest priority, unless we have found another one that
     // is higher priority.
     // Replace if priority is equal, so that newer bundles take priorty over older
     // ones.
-    if (this_bundle_priority>=highest_priority_bundle) {
-      highest_bundle_priority=this_bundle_priority;
-      highest_priority_bundle=i;
+    {
+      if ((i==0)||(this_bundle_priority>highest_bundle_priority)) {
+	if (0) fprintf(stderr,"  bundle %d is higher priority than bundle %d\n",
+		       i,highest_priority_bundle);
+	highest_bundle_priority=this_bundle_priority;
+	highest_priority_bundle=i;
+	highest_priority_bundle_peers_dont_have_it=num_peers_that_dont_have_it;
+      }
     }
+
+
+    
   }
   
   return highest_priority_bundle;

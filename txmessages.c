@@ -40,8 +40,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "lbard.h"
 
-int bundle_bar_counter=0;
-
 int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
 {
   // BAR consists of:
@@ -306,11 +304,10 @@ int update_my_message(int serialfd,
   int offset=8;
   
   // Put one or more BARs
-  bundle_bar_counter++;
-  if (bundle_bar_counter>=bundle_count) bundle_bar_counter=0;
+  int bar_number=find_highest_priority_bar();
   if (bundle_count&&((mtu-offset)>=BAR_LENGTH)) {
     msg_out[offset++]='B'; // indicates a BAR follows
-    append_bar(bundle_bar_counter,&offset,mtu,msg_out);
+    append_bar(bar_number,&offset,mtu,msg_out);
   }
 
   // Announce a bundle, if any are due.
@@ -330,10 +327,9 @@ int update_my_message(int serialfd,
 
   // Fill up spare space with BARs
   while (bundle_count&&(mtu-offset)>=BAR_LENGTH) {
-    bundle_bar_counter++;
-    if (bundle_bar_counter>=bundle_count) bundle_bar_counter=0;
+    int bundle_number=find_highest_priority_bar();
     msg_out[offset++]='B'; // indicates a BAR follows
-    append_bar(bundle_bar_counter,&offset,mtu,msg_out);
+    append_bar(bundle_number,&offset,mtu,msg_out);
   }
   // fprintf(stderr,"bundle_bar_counter=%d\n",bundle_bar_counter);
     

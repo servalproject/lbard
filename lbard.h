@@ -51,7 +51,8 @@ struct bundle_record {
   long long version;
   char *author;
   int originated_here_p;
-  int announce_now;
+  int transmit_now;
+  int announce_bar_now;
   long long length;
   char *filehash;
   char *sender;
@@ -109,6 +110,7 @@ int prime_bundle_cache(int bundle_number,char *prefix,
 		       char *servald_server, char *credential);
 int hex_byte_value(char *hexstring);
 int find_highest_priority_bundle();
+int find_highest_priority_bar();
 int find_peer_by_prefix(char *peer_prefix);
 int clear_partial(struct partial_bundle *p);
 int dump_partial(struct partial_bundle *p);
@@ -127,3 +129,4 @@ int radio_receive_bytes(unsigned char *buffer, int bytes);
 ssize_t write_all(int fd, const void *buf, size_t len);
 int radio_read_bytes(int serialfd);
 ssize_t read_nonblock(int fd, void *buf, size_t len);
+

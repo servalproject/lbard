@@ -69,7 +69,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       if (version<=bundles[i].version) {
 	// We have this version already: mark it for announcement to sender,
 	// and then return immediately.
-	bundles[i].announce_now=1;
+	bundles[i].announce_bar_now=1;
 	fprintf(stderr,"We already have %s* version %lld - ignoring piece.\n",
 		bid_prefix,version);
 	return 0;
