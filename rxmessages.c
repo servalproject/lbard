@@ -352,8 +352,8 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       snprintf(recipient_prefix,4*2+1,"%02x%02x%02x%02x",
 	       msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3]);
       offset+=4;
-      fprintf(stderr,"Saw BAR: BID=%s*:v=%lld:->%s\n",
-	      bid_prefix,version,recipient_prefix);
+      fprintf(stderr,"Saw a BAR from %s*: %s* version %lld (we know of %d bundles held by that peer)\n",
+	      p->sid_prefix,bid_prefix,version,p->bundle_count);
       peer_note_bar(p,bid_prefix,version,recipient_prefix);
 
       break;
