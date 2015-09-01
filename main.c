@@ -143,7 +143,7 @@ int main(int argc, char **argv)
     unsigned char msg_out[LINK_MTU];
 
     if ((time(0)-last_message_update_time)>=message_update_interval) {
-      fprintf(stderr,"Updating my message...\n");
+      // fprintf(stderr,"Updating my message...\n");
       scan_for_incoming_messages();
       radio_read_bytes(serialfd);
       update_my_message(serialfd,

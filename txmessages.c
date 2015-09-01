@@ -62,9 +62,6 @@ int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
 int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *msg,
 			  char *prefix,char *servald_server, char *credential)
 {
-  fprintf(stderr,"Preparing to announce a piece of bundle #%d\n",
-	  bundle_number);
-
   if (prime_bundle_cache(bundle_number,
 			 prefix,servald_server,credential)) return -1;
 
@@ -211,6 +208,13 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   bcopy(p,&msg[(*offset)],actual_bytes);
   (*offset)+=actual_bytes;
 
+  fprintf(stderr,"Announcing ");
+  for(int i=0;i<8;i++) fprintf(stderr,"%c",bundles[bundle_number].bid[i]);
+  fprintf(stderr,"* version %lld %s segment [%d,%d)\n",
+	  bundles[bundle_number].version,
+	  is_manifest?"manifest":"payload",
+	  start_offset,start_offset+actual_bytes);
+  
   // Update offset announced
   if (is_manifest) {
     bundles[bundle_number].last_manifest_offset_announced+=actual_bytes;

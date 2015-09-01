@@ -126,8 +126,6 @@ unsigned char radio_rx_buffer[RADIO_RXBUFFER_SIZE];
 
 int radio_receive_bytes(unsigned char *bytes,int count)
 {
-  fprintf(stderr,"CHECKPOINT: %s:%d %s()\n",__FILE__,__LINE__,__FUNCTION__);
-  
   for(int i=0;i<count;i++) {
     bcopy(&radio_rx_buffer[1],&radio_rx_buffer[0],RADIO_RXBUFFER_SIZE-1);
     radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]=bytes[i];
@@ -156,7 +154,9 @@ int radio_receive_bytes(unsigned char *bytes,int count)
     int rs_error_count = decode_rs_8(body,NULL,0,FEC_MAX_BYTES-length);
     
     if (rs_error_count>=0&&rs_error_count<8) {
-      fprintf(stderr,"CHECKPOINT: %s:%d %s()\n",__FILE__,__LINE__,__FUNCTION__);
+      fprintf(stderr,"CHECKPOINT: %s:%d %s() error counts = %d,%d,%d\n",
+	      __FILE__,__LINE__,__FUNCTION__,
+	      golay_end_errors,rs_error_count,golay_start_errors);
       saw_message(body,length,
 		  my_sid_hex,prefix,servald_server,credential);
     }

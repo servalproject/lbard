@@ -51,7 +51,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
   int peer=find_peer_by_prefix(peer_prefix);
   if (peer<0) return -1;
 
-  fprintf(stderr,"Saw a bundle piece from SID=%s*\n",peer_prefix);
+  // fprintf(stderr,"Saw a bundle piece from SID=%s*\n",peer_prefix);
 
   int bundle_number=-1;
   
@@ -67,8 +67,12 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       fprintf(stderr,"We have version %lld of BID=%s*.  %s is offering us version %lld\n",
 	      bundles[i].version,bid_prefix,peer_prefix,version);
       if (version<=bundles[i].version) {
-	// We have this version already
+	// We have this version already: mark it for announcement to sender,
+	// and then return immediately.
 	bundles[i].announce_now=1;
+	fprintf(stderr,"We already have %s* version %lld - ignoring piece.\n",
+		bid_prefix,version);
+	return 0;
       } else {
 	// We have an older version.
 	// Remember the bundle number so that we can pre-fetch the body we have
@@ -211,10 +215,12 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      ||((segment_end>=piece_start)&&(segment_end<=piece_end))
 	      );      
 
-      fprintf(stderr,"Before extending segment with [%d..%d):\n",
-	      piece_start,piece_end);
-      dump_partial(&peer_records[peer]->partials[i]);
-      
+      fprintf(stderr,"Received %s",bid_prefix);
+      fprintf(stderr,"* version %lld %s segment [%d,%d)\n",
+	      version,
+	      is_manifest_piece?"manifest":"payload",
+	      piece_start,piece_start+piece_bytes);
+            
       if (piece_start<segment_start) {
 	// Need to stick bytes on the start
 	int extra_bytes=segment_start-piece_start;
@@ -245,8 +251,6 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
   merge_segments(&peer_records[peer]->partials[i].manifest_segments);
   merge_segments(&peer_records[peer]->partials[i].body_segments);
   
-  dump_partial(&peer_records[peer]->partials[i]);
-
   // Check if we have the whole bundle now
   if (peer_records[peer]->partials[i].manifest_segments
       &&peer_records[peer]->partials[i].body_segments
