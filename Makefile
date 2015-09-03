@@ -15,4 +15,3 @@ lbard:	$(SRCS) $(HDRS)
 
 echotest:	Makefile echotest.c
 	cc -g -Wall -o echotest echotest.c
-
