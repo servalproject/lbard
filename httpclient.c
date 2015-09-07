@@ -148,5 +148,5 @@ int http_get_simple(char *server_and_port, char *auth_token,
   
   close(sock);
   
-  return -1;
+  return http_response;
 }
