@@ -294,7 +294,7 @@ int load_rhizome_db(int timeout,
   }
 
   int result_code=http_get_simple(servald_server,
-			      credential,path,f,timeout);
+			      credential,path,f,timeout*1000);
   
   fclose(f);
   if(result_code!=200) {
