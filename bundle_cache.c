@@ -34,7 +34,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <strings.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <curl/curl.h>
 #include <dirent.h>
 #include <assert.h>
 
@@ -62,35 +61,24 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     }
 
     // Load bundle into cache
-    char url[8192];
+    char path[8192];
     char filename[1024];
-    CURL *curl;
-    CURLcode result_code;
-    curl=curl_easy_init();
-    if (!curl) return -1;
-    curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-    curl_easy_setopt(curl, CURLOPT_USERPWD, credential);  
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 5000);
+    
+    snprintf(path,8192,"/restful/rhizome/%s.rhm",
+	     bundles[bundle_number].bid);
 
-    snprintf(url,8192,"http://%s/restful/rhizome/%s.rhm",
-	     servald_server,bundles[bundle_number].bid);
-    curl_easy_setopt(curl, CURLOPT_URL, url);
     snprintf(filename,1024,"%smanifest",sid_prefix_hex);
     unlink(filename);
     FILE *f=fopen(filename,"w");
     if (!f) {
-      curl_easy_cleanup(curl);
       fprintf(stderr,"could not open output file.\n");
       return -1;
     }
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
-    result_code=curl_easy_perform(curl);
+    int result_code=http_get_simple(servald_server,
+				    credential,path,f,5000);
     fclose(f);
-    if(result_code!=CURLE_OK) {
-      curl_easy_cleanup(curl);
-      fprintf(stderr,"curl request failed. URL:%s\n",url);
-      fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
+    if(result_code!=200) {
+      fprintf(stderr,"http request failed (%d). URLPATH:%s\n",result_code,path);
       return -1;
     }
 
@@ -103,24 +91,20 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     fprintf(stderr,"  manifest is %d bytes long.\n",cached_manifest_len);
     
     
-    snprintf(url,8192,"http://%s/restful/rhizome/%s/raw.bin",
-	     servald_server,bundles[bundle_number].bid);
-    curl_easy_setopt(curl, CURLOPT_URL, url);
+    snprintf(path,8192,"/restful/rhizome/%s/raw.bin",
+	     bundles[bundle_number].bid);
     snprintf(filename,1024,"%sraw",sid_prefix_hex);
     unlink(filename);
     f=fopen(filename,"w");
     if (!f) {
-      curl_easy_cleanup(curl);
       fprintf(stderr,"could not open output file.\n");
       return -1;
     }
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
-    result_code=curl_easy_perform(curl);
+    result_code=http_get_simple(servald_server,
+				credential,path,f,5000);
     fclose(f);
-    if(result_code!=CURLE_OK) {
-      curl_easy_cleanup(curl);
-      fprintf(stderr,"curl request failed. URL:%s\n",url);
-      fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
+    if(result_code!=200) {
+      fprintf(stderr,"http request failed (%d). URLPATH:%s\n",result_code,path);
       return -1;
     }
 
