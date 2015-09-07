@@ -118,15 +118,22 @@ int http_get_simple(char *server_and_port, char *auth_token,
   int http_response=-1;
   char line[1024];
   int len=0;
+  int empty_count=0;
   set_nonblock(sock);
   int r;
   while(len<1024) {
     r=read_nonblock(sock,&line[len],1);
     if (r==1) {
-      if ((line[len]=='\r')||(line[len]=='\r')) {
+      if ((line[len]=='\n')||(line[len]=='\r')) {
+	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;
-	printf("Line of response: %s\n",line);
+	if (len) printf("Line of response: %s\n",line);
+	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
+	  // got http response
+	}
 	len=0;
+	// Have we found end of headers?
+	if (empty_count==3) break;
       } else len++;
     } else usleep(1000);
     if (time(0)>timeout_time) {
@@ -135,6 +142,9 @@ int http_get_simple(char *server_and_port, char *auth_token,
       return -1;
     }
   }
+
+  // Got headers, read body and write to file
+  printf("  reading body...\n");
   
   close(sock);
   
