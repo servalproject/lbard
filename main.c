@@ -135,10 +135,15 @@ int main(int argc, char **argv)
   if (argc>2) credential=argv[2];
   if (argc>1) servald_server=argv[1];
 
+  long long next_rhizome_db_load_time=0;
   while(1) {
-    if (argc>2) load_rhizome_db(message_update_interval
-				-(time(0)-last_message_update_time),
-				prefix, servald_server,credential,&token);
+    if (argc>2)
+      if (next_rhizome_db_load_time<=gettime_ms()) {
+	load_rhizome_db(message_update_interval
+			-(time(0)-last_message_update_time),
+			prefix, servald_server,credential,&token);
+	next_rhizome_db_load_time=gettime_ms()+3000;
+      }
 
     unsigned char msg_out[LINK_MTU];
 

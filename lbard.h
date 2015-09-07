@@ -132,3 +132,4 @@ ssize_t read_nonblock(int fd, void *buf, size_t len);
 
 int http_get_simple(char *server_and_port, char *auth_token,
 		    char *path, FILE *outfile, int timeout_ms);
+long long gettime_ms();
