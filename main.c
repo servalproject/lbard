@@ -34,7 +34,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <strings.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <curl/curl.h>
 #include <dirent.h>
 #include <assert.h>
 #include <fcntl.h>
