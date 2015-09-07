@@ -271,11 +271,7 @@ int load_rhizome_db(int timeout,
 		    char *prefix, char *servald_server,
 		    char *credential, char **token)
 {
-  CURL *curl;
-  CURLcode result_code;
-  curl=curl_easy_init();
-  if (!curl) return -1;
-  char url[8192];
+  char path[8192];
   
   // A timeout of zero means forever. Never do this.
   if (!timeout) timeout=1;
@@ -283,38 +279,29 @@ int load_rhizome_db(int timeout,
   // We use the new-since-time version once we have a token
   // to make this much faster.
   if (!*token)
-    snprintf(url,8192,"http://%s/restful/rhizome/bundlelist.json",
-	     servald_server);
+    snprintf(path,8192,"/restful/rhizome/bundlelist.json");
   else
-    snprintf(url,8192,"http://%s/restful/rhizome/newsince/%s/bundlelist.json",
-	     servald_server,*token);
+    snprintf(path,8192,"/restful/rhizome/newsince/%s/bundlelist.json",
+	     *token);
     
-  curl_easy_setopt(curl, CURLOPT_URL, url);
   char filename[1024];
   snprintf(filename,1024,"%sbundle.list",prefix);
   unlink(filename);
   FILE *f=fopen(filename,"w");
   if (!f) {
-    curl_easy_cleanup(curl);
     fprintf(stderr,"could not open output file.\n");
     return -1;
   }
-  curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-  curl_easy_setopt(curl, CURLOPT_USERPWD, credential);  
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, timeout*1000);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, f);
-  result_code=curl_easy_perform(curl);
-  fclose(f);
-  if (0)
-    if(result_code!=CURLE_OK) {
-      curl_easy_cleanup(curl);    
-      fprintf(stderr,"curl request failed. URL:%s\n",url);
-      fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
-      return -1;
-    }
 
-  curl_easy_cleanup(curl);
+  int result_code=http_get_simple(servald_server,
+			      credential,path,f,timeout);
+  
+  fclose(f);
+  if(result_code!=200) {
+    fprintf(stderr,"rhizome HTTP API request failed. URLPATH:%s\n",path);
+    return -1;
+  }
+
   // fprintf(stderr,"Read bundle list.\n");
 
   // Now read database into memory.
