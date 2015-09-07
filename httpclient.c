@@ -101,7 +101,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
   // Build request
   snprintf(request,1024,
 	   "GET %s HTTP/1.1\n"
-	   "Authorisation: Basic %s\n"
+	   "Authorization: Basic %s\n"
 	   "Host: %s:%d\n"
 	   "Accept: */*\n"
 	   "\n",
