@@ -128,6 +128,11 @@ int http_get_simple(char *server_and_port, char *auth_token,
 	printf("Line of response: %s\n",line);
 	len=0;
       } else len++;
+    } else usleep(1000);
+    if (time(0)>timeout_time) {
+      // If still in header, just quit on timeout
+      close(sock);
+      return -1;
     }
   }
   
