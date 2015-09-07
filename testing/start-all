@@ -4,10 +4,7 @@ if ( -e testing ) then
   cd testing
 endif
 
-set n=1
-foreach radio ( /dev/cu.usbserial-* )
- echo "Radio $n is $radio"
-
+foreach n ( 1 2 3 4 )
  # Start relevant servald instance if required
  cd serval$n
  setenv SERVALINSTANCE_PATH `pwd`
@@ -20,6 +17,4 @@ foreach radio ( /dev/cu.usbserial-* )
  ~/g/serval-dna/servald rhizome add file `cat self.sid` file$n
 
  cd ..
-
- @ n = $n + 1
 end 
