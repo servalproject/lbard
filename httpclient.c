@@ -105,14 +105,14 @@ int http_get_simple(char *server_and_port, char *auth_token,
   if (strlen(auth_token)>500) return -1;
   if (strlen(path)>500) return -1;
   
-  char request[1024];
+  char request[2048];
   char authdigest[1024];
   int zero=0;
   
   base64_append(authdigest,&zero,(unsigned char *)auth_token,strlen(auth_token));
 
   // Build request
-  snprintf(request,1024,
+  snprintf(request,2048,
 	   "GET %s HTTP/1.1\n"
 	   "Authorization: Basic %s\n"
 	   "Host: %s:%d\n"
