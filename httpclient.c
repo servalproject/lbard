@@ -40,12 +40,12 @@ int connect_to_port(char *host,int port)
 int num_to_char(int n)
 {
   assert(n>=0); assert(n<64);
-  if (n<10) return '0'+n;
-  if (n<36) return 'a'+(n-10);
-  if (n<62) return 'A'+(n-36);
+  if (n<26) return 'A'+(n-0);
+  if (n<52) return 'a'+(n-26);
+  if (n<62) return '0'+(n-52);
   switch(n) {
-  case 62: return '='; 
-  case 63: return '+';
+  case 62: return '+'; 
+  case 63: return '/';
   default: return -1;
   }
 }
@@ -59,19 +59,19 @@ int base64_append(char *out,int *out_offset,unsigned char *bytes,int count)
     b[0]=bytes[i];
     if ((i+2)>=count) { b[2]=0; n=3; } else b[2]=bytes[i+2];
     if ((i+1)>=count) { b[1]=0; n=2; } else b[1]=bytes[i+1];
-    out[(*out_offset)++] = num_to_char(b[0]&0x3f);
-    out[(*out_offset)++] = num_to_char( ((b[0]&0xc0)>>6) | ((b[1]&0x0f)<<2) );
+    out[(*out_offset)++] = num_to_char((b[0]&0xfc)>>2);
+    out[(*out_offset)++] = num_to_char( ((b[0]&0x03)<<4) | ((b[1]&0xf0)>>4) );
     if (n==2) {
       out[(*out_offset)++] = '=';
       out[(*out_offset)++] = '=';
       return 0;
     }
-    out[(*out_offset)++] = num_to_char( ((b[1]&0xf0)>>4) | ((b[2]&0x03)<<4) );
+    out[(*out_offset)++] = num_to_char( ((b[1]&0x0f)<<2) | ((b[2]&0xc0)>>6) );
     if (n==3) {
       out[(*out_offset)++] = '=';
       return 0;
     }
-    out[(*out_offset)++] = num_to_char((b[2]&0xfc)>>2);
+    out[(*out_offset)++] = num_to_char((b[2]&0x3f)>>0);
   }
   return 0;
 }
