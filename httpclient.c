@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <netdb.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include "serial.h"
 
@@ -75,10 +76,22 @@ int base64_append(char *out,int *out_offset,unsigned char *bytes,int count)
   }
   return 0;
 }
-  
+
+// From os.c in serval-dna
+long long gettime_ms()
+{
+  struct timeval nowtv;
+  // If gettimeofday() fails or returns an invalid value, all else is lost!
+  if (gettimeofday(&nowtv, NULL) == -1)
+    return -1;
+  if (nowtv.tv_sec < 0 || nowtv.tv_usec < 0 || nowtv.tv_usec >= 1000000)
+    return -1;
+  return nowtv.tv_sec * 1000LL + nowtv.tv_usec / 1000;
+}
+
 
 int http_get_simple(char *server_and_port, char *auth_token,
-		    char *path, FILE *outfile, int timeout)
+		    char *path, FILE *outfile, int timeout_ms)
 {
   // Send simple HTTP request to server, and write result into outfile.
 
@@ -86,8 +99,8 @@ int http_get_simple(char *server_and_port, char *auth_token,
   int server_port=-1;
 
   if (sscanf(server_and_port,"%[^:]:%d",server_name,&server_port)!=2) return -1;
-  
-  int timeout_time=time(0)+timeout;
+
+  long long timeout_time=gettime_ms()+timeout_ms;
   
   if (strlen(auth_token)>500) return -1;
   if (strlen(path)>500) return -1;
@@ -136,7 +149,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
 	if (empty_count==3) break;
       } else len++;
     } else usleep(1000);
-    if (time(0)>timeout_time) {
+    if (gettime_ms()>timeout_time) {
       // If still in header, just quit on timeout
       close(sock);
       return -1;
