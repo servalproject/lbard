@@ -28,7 +28,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include <stdio.h>
-#include <time.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <strings.h>
@@ -89,8 +88,8 @@ int scan_for_incoming_messages()
 #define LINK_MTU 200
 // One message per second on RFD900
 // XXX - Randomise, and allow for fractional second delays.
-int message_update_interval=1;
-time_t last_message_update_time=0;
+int message_update_interval=1000;  // ms
+long long last_message_update_time=0;
 
 int main(int argc, char **argv)
 {
@@ -99,6 +98,8 @@ int main(int argc, char **argv)
     exit(-1);
   }
 
+  last_message_update_time=0;
+  
   int serialfd=-1;
   char *serial_port = argv[4];
   serialfd = open(serial_port,O_RDWR);
@@ -138,15 +139,17 @@ int main(int argc, char **argv)
   while(1) {
     if (argc>2)
       if (next_rhizome_db_load_time<=gettime_ms()) {
-	load_rhizome_db(message_update_interval
-			-(time(0)-last_message_update_time),
+	long long load_timeout=message_update_interval
+	  -(gettime_ms()-last_message_update_time);
+	if (load_timeout<100) load_timeout=100;
+	load_rhizome_db(load_timeout,
 			prefix, servald_server,credential,&token);
 	next_rhizome_db_load_time=gettime_ms()+3000;
       }
 
     unsigned char msg_out[LINK_MTU];
 
-    if ((time(0)-last_message_update_time)>=message_update_interval) {
+    if ((gettime_ms()-last_message_update_time)>=message_update_interval) {
       // fprintf(stderr,"Updating my message...\n");
       scan_for_incoming_messages();
       radio_read_bytes(serialfd);
@@ -156,7 +159,7 @@ int main(int argc, char **argv)
 			servald_server,credential);
       // sending the bytes is now handled in txmessages.c and radio.c
       //      write_all(serialfd,msg_out,LINK_MTU);
-      last_message_update_time=time(0);
+      last_message_update_time=gettime_ms();
     }
 
     usleep(100000);
