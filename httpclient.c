@@ -178,3 +178,122 @@ int http_get_simple(char *server_and_port, char *auth_token,
   
   return http_response;
 }
+
+int http_post_bundle(char *server_and_port, char *auth_token,
+		     char *path,
+		     unsigned char *manifest_data, int manifest_length,
+		     unsigned char *body_data, int body_length,
+		    int timeout_ms)
+{
+
+  char server_name[1024];
+  int server_port=-1;
+
+  if (sscanf(server_and_port,"%[^:]:%d",server_name,&server_port)!=2) return -1;
+
+  long long timeout_time=gettime_ms()+timeout_ms;
+  
+  if (strlen(auth_token)>500) return -1;
+  if (strlen(path)>500) return -1;
+  
+  char request[2048];
+  char authdigest[1024];
+  int zero=0;
+
+  bzero(authdigest,1024);
+  base64_append(authdigest,&zero,(unsigned char *)auth_token,strlen(auth_token));
+
+  // Generate random content dividor token
+  unsigned long long unique;
+  unique=random(); unique=unique<<32; unique|=random();
+
+  
+  char *manifest_header=
+    "Content-Disposition: form-data; name=\"manifest\"\n"
+    "Content-Type: rhizome/manifest\n"
+    "\n";
+  char *body_header=
+    "Content-Disposition: form-data; name=\"payload\"\n"
+    "Content-Type: binary/data\n"
+    "\n";
+
+  char boundary_string[1024];
+  snprintf(boundary_string,1024,"------------------------%016llx",unique);
+  int boundary_len=strlen(boundary_string);
+
+  // Calculate content length
+  int content_length=0
+    +boundary_len
+    +strlen(manifest_header)
+    +manifest_length
+    +2+boundary_len
+    +1
+    +strlen(manifest_header)
+    +body_length
+    +2+boundary_len+2;    
+  
+  // Build request
+  snprintf(request,2048,
+	   "POST %s HTTP/1.1\n"
+	   "Authorization: Basic %s\n"
+	   "Host: %s:%d\n"
+	   "Content-Length: %10d\n"
+	   "Accept: */*\n"
+	   "Content-Type: multipart/form-data; boundary=%s\n"
+	   "\n",
+	   path,
+	   authdigest,
+	   server_name,server_port,
+	   content_length,
+	   boundary_string);
+
+  int sock=connect_to_port(server_name,server_port);
+  if (sock<0) return -1;
+
+  // Write request
+  write_all(sock,request,strlen(request));
+  // Now write the other bits and pieces
+  write_all(sock,boundary_string,boundary_len);
+  write_all(sock,"\n",1);
+  write_all(sock,manifest_header,strlen(manifest_header));
+  write_all(sock,manifest_data,manifest_length);
+  write_all(sock,"\n\n",2);
+  write_all(sock,boundary_string,boundary_len);
+  write_all(sock,"\n",1);
+  write_all(sock,body_header,strlen(body_header));
+  write_all(sock,body_data,body_length);
+  write_all(sock,"\n\n",2);
+  write_all(sock,boundary_string,boundary_len);
+  write_all(sock,"--\n",3);
+
+  // Read reply, streaming output to file after we have skipped the header
+  int http_response=-1;
+  char line[1024];
+  int len=0;
+  int empty_count=0;
+  set_nonblock(sock);
+  int r;
+  while(len<1024) {
+    r=read_nonblock(sock,&line[len],1);
+    if (r==1) {
+      if ((line[len]=='\n')||(line[len]=='\r')) {
+	if (len) empty_count=0; else empty_count++;
+	line[len+1]=0;
+	if (len) printf("Line of response: %s\n",line);
+	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
+	  // got http response
+	}
+	len=0;
+	// Have we found end of headers?
+	if (empty_count==3) break;
+      } else len++;
+    } else usleep(1000);
+    if (gettime_ms()>timeout_time) {
+      // If still in header, just quit on timeout
+      close(sock);
+      return -1;
+    }
+  }
+  return http_response;
+  
+}
