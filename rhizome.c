@@ -357,7 +357,6 @@ int hex_byte_value(char *hexstring)
   return strtoll(hex,NULL,16);
 }
 
-
 int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 			  unsigned char *body_data,int body_length,
 			  char *servald_server,char *credential)
@@ -385,45 +384,20 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
   fclose(f);
 #endif
   
-  CURL *curl;
-  CURLcode result_code;
-  curl=curl_easy_init();
-
-  struct curl_httppost* post = NULL;
-  struct curl_httppost* last = NULL;
-  
-  curl_formadd(&post, &last, CURLFORM_COPYNAME, "manifest",
-               CURLFORM_PTRCONTENTS, manifest_data,
-               CURLFORM_CONTENTSLENGTH, (long)manifest_length,
-               CURLFORM_CONTENTTYPE, "rhizome/manifest",
-	       CURLFORM_END);
-  curl_formadd(&post, &last, CURLFORM_COPYNAME, "payload",
-               CURLFORM_PTRCONTENTS, body_data,
-               CURLFORM_CONTENTSLENGTH, (long)body_length,
-               CURLFORM_CONTENTTYPE, "binary/data", CURLFORM_END);
-
-  char url[8192];
-  snprintf(url,8192,"http://%s/rhizome/import",servald_server);
-    
-  curl_easy_setopt(curl, CURLOPT_URL, url);
-  curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-  curl_easy_setopt(curl, CURLOPT_USERPWD, credential);  
-  // 2 minute timeout, since inserting a big file can take a long time
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 120000);
-  curl_easy_setopt(curl, CURLOPT_HTTPPOST, post);
-
   fprintf(stderr,"Submitting rhizome bundle: manifest len=%d, body len=%d\n",
 	  manifest_length,body_length);
+
+  int result_code=http_post_bundle(servald_server,credential,
+				   "/rhizome/import",
+				   manifest_data,manifest_length,
+				   body_data,body_length,
+				   15000);
   
-  result_code=curl_easy_perform(curl);
-  if(result_code!=CURLE_OK) {
-    curl_easy_cleanup(curl);
-    // fprintf(stderr,"curl request failed. URL:%s\n",url);
-    // fprintf(stderr,"libcurl: %s\n",curl_easy_strerror(result_code));
+  if(result_code!=200) {
+    fprintf(stderr,"POST bundle to rhizome failed: http result = %d\n",result_code);
+    
     return -1;
   }
-
-  curl_easy_cleanup(curl);
   
   return 0;
 }
