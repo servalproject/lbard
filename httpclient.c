@@ -206,16 +206,15 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   // Generate random content dividor token
   unsigned long long unique;
   unique=random(); unique=unique<<32; unique|=random();
-
   
   char *manifest_header=
-    "Content-Disposition: form-data; name=\"manifest\"\n"
-    "Content-Type: rhizome/manifest\n"
-    "\n";
+    "Content-Disposition: form-data; name=\"manifest\"\r\n"
+    "Content-Type: rhizome/manifest\r\n"
+    "\r\n";
   char *body_header=
-    "Content-Disposition: form-data; name=\"payload\"\n"
-    "Content-Type: binary/data\n"
-    "\n";
+    "Content-Disposition: form-data; name=\"payload\"\r\n"
+    "Content-Type: binary/data\r\n"
+    "\r\n";
 
   char boundary_string[1024];
   snprintf(boundary_string,1024,"------------------------%016llx",unique);
@@ -223,24 +222,23 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 
   // Calculate content length
   int content_length=0
-    +boundary_len
-    +strlen(manifest_header)
-    +manifest_length
     +2+boundary_len
-    +1
     +strlen(manifest_header)
-    +body_length
+    +manifest_length+2
+    +2+boundary_len
+    +strlen(manifest_header)
+    +body_length+2
     +2+boundary_len+2;    
   
   // Build request
   snprintf(request,2048,
-	   "POST %s HTTP/1.1\n"
-	   "Authorization: Basic %s\n"
-	   "Host: %s:%d\n"
-	   "Content-Length: %10d\n"
-	   "Accept: */*\n"
-	   "Content-Type: multipart/form-data; boundary=%s\n"
-	   "\n",
+	   "POST %s HTTP/1.1\r\n"
+	   "Authorization: Basic %s\r\n"
+	   "Host: %s:%d\r\n"
+	   "Content-Length: %d\r\n"
+	   "Accept: */*\r\n"
+	   "Content-Type: multipart/form-data; boundary=%s\r\n"
+	   "\r\n",
 	   path,
 	   authdigest,
 	   server_name,server_port,
@@ -253,18 +251,19 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   // Write request
   write_all(sock,request,strlen(request));
   // Now write the other bits and pieces
+  write_all(sock,"--",2);
   write_all(sock,boundary_string,boundary_len);
-  write_all(sock,"\n",1);
+  write_all(sock,"\r\n",2);
   write_all(sock,manifest_header,strlen(manifest_header));
   write_all(sock,manifest_data,manifest_length);
-  write_all(sock,"\n\n",2);
+  write_all(sock,"\r\n--",4);
   write_all(sock,boundary_string,boundary_len);
-  write_all(sock,"\n",1);
+  write_all(sock,"\r\n",2);
   write_all(sock,body_header,strlen(body_header));
   write_all(sock,body_data,body_length);
-  write_all(sock,"\n\n",2);
+  write_all(sock,"\r\n--",4);
   write_all(sock,boundary_string,boundary_len);
-  write_all(sock,"--\n",3);
+  write_all(sock,"--\r\n",4);
 
   // Read reply, streaming output to file after we have skipped the header
   int http_response=-1;
