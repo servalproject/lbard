@@ -32,6 +32,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <unistd.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <string.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <dirent.h>
@@ -116,7 +117,8 @@ int peer_has_this_bundle_or_newer(int peer,char *bid_or_bidprefix, long long ver
 {
   // XXX - Another horrible linear search!
   // XXX - Bundle lists need to be stored in a hash table or similar.
-  for(int bundle=0;bundle<peer_records[peer]->bundle_count;bundle++)
+  int bundle;
+  for(bundle=0;bundle<peer_records[peer]->bundle_count;bundle++)
     {
       // Check version first, because it is faster.
       if (version<=peer_records[peer]->versions[bundle])
@@ -227,7 +229,8 @@ int find_highest_priority_bundle()
     }
 
     int num_peers_that_dont_have_it=0;
-    for(int peer=0;peer<peer_count;peer++) {
+    int peer;
+    for(peer=0;peer<peer_count;peer++) {
       if (!peer_has_this_bundle_or_newer(peer,
 					 bundles[i].bid,
 					 bundles[i].version))

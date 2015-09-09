@@ -107,7 +107,8 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
 
   unsigned char escaped[offset*2+2];
   int elen=0;
-  for(int i=0;i<offset;i++) {
+  int i;
+  for(i=0;i<offset;i++) {
     if (out[i]=='!') {
       escaped[elen++]='!'; escaped[elen++]='.';
     } else escaped[elen++]=out[i];
@@ -126,7 +127,8 @@ unsigned char radio_rx_buffer[RADIO_RXBUFFER_SIZE];
 
 int radio_receive_bytes(unsigned char *bytes,int count)
 {
-  for(int i=0;i<count;i++) {
+  int i;
+  for(i=0;i<count;i++) {
     bcopy(&radio_rx_buffer[1],&radio_rx_buffer[0],RADIO_RXBUFFER_SIZE-1);
     radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]=bytes[i];
 

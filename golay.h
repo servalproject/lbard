@@ -20,6 +20,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef __SERVAL_DNA__GOLAY_H
 #define __SERVAL_DNA__GOLAY_H
 
+#include <stdint.h>
+
 int golay_encode(uint8_t *data);
 int golay_decode(int *errs, uint8_t *data);
 
