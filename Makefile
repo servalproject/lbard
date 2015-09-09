@@ -8,10 +8,10 @@ SRCS=	main.c rhizome.c txmessages.c rxmessages.c bundle_cache.c json.c peers.c \
 	fec-3.0.1/decode_rs_8.c \
 
 HDRS=	lbard.h serial.h Makefile
-
+CC=gcc
 
 lbard:	$(SRCS) $(HDRS)
-	cc -g -std=gnu99 -Wall -o lbard $(SRCS)
+	$(CC) -g -std=gnu99 -Wall -o lbard $(SRCS)
 
 echotest:	Makefile echotest.c
-	cc -g -std=gnu99 -Wall -o echotest echotest.c
+	$(CC) -g -std=gnu99 -Wall -o echotest echotest.c
