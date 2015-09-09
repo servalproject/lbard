@@ -140,7 +140,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
       if ((line[len]=='\n')||(line[len]=='\r')) {
 	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;
-	if (len) printf("Line of response: %s\n",line);
+	// if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
 	}
@@ -157,13 +157,13 @@ int http_get_simple(char *server_and_port, char *auth_token,
   }
 
   // Got headers, read body and write to file
-  printf("  reading body...\n");
+  // printf("  reading body...\n");
 
   r=0;
   while(r>-1) {
     r=read_nonblock(sock,line,1024);
     if (r>0) {
-      printf("read %d body bytes.\n",r);
+      // printf("read %d body bytes.\n",r);
       fwrite(line,r,1,outfile);
     } else usleep(1000);
 
@@ -278,7 +278,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
       if ((line[len]=='\n')||(line[len]=='\r')) {
 	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;
-	if (len) printf("Line of response: %s\n",line);
+	// if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
 	}
