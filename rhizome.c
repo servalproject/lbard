@@ -392,7 +392,7 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 				   body_data,body_length,
 				   15000);
   
-  if(result_code!=200) {
+  if(result_code<200|| result_code>202) {
     fprintf(stderr,"POST bundle to rhizome failed: http result = %d\n",result_code);
     
     return -1;
