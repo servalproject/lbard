@@ -11,7 +11,7 @@ HDRS=	lbard.h serial.h Makefile
 
 
 lbard:	$(SRCS) $(HDRS)
-	cc -g -std=c99 -Wall -o lbard $(SRCS)
+	cc -g -std=gnu99 -Wall -o lbard $(SRCS)
 
 echotest:	Makefile echotest.c
-	cc -g -std=c99 -Wall -o echotest echotest.c
+	cc -g -std=gnu99 -Wall -o echotest echotest.c
