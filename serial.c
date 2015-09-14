@@ -99,11 +99,11 @@ int serial_setup_port(int fd)
    No 8th-bit stripping or parity error handling.
    Disable START/STOP output flow control. */
   
-  // Enable CTS/RTS flow control (for now)
+  // Disable CTS/RTS flow control
 #ifndef CNEW_RTSCTS
-  t.c_cflag |= CRTSCTS;
+  t.c_cflag &= ~CRTSCTS;
 #else
-  t.c_cflag |= CNEW_RTSCTS;
+  t.c_cflag &= ~CNEW_RTSCTS;
 #endif
 
   // no output processing
