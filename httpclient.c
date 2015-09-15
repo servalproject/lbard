@@ -234,43 +234,46 @@ int http_post_bundle(char *server_and_port, char *auth_token,
     +2+boundary_len+2;    
   
   // Build request
-  snprintf(request,8192,
-	   "POST %s HTTP/1.1\r\n"
-	   "Authorization: Basic %s\r\n"
-	   "Host: %s:%d\r\n"
-	   "Content-Length: %d\r\n"
-	   "Accept: */*\r\n"
-	   "Content-Type: multipart/form-data; boundary=%s\r\n"
-	   "\r\n"
-	   "--%s\r\n"
-	   "%s"
-	   "%s\r\n"
-	   "--%s\r\n"
-	   "%s",
-	   path,
-	   authdigest,
-	   server_name,server_port,
-	   content_length,
-	   boundary_string,
-	   boundary_string,
-	   manifest_header,
-	   manifest_data,
-	   boundary_string,
-	   body_header);
-  int total_len=strlen(request);
+  int total_len = snprintf(request,8192,
+			   "POST %s HTTP/1.1\r\n"
+			   "Authorization: Basic %s\r\n"
+			   "Host: %s:%d\r\n"
+			   "Content-Length: %d\r\n"
+			   "Accept: */*\r\n"
+			   "Content-Type: multipart/form-data; boundary=%s\r\n"
+			   "\r\n"
+			   "--%s\r\n"
+			   "%s",
+			   path,
+			   authdigest,
+			   server_name,server_port,
+			   content_length,
+			   boundary_string,
+			   boundary_string,
+			   manifest_header);
+  bcopy(manifest_data,&request[total_len],manifest_length);
+  total_len=total_len+body_length;
+  total_len+=snprintf(&request[total_len],8192+body_length-total_len,  
+			   "\r\n"
+			   "--%s\r\n"
+			   "%s",
+			   boundary_string,
+			   body_header);
   bcopy(body_data,&request[total_len],body_length);
   total_len=total_len+body_length;
-  snprintf(request,8192+body_length-total_len,
+  total_len+=snprintf(&request[total_len],8192+body_length-total_len,
 	   "\r\n"
 	   "--%s--\r\n",
 	   boundary_string);	   
-  total_len+=strlen(&request[total_len]);
+
+  fprintf(stderr,"Bundle post request is %d bytes long:\n%s\n",
+	  total_len,request);
   
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
 
   // Write request
-  write_all(sock,request,strlen(request));
+  write_all(sock,request,total_len);
 
   // Read reply, streaming output to file after we have skipped the header
   int http_response=-1;
