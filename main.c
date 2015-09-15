@@ -87,9 +87,10 @@ int scan_for_incoming_messages()
  
 */
 #define LINK_MTU 200
-// One message per second on RFD900
-// XXX - Randomise, and allow for fractional second delays.
-int message_update_interval=1000;  // ms
+// About one message per second on RFD900
+// We add random()%250 ms to this, so we deduct half of that from the base
+// interval, so that on average we obtain one message per second.
+int message_update_interval=1000-(250/2);  // ms
 long long last_message_update_time=0;
 
 int main(int argc, char **argv)
@@ -158,9 +159,9 @@ int main(int argc, char **argv)
 			my_sid,
 			LINK_MTU,msg_out,
 			servald_server,credential);
-      // sending the bytes is now handled in txmessages.c and radio.c
-      //      write_all(serialfd,msg_out,LINK_MTU);
-      last_message_update_time=gettime_ms();
+
+      // Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
+      last_message_update_time=gettime_ms()+(random()%250);
     }
 
     usleep(100000);
