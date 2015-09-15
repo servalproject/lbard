@@ -58,19 +58,21 @@ int peer_note_bar(struct peer_state *p,
 {
   int b=-1;
 
-  for(int i=0;i<p->bundle_count;i++)
-    fprintf(stderr,"  bundle #%d/%d: %s* version %lld\n",
-	    i,p->bundle_count,
-	    p&&p->bid_prefixes&&p->bid_prefixes[i]?p->bid_prefixes[i]:"<bad>",
-	    p&&p->versions&&p->versions[i]?p->versions[i]:-1);
-  fprintf(stderr,"  bundle list end.\n");
+  if (0) {
+    for(int i=0;i<p->bundle_count;i++)
+      fprintf(stderr,"  bundle #%d/%d: %s* version %lld\n",
+	      i,p->bundle_count,
+	      p&&p->bid_prefixes&&p->bid_prefixes[i]?p->bid_prefixes[i]:"<bad>",
+	      p&&p->versions&&p->versions[i]?p->versions[i]:-1);
+    fprintf(stderr,"  bundle list end.\n");
+  }
   
   // XXX Argh! Another linear search! Replace with something civilised
   for(int i=0;i<p->bundle_count;i++)
     if (!strcmp(p->bid_prefixes[i],bid_prefix)) {
       b=i;
-      fprintf(stderr,"Peer %s* has bundle %s* version %lld (we already knew that they have version %lld)\n",
-	      p->sid_prefix,bid_prefix,version,p->versions[b]);
+      if (0) fprintf(stderr,"Peer %s* has bundle %s* version %lld (we already knew that they have version %lld)\n",
+		     p->sid_prefix,bid_prefix,version,p->versions[b]);
       break;
     }
   if (b==-1) {
