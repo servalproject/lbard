@@ -136,13 +136,6 @@ unsigned char radio_rx_buffer[RADIO_RXBUFFER_SIZE];
 int radio_receive_bytes(unsigned char *bytes,int count)
 {
   int i;
-  fprintf(stderr,"Received %d bytes from the radio.\n",count);
-  // for(i=0;i<count;i++)
-  // {
-  // fprintf(stderr," %02x",bytes[i]);
-  // if ((i&0x1f)==0x1f) fprintf(stderr,"\n");
-  // }
-  // if (count&0x1f) fprintf(stderr,"\n");
   
   for(i=0;i<count;i++) {
     bcopy(&radio_rx_buffer[1],&radio_rx_buffer[0],RADIO_RXBUFFER_SIZE-1);
@@ -169,17 +162,15 @@ int radio_receive_bytes(unsigned char *bytes,int count)
     
     // Ignore packet if the two length fields do not agree.
     if (start_length!=length) continue;
-
-    fprintf(stderr,"  Found putative packet of %d bytes\n",length);
     
     // Now do RS check on packet contents
     unsigned char *body = &radio_rx_buffer[candidate_start_offset+3];
     int rs_error_count = decode_rs_8(body,NULL,0,FEC_MAX_BYTES-length);
     
     if (rs_error_count>=0&&rs_error_count<8) {
-      fprintf(stderr,"CHECKPOINT: %s:%d %s() error counts = %d,%d,%d\n",
+      fprintf(stderr,"CHECKPOINT: %s:%d %s() error counts = %d,%d,%d for packet of %d bytes.\n",
 	      __FILE__,__LINE__,__FUNCTION__,
-	      golay_end_errors,rs_error_count,golay_start_errors);
+	      golay_end_errors,rs_error_count,golay_start_errors,length);
       saw_message(body,length,
 		  my_sid_hex,prefix,servald_server,credential);
     }
