@@ -189,6 +189,9 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   char server_name[1024];
   int server_port=-1;
 
+  // Limit bundle size to 5MB via this transport, to limit memory consumption.
+  if (body_length>(5*1024*1024)) return -1;
+  
   if (sscanf(server_and_port,"%[^:]:%d",server_name,&server_port)!=2) return -1;
 
   long long timeout_time=gettime_ms()+timeout_ms;
@@ -196,7 +199,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   if (strlen(auth_token)>500) return -1;
   if (strlen(path)>500) return -1;
   
-  char request[8192];
+  char request[8192+body_length];
   char authdigest[1024];
   int zero=0;
 
@@ -254,17 +257,20 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 	   manifest_data,
 	   boundary_string,
 	   body_header);
-
+  int total_len=strlen(request);
+  bcopy(body_data,&request[total_len],body_length);
+  total_len=total_len+body_length;
+  snprintf(request,8192+body_length-total_len,
+	   "\r\n"
+	   "--%s--\r\n",
+	   boundary_string);	   
+  total_len+=strlen(&request[total_len]);
+  
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
 
   // Write request
   write_all(sock,request,strlen(request));
-  // Now write the other bits and pieces
-  write_all(sock,body_data,body_length);
-  write_all(sock,"\r\n--",4);
-  write_all(sock,boundary_string,boundary_len);
-  write_all(sock,"--\r\n",4);
 
   // Read reply, streaming output to file after we have skipped the header
   int http_response=-1;
@@ -279,7 +285,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
       if ((line[len]=='\n')||(line[len]=='\r')) {
 	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;
-	// if (len) printf("Line of response: %s\n",line);
+	if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
 	}
