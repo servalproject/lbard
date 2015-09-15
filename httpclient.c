@@ -196,7 +196,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   if (strlen(auth_token)>500) return -1;
   if (strlen(path)>500) return -1;
   
-  char request[2048];
+  char request[8192];
   char authdigest[1024];
   int zero=0;
 
@@ -231,7 +231,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
     +2+boundary_len+2;    
   
   // Build request
-  snprintf(request,2048,
+  snprintf(request,8192,
 	   "POST %s HTTP/1.1\r\n"
 	   "Authorization: Basic %s\r\n"
 	   "Host: %s:%d\r\n"
@@ -239,13 +239,21 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 	   "Accept: */*\r\n"
 	   "Content-Type: multipart/form-data; boundary=%s\r\n"
 	   "\r\n"
-	   "--%s\r\n",
+	   "--%s\r\n"
+	   "%s"
+	   "%s\r\n"
+	   "--%s\r\n"
+	   "%s",
 	   path,
 	   authdigest,
 	   server_name,server_port,
 	   content_length,
 	   boundary_string,
-	   boundary_string);
+	   boundary_string,
+	   manifest_header,
+	   manifest_data,
+	   boundary_string,
+	   body_header);
 
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
@@ -253,12 +261,6 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   // Write request
   write_all(sock,request,strlen(request));
   // Now write the other bits and pieces
-  write_all(sock,manifest_header,strlen(manifest_header));
-  write_all(sock,manifest_data,manifest_length);
-  write_all(sock,"\r\n--",4);
-  write_all(sock,boundary_string,boundary_len);
-  write_all(sock,"\r\n",2);
-  write_all(sock,body_header,strlen(body_header));
   write_all(sock,body_data,body_length);
   write_all(sock,"\r\n--",4);
   write_all(sock,boundary_string,boundary_len);
