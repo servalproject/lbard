@@ -210,14 +210,19 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   unsigned long long unique;
   unique=random(); unique=unique<<32; unique|=random();
   
-  char *manifest_header=
-    "Content-Disposition: form-data; name=\"manifest\"\r\n"
-    "Content-Type: rhizome/manifest\r\n"
-    "\r\n";
-  char *body_header=
-    "Content-Disposition: form-data; name=\"payload\"\r\n"
-    "Content-Type: binary/data\r\n"
-    "\r\n";
+  char manifest_header[1024];
+  snprintf(manifest_header,1024,
+	   "Content-Disposition: form-data; name=\"manifest\"\r\n"
+	   "Content-Length: %d\r\n"
+	   "Content-Type: rhizome/manifest\r\n"
+	   "\r\n", manifest_length);
+  char body_header[1024];
+  snprintf(body_header,1024,
+	   "Content-Disposition: form-data; name=\"data\"\r\n"
+	   "Content-Length: %d\r\n"
+	   "Content-Type: binary/data\r\n"
+	   "\r\n",
+	   body_length);
 
   char boundary_string[1024];
   snprintf(boundary_string,1024,"------------------------%016llx",unique);
@@ -229,7 +234,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
     +strlen(manifest_header)
     +manifest_length+2
     +2+boundary_len
-    +strlen(manifest_header)
+    +strlen(body_header)
     +body_length+2
     +2+boundary_len+2;    
   
@@ -252,6 +257,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 			   boundary_string,
 			   manifest_header);
   bcopy(manifest_data,&request[total_len],manifest_length);
+  
   total_len=total_len+manifest_length;
   total_len+=snprintf(&request[total_len],8192+body_length-total_len,  
 			   "\r\n"
@@ -266,9 +272,6 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 	   "--%s--\r\n",
 	   boundary_string);	   
 
-  fprintf(stderr,"Bundle post request is %d bytes long:\n%s\n",
-	  total_len,request);
-  
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
 
