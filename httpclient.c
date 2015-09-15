@@ -218,7 +218,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 	   "\r\n", manifest_length);
   char body_header[1024];
   snprintf(body_header,1024,
-	   "Content-Disposition: form-data; name=\"data\"\r\n"
+	   "Content-Disposition: form-data; name=\"payload\"\r\n"
 	   "Content-Length: %d\r\n"
 	   "Content-Type: binary/data\r\n"
 	   "\r\n",
