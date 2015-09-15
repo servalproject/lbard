@@ -74,10 +74,15 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
 
   // Golay encode length for safety
   int len=length;
-  golay_encode((unsigned char *)&len);
-  out[offset++]=(len>>0)>>0;
-  out[offset++]=(len>>8)>>0;
-  out[offset++]=(len>>16)>>0;
+  unsigned char golay_len[3];
+
+  golay_len[0]=(len&0xff)>>0;
+  golay_len[1]=(len>>8)&0x0f;
+  golay_len[2]=0;
+  golay_encode(golay_len);
+  out[offset++]=golay_len[0];
+  out[offset++]=golay_len[1];
+  out[offset++]=golay_len[2];
   
   // Then, the packet body
   bcopy(buffer,&out[offset],length);
@@ -95,10 +100,13 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   // multiply the length by 13 and add (FEC_MAX_BYTES+1).  This will give a result
   // in the range 224 - 3123 bytes.
   len=(length*13)+FEC_MAX_BYTES+1;
-  golay_encode((unsigned char *)&len);
-  out[offset++]=(len>>0)>>0;
-  out[offset++]=(len>>8)>>0;
-  out[offset++]=(len>>16)>>0;  
+  golay_len[0]=(len&0xff)>>0;
+  golay_len[1]=(len>>8)&0x0f;
+  golay_len[2]=0;
+  golay_encode(golay_len);
+  out[offset++]=golay_len[0];
+  out[offset++]=golay_len[1];
+  out[offset++]=golay_len[2];
 
   assert( offset <= (3+FEC_MAX_BYTES+FEC_LENGTH+3) );
 
@@ -128,6 +136,14 @@ unsigned char radio_rx_buffer[RADIO_RXBUFFER_SIZE];
 int radio_receive_bytes(unsigned char *bytes,int count)
 {
   int i;
+  fprintf(stderr,"Received %d bytes from the radio.\n",count);
+  // for(i=0;i<count;i++)
+  // {
+  // fprintf(stderr," %02x",bytes[i]);
+  // if ((i&0x1f)==0x1f) fprintf(stderr,"\n");
+  // }
+  // if (count&0x1f) fprintf(stderr,"\n");
+  
   for(i=0;i<count;i++) {
     bcopy(&radio_rx_buffer[1],&radio_rx_buffer[0],RADIO_RXBUFFER_SIZE-1);
     radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]=bytes[i];
@@ -135,7 +151,7 @@ int radio_receive_bytes(unsigned char *bytes,int count)
     // Decode end of packet length field
     int golay_end_errors;
     int end_length=golay_decode(&golay_end_errors,&radio_rx_buffer[RADIO_RXBUFFER_SIZE-3])-(FEC_MAX_BYTES+1);
-
+    
     // Ignore packet if it does not satisfy !((n-FEC_MAX_BYTES-1)%13)
     if (end_length%13) continue;
     // Get actual length of packet
@@ -147,10 +163,15 @@ int radio_receive_bytes(unsigned char *bytes,int count)
     int start_length=golay_decode(&golay_start_errors,
 				  &radio_rx_buffer[candidate_start_offset]);
 
+
+    // fprintf(stderr,"  This isn't a packet of %d bytes (start_length=%d)\n",
+    // length,start_length);
     
     // Ignore packet if the two length fields do not agree.
     if (start_length!=length) continue;
 
+    fprintf(stderr,"  Found putative packet of %d bytes\n",length);
+    
     // Now do RS check on packet contents
     unsigned char *body = &radio_rx_buffer[candidate_start_offset+3];
     int rs_error_count = decode_rs_8(body,NULL,0,FEC_MAX_BYTES-length);
