@@ -252,7 +252,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 			   boundary_string,
 			   manifest_header);
   bcopy(manifest_data,&request[total_len],manifest_length);
-  total_len=total_len+body_length;
+  total_len=total_len+manifest_length;
   total_len+=snprintf(&request[total_len],8192+body_length-total_len,  
 			   "\r\n"
 			   "--%s\r\n"
