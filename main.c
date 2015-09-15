@@ -159,7 +159,6 @@ int main(int argc, char **argv)
     unsigned char msg_out[LINK_MTU];
 
     if ((gettime_ms()-last_message_update_time)>=message_update_interval) {
-      fprintf(stderr,"Updating my message...\n");
       scan_for_incoming_messages();
       radio_read_bytes(serialfd);
       update_my_message(serialfd,
@@ -169,8 +168,6 @@ int main(int argc, char **argv)
 
       // Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
       last_message_update_time=gettime_ms()+(random()%250);
-      fprintf(stderr,"  next update in %lld ms\n",
-	      (gettime_ms()-last_message_update_time)-message_update_interval);
     }
 
     usleep(10000);
