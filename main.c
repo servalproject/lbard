@@ -143,6 +143,13 @@ int main(int argc, char **argv)
       if (next_rhizome_db_load_time<=gettime_ms()) {
 	long long load_timeout=message_update_interval
 	  -(gettime_ms()-last_message_update_time);
+
+	// Don't wait around forever for rhizome -- we want to receive inbound
+	// messages within a reasonable timeframe to prevent input buffer overflow,
+	// and peers wasting time sending bundles that we already know about, and that
+	// we can inform them about.
+	if (load_timeout>500) load_timeout=500;
+	
 	if (load_timeout<100) load_timeout=100;
 	load_rhizome_db(load_timeout,
 			prefix, servald_server,credential,&token);
@@ -152,7 +159,7 @@ int main(int argc, char **argv)
     unsigned char msg_out[LINK_MTU];
 
     if ((gettime_ms()-last_message_update_time)>=message_update_interval) {
-      // fprintf(stderr,"Updating my message...\n");
+      fprintf(stderr,"Updating my message...\n");
       scan_for_incoming_messages();
       radio_read_bytes(serialfd);
       update_my_message(serialfd,
@@ -162,9 +169,11 @@ int main(int argc, char **argv)
 
       // Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
       last_message_update_time=gettime_ms()+(random()%250);
+      fprintf(stderr,"  next update in %lld ms\n",
+	      (gettime_ms()-last_message_update_time)-message_update_interval);
     }
 
-    usleep(100000);
+    usleep(10000);
 
     
   }
