@@ -55,6 +55,67 @@ int radio_read_bytes(int serialfd)
   return count;
 }
 
+/* 
+   On the MR3020 hardware, there is a 3-position slider switch.
+   If the switch is in the centre position, then we enable high
+   power output.
+
+   WARNING: You will need a spectrum license to be able to operate
+   in high-power mode, because the CSMA RFD900a firmware is normally
+   only legal at an EIRP of 3dBm or less, which allowing for a +3dB
+   antanna means that 1dBm is the highest TX power that is realistically
+   safe.
+
+   Because of the above, we require that /dos/hipower.en exist on the file
+   system as well as the switch being in the correct position.  The Mesh
+   Extender default image does not include the /dos/hipower.en file, and it
+   must be added manually to enable hi-power mode.
+ */
+unsigned char hipower_en=0;
+unsigned char hipower_switch_set=0;
+long long hi_power_timeout=3000; // 3 seconds between checks
+long long next_check_time=0;
+int radio_set_tx_power(int serialfd)
+{
+  char *safety_file="/dos/hipower.en";
+  char *gpio_file="/sys/kernel/debug/gpio";
+  char *gpio_string="gpio-18  (sw1                 ) in  lo";
+
+  if (next_check_time<gettime_ms()) {
+    hipower_en=0;
+    hipower_switch_set=0;
+    next_check_time=gettime_ms()+hi_power_timeout;
+
+    FILE *f=fopen(safety_file,"r");
+    if (f) {
+      hipower_en=1;
+      fclose(f);
+    }
+    f=fopen(gpio_file,"r");
+    if (f) {
+      char line[1024];
+      line[0]=0; fgets(line,2014,f);
+      while(line[0]) {
+	if (!strncmp(gpio_string,line,strlen(gpio_string)))
+	  hipower_switch_set=1;
+	
+	line[0]=0; fgets(line,2014,f);
+      }
+      fclose(f);
+    }
+  }
+
+  if (hipower_switch_set&&hipower_en) {
+    fprintf(stderr,"Setting radio to hipower -- you need a special spectrum license to do this!\n");
+    write_all(serialfd,"!H",2);
+  } else {
+    fprintf(stderr,"Setting radio to lowpower mode -- probably ok under Australian LIPD class license, but you should check.\n");
+    write_all(serialfd,"!L",2);
+  }
+
+  return 0;
+}
+
 int radio_send_message(int serialfd, unsigned char *buffer,int length)
 {
   unsigned char out[3+FEC_MAX_BYTES+FEC_LENGTH+3];
@@ -123,6 +184,7 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   }
   escaped[elen++]='!'; escaped[elen++]='!';
   
+  radio_set_tx_power(serialfd);
   
   write_all(serialfd,escaped,elen);
   
