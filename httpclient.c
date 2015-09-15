@@ -238,11 +238,13 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 	   "Content-Length: %d\r\n"
 	   "Accept: */*\r\n"
 	   "Content-Type: multipart/form-data; boundary=%s\r\n"
-	   "\r\n",
+	   "\r\n"
+	   "--%s\r\n",
 	   path,
 	   authdigest,
 	   server_name,server_port,
 	   content_length,
+	   boundary_string,
 	   boundary_string);
 
   int sock=connect_to_port(server_name,server_port);
@@ -251,9 +253,6 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   // Write request
   write_all(sock,request,strlen(request));
   // Now write the other bits and pieces
-  write_all(sock,"--",2);
-  write_all(sock,boundary_string,boundary_len);
-  write_all(sock,"\r\n",2);
   write_all(sock,manifest_header,strlen(manifest_header));
   write_all(sock,manifest_data,manifest_length);
   write_all(sock,"\r\n--",4);
