@@ -79,7 +79,7 @@ int radio_set_tx_power(int serialfd)
 {
   char *safety_file="/dos/hipower.en";
   char *gpio_file="/sys/kernel/debug/gpio";
-  char *gpio_string="gpio-18  (sw1                 ) in  lo";
+  char *gpio_string=" gpio-18  (sw1                 ) in  lo";
 
   if (next_check_time<gettime_ms()) {
     hipower_en=0;
