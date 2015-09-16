@@ -109,7 +109,8 @@ int radio_set_tx_power(int serialfd)
     fprintf(stderr,"Setting radio to hipower -- you need a special spectrum license to do this!\n");
     write_all(serialfd,"!H",2);
   } else {
-    fprintf(stderr,"Setting radio to lowpower mode -- probably ok under Australian LIPD class license, but you should check.\n");
+    fprintf(stderr,"Setting radio to lowpower mode (flags %d:%d) -- probably ok under Australian LIPD class license, but you should check.\n",
+	    hipower_switch_set,hipower_en);
     write_all(serialfd,"!L",2);
   }
 
