@@ -80,6 +80,16 @@ int serial_setup_port(int fd)
   struct termios t;
 
   tcgetattr(fd, &t);
+
+  fprintf(stderr,"Before serial port setup: t.c_cflag&CTSRTS=0x%lx\n",
+#ifndef CNEW_RTSCTS
+	  t.c_cflag & CRTSCTS
+#else
+	  t.c_cflag & CNEW_RTSCTS
+#endif
+	  );
+	  
+  
   // XXX Speed and options should be configurable
   cfsetispeed(&t, B230400);
   cfsetospeed(&t, B230400);
@@ -110,8 +120,18 @@ int serial_setup_port(int fd)
   t.c_oflag &= ~OPOST;
 
   tcsetattr(fd, TCSANOW, &t);
-    
+  
   set_nonblock(fd);
+
+    tcgetattr(fd, &t);
+
+  fprintf(stderr,"After serial port setup: t.c_cflag&CTSRTS=0x%lx\n",
+#ifndef CNEW_RTSCTS
+	  t.c_cflag & CRTSCTS
+#else
+	  t.c_cflag & CNEW_RTSCTS
+#endif
+	  );
 
   return 0;
 }
