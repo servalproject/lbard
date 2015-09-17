@@ -109,6 +109,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
   char authdigest[1024];
   int zero=0;
   
+  bzero(authdigest,1024);
   base64_append(authdigest,&zero,(unsigned char *)auth_token,strlen(auth_token));
 
   // Build request
