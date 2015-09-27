@@ -44,14 +44,14 @@ extern char *servald_server;
 extern char *credential;
 extern char *prefix;
 
-int radio_read_bytes(int serialfd)
+int radio_read_bytes(int serialfd,int monitor_mode)
 {
   unsigned char buf[8192];
   ssize_t count =
     read_nonblock(serialfd,buf,8192);
 
   if (count>0)
-    radio_receive_bytes(buf,count);
+    radio_receive_bytes(buf,count,monitor_mode);
   return count;
 }
 
@@ -109,8 +109,8 @@ int radio_set_tx_power(int serialfd)
     fprintf(stderr,"Setting radio to hipower -- you need a special spectrum license to do this!\n");
     write_all(serialfd,"!H",2);
   } else {
-    fprintf(stderr,"Setting radio to lowpower mode (flags %d:%d) -- probably ok under Australian LIPD class license, but you should check.\n",
-	    hipower_switch_set,hipower_en);
+    if (0) fprintf(stderr,"Setting radio to lowpower mode (flags %d:%d) -- probably ok under Australian LIPD class license, but you should check.\n",
+		   hipower_switch_set,hipower_en);
     write_all(serialfd,"!L",2);
   }
 
@@ -196,14 +196,50 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
 #define RADIO_RXBUFFER_SIZE 1000
 unsigned char radio_rx_buffer[RADIO_RXBUFFER_SIZE];
 
-int radio_receive_bytes(unsigned char *bytes,int count)
+int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 {
-  int i;
+  int i,j;
+
+  if (monitor_mode) {
+    fprintf(stderr,"Read %d bytes from radio:\n",count);
+    for(i=0;i<count;i+=32) {
+      for(j=0;j<32;j++) {
+	if (i+j<count) fprintf(stderr," %02x",bytes[i+j]);
+      }
+      for(;j<32;j++) fprintf(stderr,"   ");
+      fprintf(stderr,"  ");
+      for(j=0;j<32;j++) {
+	if (i+j<count) {
+	  if (bytes[i+j]>=' '&&bytes[i+j]<0x7e)
+	    fprintf(stderr," %c",bytes[i+j]);
+	  else fprintf(stderr,".");
+	}
+      }
+      fprintf(stderr,"\n");
+    }
+  }
   
   for(i=0;i<count;i++) {
     bcopy(&radio_rx_buffer[1],&radio_rx_buffer[0],RADIO_RXBUFFER_SIZE-1);
     radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]=bytes[i];
 
+    if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0x55)
+	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0x55)
+	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xaa))
+      {
+	// Found RFD900 CSMA envelope
+	int last_rx_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-7];
+	int average_remote_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-6];
+	int radio_temperature=radio_rx_buffer[RADIO_RXBUFFER_SIZE-5];
+	int packet_len=radio_rx_buffer[RADIO_RXBUFFER_SIZE-4];
+	int buffer_space=radio_rx_buffer[RADIO_RXBUFFER_SIZE-3];
+	buffer_space+=radio_rx_buffer[RADIO_RXBUFFER_SIZE-2]*256;
+
+	fprintf(stderr,"Saw RFD900 CSMA Data frame: temp=%dC, last rx RSSI=%d, mean remote RSSI=%d, frame len=%d, buffer_space=%d\n",
+		last_rx_rssi, average_remote_rssi,
+		radio_temperature, packet_len, buffer_space);
+      }
+    
     // Decode end of packet length field
     int golay_end_errors;
     int end_length=golay_decode(&golay_end_errors,&radio_rx_buffer[RADIO_RXBUFFER_SIZE-3])-(FEC_MAX_BYTES+1);
