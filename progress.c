@@ -101,7 +101,7 @@ int generate_progress_string(struct partial_bundle *partial,
     s=s->next;
   }
 
-  snprintf(&progress[24],15," %d/%d, %d/%d",
+  snprintf(&progress[24],54," %d/%d, %d/%d",
 	   manifest_bytes,partial->manifest_length,
 	   body_bytes,partial->body_length
 	   );
