@@ -37,6 +37,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <dirent.h>
 #include <assert.h>
 #include <fcntl.h>
+#include <time.h>
 
 #include "lbard.h"
 #include "serial.h"
@@ -93,11 +94,23 @@ int scan_for_incoming_messages()
 int message_update_interval=1000-(250/2);  // ms
 long long last_message_update_time=0;
 
+time_t last_summary_time=0;
+
 int main(int argc, char **argv)
 {
-  if (argc!=5) {
-    fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <serial port>\n");
+  int monitor_mode=0;
+  
+  if (argc<5||argc>6) {
+    fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <serial port> [monitor]\n");
     exit(-1);
+  }
+
+  if (argv[5]) {
+    if (!strcasecmp("monitor",argv[5])) monitor_mode=1;
+    else {
+      fprintf(stderr,"Illegal mode '%s'\n",argv[5]);
+      exit(-3);
+    }    
   }
 
   last_message_update_time=0;
@@ -151,27 +164,34 @@ int main(int argc, char **argv)
 	if (load_timeout>500) load_timeout=500;
 	
 	if (load_timeout<100) load_timeout=100;
-	load_rhizome_db(load_timeout,
-			prefix, servald_server,credential,&token);
+	if (!monitor_mode)
+	  load_rhizome_db(load_timeout,
+			  prefix, servald_server,credential,&token);
 	next_rhizome_db_load_time=gettime_ms()+3000;
       }
 
     unsigned char msg_out[LINK_MTU];
 
+    scan_for_incoming_messages();
+    radio_read_bytes(serialfd,monitor_mode);
+    
     if ((gettime_ms()-last_message_update_time)>=message_update_interval) {
-      scan_for_incoming_messages();
-      radio_read_bytes(serialfd);
-      update_my_message(serialfd,
-			my_sid,
-			LINK_MTU,msg_out,
-			servald_server,credential);
-
+      if (!monitor_mode)
+	update_my_message(serialfd,
+			  my_sid,
+			  LINK_MTU,msg_out,
+			  servald_server,credential);
+      
       // Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
       last_message_update_time=gettime_ms()+(random()%250);
     }
 
     usleep(10000);
 
+    if (time(0)>last_summary_time) {
+      last_summary_time=time(0);
+      show_progress();
+    }
     
   }
 }
