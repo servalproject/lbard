@@ -68,6 +68,8 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     snprintf(path,8192,"/restful/rhizome/%s.rhm",
 	     bundles[bundle_number].bid);
 
+    long long t1=gettime_ms();
+    
     snprintf(filename,1024,"%smanifest",sid_prefix_hex);
     unlink(filename);
     FILE *f=fopen(filename,"w");
@@ -82,6 +84,7 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
       fprintf(stderr,"http request failed (%d). URLPATH:%s\n",result_code,path);
       return -1;
     }
+    long long t2=gettime_ms();
 
     f=fopen(filename,"r");
     cached_manifest=malloc(8192);
@@ -108,7 +111,11 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
       fprintf(stderr,"http request failed (%d). URLPATH:%s\n",result_code,path);
       return -1;
     }
+    long long t3=gettime_ms();
 
+    fprintf(stderr,"  HTTP pre-fetching of next bundle to send took %lldms + %lldms\n",
+	    t2-t1,t3-t2);
+    
     // XXX - This transport only allows bundles upto 5MB!
     // (and that is probably pushing it a bit for a mesh extender with only 32MB RAM
     // for everything!)
