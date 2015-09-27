@@ -267,7 +267,7 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
     int rs_error_count = decode_rs_8(body,NULL,0,FEC_MAX_BYTES-length);
     
     if (rs_error_count>=0&&rs_error_count<8) {
-      fprintf(stderr,"CHECKPOINT: %s:%d %s() error counts = %d,%d,%d for packet of %d bytes.\n",
+      if (0) fprintf(stderr,"CHECKPOINT: %s:%d %s() error counts = %d,%d,%d for packet of %d bytes.\n",
 	      __FILE__,__LINE__,__FUNCTION__,
 	      golay_end_errors,rs_error_count,golay_start_errors,length);
       saw_message(body,length,
