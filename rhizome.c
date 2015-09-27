@@ -58,7 +58,32 @@ int register_bundle(char *service,
 		    char *sender,
 		    char *recipient)
 {
-  int i;
+  int i,peer;
+
+  long long versionll=strtoll(version,NULL,10);
+  
+  // Remove bundle from partial lists of all peers if we have other transmissions
+  // to us in progress of this bundle
+  // XXX - Linear searches! Replace with hash table etc
+  for(peer=0;peer<peer_count;peer++) {
+    for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
+      if (peer_records[peer]->partials[i].bid_prefix) {
+	// Here is a bundle in flight
+	char *bid_prefix=peer_records[peer]->partials[i].bid_prefix;
+	long long bid_version=peer_records[peer]->partials[i].bundle_version;
+
+	if (versionll>=bid_version)
+	  if (!strncasecmp(bid,bid_prefix,strlen(bid_prefix)))
+	    {
+	      fprintf(stderr,"--- Culling in-progress transfer for bundle that has shown up in Rhizome.\n");
+	      clear_partial(&peer_records[peer]->partials[i]);
+	      break;
+	    }
+      }
+    }
+  }
+
+  
   // XXX - Linear search through bundles!
   // Use a hash table or something so that it doesn't cost O(n^2) with number
   // of bundles.
@@ -76,7 +101,7 @@ int register_bundle(char *service,
     // Replace old bundle values, ...
 
     // ... unless we already hold a newer version
-    if (bundles[bundle_number].version>=strtoll(version,NULL,10))
+    if (bundles[bundle_number].version>=versionll)
       return 0;
     
     free(bundles[bundle_number].service);
@@ -323,7 +348,7 @@ int load_rhizome_db(int timeout,
 	// future call. Remember it and use it.
 	if (*token) free(*token);
 	*token=strdup(fields[0]);
-	fprintf(stderr,"Saw rhizome progressive fetch token '%s'\n",*token);
+	if (0) fprintf(stderr,"Saw rhizome progressive fetch token '%s'\n",*token);
       }
       
       // Now we have the fields, so register the bundles into our internal list.
@@ -343,7 +368,7 @@ int load_rhizome_db(int timeout,
     line[0]=0; fgets(line,8192,f);
   }
 
-  fprintf(stderr,"Rhizome contains %d new bundles (token = %s). We now know about %d bundles.\n",count,*token,bundle_count);
+  if (0) fprintf(stderr,"Rhizome contains %d new bundles (token = %s). We now know about %d bundles.\n",count,*token,bundle_count);
   fclose(f);
   unlink(filename);
   
@@ -406,6 +431,7 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 
 int clear_partial(struct partial_bundle *p)
 {
+  fprintf(stderr,"+++++ clearing partial\n");
   while(p->manifest_segments) {
     struct segment_list *s=p->manifest_segments;
     p->manifest_segments=s->next;
