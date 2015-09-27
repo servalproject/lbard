@@ -77,7 +77,7 @@ int peer_note_bar(struct peer_state *p,
     }
   if (b==-1) {
     // New bundle.
-    fprintf(stderr,"Peer %s* has bundle %s* version %lld, which we haven't seen before\n",
+    if (0) fprintf(stderr,"Peer %s* has bundle %s* version %lld, which we haven't seen before\n",
 	    p->sid_prefix,bid_prefix,version);
     if (p->bundle_count>=MAX_PEER_BUNDLES) {
       // BID list too full -- random replacement.
@@ -93,7 +93,7 @@ int peer_note_bar(struct peer_state *p,
       assert(p->versions);
     }
     b=p->bundle_count;
-    fprintf(stderr,"Peer %s* bundle %s* will go in index %d (current count = %d)\n",
+    if (0) fprintf(stderr,"Peer %s* bundle %s* will go in index %d (current count = %d)\n",
 	    p->sid_prefix,bid_prefix,b,p->bundle_count);
     p->bid_prefixes[b]=strdup(bid_prefix);
     if (b>=p->bundle_count) p->bundle_count++;
