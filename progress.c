@@ -115,7 +115,8 @@ int show_progress()
   int peer,i;
 
 
-  fprintf(stderr,">> List of bundles currently being received:\n");
+  fprintf(stderr,">> List of bundles currently being received (%d in rhizome store)\n",
+	  bundle_count);
   for(peer=0;peer<peer_count;peer++) {
     char *peer_prefix=peer_records[peer]->sid_prefix;
     for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
