@@ -206,7 +206,7 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   bcopy(p,&msg[(*offset)],actual_bytes);
   (*offset)+=actual_bytes;
 
-  if (0) {
+  if (debug_announce) {
     fprintf(stderr,"Announcing ");
     for(int i=0;i<8;i++) fprintf(stderr,"%c",bundles[bundle_number].bid[i]);
     fprintf(stderr,"* version %lld %s segment [%d,%d)\n",
@@ -314,7 +314,8 @@ int update_my_message(int serialfd,
 
   // Announce a bundle, if any are due.
   int bundle_to_announce=find_highest_priority_bundle();
-  // fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
+  if (debug_announce)
+    fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
   if (bundle_to_announce!=-1)
     announce_bundle_piece(bundle_to_announce,&offset,mtu,msg_out,
 			  prefix,servald_server,credential);
@@ -328,12 +329,14 @@ int update_my_message(int serialfd,
   }
 
   // Fill up spare space with BARs
+  int bar_count=0;
   while (bundle_count&&(mtu-offset)>=BAR_LENGTH) {
     int bundle_number=find_highest_priority_bar();
     msg_out[offset++]='B'; // indicates a BAR follows
     append_bar(bundle_number,&offset,mtu,msg_out);
+    bar_count++;
   }
-  // fprintf(stderr,"bundle_bar_counter=%d\n",bundle_bar_counter);
+  if (debug_announce) fprintf(stderr,"bar_count=%d\n",bar_count);
     
   // Increment message counter
   message_counter++;

@@ -301,6 +301,11 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   // Ignore messages from ourselves
   if (!bcmp(msg,my_sid,6)) return -1;
   
+  if (debug_pieces) {
+    fprintf(stderr,"Decoding message #%d from %s*, length = %d:\n",
+	    msg_number,peer_prefix,len);
+  }
+  
   int offset=8; 
 
   char bid_prefix[8*2+1];
@@ -338,7 +343,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   // Update time stamp and most recent message from peer
   p->last_message_time=time(0);
   if (!is_retransmission) p->last_message_number=msg_number;
-  
+
   while(offset<len) {
     if (debug_pieces) {
       fprintf(stderr,"Saw message section with type '%c' (0x%02x) @ offset %d\n",

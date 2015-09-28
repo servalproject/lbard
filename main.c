@@ -43,6 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "serial.h"
 
 int debug_pieces=0;
+int debug_announce=0;
 
 unsigned char my_sid[32];
 char *my_sid_hex=NULL;
