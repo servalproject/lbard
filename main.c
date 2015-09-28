@@ -42,6 +42,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "lbard.h"
 #include "serial.h"
 
+int debug_pieces=0;
+
 unsigned char my_sid[32];
 char *my_sid_hex=NULL;
 char *servald_server="";
@@ -107,6 +109,7 @@ int main(int argc, char **argv)
 
   if (argv[5]) {
     if (!strcasecmp("monitor",argv[5])) monitor_mode=1;
+    else if (!strcasecmp("pieces",argv[5])) debug_pieces=1;
     else {
       fprintf(stderr,"Illegal mode '%s'\n",argv[5]);
       exit(-3);

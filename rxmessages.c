@@ -51,7 +51,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
   int peer=find_peer_by_prefix(peer_prefix);
   if (peer<0) return -1;
 
-  // fprintf(stderr,"Saw a bundle piece from SID=%s*\n",peer_prefix);
+  if (debug_pieces) fprintf(stderr,"Saw a bundle piece from SID=%s*\n",peer_prefix);
 
   int bundle_number=-1;
   
@@ -64,13 +64,13 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
   // scheme gets stuck trying to send these bundles to them forever.
   for(int i=0;i<bundle_count;i++) {
     if (!strncasecmp(bid_prefix,bundles[i].bid,strlen(bid_prefix))) {
-      if (0) fprintf(stderr,"We have version %lld of BID=%s*.  %s is offering us version %lld\n",
+      if (debug_pieces) fprintf(stderr,"We have version %lld of BID=%s*.  %s is offering us version %lld\n",
 	      bundles[i].version,bid_prefix,peer_prefix,version);
       if (version<=bundles[i].version) {
 	// We have this version already: mark it for announcement to sender,
 	// and then return immediately.
 	bundles[i].announce_bar_now=1;
-	if (0) fprintf(stderr,"We already have %s* version %lld - ignoring piece.\n",
+	if (debug_pieces) fprintf(stderr,"We already have %s* version %lld - ignoring piece.\n",
 		bid_prefix,version);
 	return 0;
       } else {
@@ -94,9 +94,9 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     } else {
       if (!strcasecmp(peer_records[peer]->partials[i].bid_prefix,bid_prefix))
 	{
-	  if (0) fprintf(stderr,"Saw another piece for BID=%s* from SID=%s: ",
+	  if (debug_pieces) fprintf(stderr,"Saw another piece for BID=%s* from SID=%s: ",
 			 bid_prefix,peer_prefix);
-	  if (0) fprintf(stderr,"[%lld..%lld)\n",
+	  if (debug_pieces) fprintf(stderr,"[%lld..%lld)\n",
 			 piece_offset,piece_offset+piece_bytes);
 
 	  break;
@@ -179,7 +179,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     if ((!(*s))||(segment_end<piece_offset)) {
       // Create a new segment before the current one
 
-      if (0) fprintf(stderr,"Inserting piece [%lld..%lld) before [%d..%d)\n",
+      if (debug_pieces) fprintf(stderr,"Inserting piece [%lld..%lld) before [%d..%d)\n",
 		     piece_offset,piece_offset+piece_bytes,
 		     segment_start,segment_end);
 
@@ -340,6 +340,10 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   if (!is_retransmission) p->last_message_number=msg_number;
   
   while(offset<len) {
+    if (debug_pieces) {
+      fprintf(stderr,"Saw message section with type '%c' (0x%02x) @ offset %d\n",
+	      msg[offset],msg[offset],offset);
+    }
     switch(msg[offset]) {
     case 'B':
       
@@ -356,7 +360,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       snprintf(recipient_prefix,4*2+1,"%02x%02x%02x%02x",
 	       msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3]);
       offset+=4;
-      if (0) fprintf(stderr,"Saw a BAR from %s*: %s* version %lld (we know of %d bundles held by that peer)\n",
+      if (debug_pieces) fprintf(stderr,"Saw a BAR from %s*: %s* version %lld (we know of %d bundles held by that peer)\n",
 	      p->sid_prefix,bid_prefix,version,p->bundle_count);
       peer_note_bar(p,bid_prefix,version,recipient_prefix);
 
