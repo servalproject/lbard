@@ -240,13 +240,14 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 
   // Calculate content length
   int content_length=0
-    +2+boundary_len
+    +2+boundary_len+2
     +strlen(manifest_header)
     +manifest_length+2
-    +2+boundary_len
+    +2+boundary_len+2
     +strlen(body_header)
     +body_length+2
-    +2+boundary_len+2;    
+    +2+boundary_len+2
+    +2;   // not sure where we have missed this last 2, but it is needed to reconcile
   
   // Build request
   int total_len = snprintf(request,8192,
@@ -267,7 +268,8 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 			   boundary_string,
 			   manifest_header);
   bcopy(manifest_data,&request[total_len],manifest_length);
-  
+
+  int subtotal_len=total_len;
   total_len=total_len+manifest_length;
   total_len+=snprintf(&request[total_len],8192+body_length-total_len,  
 			   "\r\n"
@@ -280,7 +282,14 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   total_len+=snprintf(&request[total_len],8192+body_length-total_len,
 	   "\r\n"
 	   "--%s--\r\n",
-	   boundary_string);	   
+	   boundary_string);
+
+  fprintf(stderr,"  content_length was calculated at %d bytes, total_len=%d\n",
+	  content_length,total_len);
+  int present_len=2+boundary_len+2+strlen(manifest_header);
+  fprintf(stderr,
+	  "    subtotal_len=%d, difference+present=%d (should match content_length)\n",
+	  subtotal_len,total_len-subtotal_len+present_len);
 
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
