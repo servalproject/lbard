@@ -204,14 +204,14 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
     fprintf(stderr,"Read %d bytes from radio:\n",count);
     for(i=0;i<count;i+=32) {
       for(j=0;j<32;j++) {
-	if (i+j<count) fprintf(stderr," %02x",bytes[i+j]);
+	if (i+j<count) fprintf(stderr," %02x",bytes[i+j]); else break;
       }
       for(;j<32;j++) fprintf(stderr,"   ");
       fprintf(stderr,"  ");
       for(j=0;j<32;j++) {
 	if (i+j<count) {
 	  if (bytes[i+j]>=' '&&bytes[i+j]<0x7e)
-	    fprintf(stderr," %c",bytes[i+j]);
+	    fprintf(stderr,"%c",bytes[i+j]);
 	  else fprintf(stderr,".");
 	}
       }

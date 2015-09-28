@@ -103,18 +103,22 @@ int main(int argc, char **argv)
 {
   int monitor_mode=0;
   
-  if (argc<5||argc>6) {
+  if (argc<5) {
     fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <serial port> [monitor]\n");
     exit(-1);
   }
 
-  if (argv[5]) {
-    if (!strcasecmp("monitor",argv[5])) monitor_mode=1;
-    else if (!strcasecmp("pieces",argv[5])) debug_pieces=1;
-    else {
-      fprintf(stderr,"Illegal mode '%s'\n",argv[5]);
-      exit(-3);
-    }    
+  int n=5;
+  while (n<argc) {
+    if (argv[n]) {
+      if (!strcasecmp("monitor",argv[n])) monitor_mode=1;
+      else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
+      else {
+	fprintf(stderr,"Illegal mode '%s'\n",argv[n]);
+	exit(-3);
+      }
+    }
+    n++;
   }
 
   last_message_update_time=0;
@@ -198,4 +202,4 @@ int main(int argc, char **argv)
     }
     
   }
-}
+  }
