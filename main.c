@@ -113,6 +113,7 @@ int main(int argc, char **argv)
     if (argv[n]) {
       if (!strcasecmp("monitor",argv[n])) monitor_mode=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
+      else if (!strcasecmp("announce",argv[n])) debug_announce=1;
       else {
 	fprintf(stderr,"Illegal mode '%s'\n",argv[n]);
 	exit(-3);
