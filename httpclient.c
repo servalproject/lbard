@@ -304,6 +304,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 	// if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
+	  fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
 	}
 	len=0;
 	// Have we found end of headers?
