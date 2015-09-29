@@ -184,7 +184,11 @@ int find_highest_priority_bundle()
 
     // Bigger values in this list means that factor is more important in selecting
     // which bundle to announce next.
-#define BUNDLE_PRIORITY_SENT_LESS_RECENTLY    0x00000080
+    // Sent less recently is less important than size or whether it is meshms.
+    // This ensures that we rotate through the bundles we have.
+    // If a peer comes along who doesn't have a smaller or meshms bundle, then
+    // the less-peers-have-it priority will kick in.
+#define BUNDLE_PRIORITY_SENT_LESS_RECENTLY    0x00001000
 #define BUNDLE_PRIORITY_FILE_SIZE_SMALLER     0x00000100
 #define BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER   0x00000200
 #define BUNDLE_PRIORITY_IS_MESHMS             0x00000400
@@ -204,13 +208,12 @@ int find_highest_priority_bundle()
       
       if (bundles[i].length<bundles[highest_priority_bundle].length)
 	this_bundle_priority|=BUNDLE_PRIORITY_FILE_SIZE_SMALLER;
-    } 
+    } else time_delta=0;
 
-    if (time_delta>0) {
+    if (time_delta>0LL) {
       // XXX Consider having the time delta influence the priority in a
       // smoother way, so that very large files will still get sent from time
       // to time.
-      
       this_bundle_priority|=BUNDLE_PRIORITY_SENT_LESS_RECENTLY;
     }
 
@@ -261,8 +264,6 @@ int find_highest_priority_bundle()
 					 bundles[i].version))
 	num_peers_that_dont_have_it++;
     }
-    // Don't bother sending anything out if all of our peers already have it.
-    if (num_peers_that_dont_have_it==0) this_bundle_priority=0;
     if (num_peers_that_dont_have_it>highest_priority_bundle_peers_dont_have_it)
       this_bundle_priority|=BUNDLE_PRIORITY_LESS_PEERS_HAVE_IT;
 
@@ -279,8 +280,10 @@ int find_highest_priority_bundle()
     // ones.
     {
       if ((i==0)||(this_bundle_priority>highest_bundle_priority)) {
-	if (0) fprintf(stderr,"  bundle %d is higher priority than bundle %d\n",
-		       i,highest_priority_bundle);
+	if (1) fprintf(stderr,"  bundle %d is higher priority than bundle %d"
+		       " (%08llx vs %08llx)\n",
+		       i,highest_priority_bundle,
+		       this_bundle_priority,highest_bundle_priority);
 	highest_bundle_priority=this_bundle_priority;
 	highest_priority_bundle=i;
 	highest_priority_bundle_peers_dont_have_it=num_peers_that_dont_have_it;
