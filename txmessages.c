@@ -235,7 +235,6 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
       bundles[bundle_number].last_offset_announced=0;
       bundles[bundle_number].last_manifest_offset_announced=0;
     }
-
   }
   
   return 0;

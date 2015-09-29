@@ -280,7 +280,7 @@ int find_highest_priority_bundle()
     // ones.
     {
       if ((i==0)||(this_bundle_priority>highest_bundle_priority)) {
-	if (1) fprintf(stderr,"  bundle %d is higher priority than bundle %d"
+	if (0) fprintf(stderr,"  bundle %d is higher priority than bundle %d"
 		       " (%08llx vs %08llx)\n",
 		       i,highest_priority_bundle,
 		       this_bundle_priority,highest_bundle_priority);
