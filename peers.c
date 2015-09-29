@@ -124,6 +124,8 @@ int find_peer_by_prefix(char *peer_prefix)
 // XXX - Actually, we can't even take into account MeshMS or size, because we currenlty
 // only store version and BID prefix. version will do as a decent proxy for these
 // things for now, since for meshms version is the journal bundle length.
+// XXX - We should also not ask for bundles we are currently transferring from other
+// peers.
 int peers_most_interesting_bundle(int peer)
 {
   int best_bundle=-1;
