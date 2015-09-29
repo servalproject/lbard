@@ -47,6 +47,7 @@ int free_peer(struct peer_state *p)
   for(int i=0;i<p->bundle_count;i++) {
     if (p->bid_prefixes[i]) free(p->bid_prefixes[i]);    
   }
+  for(int i=0;i<4;i++) p->sid_prefix_bin[i]=0;
   free(p->bid_prefixes); p->bid_prefixes=NULL;
   free(p->versions); p->versions=NULL;
   free(p);
@@ -113,4 +114,88 @@ int find_peer_by_prefix(char *peer_prefix)
       return i;
   
   return -1;
+}
+
+int hex_to_val(int c)
+{
+  if (c>='0'&&c<'9') return c-'0';
+  if (c>='A'&&c<'F') return c-'A'+10;
+  if (c>='a'&&c<'f') return c-'a'+10;
+  return 0;
+}
+
+int request_segment(int peer, int partial, int seg_start, int is_manifest,
+		    int *offset, int mtu,unsigned char *msg_out)
+{
+  // Check that we have enough space
+  if ((mtu-*offset)<(1+2+8+3)) return -1;
+
+  // Request piece
+  msg_out[(*offset)++]='R';
+
+  // First 2 bytes only of peer SID. This will almost always get the benefit of
+  // specifying the peer precisely, but save bytes on average
+  msg_out[(*offset)++]=peer_records[peer]->sid_prefix_bin[0];
+  msg_out[(*offset)++]=peer_records[peer]->sid_prefix_bin[1];
+
+  // BID prefix
+  for(int i=0;i<8;i++)
+    msg_out[(*offset)++]=
+      hex_to_val(peer_records[peer]->partials[partial].bid_prefix[i*2+1])
+      +hex_to_val(peer_records[peer]->partials[partial].bid_prefix[i*2+0])*16;
+
+  // Start offset of interest
+  msg_out[(*offset)++]=(seg_start>>0)&0xff;
+  msg_out[(*offset)++]=(seg_start>>8)&0xff;
+  msg_out[(*offset)++]=((seg_start>>16)&0x7f)|(is_manifest?0x80:0x00);
+
+  return 0;
+}
+
+int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_out)
+{
+  int peer;
+
+  for(peer=0;peer<peer_count;peer++)
+    {
+      // Keep track of what we are getting from this peer, and try to finish
+      // the most complete things first.
+      // XXX - It would really help if we knew in advance the length of a payload
+      // so that we could actually do this properly.
+      // XXX - Instead for now, we just request the first missing thing we have.
+      // int most_complete_partial=-1;
+      // int most_complete_remaining=-1;
+      // int most_complete_start=-1;
+      // int most_complete_manifest_or_body=-1;
+      
+      // What are we fetching from this peer?
+      int i;
+      for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
+	if (peer_records[peer]->partials[i].bid_prefix) {
+	  // We are receiving something from this peer, so we presume it is
+	  // interesting.
+	  // Our approach to requesting missing parts is simple:
+	  // 1. Request missing stuff from the start, if any.
+	  // 2. Else, request from the end of the first segment, so that we will tend
+	  // to merge segments.
+	  struct segment_list *s=peer_records[peer]->partials[i].manifest_segments;
+	  if (s&&s->start_offset) {
+	    // We are missing bytes at the beginning
+	    return request_segment(peer,i,0,1 /* manifest */,offset,mtu,msg_out);
+	  } else if (s) {
+	    return request_segment(peer,i,(s->start_offset+s->length),
+				   1 /* manifest */,offset,mtu,msg_out);
+	  }
+	  s=peer_records[peer]->partials[i].body_segments;
+	  if (s&&s->start_offset) {
+	    // We are missing bytes at the beginning
+	    return request_segment(peer,i,0,0 /* not manifest */,offset,mtu,msg_out);
+	  } else if (s) {
+	    return request_segment(peer,i,(s->start_offset+s->length),
+				   0 /* not manifest */,offset,mtu,msg_out);
+	  }
+	}
+      }
+    }
+  return 0;
 }

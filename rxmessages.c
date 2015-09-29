@@ -327,6 +327,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   }
   if (!p) {
     p=calloc(sizeof(struct peer_state),1);
+    for(int i=0;i<4;i++) p->sid_prefix_bin[i]=msg[i];
     p->sid_prefix=strdup(peer_prefix);
     p->last_message_number=-1;
     fprintf(stderr,"Registering peer %s*\n",p->sid_prefix);
@@ -400,6 +401,53 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       offset+=piece_bytes;
 
       break;
+    case 'R':
+      // Request for a segment
+      {
+	char target_sid[4+1+1];
+	char bid_prefix[8*2+1+1];
+	int bundle_offset=0;
+	int is_manifest=0;
+	snprintf(target_sid,5,"%02x%02x",msg[offset],msg[offset+1]);
+	offset+=2;
+	snprintf(bid_prefix,17,"%02x%02x%02x%02x%02x%02x%02x%02x",
+		 msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
+		 msg[offset+4],msg[offset+5],msg[offset+6],msg[offset+7]);
+	offset+=8;
+	bundle_offset|=msg[offset++];
+	bundle_offset|=msg[offset++]<<8;
+	bundle_offset|=msg[offset++]<<16;
+	// We can only request segments upto 8MB point in a bundle via this transport!
+	// XXX here be dragons
+	if (bundle_offset&0x800000) is_manifest=1;
+	bundle_offset&=0x7fffff;
+
+	// Are we the target SID?
+	if (!strncasecmp(my_sid,target_sid,4)) {
+	  // Yes, it is addressed to us.
+	  // See if we have this bundle, and if so, set the appropriate stream offset
+	  // and mark the bundle as requested
+	  // XXX linear search!
+	  for(int i=0;i<bundle_count;i++) {
+	    if (!strncasecmp(bid_prefix,bundles[i].bid,16)) {
+	      bundles[i].transmit_now=1;
+	      // When adjusting the offset, don't adjust it if we are going to reach
+	      // that point within a few hundred bytes, as it won't save any time, and
+	      // it might just cause confusion and delay because of the latency of us
+	      // receiving the message and responding to it.
+	      if (is_manifest) {
+		if ((offset<bundles[i].last_manifest_offset_announced)
+		    ||((offset-bundles[i].last_manifest_offset_announced)>500))
+		  bundles[i].last_manifest_offset_announced=offset;
+	      } else {
+		if ((offset<bundles[i].last_offset_announced)
+		    ||((offset-bundles[i].last_offset_announced)>500))
+		bundles[i].last_offset_announced=offset;
+	      }
+	    }
+	  }
+	}
+      }
     default:
       // invalid message field.
       return -1;

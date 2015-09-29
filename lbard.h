@@ -19,6 +19,7 @@ struct partial_bundle {
 
 struct peer_state {
   char *sid_prefix;
+  unsigned char sid_prefix_bin[4];
   
   unsigned char *last_message;
   time_t last_message_time;
@@ -143,3 +144,4 @@ long long gettime_ms();
 int generate_progress_string(struct partial_bundle *partial,
 			     char *progress,int progress_size);
 int show_progress();
+int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_out);

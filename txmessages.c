@@ -311,6 +311,9 @@ int update_my_message(int serialfd,
     append_bar(bar_number,&offset,mtu,msg_out);
   }
 
+  // Request peers to send something interesting if they are not already
+  request_wanted_content_from_peers(&offset,mtu,msg_out);
+
   // Announce a bundle, if any are due.
   int bundle_to_announce=find_highest_priority_bundle();
   if (debug_announce)
