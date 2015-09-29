@@ -189,11 +189,19 @@ int request_segment(int peer, int partial, int seg_start, int is_manifest,
   return 0;
 }
 
+int last_peer_requested=-1;
+
 int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_out)
 {
   int peer;
 
-  for(peer=0;peer<peer_count;peer++)
+  // Work out who to ask next?
+  // (consider all peers in round-robin)
+  if (last_peer_requested>=peer_count) last_peer_requested=0;
+  peer=last_peer_requested;
+  last_peer_requested++;
+  
+  for(;peer<peer_count;peer++)
     {
       // Keep track of what we are getting from this peer, and try to finish
       // the most complete things first.
