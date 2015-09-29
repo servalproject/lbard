@@ -94,6 +94,7 @@ extern unsigned char *cached_body;
 
 extern int debug_pieces;
 extern int debug_announce;
+extern int debug_pull;
 
 int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      long long piece_offset,int piece_bytes,int is_end_piece,

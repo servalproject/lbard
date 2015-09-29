@@ -422,6 +422,13 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	if (bundle_offset&0x800000) is_manifest=1;
 	bundle_offset&=0x7fffff;
 
+	if (debug_pull) {
+	  fprintf(stderr,"Saw request from SID=%s* BID=%s @ %c%d addressed to SID=%s*\n",
+		  peer_prefix,bid_prefix,is_manifest?'M':'B',bundle_offset,
+		  target_sid);
+	}
+
+	
 	// Are we the target SID?
 	if (!strncasecmp(my_sid,target_sid,4)) {
 	  // Yes, it is addressed to us.

@@ -44,6 +44,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 int debug_pieces=0;
 int debug_announce=0;
+int debug_pull=0;
 
 unsigned char my_sid[32];
 char *my_sid_hex=NULL;
@@ -112,6 +113,7 @@ int main(int argc, char **argv)
   while (n<argc) {
     if (argv[n]) {
       if (!strcasecmp("monitor",argv[n])) monitor_mode=1;
+      else if (!strcasecmp("pull",argv[n])) debug_pull=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
       else if (!strcasecmp("announce",argv[n])) debug_announce=1;
       else {
