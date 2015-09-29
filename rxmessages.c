@@ -310,6 +310,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 
   char bid_prefix[8*2+1];
   long long version;
+  int size_byte;
   char recipient_prefix[4*2+1];
   unsigned int offset_compound;
   long long piece_offset;
@@ -366,9 +367,14 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       snprintf(recipient_prefix,4*2+1,"%02x%02x%02x%02x",
 	       msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3]);
       offset+=4;
-      if (debug_pieces) fprintf(stderr,"Saw a BAR from %s*: %s* version %lld (we know of %d bundles held by that peer)\n",
-	      p->sid_prefix,bid_prefix,version,p->bundle_count);
-      peer_note_bar(p,bid_prefix,version,recipient_prefix);
+      size_byte=msg[offset];
+      offset++;
+      if (debug_pieces)
+	fprintf(stderr,
+		"Saw a BAR from %s*: %s* version %lld size byte 0x%02x"
+		" (we know of %d bundles held by that peer)\n",
+		p->sid_prefix,bid_prefix,version,size_byte,p->bundle_count);
+      peer_note_bar(p,bid_prefix,version,recipient_prefix,size_byte);
 
       break;
     case 'P': case 'p': case 'Q': case 'q':

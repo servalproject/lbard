@@ -55,7 +55,8 @@ int free_peer(struct peer_state *p)
 }
 
 int peer_note_bar(struct peer_state *p,
-		  char *bid_prefix,long long version, char *recipient_prefix)
+		  char *bid_prefix,long long version, char *recipient_prefix,
+		  int size_byte)
 {
   int b=-1;
 
@@ -92,6 +93,8 @@ int peer_note_bar(struct peer_state *p,
       assert(p->bid_prefixes);
       p->versions=realloc(p->versions,sizeof(long long)*p->bundle_count_alloc);
       assert(p->versions);
+      p->size_bytes=realloc(p->versions,1);
+      assert(p->size_bytes);
     }
     b=p->bundle_count;
     if (0) fprintf(stderr,"Peer %s* bundle %s* will go in index %d (current count = %d)\n",
@@ -100,6 +103,7 @@ int peer_note_bar(struct peer_state *p,
     if (b>=p->bundle_count) p->bundle_count++;
   }
   p->versions[b]=version;
+  p->size_bytes[b]=size_byte;
   
   return 0;
 }

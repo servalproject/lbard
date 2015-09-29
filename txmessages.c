@@ -37,6 +37,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <assert.h>
+#include <math.h>
 
 #include "lbard.h"
 
@@ -46,13 +47,20 @@ int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
   // 8 bytes : BID prefix
   // 8 bytes : version
   // 4 bytes : recipient prefix
-
+  // 1 byte : log2 size and meshms flag
+  
   for(int i=0;i<8;i++)
     msg_out[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);
   for(int i=0;i<8;i++)
     msg_out[(*offset)++]=(bundles[bundle_number].version>>(i*8))&0xff;
   for(int i=0;i<4;i++)
     msg_out[(*offset)++]=hex_byte_value(&bundles[bundle_number].recipient[i*2]);
+  int size_byte=log2(bundles[bundle_number].length);
+  if ((!strcasecmp("MeshMS1",bundles[bundle_number].service))
+      ||(!strcasecmp("MeshMS2",bundles[bundle_number].service)))
+    size_byte&=0x7f;
+  else
+    size_byte|=0x80;
   
   return 0;
 }

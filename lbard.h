@@ -31,6 +31,7 @@ struct peer_state {
   int bundle_count_alloc;
   char **bid_prefixes;
   long long *versions;
+  unsigned char *size_bytes;
 
   // Bundles this peer is transferring.
   // The bundle prioritisation algorithm means that the peer may announce pieces
@@ -83,7 +84,8 @@ extern int bundle_count;
 // 8 bytes : BID prefix
 // 8 bytes : version
 // 4 bytes : recipient prefix
-#define BAR_LENGTH (8+8+4)
+// 1 byte : size and meshms flag byte
+#define BAR_LENGTH (8+8+4+1)
 
 extern char *bid_of_cached_bundle;
 extern long long cached_version;
@@ -121,7 +123,8 @@ int dump_partial(struct partial_bundle *p);
 int merge_segments(struct segment_list **s);
 int free_peer(struct peer_state *p);
 int peer_note_bar(struct peer_state *p,
-		  char *bid_prefix,long long version, char *recipient_prefix);
+		  char *bid_prefix,long long version, char *recipient_prefix,
+		  int size_byte);
 int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *msg,
 			  char *prefix,char *servald_server, char *credential);
 int update_my_message(int serialfd,
