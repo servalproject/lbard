@@ -42,6 +42,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 extern char *my_sid_hex;
 
+int saw_length(char *peer_prefix,char *bid_prefix,long long version,
+	       int body_length)
+{
+  return 0;
+}
+
 int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      long long piece_offset,int piece_bytes,int is_end_piece,
 	      int is_manifest_piece,unsigned char *piece,
@@ -125,12 +131,16 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 
   int piece_end=piece_offset+piece_bytes;
 
-  // Note stream length if this is an end piece.
+  // Note stream length if this is an end piece or journal bundle
   if (is_end_piece) {
     if (is_manifest_piece)
       peer_records[peer]->partials[i].manifest_length=piece_end;
     else
       peer_records[peer]->partials[i].body_length=piece_end;
+  }
+  if (version<0x100000000LL) {
+    // Journal bundle, so body_length = version
+    peer_records[peer]->partials[i].body_length=version;
   }
 
   if ((bundle_number>-1)
@@ -377,6 +387,21 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       peer_note_bar(p,bid_prefix,version,recipient_prefix,size_byte);
 
       break;
+    case 'L':
+      // Length of bundle announcement for receivers
+      if (len-offset<(1+8+8+4)) return -3;
+      snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
+	       msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
+	       msg[offset+4],msg[offset+5],msg[offset+6],msg[offset+7]);
+      offset+=8;
+      version=0;
+      for(int i=0;i<8;i++) version|=((long long)msg[offset+i])<<(i*8LL);
+      offset+=8;
+      offset_compound=0;
+      for(int i=0;i<4;i++) offset_compound|=((long long)msg[offset+i])<<(i*8LL);
+      offset+=4;
+      saw_length(peer_prefix,bid_prefix,version,offset_compound);
+      break;
     case 'P': case 'p': case 'Q': case 'q':
       // Skip header character
       above_1mb=0;
@@ -461,6 +486,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	  }
 	}
       }
+      break;
     default:
       // invalid message field.
       return -1;

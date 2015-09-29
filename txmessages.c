@@ -86,8 +86,32 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
     If start_offset>0xfffff, then 2 extra bytes are used for the upper bytes of the
     starting offset.    
 
+    When we are about to begin sending the body, we send a message that indicates the
+    length of the current bundle so that the far end knows, and can factor it into its
+    prioritisation of transfers when requesting retransmissions. We don't need to do
+    this for journal bundles, however, because their length is the same as their 
+    version
   */
 
+  if ((cached_version>0x100000000LL)&&(!bundles[bundle_number].last_offset_announced))
+    {
+      if ((mtu-*offset)>(1+8+8+4)) {
+	// Announce length of bundle
+	msg[(*offset)++]='L';
+	// Bundle prefix (8 bytes)
+	for(int i=0;i<8;i++)
+	  msg[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);
+	// Bundle version (8 bytes)
+	for(int i=0;i<8;i++)
+	  msg[(*offset)++]=(cached_version>>(i*8))&0xff;
+	// Length (4 bytes)
+	msg[(*offset)++]=(bundles[bundle_number].length>>0)&0xff;
+	msg[(*offset)++]=(bundles[bundle_number].length>>8)&0xff;
+	msg[(*offset)++]=(bundles[bundle_number].length>>16)&0xff;
+	msg[(*offset)++]=(bundles[bundle_number].length>>24)&0xff;
+      }
+    }
+  
   int max_bytes=mtu-(*offset)-21;
   assert(max_bytes>0);
   int is_manifest=0;

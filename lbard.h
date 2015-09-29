@@ -103,6 +103,8 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      int is_manifest_piece,unsigned char *piece,
 
 	      char *prefix, char *servald_server, char *credential);
+int saw_length(char *peer_prefix,char *bid_prefix,long long version,
+	       int body_length);
 int saw_message(unsigned char *msg,int len,char *my_sid,
 		char *prefix, char *servald_server,char *credential);
 int load_rhizome_db(int timeout,
