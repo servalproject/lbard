@@ -116,6 +116,43 @@ int find_peer_by_prefix(char *peer_prefix)
   return -1;
 }
 
+// The most interesting bundle a peer has is the smallest MeshMS bundle, if any, or
+// else the smallest bundle that it has, but that we do not have.
+// XXX - We should take into account neighbours we can see to prioritise content for
+// them (and neighbours of neighbours, since phones are usually not going to be running
+// lbard).
+// XXX - Actually, we can't even take into account MeshMS or size, because we currenlty
+// only store version and BID prefix. version will do as a decent proxy for these
+// things for now, since for meshms version is the journal bundle length.
+int peers_most_interesting_bundle(int peer)
+{
+  int best_bundle=-1;
+  int bundle;
+  int i;
+  // XXX - More linear searches!
+  for (bundle=0;bundle<peer_records[peer]->bundle_count;bundle++) {
+    int not_interesting=0;
+    for(i=0;i<bundle_count;i++) {
+      if (!strncasecmp(bundles[i].bid,peer_records[peer]->bid_prefixes[bundle],
+		       strlen(peer_records[peer]->bid_prefixes[bundle]))) {
+	// We have this bundle, but do we have this version?
+	if (bundles[i].version>=peer_records[peer]->versions[bundle]) {
+	  // Ok, we have this already, so it is not interesting.
+	  not_interesting=1;
+	  break;
+	}
+      }
+    }
+    if (!not_interesting) {
+      if ((best_bundle==-1)
+	  ||(peer_records[peer]->versions[bundle]<peer_records[peer]->versions[best_bundle]))
+	best_bundle=bundle;
+    }
+  }
+
+  return best_bundle;
+}
+
 int hex_to_val(int c)
 {
   if (c>='0'&&c<'9') return c-'0';
@@ -196,6 +233,12 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 	  }
 	}
       }
+      // If we got here, the peer is not currently sending us anything interesting.
+      // So have a look at what the peer has to offer, and ask for something
+      // interesting.
+      int bundle=peers_most_interesting_bundle(peer);
+      if (bundle>-1)
+	return request_segment(peer,bundle,0,0 /* not manifest */,offset,mtu,msg_out);
     }
   return 0;
 }
