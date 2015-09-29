@@ -125,7 +125,8 @@ int find_peer_by_prefix(char *peer_prefix)
 // only store version and BID prefix. version will do as a decent proxy for these
 // things for now, since for meshms version is the journal bundle length.
 // XXX - We should also not ask for bundles we are currently transferring from other
-// peers.
+// peers. This is tricky to enforce, because there are race conditions that could
+// easily end up with this exact scenario.
 int peers_most_interesting_bundle(int peer)
 {
   int best_bundle=-1;
