@@ -10,6 +10,6 @@ foreach radio ( `echo /dev/cu.usbserial-*` /dev/null /dev/null )
  @ n = $n + 1
 end
 
-echo ./lbard 127.0.0.1:`cat testing/serval${1}/proc/http_port` lbard:lbard `cat testing/serval${1}/self.sid` $theradio
-./lbard 127.0.0.1:`cat testing/serval${1}/proc/http_port` lbard:lbard `cat testing/serval${1}/self.sid` $theradio
+echo ./lbard 127.0.0.1:`cat testing/serval${1}/proc/http_port` lbard:lbard `cat testing/serval${1}/self.sid` $theradio announce
+./lbard 127.0.0.1:`cat testing/serval${1}/proc/http_port` lbard:lbard `cat testing/serval${1}/self.sid` $theradio announce
 
