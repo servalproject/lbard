@@ -151,8 +151,15 @@ int peers_most_interesting_bundle(int peer)
       }
     }
     if (!not_interesting) {
+      // Bundle is more interesting if it is smaller or meshms and the best so far is
+      // not. We do this by comparing size_bytes first, which will put all meshms to
+      // the front of the queue, and then version, which will allow finer
+      // discrimination of size differences if size_bytes are identical.
+
       if ((best_bundle==-1)
-	  ||(peer_records[peer]->versions[bundle]<peer_records[peer]->versions[best_bundle]))
+	  ||(peer_records[peer]->size_bytes[bundle]<peer_records[peer]->size_bytes[best_bundle])
+	  ||((peer_records[peer]->size_bytes[bundle]==peer_records[peer]->size_bytes[best_bundle])
+	     &&(peer_records[peer]->versions[bundle]<peer_records[peer]->versions[best_bundle])))
 	best_bundle=bundle;
     }
   }
@@ -221,6 +228,8 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
       // XXX - It would really help if we knew in advance the length of a payload
       // so that we could actually do this properly.
       // XXX - Instead for now, we just request the first missing thing we have.
+      // XXX - We now have access to size_bytes from BARs to help us prioritise
+      // content.
       // int most_complete_partial=-1;
       // int most_complete_remaining=-1;
       // int most_complete_start=-1;
@@ -228,6 +237,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
       
       // What are we fetching from this peer?
       int i;
+      
       for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
 	if (peer_records[peer]->partials[i].bid_prefix) {
 	  // We are receiving something from this peer, so we presume it is

@@ -14,7 +14,7 @@ struct partial_bundle {
   int manifest_length;
 
   struct segment_list *body_segments;
-  int body_length;    
+  int body_length;
 };
 
 struct peer_state {
