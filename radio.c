@@ -242,9 +242,12 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 	int buffer_space=radio_rx_buffer[RADIO_RXBUFFER_SIZE-3];
 	buffer_space+=radio_rx_buffer[RADIO_RXBUFFER_SIZE-2]*256;
 
-	fprintf(stderr,"Saw RFD900 CSMA Data frame: temp=%dC, last rx RSSI=%d, mean remote RSSI=%d, frame len=%d\n",
-		radio_temperature, last_rx_rssi, average_remote_rssi,
-		packet_len);
+	message_buffer_length+=
+	  snprintf(&message_buffer[message_buffer_length],
+		   message_buffer_size-message_buffer_length,
+		   "Saw RFD900 CSMA Data frame: temp=%dC, last rx RSSI=%d, mean remote RSSI=%d, frame len=%d\n",
+		   radio_temperature, last_rx_rssi, average_remote_rssi,
+		   packet_len);
       }
 
     // Decode end of packet length field

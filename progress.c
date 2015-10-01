@@ -40,6 +40,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "lbard.h"
 
+char message_buffer[16384];
+int message_buffer_size=16384;
+int message_buffer_length=0;
+
+
 int generate_segment_progress_string(int stream_length,
 				     struct segment_list *s, char *progress)
 {
@@ -114,7 +119,9 @@ int show_progress()
 {
   int peer,i;
 
-
+  fprintf(stderr,"%s",message_buffer);
+  message_buffer_length=0; message_buffer[0]=0;
+  
   fprintf(stderr,">> List of bundles currently being received (%d in rhizome store)\n",
 	  bundle_count);
   for(peer=0;peer<peer_count;peer++) {

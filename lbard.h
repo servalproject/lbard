@@ -57,6 +57,9 @@ struct peer_state {
   struct partial_bundle partials[MAX_BUNDLES_IN_FLIGHT];  
 }; 
 
+extern char message_buffer[];
+extern int message_buffer_size;
+extern int message_buffer_length;
 
 struct bundle_record {
   char *service;
