@@ -191,10 +191,12 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       s->start_offset=0;
       s->length=cached_body_len;
       peer_records[peer]->partials[i].body_segments=s;
-      fprintf(stderr,"Preloaded %d bytes from old version of journal bundle.\n",
-	      cached_body_len);
+      if (debug_pieces)
+	fprintf(stderr,"Preloaded %d bytes from old version of journal bundle.\n",
+		cached_body_len);
     } else {
-      fprintf(stderr,"Failed to preload bytes from old version of journal bundle. XFER will likely fail due to far end thinking it can skip the bytes we already have, so ignoring current piece.\n");
+      if (debug_pieces)
+	fprintf(stderr,"Failed to preload bytes from old version of journal bundle. XFER will likely fail due to far end thinking it can skip the bytes we already have, so ignoring current piece.\n");
       return -1;
     }
   }
@@ -247,10 +249,11 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       break;
     } else if (piece_end<segment_start) {
       // Piece ends before this segment starts, so proceed down the list further.
-      fprintf(stderr,"Piece [%lld..%lld) comes before [%d..%d)\n",
-	      piece_offset,piece_offset+piece_bytes,
-	      segment_start,segment_end);
-
+      if (debug_pieces)
+	fprintf(stderr,"Piece [%lld..%lld) comes before [%d..%d)\n",
+		piece_offset,piece_offset+piece_bytes,
+		segment_start,segment_end);
+      
       s=&(*s)->next;
     } else {
       // Segment should abutt or overlap with new piece.
@@ -263,11 +266,19 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      ||((segment_end>=piece_start)&&(segment_end<=piece_end))
 	      );      
 
-      fprintf(stderr,"Received %s",bid_prefix);
-      fprintf(stderr,"* version %lld %s segment [%d,%d)\n",
-	      version,
-	      is_manifest_piece?"manifest":"payload",
-	      piece_start,piece_start+piece_bytes);
+      {
+	message_buffer_length+=
+	  snprintf(&message_buffer[message_buffer_length],
+		   message_buffer_size-message_buffer_length,
+		   "Received %s",bid_prefix);
+	message_buffer_length+=
+	  snprintf(&message_buffer[message_buffer_length],
+		   message_buffer_size-message_buffer_length,
+		   "* version %lld %s segment [%d,%d)\n",
+		   version,
+		   is_manifest_piece?"manifest":"payload",
+		   piece_start,piece_start+piece_bytes);
+      }
             
       if (piece_start<segment_start) {
 	// Need to stick bytes on the start

@@ -496,9 +496,10 @@ int merge_segments(struct segment_list **s)
     struct segment_list *next=(*s)->next;
     if (me->start_offset<=(next->start_offset+next->length)) {
       // Merge this piece onto the end of the next piece
-      fprintf(stderr,"Merging [%d..%d) and [%d..%d)\n",
-	      me->start_offset,me->start_offset+me->length,
-	      next->start_offset,next->start_offset+next->length);
+      if (debug_pieces)
+	fprintf(stderr,"Merging [%d..%d) and [%d..%d)\n",
+		me->start_offset,me->start_offset+me->length,
+		next->start_offset,next->start_offset+next->length);
       int extra_bytes
 	=(me->start_offset+me->length)-(next->start_offset+next->length);
       int new_length=next->length+extra_bytes;
