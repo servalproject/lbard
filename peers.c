@@ -50,6 +50,7 @@ int free_peer(struct peer_state *p)
   for(int i=0;i<4;i++) p->sid_prefix_bin[i]=0;
   free(p->bid_prefixes); p->bid_prefixes=NULL;
   free(p->versions); p->versions=NULL;
+  free(p->size_bytes); p->size_bytes=NULL;
   free(p);
   return 0;
 }
@@ -139,14 +140,17 @@ int peers_most_interesting_bundle(int peer)
   // XXX - More linear searches!
   for (bundle=0;bundle<peer_records[peer]->bundle_count;bundle++) {
     int not_interesting=0;
-    for(i=0;i<bundle_count;i++) {
-      if (!strncasecmp(bundles[i].bid,peer_records[peer]->bid_prefixes[bundle],
-		       strlen(peer_records[peer]->bid_prefixes[bundle]))) {
-	// We have this bundle, but do we have this version?
-	if (bundles[i].version>=peer_records[peer]->versions[bundle]) {
-	  // Ok, we have this already, so it is not interesting.
-	  not_interesting=1;
-	  break;
+    if (!peer_records[peer]->bid_prefixes[bundle]) not_interesting=1;
+    else {
+      for(i=0;i<bundle_count;i++) {
+	if (!strncasecmp(bundles[i].bid,peer_records[peer]->bid_prefixes[bundle],
+			 strlen(peer_records[peer]->bid_prefixes[bundle]))) {
+	  // We have this bundle, but do we have this version?
+	  if (bundles[i].version>=peer_records[peer]->versions[bundle]) {
+	    // Ok, we have this already, so it is not interesting.
+	    not_interesting=1;
+	    break;
+	  }
 	}
       }
     }
@@ -175,7 +179,7 @@ int hex_to_val(int c)
   return 0;
 }
 
-int request_segment(int peer, int partial, int seg_start, int is_manifest,
+int request_segment(int peer, char *bid_prefix, int seg_start, int is_manifest,
 		    int *offset, int mtu,unsigned char *msg_out)
 {
   // Check that we have enough space
@@ -192,8 +196,8 @@ int request_segment(int peer, int partial, int seg_start, int is_manifest,
   // BID prefix
   for(int i=0;i<8;i++)
     msg_out[(*offset)++]=
-      hex_to_val(peer_records[peer]->partials[partial].bid_prefix[i*2+1])
-      +hex_to_val(peer_records[peer]->partials[partial].bid_prefix[i*2+0])*16;
+      hex_to_val(bid_prefix[i*2+1])
+      +hex_to_val(bid_prefix[i*2+0])*16;
 
   // Start offset of interest
   msg_out[(*offset)++]=(seg_start>>0)&0xff;
@@ -202,14 +206,14 @@ int request_segment(int peer, int partial, int seg_start, int is_manifest,
 
   if (debug_pull) {
     fprintf(stderr,"Requesting BID=%s @ %c%d from SID=%s*\n",
-	    peer_records[peer]->partials[partial].bid_prefix,
+	    bid_prefix,
 	    is_manifest?'M':'B',seg_start,peer_records[peer]->sid_prefix);	    
   }
   
   return 0;
 }
 
-int last_peer_requested=-1;
+int last_peer_requested=0;
 
 int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_out)
 {
@@ -247,19 +251,31 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 	  // 2. Else, request from the end of the first segment, so that we will tend
 	  // to merge segments.
 	  struct segment_list *s=peer_records[peer]->partials[i].manifest_segments;
-	  if (s&&s->start_offset) {
-	    // We are missing bytes at the beginning
-	    return request_segment(peer,i,0,1 /* manifest */,offset,mtu,msg_out);
-	  } else if (s) {
-	    return request_segment(peer,i,(s->start_offset+s->length),
-				   1 /* manifest */,offset,mtu,msg_out);
-	  }
+	  if (s&&(s->start_offset||(s->length<peer_records[peer]->partials[i].manifest_length)||peer_records[peer]->partials[i].manifest_length<0))
+	    {
+	      if (s&&s->start_offset) {
+		// We are missing bytes at the beginning
+		return request_segment(peer,
+				       peer_records[peer]->partials[i].bid_prefix,
+				       0,1 /* manifest */,offset,mtu,msg_out);
+	      } else if (s) {
+		return request_segment(peer,
+				       peer_records[peer]->partials[i].bid_prefix,
+				       (s->start_offset+s->length),
+				       1 /* manifest */,offset,mtu,msg_out);
+	      }
+	    }
 	  s=peer_records[peer]->partials[i].body_segments;
 	  if (s&&s->start_offset) {
 	    // We are missing bytes at the beginning
-	    return request_segment(peer,i,0,0 /* not manifest */,offset,mtu,msg_out);
+	    return request_segment(peer,
+				   peer_records[peer]->partials[i].bid_prefix,
+				   0,
+				   0 /* not manifest */,offset,mtu,msg_out);
 	  } else if (s) {
-	    return request_segment(peer,i,(s->start_offset+s->length),
+	    return request_segment(peer,
+				   peer_records[peer]->partials[i].bid_prefix,
+				   (s->start_offset+s->length),
 				   0 /* not manifest */,offset,mtu,msg_out);
 	  }
 	}
@@ -269,7 +285,8 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
       // interesting.
       int bundle=peers_most_interesting_bundle(peer);
       if (bundle>-1)
-	return request_segment(peer,bundle,0,0 /* not manifest */,offset,mtu,msg_out);
+	return request_segment(peer,peer_records[peer]->bid_prefixes[bundle],
+			       0,0 /* not manifest */,offset,mtu,msg_out);
     }
   return 0;
 }
