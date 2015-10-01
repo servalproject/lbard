@@ -245,6 +245,10 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
       // int most_complete_remaining=-1;
       // int most_complete_start=-1;
       // int most_complete_manifest_or_body=-1;
+
+      // Don't request anything from a peer that we haven't heard from for a while
+      if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
+	continue;
       
       // What are we fetching from this peer?
       int i;
