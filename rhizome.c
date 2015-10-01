@@ -264,11 +264,13 @@ int find_highest_priority_bundle()
 
     int num_peers_that_dont_have_it=0;
     int peer;
+    time_t peer_observation_time_cutoff=time(0)-20;
     for(peer=0;peer<peer_count;peer++) {
-      if (!peer_has_this_bundle_or_newer(peer,
-					 bundles[i].bid,
-					 bundles[i].version))
-	num_peers_that_dont_have_it++;
+      if (peer_records[peer].last_message_time>=peer_observation_time_cutoff)
+	if (!peer_has_this_bundle_or_newer(peer,
+					   bundles[i].bid,
+					   bundles[i].version))
+	  num_peers_that_dont_have_it++;
     }
     if (num_peers_that_dont_have_it>highest_priority_bundle_peers_dont_have_it)
       this_bundle_priority|=BUNDLE_PRIORITY_LESS_PEERS_HAVE_IT;
