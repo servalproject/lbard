@@ -284,7 +284,8 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 	  if ((!s)||s->start_offset) {
 	    // We are missing bytes at the beginning
 	    if (debug_pull) {
-	      fprintf(stderr,"We need body bytes at the start (start_offset=%d)...\n",s->start_offset);
+	      fprintf(stderr,"We need body bytes at the start (start_offset=%d)...\n",
+		      s?s->start_offset:-1);
 	      dump_segment_list(s);
 	    }
 	    return request_segment(peer,
