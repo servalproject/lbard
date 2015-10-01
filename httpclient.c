@@ -91,7 +91,8 @@ long long gettime_ms()
 
 
 int http_get_simple(char *server_and_port, char *auth_token,
-		    char *path, FILE *outfile, int timeout_ms)
+		    char *path, FILE *outfile, int timeout_ms,
+		    long long *last_read_time)
 {
   // Send simple HTTP request to server, and write result into outfile.
 
@@ -170,6 +171,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
     r=read_nonblock(sock,line,1024);
     if (r>0) {
       // printf("read %d body bytes.\n",r);
+      if (last_read_time) *last_read_time=gettime_ms();
       fwrite(line,r,1,outfile);
       rxlen+=r;
       if (content_length>-1) {
