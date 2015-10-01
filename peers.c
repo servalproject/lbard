@@ -98,7 +98,7 @@ int peer_note_bar(struct peer_state *p,
       assert(p->size_bytes);
     }
     b=p->bundle_count;
-    if (1) fprintf(stderr,"Peer %s* bundle %s* will go in index %d (current count = %d)\n",
+    if (debug_pieces) fprintf(stderr,"Peer %s* bundle %s* will go in index %d (current count = %d)\n",
 	    p->sid_prefix,bid_prefix,b,p->bundle_count);
     p->bid_prefixes[b]=strdup(bid_prefix);
     if (b>=p->bundle_count) p->bundle_count++;

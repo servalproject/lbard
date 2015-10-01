@@ -95,7 +95,7 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     assert(cached_manifest);
     fclose(f);
     unlink(filename);
-    fprintf(stderr,"  manifest is %d bytes long.\n",cached_manifest_len);
+    if (0) fprintf(stderr,"  manifest is %d bytes long.\n",cached_manifest_len);
     
     
     snprintf(path,8192,"/restful/rhizome/%s/raw.bin",
@@ -116,8 +116,9 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     }
     long long t3=gettime_ms();
 
-    fprintf(stderr,"  HTTP pre-fetching of next bundle to send took %lldms + %lldms\n",
-	    t2-t1,t3-t2);
+    if (0)
+      fprintf(stderr,"  HTTP pre-fetching of next bundle to send took %lldms + %lldms\n",
+	      t2-t1,t3-t2);
     
     // XXX - This transport only allows bundles upto 5MB!
     // (and that is probably pushing it a bit for a mesh extender with only 32MB RAM
@@ -132,14 +133,16 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     assert(cached_body);
     fclose(f);
     unlink(filename);
-    fprintf(stderr,"  body is %d bytes long.\n",cached_body_len);
+    if (0)
+      fprintf(stderr,"  body is %d bytes long.\n",cached_body_len);
 
     bid_of_cached_bundle=strdup(bundles[bundle_number].bid);
 
     cached_version=bundles[bundle_number].version;
-    
-    fprintf(stderr,"Cached manifest and body for %s\n",
-	    bundles[bundle_number].bid);
+
+    if (0)
+      fprintf(stderr,"Cached manifest and body for %s\n",
+	      bundles[bundle_number].bid);
   }
   
   return 0;
