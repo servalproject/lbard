@@ -262,12 +262,12 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 	  // 2. Else, request from the end of the first segment, so that we will tend
 	  // to merge segments.
 	  struct segment_list *s=peer_records[peer]->partials[i].manifest_segments;
-	  while(s) s=s->next;
+	  while(s&&s->next) s=s->next;
 	  if ((!s)||(s->start_offset||(s->length<peer_records[peer]->partials[i].manifest_length)||peer_records[peer]->partials[i].manifest_length<0))
 	    {
 	      if (debug_pull) {
 		fprintf(stderr,"We need manifest bytes...\n");
-		dump_segment_list(s);
+		dump_segment_list(peer_records[peer]->partials[i].manifest_segments);
 	      }
 	      if ((!s)||s->start_offset) {
 		// We are missing bytes at the beginning
@@ -277,7 +277,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 	      } else if (s) {
 		if (debug_pull) {
 		  fprintf(stderr,"We need manifest bytes...\n");
-		  dump_segment_list(s);
+		  dump_segment_list(peer_records[peer]->partials[i].manifest_segments);
 		}
 		return request_segment(peer,
 				       peer_records[peer]->partials[i].bid_prefix,
@@ -286,13 +286,14 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 	      }
 	    }
 	  s=peer_records[peer]->partials[i].body_segments;
-	  while(s) s=s->next;
+	  if (debug_pull) dump_segment_list(s);
+	  while(s&&s->next) s=s->next;
 	  if ((!s)||s->start_offset) {
 	    // We are missing bytes at the beginning
 	    if (debug_pull) {
 	      fprintf(stderr,"We need body bytes at the start (start_offset=%d)...\n",
 		      s?s->start_offset:-1);
-	      dump_segment_list(s);
+	      dump_segment_list(peer_records[peer]->partials[i].body_segments);
 	    }
 	    return request_segment(peer,
 				   peer_records[peer]->partials[i].bid_prefix,
@@ -302,7 +303,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 	    if (debug_pull) {
 	      fprintf(stderr,"We need body bytes @ %d...\n",
 				    s->start_offset+s->length);
-	      dump_segment_list(s);
+	      dump_segment_list(peer_records[peer]->partials[i].body_segments);
 	    }
 	    return request_segment(peer,
 				   peer_records[peer]->partials[i].bid_prefix,
