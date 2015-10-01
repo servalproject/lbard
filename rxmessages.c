@@ -60,7 +60,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
   if (debug_pieces) fprintf(stderr,"Saw a bundle piece from SID=%s*\n",peer_prefix);
 
   int bundle_number=-1;
-  
+
   // Schedule BAR for announcement immediately if we already have this version of this
   // bundle, so that the sender knows that they can start sending something else.
   // This in effect provides a positive ACK for reception of a new bundle.
@@ -91,7 +91,6 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     }
   }
 
-  
   int i;
   int spare_record=random()%MAX_BUNDLES_IN_FLIGHT;
   for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
@@ -149,7 +148,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     // for which we as yet have no body segments.  So fetch from Rhizome the content
     // that we do have, and prepopulate the body segment.
     if (!prime_bundle_cache(bundle_number,my_sid_hex,servald_server,credential)) {
-      struct segment_list *s=calloc(sizeof(struct segment_list),1);
+      struct segment_list *s=calloc(1,sizeof(struct segment_list));
       assert(s);
       s->data=malloc(cached_body_len);
       assert(s->data);
@@ -165,7 +164,6 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     }
   }
 
-  
   // Now we have the right partial, we need to look for the right segment to add this
   // piece to, if any.
   struct segment_list **s;
@@ -193,9 +191,9 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 		     piece_offset,piece_offset+piece_bytes,
 		     segment_start,segment_end);
 
-      
-      struct segment_list *ns=calloc(sizeof(struct segment_list),1);
+      struct segment_list *ns=calloc(1,sizeof(struct segment_list));
       assert(ns);
+
       // Link into the list
       ns->next=*s;
       if (*s) ns->prev=(*s)->prev; else ns->prev=NULL;
@@ -206,7 +204,8 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       ns->start_offset=piece_offset;
       ns->length=piece_bytes;
       ns->data=malloc(piece_bytes);
-      bcopy(piece,ns->data,piece_bytes);      
+      bcopy(piece,ns->data,piece_bytes);
+
       break;
     } else if ((segment_start<=piece_offset)&&(segment_end>=piece_end)) {
       // Piece fits entirely within a current segment, i.e., is not new data
@@ -264,7 +263,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 
   merge_segments(&peer_records[peer]->partials[i].manifest_segments);
   merge_segments(&peer_records[peer]->partials[i].body_segments);
-  
+
   // Check if we have the whole bundle now
   if (peer_records[peer]->partials[i].manifest_segments
       &&peer_records[peer]->partials[i].body_segments
@@ -288,7 +287,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       // Now release this partial.
       clear_partial(&peer_records[peer]->partials[i]);
     }
-  
+
   return 0;
 }
 
@@ -299,7 +298,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   /*
     Parse message and act on it.    
   */
-
+  
   // All valid messages must be at least 8 bytes long.
   if (len<8) return -1;
   char peer_prefix[6*2+1];
@@ -315,7 +314,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
     fprintf(stderr,"Decoding message #%d from %s*, length = %d:\n",
 	    msg_number,peer_prefix,len);
   }
-  
+
   int offset=8; 
 
   char bid_prefix[8*2+1];
@@ -336,8 +335,9 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       p=peer_records[i]; break;
     }
   }
+
   if (!p) {
-    p=calloc(sizeof(struct peer_state),1);
+    p=calloc(1,sizeof(struct peer_state));
     for(int i=0;i<4;i++) p->sid_prefix_bin[i]=msg[i];
     p->sid_prefix=strdup(peer_prefix);
     p->last_message_number=-1;
@@ -351,7 +351,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       peer_records[n]=p;
     }
   }
-
+  
   // Update time stamp and most recent message from peer
   p->last_message_time=time(0);
   if (!is_retransmission) p->last_message_number=msg_number;
@@ -363,7 +363,6 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
     }
     switch(msg[offset]) {
     case 'B':
-      
       offset++;
       if (len-offset<BAR_LENGTH) return -2;
       // BAR announcement
@@ -378,17 +377,17 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	       msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3]);
       offset+=4;
       size_byte=msg[offset];
-      offset++;
+      offset+=1;
       if (debug_pieces)
 	fprintf(stderr,
 		"Saw a BAR from %s*: %s* version %lld size byte 0x%02x"
 		" (we know of %d bundles held by that peer)\n",
 		p->sid_prefix,bid_prefix,version,size_byte,p->bundle_count);
       peer_note_bar(p,bid_prefix,version,recipient_prefix,size_byte);
-
       break;
     case 'L':
       // Length of bundle announcement for receivers
+      offset++;
       if (len-offset<(1+8+8+4)) return -3;
       snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
 	       msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
@@ -452,10 +451,11 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	// XXX here be dragons
 	if (bundle_offset&0x800000) is_manifest=1;
 	bundle_offset&=0x7fffff;
-
+	int size_byte=msg[offset++];
+	
 	if (debug_pull) {
-	  fprintf(stderr,"Saw request from SID=%s* BID=%s @ %c%d addressed to SID=%s*\n",
-		  peer_prefix,bid_prefix,is_manifest?'M':'B',bundle_offset,
+	  fprintf(stderr,"Saw request from SID=%s* BID=%s (size byte $%02x) @ %c%d addressed to SID=%s*\n",
+		  peer_prefix,bid_prefix,size_byte,is_manifest?'M':'B',bundle_offset,
 		  target_sid);
 	}
 
@@ -492,6 +492,5 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       return -1;
     }
   }
-  
   return 0;
 }
