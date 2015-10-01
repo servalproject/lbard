@@ -103,8 +103,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	// for incremental journal transfers
 	if (version<0x100000000LL) {
 	  bundle_number=i;
-	}
-	
+	}	
       }
     }
   }
@@ -124,16 +123,23 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 
 	  break;
 	}
+      else {
+	if (debug_pieces) {
+	  fprintf(stderr,"  this isn't the partial we are looking for.\n");
+	  fprintf(stderr,"  piece is of %s*, but slot #%d has %s*\n",
+		  bid_prefix,i,
+		  peer_records[peer]->partials[i].bid_prefix);
+	}
+      }
     }
   }
 
   if (debug_pieces)
     fprintf(stderr,"Saw a piece of interesting bundle BID=%s*/%lld from SID=%s\n",
 	    bid_prefix,version, peer_prefix);
-
-  if (spare_record>0) i=spare_record;
   
   if (i==MAX_BUNDLES_IN_FLIGHT) {
+    if (spare_record>0) i=spare_record;
     if (debug_pieces)
       fprintf(stderr,"Didn't find bundle in partials for this peer. first spare slot =%d\n",spare_record);
     // Didn't find bundle in the progress list.
