@@ -264,7 +264,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 		fprintf(stderr,"We need manifest bytes...\n");
 		dump_segment_list(s);
 	      }
-	      if (s&&s->start_offset) {
+	      if ((!s)||s->start_offset) {
 		// We are missing bytes at the beginning
 		return request_segment(peer,
 				       peer_records[peer]->partials[i].bid_prefix,
