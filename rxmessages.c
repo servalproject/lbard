@@ -358,8 +358,8 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 
   while(offset<len) {
     if (debug_pieces) {
-      fprintf(stderr,"Saw message section with type '%c' (0x%02x) @ offset %d\n",
-	      msg[offset],msg[offset],offset);
+      fprintf(stderr,"Saw message section with type '%c' (0x%02x) @ offset %d (between '%c' and '%c')\n",
+	      msg[offset],msg[offset],offset,msg[offset-1],msg[offset+1]);
     }
     switch(msg[offset]) {
     case 'B':
@@ -452,11 +452,10 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	// XXX here be dragons
 	if (bundle_offset&0x800000) is_manifest=1;
 	bundle_offset&=0x7fffff;
-	int size_byte=msg[offset++];
 	
 	if (debug_pull) {
-	  fprintf(stderr,"Saw request from SID=%s* BID=%s (size byte $%02x) @ %c%d addressed to SID=%s*\n",
-		  peer_prefix,bid_prefix,size_byte,is_manifest?'M':'B',bundle_offset,
+	  fprintf(stderr,"Saw request from SID=%s* BID=%s @ %c%d addressed to SID=%s*\n",
+		  peer_prefix,bid_prefix,is_manifest?'M':'B',bundle_offset,
 		  target_sid);
 	}
 
