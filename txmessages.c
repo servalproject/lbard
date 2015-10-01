@@ -258,6 +258,16 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 
     if (bundles[bundle_number].last_offset_announced==cached_body_len) {
       // If we have reached the end, then mark this bundle as having been announced.
+      if (debug_pull) fprintf(stderr,"*** Marking %c%c%c%c%c%c%c%c* as having been sent.\n",
+			      bundles[bundle_number].bid[0],
+			      bundles[bundle_number].bid[1],
+			      bundles[bundle_number].bid[2],
+			      bundles[bundle_number].bid[3],
+			      bundles[bundle_number].bid[4],
+			      bundles[bundle_number].bid[5],
+			      bundles[bundle_number].bid[6],
+			      bundles[bundle_number].bid[7]
+			      );
       bundles[bundle_number].last_announced_time=time(0);
       // XXX - Race condition exists where bundle version could be updated while we
       // are announcing it.  By caching the version number, we reduce, but do not
@@ -349,20 +359,24 @@ int update_my_message(int serialfd,
   // Request peers to send something interesting if they are not already
   request_wanted_content_from_peers(&offset,mtu,msg_out);
 
-  // Announce a bundle, if any are due.
-  int bundle_to_announce=find_highest_priority_bundle();
-  if (debug_announce)
-    fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
-  if (bundle_to_announce!=-1)
-    announce_bundle_piece(bundle_to_announce,&offset,mtu,msg_out,
-			  prefix,servald_server,credential);
-  // If including a bundle piece leaves space, then try announcing another piece.
-  // This basically addresses the situation where the last few bytes of a manifest
-  // are included, and there is space to start sending the body.
-  if ((offset+21)<mtu) {
+  // Only include a piece most of the them, so that we can sometimes include
+  // more BARs so that the time to go through the BAR list is reduced
+  if (random()&7) {
+    // Announce a bundle, if any are due.
+    int bundle_to_announce=find_highest_priority_bundle();
+    if (debug_announce)
+      fprintf(stderr,"Next bundle to announce is %d\n",bundle_to_announce);
     if (bundle_to_announce!=-1)
       announce_bundle_piece(bundle_to_announce,&offset,mtu,msg_out,
 			    prefix,servald_server,credential);
+    // If including a bundle piece leaves space, then try announcing another piece.
+    // This basically addresses the situation where the last few bytes of a manifest
+    // are included, and there is space to start sending the body.
+    if ((offset+21)<mtu) {
+      if (bundle_to_announce!=-1)
+	announce_bundle_piece(bundle_to_announce,&offset,mtu,msg_out,
+			      prefix,servald_server,credential);
+    }
   }
 
   // Fill up spare space with BARs
