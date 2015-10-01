@@ -94,7 +94,7 @@ int peer_note_bar(struct peer_state *p,
       assert(p->bid_prefixes);
       p->versions=realloc(p->versions,sizeof(long long)*p->bundle_count_alloc);
       assert(p->versions);
-      p->size_bytes=realloc(p->versions,p->bundle_count_alloc);
+      p->size_bytes=realloc(p->size_bytes,p->bundle_count_alloc);
       assert(p->size_bytes);
     }
     b=p->bundle_count;
