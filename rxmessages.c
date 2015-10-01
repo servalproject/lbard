@@ -462,25 +462,31 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	
 	// Are we the target SID?
 	if (!strncasecmp(my_sid,target_sid,4)) {
+	  if (debug_pull) fprintf(stderr,"  -> request is for us.\n");
 	  // Yes, it is addressed to us.
 	  // See if we have this bundle, and if so, set the appropriate stream offset
 	  // and mark the bundle as requested
 	  // XXX linear search!
 	  for(int i=0;i<bundle_count;i++) {
 	    if (!strncasecmp(bid_prefix,bundles[i].bid,16)) {
+	      if (debug_pull) fprintf(stderr,"  -> found the bundle.\n");
 	      bundles[i].transmit_now=1;
 	      // When adjusting the offset, don't adjust it if we are going to reach
 	      // that point within a few hundred bytes, as it won't save any time, and
 	      // it might just cause confusion and delay because of the latency of us
 	      // receiving the message and responding to it.
 	      if (is_manifest) {
-		if ((offset<bundles[i].last_manifest_offset_announced)
-		    ||((offset-bundles[i].last_manifest_offset_announced)>500))
-		  bundles[i].last_manifest_offset_announced=offset;
+		if ((bundle_offset<bundles[i].last_manifest_offset_announced)
+		    ||((bundle_offset-bundles[i].last_manifest_offset_announced)>500)) {
+		  bundles[i].last_manifest_offset_announced=bundle_offset;
+		  if (debug_pull) fprintf(stderr,"  -> setting manifest announcement offset to %d.\n",bundle_offset);
+		}
 	      } else {
-		if ((offset<bundles[i].last_offset_announced)
-		    ||((offset-bundles[i].last_offset_announced)>500))
-		bundles[i].last_offset_announced=offset;
+		if ((bundle_offset<bundles[i].last_offset_announced)
+		    ||((bundle_offset-bundles[i].last_offset_announced)>500)) {
+		bundles[i].last_offset_announced=bundle_offset;
+		if (debug_pull) fprintf(stderr,"  -> setting body announcement offset to %d.\n",bundle_offset);
+		}
 	      }
 	    }
 	  }
