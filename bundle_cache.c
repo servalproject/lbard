@@ -87,9 +87,12 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     long long t2=gettime_ms();
 
     f=fopen(filename,"r");
+    if (cached_manifest) free(cached_manifest);
     cached_manifest=malloc(8192);
+    assert(cached_manifest);
     cached_manifest_len=fread(cached_manifest,1,8192,f);
-    cached_manifest=realloc(cached_manifest,cached_manifest_len);    
+    cached_manifest=realloc(cached_manifest,cached_manifest_len);
+    assert(cached_manifest);
     fclose(f);
     unlink(filename);
     fprintf(stderr,"  manifest is %d bytes long.\n",cached_manifest_len);
@@ -120,10 +123,13 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     // (and that is probably pushing it a bit for a mesh extender with only 32MB RAM
     // for everything!)
     f=fopen(filename,"r");
+    if (cached_body) free(cached_body);
     cached_body=malloc(5*1024*1024);
+    assert(cached_body);
     // XXX - Should check that we read all the bytes
     cached_body_len=fread(cached_body,1,5*1024*1024,f);
-    cached_body=realloc(cached_body,cached_body_len);    
+    cached_body=realloc(cached_body,cached_body_len);
+    assert(cached_body);
     fclose(f);
     unlink(filename);
     fprintf(stderr,"  body is %d bytes long.\n",cached_body_len);
