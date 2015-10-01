@@ -26,6 +26,10 @@ struct peer_state {
   
   unsigned char *last_message;
   time_t last_message_time;
+  // if last_message_time is more than this many seconds ago, then they aren't
+  // considered an active peer, and are excluded from rhizome rank calculations
+  // and various other things.
+#define PEER_KEEPALIVE_INTERVAL 20
   int last_message_number;
 
   // BARs we have seen from them.
