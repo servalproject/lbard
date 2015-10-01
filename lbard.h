@@ -1,6 +1,10 @@
 
 #define C fprintf(stderr,"%s:%d CHECKPOINT in %s()\n",__FILE__,__LINE__,__FUNCTION__)
 
+// Set packet TX interval details (all in ms)
+#define AVG_PACKET_TX_INTERVAL 1000
+#define PACKET_TX_INTERVAL_RANDOMNESS 250
+
 struct segment_list {
   unsigned char *data;
   int start_offset;

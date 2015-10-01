@@ -95,7 +95,11 @@ int scan_for_incoming_messages()
 // About one message per second on RFD900
 // We add random()%250 ms to this, so we deduct half of that from the base
 // interval, so that on average we obtain one message per second.
-int message_update_interval=1000-(250/2);  // ms
+// 128K air speed / 230K serial speed means that we can in principle send
+// about 128K / 256 = 512 packets per second. However, the FTDI serial USB
+// drivers for Mac crash well before that point.
+int message_update_interval=AVG_PACKET_TX_INTERVAL-(PACKET_TX_INTERVAL_RANDOMNESS/2);  // ms
+int message_update_interval_randomness=PACKET_TX_INTERVAL_RANDOMNESS;
 long long last_message_update_time=0;
 
 time_t last_summary_time=0;
@@ -103,7 +107,7 @@ time_t last_summary_time=0;
 int main(int argc, char **argv)
 {
   int monitor_mode=0;
-  
+
   if (argc<5) {
     fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <serial port> [monitor]\n");
     exit(-1);
@@ -116,7 +120,11 @@ int main(int argc, char **argv)
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
       else if (!strcasecmp("announce",argv[n])) debug_announce=1;
-      else {
+      else if (!strcasecmp("rapidfire",argv[n])) {
+	// Send packets fast in this mode -- primarily used for bench testing
+	message_update_interval=100;
+	message_update_interval_randomness=100;
+      } else {
 	fprintf(stderr,"Illegal mode '%s'\n",argv[n]);
 	exit(-3);
       }
@@ -124,6 +132,8 @@ int main(int argc, char **argv)
     n++;
   }
 
+  if (message_update_interval<0) message_update_interval=0;
+  
   last_message_update_time=0;
   
   int serialfd=-1;
@@ -200,7 +210,7 @@ int main(int argc, char **argv)
 			  LINK_MTU,msg_out,
 			  servald_server,credential);
       // Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
-      last_message_update_time=gettime_ms()+(random()%250);
+      last_message_update_time=gettime_ms()+(random()%message_update_interval_randomness);
     }
 
     usleep(10000);
