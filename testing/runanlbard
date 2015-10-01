@@ -10,13 +10,13 @@ foreach radio ( `echo /dev/cu.usbserial-*` /dev/null /dev/null )
  @ n = $n + 1
 end
 
-setenv MallocStackLogging 1
-setenv MallocStackLoggingNoCompact 1
-setenv MallocScribble 1
-setenv MallocPreScribble 1
-setenv MallocGuardEdges 1
-setenv MallocCheckHeapStart 1
-setenv MallocCheckHeapEach 1
+#setenv MallocStackLogging 1
+#setenv MallocStackLoggingNoCompact 1
+#setenv MallocScribble 1
+#setenv MallocPreScribble 1
+#setenv MallocGuardEdges 1
+#setenv MallocCheckHeapStart 1
+#setenv MallocCheckHeapEach 1
     
 echo ./lbard 127.0.0.1:`cat testing/serval${1}/proc/http_port` lbard:lbard `cat testing/serval${1}/self.sid` $theradio announce pull
 ./lbard 127.0.0.1:`cat testing/serval${1}/proc/http_port` lbard:lbard `cat testing/serval${1}/self.sid` $theradio announce pull
