@@ -163,6 +163,8 @@ int main(int argc, char **argv)
 
   long long next_rhizome_db_load_time=0;
   while(1) {
+
+    
     if (argc>2)
       if (next_rhizome_db_load_time<=gettime_ms()) {
 	long long load_timeout=message_update_interval
@@ -192,7 +194,6 @@ int main(int argc, char **argv)
 			  my_sid,
 			  LINK_MTU,msg_out,
 			  servald_server,credential);
-      
       // Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
       last_message_update_time=gettime_ms()+(random()%250);
     }
@@ -203,6 +204,6 @@ int main(int argc, char **argv)
       last_summary_time=time(0);
       show_progress();
     }
-    
+
   }
   }

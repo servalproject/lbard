@@ -94,15 +94,16 @@ int peer_note_bar(struct peer_state *p,
       assert(p->bid_prefixes);
       p->versions=realloc(p->versions,sizeof(long long)*p->bundle_count_alloc);
       assert(p->versions);
-      p->size_bytes=realloc(p->versions,1);
+      p->size_bytes=realloc(p->versions,p->bundle_count_alloc);
       assert(p->size_bytes);
     }
     b=p->bundle_count;
-    if (0) fprintf(stderr,"Peer %s* bundle %s* will go in index %d (current count = %d)\n",
+    if (1) fprintf(stderr,"Peer %s* bundle %s* will go in index %d (current count = %d)\n",
 	    p->sid_prefix,bid_prefix,b,p->bundle_count);
     p->bid_prefixes[b]=strdup(bid_prefix);
     if (b>=p->bundle_count) p->bundle_count++;
   }
+  assert(p);
   p->versions[b]=version;
   p->size_bytes[b]=size_byte;
   

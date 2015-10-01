@@ -8,10 +8,15 @@ SRCS=	main.c rhizome.c txmessages.c rxmessages.c bundle_cache.c json.c peers.c \
 	fec-3.0.1/decode_rs_8.c \
 
 HDRS=	lbard.h serial.h Makefile
-CC=gcc
+#CC=/usr/local/Cellar/llvm/3.6.2/bin/clang
+#LDFLAGS= -lgmalloc
+#CFLAGS= -fno-omit-frame-pointer -fsanitize=address
+CC=clang
+LDFLAGS= -lefence
+CFLAGS= -fno-omit-frame-pointer
 
 lbard:	$(SRCS) $(HDRS)
-	$(CC) -g -std=gnu99 -Wall -o lbard $(SRCS)
+	$(CC) $(CFLAGS) -g -std=gnu99 -Wall -o lbard $(SRCS) $(LDFLAGS)
 
 echotest:	Makefile echotest.c
 	$(CC) -g -std=gnu99 -Wall -o echotest echotest.c

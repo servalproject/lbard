@@ -61,7 +61,7 @@ int register_bundle(char *service,
   int i,peer;
 
   long long versionll=strtoll(version,NULL,10);
-  
+
   // Remove bundle from partial lists of all peers if we have other transmissions
   // to us in progress of this bundle
   // XXX - Linear searches! Replace with hash table etc
@@ -105,10 +105,15 @@ int register_bundle(char *service,
       return 0;
     
     free(bundles[bundle_number].service);
+    bundles[bundle_number].service=NULL;
     free(bundles[bundle_number].author);
+    bundles[bundle_number].author=NULL;
     free(bundles[bundle_number].filehash);
+    bundles[bundle_number].filehash=NULL;
     free(bundles[bundle_number].sender);
+    bundles[bundle_number].sender=NULL;
     free(bundles[bundle_number].recipient);
+    bundles[bundle_number].recipient=NULL;
   } else {    
     // New bundle
     bundles[bundle_number].bid=strdup(bid);
@@ -142,6 +147,7 @@ int peer_has_this_bundle_or_newer(int peer,char *bid_or_bidprefix, long long ver
 {
   // XXX - Another horrible linear search!
   // XXX - Bundle lists need to be stored in a hash table or similar.
+
   int bundle;
   for(bundle=0;bundle<peer_records[peer]->bundle_count;bundle++)
     {
@@ -438,14 +444,16 @@ int clear_partial(struct partial_bundle *p)
   while(p->manifest_segments) {
     struct segment_list *s=p->manifest_segments;
     p->manifest_segments=s->next;
-    if (s->data) free(s->data);
-    free(s);    
+    if (s->data) free(s->data); s->data=NULL;
+    free(s);
+    s=NULL;
   }
   while(p->body_segments) {
     struct segment_list *s=p->body_segments;
     p->body_segments=s->next;
-    if (s->data) free(s->data);
-    free(s);    
+    if (s->data) free(s->data); s->data=NULL;
+    free(s);
+    s=NULL;
   }
 
   bzero(p,sizeof(struct partial_bundle));
@@ -504,8 +512,8 @@ int merge_segments(struct segment_list **s)
       if (me->prev) me->prev->next=next;
 
       // Free redundant segment.
-      free(me->data);
-      free(me);
+      free(me->data); me->data=NULL;
+      free(me); me=NULL;
     } else 
       s=&(*s)->next;
   }

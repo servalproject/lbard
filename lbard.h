@@ -1,3 +1,6 @@
+
+#define C fprintf(stderr,"%s:%d CHECKPOINT in %s()\n",__FILE__,__LINE__,__FUNCTION__)
+
 struct segment_list {
   unsigned char *data;
   int start_offset;

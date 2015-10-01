@@ -61,6 +61,7 @@ int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
     size_byte&=0x7f;
   else
     size_byte|=0x80;
+  msg_out[(*offset)++]=size_byte;
   
   return 0;
 }
@@ -111,9 +112,11 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 	msg[(*offset)++]=(bundles[bundle_number].length>>24)&0xff;
       }
     }
-  
+
+  // Check that we still have space after
   int max_bytes=mtu-(*offset)-21;
-  assert(max_bytes>0);
+  if (max_bytes<1) return 0;
+  
   int is_manifest=0;
   unsigned char *p=NULL;
   int actual_bytes=0;
@@ -371,7 +374,7 @@ int update_my_message(int serialfd,
     bar_count++;
   }
   if (debug_announce) fprintf(stderr,"bar_count=%d\n",bar_count);
-    
+
   // Increment message counter
   message_counter++;
 
@@ -382,6 +385,6 @@ int update_my_message(int serialfd,
   }
 
   radio_send_message(serialfd,msg_out,offset);
-  
+
   return offset;
 }

@@ -57,8 +57,8 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     // Cache is invalid - release
     if (bid_of_cached_bundle) {
       free(bid_of_cached_bundle); bid_of_cached_bundle=NULL;
-      free(cached_manifest);
-      free(cached_body);
+      free(cached_manifest); cached_manifest=NULL;
+      free(cached_body); cached_body=NULL;
     }
 
     // Load bundle into cache
