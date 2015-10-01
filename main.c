@@ -140,7 +140,12 @@ int main(int argc, char **argv)
     }
   fprintf(stderr,"Serial port open as fd %d\n",serialfd);
   
-  prefix=strdup(argv[3]); prefix[6]=0;
+  prefix=strdup(argv[3]);
+  if (strlen(prefix)<32) {
+      fprintf(stderr,"You must provide a valid SID for the ID of the local node.\n");
+      exit(-1);
+    }
+  prefix[6]=0;
   
   if (argc>3) {
     // set my_sid from argv[3]
