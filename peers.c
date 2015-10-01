@@ -260,12 +260,20 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 	  struct segment_list *s=peer_records[peer]->partials[i].manifest_segments;
 	  if (s&&(s->start_offset||(s->length<peer_records[peer]->partials[i].manifest_length)||peer_records[peer]->partials[i].manifest_length<0))
 	    {
+	      if (debug_pull) {
+		fprintf(stderr,"We need manifest bytes...\n");
+		dump_segment_list(s);
+	      }
 	      if (s&&s->start_offset) {
 		// We are missing bytes at the beginning
 		return request_segment(peer,
 				       peer_records[peer]->partials[i].bid_prefix,
 				       0,1 /* manifest */,offset,mtu,msg_out);
 	      } else if (s) {
+		if (debug_pull) {
+		  fprintf(stderr,"We need manifest bytes...\n");
+		  dump_segment_list(s);
+		}
 		return request_segment(peer,
 				       peer_records[peer]->partials[i].bid_prefix,
 				       (s->start_offset+s->length),
@@ -275,11 +283,20 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 	  s=peer_records[peer]->partials[i].body_segments;
 	  if (s&&s->start_offset) {
 	    // We are missing bytes at the beginning
+	    if (debug_pull) {
+	      fprintf(stderr,"We need body bytes at the start (start_offset=%d)...\n",s->start_offset);
+	      dump_segment_list(s);
+	    }
 	    return request_segment(peer,
 				   peer_records[peer]->partials[i].bid_prefix,
 				   0,
 				   0 /* not manifest */,offset,mtu,msg_out);
 	  } else if (s) {
+	    if (debug_pull) {
+	      fprintf(stderr,"We need body bytes @ %d...\n",
+				    s->start_offset+s->length);
+	      dump_segment_list(s);
+	    }
 	    return request_segment(peer,
 				   peer_records[peer]->partials[i].bid_prefix,
 				   (s->start_offset+s->length),
@@ -291,9 +308,11 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
       // So have a look at what the peer has to offer, and ask for something
       // interesting.
       int bundle=peers_most_interesting_bundle(peer);
-      if (bundle>-1)
+      if (bundle>-1) {
+	if (debug_pull) fprintf(stderr,"We need an interesting bundle...\n");
 	return request_segment(peer,peer_records[peer]->bid_prefixes[bundle],
 			       0,0 /* not manifest */,offset,mtu,msg_out);
+      }
     }
   return 0;
 }
