@@ -316,7 +316,7 @@ int load_rhizome_db(int timeout,
   
   // We use the new-since-time version once we have a token
   // to make this much faster.
-  if (!*token)
+  if ((!*token))
     snprintf(path,8192,"/restful/rhizome/bundlelist.json");
   else
     snprintf(path,8192,"/restful/rhizome/newsince/%s/bundlelist.json",
@@ -379,7 +379,12 @@ int load_rhizome_db(int timeout,
     line[0]=0; fgets(line,8192,f);
   }
 
-  if (0) fprintf(stderr,"Rhizome contains %d new bundles (token = %s). We now know about %d bundles.\n",count,*token,bundle_count);
+  message_buffer_length+=
+    snprintf(&message_buffer[message_buffer_length],
+	     message_buffer_size-message_buffer_length,
+	     "Querying rhizome DB for new content (timeout %d ms)\n"
+	     "Rhizome contains %d new bundles (token = %s). We now know about %d bundles.\n",
+	     timeout,count,*token,bundle_count);
   fclose(f);
   unlink(filename);
   
