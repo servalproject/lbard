@@ -154,3 +154,5 @@ int generate_progress_string(struct partial_bundle *partial,
 			     char *progress,int progress_size);
 int show_progress();
 int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_out);
+int dump_segment_list(struct segment_list *s);
+
