@@ -174,9 +174,9 @@ int peers_most_interesting_bundle(int peer)
 
 int hex_to_val(int c)
 {
-  if (c>='0'&&c<'9') return c-'0';
-  if (c>='A'&&c<'F') return c-'A'+10;
-  if (c>='a'&&c<'f') return c-'a'+10;
+  if (c>='0'&&c<='9') return c-'0';
+  if (c>='A'&&c<='F') return c-'A'+10;
+  if (c>='a'&&c<='f') return c-'a'+10;
   return 0;
 }
 
@@ -186,6 +186,8 @@ int request_segment(int peer, char *bid_prefix, int seg_start, int is_manifest,
   // Check that we have enough space
   if ((mtu-*offset)<(1+2+8+3)) return -1;
 
+  int start_offset=*offset;
+  
   // Request piece
   msg_out[(*offset)++]='R';
 
@@ -208,7 +210,11 @@ int request_segment(int peer, char *bid_prefix, int seg_start, int is_manifest,
   if (debug_pull) {
     fprintf(stderr,"Requesting BID=%s @ %c%d from SID=%s*\n",
 	    bid_prefix,
-	    is_manifest?'M':'B',seg_start,peer_records[peer]->sid_prefix);	    
+	    is_manifest?'M':'B',seg_start,peer_records[peer]->sid_prefix);
+    fprintf(stderr,"Request block: ");
+    for(;start_offset<*offset;start_offset++)
+      fprintf(stderr," %02X",msg_out[start_offset]);
+    fprintf(stderr,"\n");
   }
   
   return 0;
