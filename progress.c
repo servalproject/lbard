@@ -129,10 +129,10 @@ int show_progress()
 				 progress_string,sizeof(progress_string));
 	fprintf(stderr,"   PEER:%s* %s* version %-18lld: [%s]\n",
 		peer_prefix,bid_prefix,version,
-		progress_string);	
-	break;
+		progress_string);
       }
     }
   }
+  fprintf(stderr,"<< end of bundle transfer list.\n");
   return 0;
 }
