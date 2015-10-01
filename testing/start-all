@@ -16,7 +16,7 @@ foreach n ( 1 2 3 4 )
  # Repopulate rhizome with test bundles.
  ~/g/serval-dna/servald rhizome add file `cat self.sid` file$n
 
- foreach f ( $n{0,1,2,3,4,5,6,7,8,9} )
+ foreach f ( $n{0,1,2,3,4,5,6,7,8,9}{0,1,2,3,4,5,6,7,8,9}{0,1,2,3,4,5,6,7,8,9} )
     hexdump /dev/random | head -20 | sed -e 's/[^f]//g'  > random$f
     hexdump /dev/random | head -$f >> random$f
     ~/g/serval-dna/servald rhizome add file `cat self.sid` random$f
