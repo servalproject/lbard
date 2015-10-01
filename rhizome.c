@@ -316,9 +316,11 @@ int load_rhizome_db(int timeout,
   
   // We use the new-since-time version once we have a token
   // to make this much faster.
-  if ((!*token)||(!(random()&0xf))
-    snprintf(path,8192,"/restful/rhizome/bundlelist.json");
-  else
+  if ((!*token)||(!(random()&0xf))) {
+      snprintf(path,8192,"/restful/rhizome/bundlelist.json");
+      // Allow a bit more time to read all the bundles this time around
+      timeout=2000;
+  } else
     snprintf(path,8192,"/restful/rhizome/newsince/%s/bundlelist.json",
 	     *token);
     
@@ -331,8 +333,15 @@ int load_rhizome_db(int timeout,
     return -1;
   }
 
+  int ignore_token=0;
+  long long last_read_time=0LL;
   int result_code=http_get_simple(servald_server,
-			      credential,path,f,timeout);
+				  credential,path,f,timeout,&last_read_time);
+  // Did we keep reading upto the last fraction of a second?
+  if ((gettime_ms()-last_read_time)<100) {
+    // Yes, rhizome list fetch consumed all available time, so ignore tokens
+    ignore_token=1;
+  }
   
   fclose(f);
   if(result_code!=200) {
@@ -357,9 +366,15 @@ int load_rhizome_db(int timeout,
       if (strcmp(fields[0],"null")) {
 	// We have a token that will allow us to ask for only newer bundles in a
 	// future call. Remember it and use it.
-	if (*token) free(*token);
-	*token=strdup(fields[0]);
-	if (0) fprintf(stderr,"Saw rhizome progressive fetch token '%s'\n",*token);
+	// XXX - This token is only reliable if we read the complete list in this call.
+
+	if (!ignore_token) {
+	  if (*token) free(*token);
+	  *token=strdup(fields[0]);
+	  if (1) fprintf(stderr,"Saw rhizome progressive fetch token '%s'\n",*token);
+	} else {
+	  if (1) fprintf(stderr,"Ignoring rhizome progressive fetch token '%s' because of timeout\n",*token);
+	}
       }
       
       // Now we have the fields, so register the bundles into our internal list.
