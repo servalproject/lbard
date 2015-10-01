@@ -189,9 +189,9 @@ int main(int argc, char **argv)
 	// messages within a reasonable timeframe to prevent input buffer overflow,
 	// and peers wasting time sending bundles that we already know about, and that
 	// we can inform them about.
-	if (load_timeout>500) load_timeout=500;
+	if (load_timeout>1500) load_timeout=1500;
 	
-	if (load_timeout<100) load_timeout=100;
+	if (load_timeout<500) load_timeout=500;
 	if (!monitor_mode)
 	  load_rhizome_db(load_timeout,
 			  prefix, servald_server,credential,&token);
