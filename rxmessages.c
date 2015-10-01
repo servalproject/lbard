@@ -438,6 +438,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	char bid_prefix[8*2+1+1];
 	int bundle_offset=0;
 	int is_manifest=0;
+	offset++;
 	snprintf(target_sid,5,"%02x%02x",msg[offset],msg[offset+1]);
 	offset+=2;
 	snprintf(bid_prefix,17,"%02x%02x%02x%02x%02x%02x%02x%02x",
