@@ -45,7 +45,25 @@ extern char *my_sid_hex;
 int saw_length(char *peer_prefix,char *bid_prefix,long long version,
 	       int body_length)
 {
-  return 0;
+  // Note length of payload for this bundle, if we don't already know it
+  int peer=find_peer_by_prefix(peer_prefix);
+  if (peer<0) return -1;
+
+  int i;
+  int spare_record=random()%MAX_BUNDLES_IN_FLIGHT;
+  for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
+    if (!peer_records[peer]->partials[i].bid_prefix) {
+      if (spare_record==-1) spare_record=i;
+    } else {
+      if (!strcasecmp(peer_records[peer]->partials[i].bid_prefix,bid_prefix))
+	if (peer_records[peer]->partials[i].bundle_version==version)
+	  {
+	    peer_records[peer]->partials[i].body_length=body_length;
+	    return 0;
+	  }
+    }
+  }
+  return -1;
 }
 
 int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
