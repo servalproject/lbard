@@ -262,6 +262,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 	  // 2. Else, request from the end of the first segment, so that we will tend
 	  // to merge segments.
 	  struct segment_list *s=peer_records[peer]->partials[i].manifest_segments;
+	  while(s) s=s->next;
 	  if ((!s)||(s->start_offset||(s->length<peer_records[peer]->partials[i].manifest_length)||peer_records[peer]->partials[i].manifest_length<0))
 	    {
 	      if (debug_pull) {
@@ -285,6 +286,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 	      }
 	    }
 	  s=peer_records[peer]->partials[i].body_segments;
+	  while(s) s=s->next;
 	  if ((!s)||s->start_offset) {
 	    // We are missing bytes at the beginning
 	    if (debug_pull) {
