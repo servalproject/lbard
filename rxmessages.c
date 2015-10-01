@@ -373,7 +373,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   // Update time stamp and most recent message from peer
   p->last_message_time=time(0);
   if (!is_retransmission) p->last_message_number=msg_number;
-
+  
   while(offset<len) {
     if (debug_pieces) {
       fprintf(stderr,"Saw message section with type '%c' (0x%02x) @ offset %d (between '%c' and '%c')\n",
