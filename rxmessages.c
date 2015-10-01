@@ -127,17 +127,26 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
     }
   }
 
-  if (1) fprintf(stderr,"Saw a piece of interesting bundle BID=%s*/%lld from SID=%s\n",
-		 bid_prefix,version, peer_prefix);
+  if (debug_pieces)
+    fprintf(stderr,"Saw a piece of interesting bundle BID=%s*/%lld from SID=%s\n",
+	    bid_prefix,version, peer_prefix);
 
   if (i==MAX_BUNDLES_IN_FLIGHT) {
+    if (debug_pieces)
+      fprintf(stderr,"Didn't find bundle in partials for this peer. first spare slot =%d\n",spare_record);
     // Didn't find bundle in the progress list.
     // Abort one of the ones in the list at random, and replace, unless there is
     // a spare record slot to use.
     if (spare_record==-1) {
       i=random()%MAX_BUNDLES_IN_FLIGHT;
       clear_partial(&peer_records[peer]->partials[i]);
-    } else i=spare_record;
+    } else {
+      i=spare_record;
+      // Clear it just to make sure.
+      clear_partial(&peer_records[peer]->partials[i]);
+    }
+    if (debug_pieces)
+      fprintf(stderr,"Using slot %d\n",i);
 
     // Now prepare the partial record
     peer_records[peer]->partials[i].bid_prefix=strdup(bid_prefix);
