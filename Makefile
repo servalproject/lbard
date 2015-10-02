@@ -12,7 +12,8 @@ HDRS=	lbard.h serial.h Makefile
 #LDFLAGS= -lgmalloc
 #CFLAGS= -fno-omit-frame-pointer -fsanitize=address
 CC=clang
-LDFLAGS= -lefence
+#LDFLAGS= -lefence
+LDFLAGS=
 CFLAGS= -fno-omit-frame-pointer
 
 lbard:	$(SRCS) $(HDRS)
