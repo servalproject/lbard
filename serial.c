@@ -75,7 +75,7 @@ ssize_t write_all(int fd, const void *buf, size_t len)
   return written;
 }
 
-int serial_setup_port(int fd)
+int serial_setup_port_with_speed(int fd,int speed)
 {
   struct termios t;
 
@@ -91,8 +91,8 @@ int serial_setup_port(int fd)
 	  
   
   // XXX Speed and options should be configurable
-  cfsetispeed(&t, B230400);
-  cfsetospeed(&t, B230400);
+  cfsetispeed(&t, speed);
+  cfsetospeed(&t, speed);
   // 8N1
   t.c_cflag &= ~PARENB;
   t.c_cflag &= ~CSTOPB;
@@ -134,4 +134,9 @@ int serial_setup_port(int fd)
 	  );
 
   return 0;
+}
+
+int serial_setup_port(int fd)
+{
+  return serial_setup_port_with_speed(fd,B230400);
 }
