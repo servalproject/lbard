@@ -108,6 +108,14 @@ int main(int argc, char **argv)
 {
   int monitor_mode=0;
 
+  if ((argc==6)&&(!strcasecmp(argv[1],"energysample"))) {
+    char *port=argv[2];
+    float pulse_width_ms=atof(argv[3]);
+    float pulse_frequency=atoi(argv[4]);
+    int wifiup_hold_time_ms=atoi(argv[5]);
+    return energy_experiment(port,pulse_frequency,pulse_width_ms,wifiup_hold_time_ms);
+  }
+  
   if (argc<5) {
     fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <serial port> [monitor]\n");
     exit(-1);
