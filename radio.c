@@ -206,7 +206,7 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 {
   int i,j;
 
-  if (monitor_mode||debug_pieces) {
+  if (debug_pieces) {
     fprintf(stderr,"Read %d bytes from radio:\n",count);
     for(i=0;i<count;i+=32) {
       for(j=0;j<32;j++) {
