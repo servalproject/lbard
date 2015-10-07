@@ -170,3 +170,4 @@ int dump_segment_list(struct segment_list *s);
 
 int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
 		      int wifi_hold_time_ms);
+int serial_setup_port_with_speed(int fd,int speed);
