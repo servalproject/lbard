@@ -8,6 +8,9 @@
 #ifdef linux
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
 #endif
 
 // From os.c in serval-dna
@@ -25,19 +28,6 @@ long long gettime_us()
 char *wifi_interface_name=NULL;
 int wifi_fd=-1;
 
-int wifi_disable()
-{
-#ifdef linux
-  fprintf(stderr,"Disabling wifi interface %s @ %lldms\n",
-	  wifi_interface_name,gettime_ms());
-  if (wifi_fd==-1)
-    wifi_fd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP);
-  struct ifreq ifr;
-  memset(&ifr, 0, sizeof(ifr));
-  strcpy(ifr.ifr_name, wifi_interface_name);
-  if (ioctl(wifi_fd,SIOCGIFFLAGS,&ifr)) return -1;
-  ifr.ifr_flags&=!IFF_UP;
-  if (ioctl(wifi_fd,SIOCSIFFLAGS,&ifr)) return -1;
 #else
   return -1;
 #endif
