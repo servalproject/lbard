@@ -5,6 +5,10 @@
 #include <time.h>
 #include <unistd.h>
 #include "lbard.h"
+#ifdef linux
+#include <sys/ioctl.h>
+#include <net/if.h>
+#endif
 
 // From os.c in serval-dna
 long long gettime_us()
@@ -18,25 +22,53 @@ long long gettime_us()
   return nowtv.tv_sec * 1000000LL + nowtv.tv_usec;
 }
 
+char *wifi_interface_name=NULL;
+int wifi_fd=-1;
+
 int wifi_disable()
 {
+#ifdef linux
+ if (wifi_fd==-1)
+   wifi_fd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP);
+ struct ifreq ifr;
+ memset(&ifr, 0, sizeof(ifr));
+ strcpy(ifr.ifr_name, wifi_interface_name);
+ if (ioctl(wifi_fd,SIOCGIFFLAGS,&ifr)) return -1;
+ ifr.ifr_flags&=!IFF_UP;
+ if (ioctl(wifi_fd,SIOCSIFFLAGS,&ifr)) return -1;
+#else
   return -1;
+#endif
 }
 
 int wifi_enable()
 {
+#ifdef linux
+ if (wifi_fd==-1)
+   wifi_fd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP);
+ struct ifreq ifr;
+ memset(&ifr, 0, sizeof(ifr));
+ strcpy(ifr.ifr_name, wifi_interface_name);
+ if (ioctl(wifi_fd,SIOCGIFFLAGS,&ifr)) return -1;
+ ifr.ifr_flags|=IFF_UP;
+ if (ioctl(wifi_fd,SIOCSIFFLAGS,&ifr)) return -1;
+#else
   return -1;
+#endif 
 }
 
 
 int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
-		      int wifiup_hold_time_ms)
+		      int wifiup_hold_time_ms, char *interface_name)
 {
   fprintf(stderr,"Running energy sample experiment:\n");
   fprintf(stderr,"  pulse width = %.4fms\n",pulse_width_ms);
   fprintf(stderr,"  pulse frequency = %dHz\n",pulse_frequency);
   fprintf(stderr,"  wifi hold time = %dms\n",wifiup_hold_time_ms);
+  fprintf(stderr,"  wifi interface = %s\n",interface_name);
 
+  wifi_interface_name=interface_name;
+  
   // Work out correct serial port speed to produce the required pulse width
   int speed=-1;
   int pulse_width_usec=pulse_width_ms*1000;

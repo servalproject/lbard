@@ -108,12 +108,14 @@ int main(int argc, char **argv)
 {
   int monitor_mode=0;
 
-  if ((argc==6)&&(!strcasecmp(argv[1],"energysample"))) {
+  if ((argc==7)&&(!strcasecmp(argv[1],"energysample"))) {
     char *port=argv[2];
     float pulse_width_ms=atof(argv[3]);
     float pulse_frequency=atoi(argv[4]);
     int wifiup_hold_time_ms=atoi(argv[5]);
-    return energy_experiment(port,pulse_frequency,pulse_width_ms,wifiup_hold_time_ms);
+    char *interface=argv[6];
+    return energy_experiment(port,pulse_frequency,pulse_width_ms,wifiup_hold_time_ms,
+			     interface);
   }
   
   if (argc<5) {
