@@ -298,7 +298,9 @@ int find_highest_priority_bundle()
       }
     }
 
-
+    // Remember last calculated priority so that we can help debug problems with
+    // priority calculation.
+    bundles[highest_priority_bundle].last_priority=this_bundle_priority;
     
   }
   

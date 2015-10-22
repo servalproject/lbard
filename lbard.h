@@ -84,6 +84,9 @@ struct bundle_record {
   long long last_offset_announced;
   // Similarly for the manifest
   long long last_manifest_offset_announced;
+
+  
+  long long last_priority;
 };
 
 #define MAX_PEERS 1024
@@ -171,3 +174,4 @@ int dump_segment_list(struct segment_list *s);
 int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
 		      int wifi_hold_time_ms,char *interface_name);
 int serial_setup_port_with_speed(int fd,int speed);
+int status_dump();
