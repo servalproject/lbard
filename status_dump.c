@@ -43,7 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "serial.h"
 #include "version.h"
 
-#define STATUS_FILE "/tmp/lbard.status"
+#define STATUS_FILE "/tmp/lbard_status.html"
 
 int status_dump()
 {
