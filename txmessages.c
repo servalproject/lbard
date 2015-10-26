@@ -50,6 +50,7 @@ int log2ish(int value)
   return result;
 }
 
+
 int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
 {
   // BAR consists of:

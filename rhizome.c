@@ -176,6 +176,25 @@ int find_highest_priority_bar()
   return bundle_bar_counter;
 }
 
+int lengthToPriority(long long value)
+{
+  long long original_value=value;
+  
+  int result=0;
+  while(value) {
+    result++; value=value>>1;
+  }
+
+  int shift=4;
+  if (result<=shift) shift=result-1;
+  long long part=((original_value-(1<<result))>>(result-shift))&0xf;
+
+  part=15-part;
+  result=63-result;
+  
+  return (result<<4)|part;
+}
+
 int find_highest_priority_bundle()
 {
   long long this_bundle_priority=0;
@@ -194,11 +213,10 @@ int find_highest_priority_bundle()
     // This ensures that we rotate through the bundles we have.
     // If a peer comes along who doesn't have a smaller or meshms bundle, then
     // the less-peers-have-it priority will kick in.
-#define BUNDLE_PRIORITY_SENT_LESS_RECENTLY    0x00001000
-#define BUNDLE_PRIORITY_FILE_SIZE_SMALLER     0x00000100
-#define BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER   0x00000200
-#define BUNDLE_PRIORITY_IS_MESHMS             0x00000400
-#define BUNDLE_PRIORITY_LESS_PEERS_HAVE_IT    0x00010000
+#define BUNDLE_PRIORITY_SENT_LESS_RECENTLY    0x00010000
+#define BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER   0x00002000
+#define BUNDLE_PRIORITY_IS_MESHMS             0x00004000
+#define BUNDLE_PRIORITY_LESS_PEERS_HAVE_IT    0x00100000
 #define BUNDLE_PRIORITY_TRANSMIT_NOW          0x40000000
 
     if (bundles[i].transmit_now) {
@@ -212,8 +230,7 @@ int find_highest_priority_bundle()
       time_delta=bundles[highest_priority_bundle].last_announced_time
 	-bundles[i].last_announced_time;
       
-      if (bundles[i].length<bundles[highest_priority_bundle].length)
-	this_bundle_priority|=BUNDLE_PRIORITY_FILE_SIZE_SMALLER;
+      this_bundle_priority = lengthToPriority(bundles[i].length);
     } else time_delta=0;
 
     if (time_delta>0LL) {
