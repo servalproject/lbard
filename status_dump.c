@@ -50,6 +50,20 @@ struct b {
   int priority;
 };
 
+char *msgs[1024];
+long long msg_times[1024];
+int msg_count=0;
+
+int status_log(char *msg)
+{
+  if (msg_count<1024) {
+    msgs[msg_count]=strdup(msg);
+    msg_times[msg_count++]=gettime_ms();
+    return 0;
+  }
+  return -1;
+}
+
 int compare_b(const void *a,const void *b)
 {
   const struct b *aa=a;
@@ -123,6 +137,16 @@ int status_dump()
     }
   }
   fprintf(f,"</table>\n");
+
+    fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>Time</th><th>Announced content</th></tr>\n");
+  fprintf(f,"</table>\n");
+  long long now=gettime_ms();
+  for(i=0;i<msg_count;i++) {
+    fprintf(f,"<tr><td>T-%lldms</td><td>%s</td></tr>\n",
+	    now-msg_times[i],msgs[i]);
+    free(msgs[i]); msgs[i]=NULL;
+  }
+  msg_count=0;
   
   fprintf(f,"</body>\n");
   

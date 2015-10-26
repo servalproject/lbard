@@ -216,6 +216,12 @@ int request_segment(int peer, char *bid_prefix, int seg_start, int is_manifest,
       fprintf(stderr," %02X",msg_out[start_offset]);
     fprintf(stderr,"\n");
   }
+
+  char status_msg[1024];
+  snprintf(status_msg,1024,"Requesting BID=%s @ %c%d from SID=%s*\n",
+	   bid_prefix,
+	   is_manifest?'M':'B',seg_start,peer_records[peer]->sid_prefix);
+  status_log(status_msg);
   
   return 0;
 }

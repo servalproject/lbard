@@ -72,6 +72,17 @@ int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
   else
     size_byte|=0x80;
   msg_out[(*offset)++]=size_byte;
+
+  char status_msg[1024];
+  snprintf(status_msg,1024,"Announcing BAR %c%c%c%c%c%c%c%c* version %lld [%s]",
+	   bundles[bundle_number].bid[0],bundles[bundle_number].bid[1],
+	   bundles[bundle_number].bid[2],bundles[bundle_number].bid[3],
+	   bundles[bundle_number].bid[4],bundles[bundle_number].bid[5],
+	   bundles[bundle_number].bid[6],bundles[bundle_number].bid[7],
+	   bundles[bundle_number].version,	   
+	   bundles[bundle_number].service);
+  status_log(status_msg);
+
   
   return 0;
 }
@@ -259,7 +270,18 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 	    is_manifest?"manifest":"payload",
 	    start_offset,start_offset+actual_bytes);
   }
-  
+
+  char status_msg[1024];
+  snprintf(status_msg,1024,"Announcing %c%c%c%c%c%c%c%c* version %lld %s segment [%d,%d)",
+	   bundles[bundle_number].bid[0],bundles[bundle_number].bid[1],
+	   bundles[bundle_number].bid[2],bundles[bundle_number].bid[3],
+	   bundles[bundle_number].bid[4],bundles[bundle_number].bid[5],
+	   bundles[bundle_number].bid[6],bundles[bundle_number].bid[7],
+	   bundles[bundle_number].version,
+	   is_manifest?"manifest":"payload",
+	   start_offset,start_offset+actual_bytes);
+  status_log(status_msg);
+	     
   // Update offset announced
   if (is_manifest) {
     bundles[bundle_number].last_manifest_offset_announced+=actual_bytes;
