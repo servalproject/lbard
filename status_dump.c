@@ -45,6 +45,21 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #define STATUS_FILE "/tmp/lbard_status.html"
 
+struct b {
+  int order;
+  int priority;
+};
+
+int compare_b(const void *a,const void *b)
+{
+  const struct b *aa=a;
+  const struct b *bb=b;
+
+  if (aa->priority<bb->priority) return -1;
+  if (aa->priority>bb->priority) return 1;
+  return 0;
+}
+
 int status_dump()
 {
   FILE *f=fopen(STATUS_FILE,"w");
@@ -52,16 +67,26 @@ int status_dump()
 
   fprintf(f,"<HTML>\n<HEAD>lbard version %s status dump @ T=%lldms</head><body>\n",
 	  VERSION_STRING,gettime_ms());
-
-  int i;
+  
+  struct b order[bundle_count];
+  int i,n;
+  
+  for (i=0;i<bundle_count;i++) {
+    order[i].order=i;
+    order[i].priority=bundles[i].last_priority;
+  }
+  qsort(order,bundle_count,sizeof(struct b),compare_b);
+  
   fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>BID Prefix</th><th>Bundle version</th><th>Bundle length</th><th>Last calculated priority</th></tr>\n");
-  for (i=0;i<bundle_count;i++)
+  for (n=0;i<bundle_count;i++) {
+    i=order[n].order;
     fprintf(f,"<tr><td>%02x%02x%02x%02x%02x%02x*</td><td>%lld</td><td>%lld</td><td>0x%08llx (%lld)</td></tr>\n",
 	    bundles[i].bid[0],bundles[i].bid[1],bundles[i].bid[2],
 	    bundles[i].bid[3],bundles[i].bid[4],bundles[i].bid[5],
 	    bundles[i].version,
 	    bundles[i].length,
 	    bundles[i].last_priority,bundles[i].last_priority);
+  }
   fprintf(f,"</table>\n");
 
   fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>Peer SID Prefix</th><th>Time since last message<th></tr>\n");
