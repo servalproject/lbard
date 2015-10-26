@@ -92,7 +92,7 @@ int status_dump()
   qsort(order,bundle_count,sizeof(struct b),compare_b);
   
   fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>BID Prefix</th><th>Bundle version</th><th>Bundle length</th><th>Last calculated priority</th></tr>\n");
-  for (n=0;i<bundle_count;i++) {
+  for (n=0;n<bundle_count;n++) {
     i=order[n].order;
     fprintf(f,"<tr><td>%02x%02x%02x%02x%02x%02x*</td><td>%lld</td><td>%lld</td><td>0x%08llx (%lld)</td></tr>\n",
 	    bundles[i].bid[0],bundles[i].bid[1],bundles[i].bid[2],
