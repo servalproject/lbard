@@ -47,7 +47,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 struct b {
   int order;
-  int priority;
+  long long priority;
 };
 
 char *msgs[1024];
@@ -91,10 +91,11 @@ int status_dump()
   }
   qsort(order,bundle_count,sizeof(struct b),compare_b);
   
-  fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>BID Prefix</th><th>Bundle version</th><th>Bundle length</th><th>Last calculated priority</th></tr>\n");
+  fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>Bundle #</th><th>BID Prefix</th><th>Bundle version</th><th>Bundle length</th><th>Last calculated priority</th></tr>\n");
   for (n=0;n<bundle_count;n++) {
     i=order[n].order;
-    fprintf(f,"<tr><td>%02x%02x%02x%02x%02x%02x*</td><td>%lld</td><td>%lld</td><td>0x%08llx (%lld)</td></tr>\n",
+    fprintf(f,"<tr><td>#%d</td><td>%02x%02x%02x%02x%02x%02x*</td><td>%lld</td><td>%lld</td><td>0x%08llx (%lld)</td></tr>\n",
+	    i,
 	    bundles[i].bid[0],bundles[i].bid[1],bundles[i].bid[2],
 	    bundles[i].bid[3],bundles[i].bid[4],bundles[i].bid[5],
 	    bundles[i].version,
