@@ -232,7 +232,7 @@ int find_highest_priority_bundle()
     } else time_delta=0;
 
     if (bundles[i].transmit_now)
-      if (bundles[i].transmit_now<=time(0)) {
+      if (bundles[i].transmit_now>=time(0)) {
 	this_bundle_priority|=BUNDLE_PRIORITY_TRANSMIT_NOW;
       }
     
