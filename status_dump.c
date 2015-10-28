@@ -94,10 +94,11 @@ int status_dump()
   fprintf(f,"<h2>Bundles in local store</h2>\n<table border=1 padding=2 spacing=2><tr><th>Bundle #</th><th>BID Prefix</th><th>Bundle version</th><th>Bundle length</th><th>Last calculated priority</th></tr>\n");
   for (n=0;n<bundle_count;n++) {
     i=order[n].order;
-    fprintf(f,"<tr><td>#%d</td><td>%02x%02x%02x%02x%02x%02x*</td><td>%lld</td><td>%lld</td><td>0x%08llx (%lld)</td></tr>\n",
+    fprintf(f,"<tr><td>#%d</td><td>%c%c%c%c%c%c%c%c*</td><td>%lld</td><td>%lld</td><td>0x%08llx (%lld)</td></tr>\n",
 	    i,
 	    bundles[i].bid[0],bundles[i].bid[1],bundles[i].bid[2],
 	    bundles[i].bid[3],bundles[i].bid[4],bundles[i].bid[5],
+	    bundles[i].bid[6],bundles[i].bid[7],
 	    bundles[i].version,
 	    bundles[i].length,
 	    bundles[i].last_priority,bundles[i].last_priority);
