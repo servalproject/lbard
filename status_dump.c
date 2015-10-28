@@ -91,7 +91,7 @@ int status_dump()
   }
   qsort(order,bundle_count,sizeof(struct b),compare_b);
   
-  fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>Bundle #</th><th>BID Prefix</th><th>Bundle version</th><th>Bundle length</th><th>Last calculated priority</th></tr>\n");
+  fprintf(f,"<h2>Bundles in local store</h2>\n<table border=1 padding=2 spacing=2><tr><th>Bundle #</th><th>BID Prefix</th><th>Bundle version</th><th>Bundle length</th><th>Last calculated priority</th></tr>\n");
   for (n=0;n<bundle_count;n++) {
     i=order[n].order;
     fprintf(f,"<tr><td>#%d</td><td>%02x%02x%02x%02x%02x%02x*</td><td>%lld</td><td>%lld</td><td>0x%08llx (%lld)</td></tr>\n",
@@ -104,14 +104,7 @@ int status_dump()
   }
   fprintf(f,"</table>\n");
 
-  fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>Peer SID Prefix</th><th>Time since last message<th></tr>\n");
-  for (i=0;i<peer_count;i++)
-    fprintf(f,"<tr><td>%s*</td><td>%lld</td></tr>\n",
-	    peer_records[i]->sid_prefix,
-	    (long long)(time(0)-peer_records[i]->last_message_time));
-  fprintf(f,"</table>\n");
-
-  fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>Time since last message</th></tr>\n");
+  fprintf(f,"<h2>Peer list</h2>\n<table border=1 padding=2 spacing=2><tr><th>Time since last message</th></tr>\n");
   for (i=0;i<peer_count;i++)
     fprintf(f,"<tr><td>%s*</td><td>%lld</td></tr>\n",
 	    peer_records[i]->sid_prefix,
@@ -119,7 +112,7 @@ int status_dump()
   fprintf(f,"</table>\n");
   
   int peer;
-  fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>Peer</th><th>Bundle prefix</th><th>Bundle version</th><th>Progress<th></tr>\n");
+  fprintf(f,"<h2>Bundles in flight</h2>\n<table border=1 padding=2 spacing=2><tr><th>Peer</th><th>Bundle prefix</th><th>Bundle version</th><th>Progress<th></tr>\n");
 
   for(peer=0;peer<peer_count;peer++) {
     char *peer_prefix=peer_records[peer]->sid_prefix;
