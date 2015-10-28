@@ -75,7 +75,8 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
   int peer=find_peer_by_prefix(peer_prefix);
   if (peer<0) return -1;
 
-  if (debug_pieces) fprintf(stderr,"Saw a bundle piece from SID=%s*\n",peer_prefix);
+  if (debug_pieces) fprintf(stderr,"Saw a piece of BID=%s* from SID=%s*\n",
+			    bid_prefix,peer_prefix);
 
   int bundle_number=-1;
 
