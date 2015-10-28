@@ -255,78 +255,87 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
       // Don't request anything from a peer that we haven't heard from for a while
       if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
 	continue;
-      
-      // What are we fetching from this peer?
-      int i;
-      
-      for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
-	if (peer_records[peer]->partials[i].bid_prefix) {
-	  // We are receiving something from this peer, so we presume it is
-	  // interesting.
-	  // Our approach to requesting missing parts is simple:
-	  // 1. Request missing stuff from the start, if any.
-	  // 2. Else, request from the end of the first segment, so that we will tend
-	  // to merge segments.
-	  struct segment_list *s=peer_records[peer]->partials[i].manifest_segments;
-	  while(s&&s->next) s=s->next;
-	  if ((!s)||(s->start_offset||(s->length<peer_records[peer]->partials[i].manifest_length)||peer_records[peer]->partials[i].manifest_length<0))
-	    {
-	      if (debug_pull) {
-		fprintf(stderr,"We need manifest bytes...\n");
-		dump_segment_list(peer_records[peer]->partials[i].manifest_segments);
-	      }
-	      if ((!s)||s->start_offset) {
-		// We are missing bytes at the beginning
-		return request_segment(peer,
-				       peer_records[peer]->partials[i].bid_prefix,
-				       0,1 /* manifest */,offset,mtu,msg_out);
-	      } else if (s) {
-		if (debug_pull) {
-		  fprintf(stderr,"We need manifest bytes...\n");
-		  dump_segment_list(peer_records[peer]->partials[i].manifest_segments);
-		}
-		return request_segment(peer,
-				       peer_records[peer]->partials[i].bid_prefix,
-				       (s->start_offset+s->length),
-				       1 /* manifest */,offset,mtu,msg_out);
-	      }
-	    }
-	  s=peer_records[peer]->partials[i].body_segments;
-	  if (debug_pull) dump_segment_list(s);
-	  while(s&&s->next) s=s->next;
-	  if ((!s)||s->start_offset) {
-	    // We are missing bytes at the beginning
-	    if (debug_pull) {
-	      fprintf(stderr,"We need body bytes at the start (start_offset=%d)...\n",
-		      s?s->start_offset:-1);
-	      dump_segment_list(peer_records[peer]->partials[i].body_segments);
-	    }
-	    return request_segment(peer,
-				   peer_records[peer]->partials[i].bid_prefix,
-				   0,
-				   0 /* not manifest */,offset,mtu,msg_out);
-	  } else if (s) {
-	    if (debug_pull) {
-	      fprintf(stderr,"We need body bytes @ %d...\n",
-				    s->start_offset+s->length);
-	      dump_segment_list(peer_records[peer]->partials[i].body_segments);
-	    }
-	    return request_segment(peer,
-				   peer_records[peer]->partials[i].bid_prefix,
-				   (s->start_offset+s->length),
-				   0 /* not manifest */,offset,mtu,msg_out);
-	  }
-	}
-      }
+
       // If we got here, the peer is not currently sending us anything interesting.
       // So have a look at what the peer has to offer, and ask for something
       // interesting.
-      int bundle=peers_most_interesting_bundle(peer);
-      if (bundle>-1) {
-	if (debug_pull) fprintf(stderr,"We need an interesting bundle...\n");
-	return request_segment(peer,peer_records[peer]->bid_prefixes[bundle],
+      int most_interesting_bundle=peers_most_interesting_bundle(peer);
+      if (most_interesting_bundle>-1) {
+	// Peer has something interesting.
+
+	// Now see if it is being transferred to us already.
+	// If so, request the most useful segment of it.
+	int i;
+	for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
+	  if (peer_records[peer]->partials[i].bid_prefix) {
+	    if (!strcasecmp(peer_records[peer]->partials[i].bid_prefix,
+			    peer_records[peer]->bid_prefixes[most_interesting_bundle]))
+	      {
+		// This bundle is in flight.
+		// We are receiving something from this peer, so we presume it is
+		// interesting.
+		// Our approach to requesting missing parts is simple:
+		// 1. Request missing stuff from the start, if any.
+		// 2. Else, request from the end of the first segment, so that we will tend
+		// to merge segments.
+		struct segment_list *s=peer_records[peer]->partials[i].manifest_segments;
+		while(s&&s->next) s=s->next;
+		if ((!s)||(s->start_offset||(s->length<peer_records[peer]->partials[i].manifest_length)||peer_records[peer]->partials[i].manifest_length<0))
+		  {
+		    if (debug_pull) {
+		      fprintf(stderr,"We need manifest bytes...\n");
+		      dump_segment_list(peer_records[peer]->partials[i].manifest_segments);
+		    }
+		    if ((!s)||s->start_offset) {
+		      // We are missing bytes at the beginning
+		      return request_segment(peer,
+					     peer_records[peer]->partials[i].bid_prefix,
+					     0,1 /* manifest */,offset,mtu,msg_out);
+		    } else if (s) {
+		      if (debug_pull) {
+			fprintf(stderr,"We need manifest bytes...\n");
+			dump_segment_list(peer_records[peer]->partials[i].manifest_segments);
+		      }
+		      return request_segment(peer,
+					     peer_records[peer]->partials[i].bid_prefix,
+					     (s->start_offset+s->length),
+					     1 /* manifest */,offset,mtu,msg_out);
+		    }
+		  }
+		s=peer_records[peer]->partials[i].body_segments;
+		if (debug_pull) dump_segment_list(s);
+		while(s&&s->next) s=s->next;
+		if ((!s)||s->start_offset) {
+		  // We are missing bytes at the beginning
+		  if (debug_pull) {
+		    fprintf(stderr,"We need body bytes at the start (start_offset=%d)...\n",
+			    s?s->start_offset:-1);
+		    dump_segment_list(peer_records[peer]->partials[i].body_segments);
+		  }
+		  return request_segment(peer,
+					 peer_records[peer]->partials[i].bid_prefix,
+					 0,
+					 0 /* not manifest */,offset,mtu,msg_out);
+		} else if (s) {
+		  if (debug_pull) {
+		    fprintf(stderr,"We need body bytes @ %d...\n",
+			    s->start_offset+s->length);
+		    dump_segment_list(peer_records[peer]->partials[i].body_segments);
+		  }
+		  return request_segment(peer,
+					 peer_records[peer]->partials[i].bid_prefix,
+					 (s->start_offset+s->length),
+					 0 /* not manifest */,offset,mtu,msg_out);
+		}		
+	      }
+	  }
+	}
+
+	// The most interesting bundle is not currently in flight, so request first piece of it.
+	return request_segment(peer,peer_records[peer]->bid_prefixes[most_interesting_bundle],
 			       0,0 /* not manifest */,offset,mtu,msg_out);
       }
+      
     }
   return 0;
 }
