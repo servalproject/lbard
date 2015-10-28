@@ -505,7 +505,13 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 		  peer_prefix,bid_prefix,is_manifest?'M':'B',bundle_offset,
 		  target_sid);
 	}
-
+	{
+	  char status_msg[1024];
+	  snprintf(status_msg,1024,"Saw request from SID=%s* BID=%s @ %c%d addressed to SID=%s*\n",
+		   peer_prefix,bid_prefix,is_manifest?'M':'B',bundle_offset,
+		   target_sid);
+	  status_log(status_msg);
+	}
 	
 	// Are we the target SID?
 	if (!strncasecmp(my_sid,target_sid,4)) {
