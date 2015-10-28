@@ -180,7 +180,8 @@ int hex_to_val(int c)
   return 0;
 }
 
-int request_segment(int peer, char *bid_prefix, int seg_start, int is_manifest,
+int request_segment(int peer, char *bid_prefix, int bundle_length,
+		    int seg_start, int is_manifest,
 		    int *offset, int mtu,unsigned char *msg_out)
 {
   // Check that we have enough space
@@ -208,9 +209,11 @@ int request_segment(int peer, char *bid_prefix, int seg_start, int is_manifest,
   msg_out[(*offset)++]=((seg_start>>16)&0x7f)|(is_manifest?0x80:0x00);
 
   if (debug_pull) {
-    fprintf(stderr,"Requesting BID=%s @ %c%d from SID=%s*\n",
+    fprintf(stderr,"Requesting BID=%s @ %c%d (len=%d) from SID=%s*\n",
 	    bid_prefix,
-	    is_manifest?'M':'B',seg_start,peer_records[peer]->sid_prefix);
+	    is_manifest?'M':'B',seg_start,
+	    bundle_length,
+	    peer_records[peer]->sid_prefix);
     fprintf(stderr,"Request block: ");
     for(;start_offset<*offset;start_offset++)
       fprintf(stderr," %02X",msg_out[start_offset]);
@@ -218,9 +221,11 @@ int request_segment(int peer, char *bid_prefix, int seg_start, int is_manifest,
   }
 
   char status_msg[1024];
-  snprintf(status_msg,1024,"Requesting BID=%s @ %c%d from SID=%s*\n",
-	   bid_prefix,
-	   is_manifest?'M':'B',seg_start,peer_records[peer]->sid_prefix);
+  snprintf(status_msg,1024,"Requesting BID=%s @ %c%d (len=%d) from SID=%s*\n",
+	    bid_prefix,
+	    is_manifest?'M':'B',seg_start,
+	    bundle_length,
+	    peer_records[peer]->sid_prefix);
   status_log(status_msg);
   
   return 0;
@@ -290,6 +295,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 		      // We are missing bytes at the beginning
 		      return request_segment(peer,
 					     peer_records[peer]->partials[i].bid_prefix,
+					     peer_records[peer]->partials[i].body_length,
 					     0,1 /* manifest */,offset,mtu,msg_out);
 		    } else if (s) {
 		      if (debug_pull) {
@@ -298,6 +304,8 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 		      }
 		      return request_segment(peer,
 					     peer_records[peer]->partials[i].bid_prefix,
+					     peer_records[peer]->partials[i].body_length,
+
 					     (s->start_offset+s->length),
 					     1 /* manifest */,offset,mtu,msg_out);
 		    }
@@ -314,6 +322,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 		  }
 		  return request_segment(peer,
 					 peer_records[peer]->partials[i].bid_prefix,
+					 peer_records[peer]->partials[i].body_length,
 					 0,
 					 0 /* not manifest */,offset,mtu,msg_out);
 		} else if (s) {
@@ -324,6 +333,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 		  }
 		  return request_segment(peer,
 					 peer_records[peer]->partials[i].bid_prefix,
+					 peer_records[peer]->partials[i].body_length,
 					 (s->start_offset+s->length),
 					 0 /* not manifest */,offset,mtu,msg_out);
 		}		
@@ -333,6 +343,8 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 
 	// The most interesting bundle is not currently in flight, so request first piece of it.
 	return request_segment(peer,peer_records[peer]->bid_prefixes[most_interesting_bundle],
+			       -1,
+
 			       0,0 /* not manifest */,offset,mtu,msg_out);
       }
       
