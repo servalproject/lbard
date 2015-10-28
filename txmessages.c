@@ -265,7 +265,8 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   if (debug_announce) {
     fprintf(stderr,"Announcing ");
     for(int i=0;i<8;i++) fprintf(stderr,"%c",bundles[bundle_number].bid[i]);
-    fprintf(stderr,"* version %lld %s segment [%d,%d)\n",
+    fprintf(stderr,"* (priority=0x%llx) version %lld %s segment [%d,%d)\n",
+	    bundles[bundle_number].last_priority,
 	    bundles[bundle_number].version,
 	    is_manifest?"manifest":"payload",
 	    start_offset,start_offset+actual_bytes);
