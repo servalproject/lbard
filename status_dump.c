@@ -127,7 +127,8 @@ int status_dump()
 	char *bid_prefix=peer_records[peer]->bid_prefixes[i];
 	long long version=peer_records[peer]->versions[i];
 	fprintf(f,"<tr><td>%s*</td><td>%s*</td><td>%-18lld</td></tr>\n",
-		peer_prefix,bid_prefix,version);
+		peer_prefix?peer_prefix:"<no peer prefix>",
+		bid_prefix?bid_prefix:"<no bid prefix>",version);
       }
     }
   }
