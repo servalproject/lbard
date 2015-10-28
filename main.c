@@ -103,6 +103,7 @@ int message_update_interval_randomness=PACKET_TX_INTERVAL_RANDOMNESS;
 long long last_message_update_time=0;
 
 time_t last_summary_time=0;
+time_t last_status_time=0;
 
 int main(int argc, char **argv)
 {
@@ -224,7 +225,12 @@ int main(int argc, char **argv)
       last_message_update_time=gettime_ms()+(random()%message_update_interval_randomness);
 
       // Update the state file to help debug things
-      status_dump();
+      // (but not too often, since it is SLOW on the MR3020s
+      //  XXX fix all those linear searches, and it will be fine!)
+      if (time(0)>last_status_time) {
+	last_status_time=time(0)+3;
+	status_dump();
+      }
     }
 
     usleep(10000);
