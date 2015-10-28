@@ -213,10 +213,13 @@ int find_highest_priority_bundle()
     // This ensures that we rotate through the bundles we have.
     // If a peer comes along who doesn't have a smaller or meshms bundle, then
     // the less-peers-have-it priority will kick in.
+
+    // Size-based priority is a value between 0 - 0x3FF
+    // Number of peers who lack a bundle is added to this to boost priority a little
+    // for bundles which are wanted by more peers
 #define BUNDLE_PRIORITY_SENT_LESS_RECENTLY    0x00010000
 #define BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER   0x00002000
 #define BUNDLE_PRIORITY_IS_MESHMS             0x00004000
-#define BUNDLE_PRIORITY_LESS_PEERS_HAVE_IT    0x00100000
 #define BUNDLE_PRIORITY_TRANSMIT_NOW          0x04000000
 
     long long time_delta=0;
@@ -289,9 +292,9 @@ int find_highest_priority_bundle()
 					   bundles[i].version))
 	  num_peers_that_dont_have_it++;
     }
-    if (num_peers_that_dont_have_it>highest_priority_bundle_peers_dont_have_it)
-      this_bundle_priority|=BUNDLE_PRIORITY_LESS_PEERS_HAVE_IT;
 
+    // Add to priority according to the number of peers that don't have the bundle
+    this_bundle_priority+=num_peers_that_dont_have_it;
 
     if (0)
       fprintf(stderr,"  bundle %s was last announced %ld seconds ago.  "
