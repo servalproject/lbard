@@ -103,6 +103,7 @@ int status_dump()
 	    bundles[i].last_priority,bundles[i].last_priority);
   }
   fprintf(f,"</table>\n");
+  fflush(f);
 
   fprintf(f,"<h2>Peer list</h2>\n<table border=1 padding=2 spacing=2><tr><th>Time since last message</th></tr>\n");
   for (i=0;i<peer_count;i++)
@@ -110,6 +111,7 @@ int status_dump()
 	    peer_records[i]->sid_prefix,
 	    (long long)(time(0)-peer_records[i]->last_message_time));
   fprintf(f,"</table>\n");
+  fflush(f);
 
   int peer;
 
@@ -133,7 +135,8 @@ int status_dump()
     }
   }
   fprintf(f,"</table>\n");
-  
+  fflush(f);
+
   fprintf(f,"<h2>Bundles in flight</h2>\n<table border=1 padding=2 spacing=2><tr><th>Peer</th><th>Bundle prefix</th><th>Bundle version</th><th>Progress<th></tr>\n");
 
   for(peer=0;peer<peer_count;peer++) {
@@ -153,6 +156,7 @@ int status_dump()
     }
   }
   fprintf(f,"</table>\n");
+  fflush(f);
 
   fprintf(f,"<h2>Announced material</h2>\n<table border=1 padding=2 spacing=2><tr><th>Time</th><th>Announced content</th></tr>\n");
   fprintf(f,"</table>\n");
