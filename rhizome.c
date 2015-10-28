@@ -228,9 +228,10 @@ int find_highest_priority_bundle()
       this_bundle_priority = lengthToPriority(bundles[i].length);
     } else time_delta=0;
 
-    if (bundles[i].transmit_now<=time(0)) {
-      this_bundle_priority|=BUNDLE_PRIORITY_TRANSMIT_NOW;
-    }
+    if (bundles[i].transmit_now)
+      if (bundles[i].transmit_now<=time(0)) {
+	this_bundle_priority|=BUNDLE_PRIORITY_TRANSMIT_NOW;
+      }
     
     if (time_delta>0LL) {
       // XXX Consider having the time delta influence the priority in a
