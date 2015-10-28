@@ -217,12 +217,7 @@ int find_highest_priority_bundle()
 #define BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER   0x00002000
 #define BUNDLE_PRIORITY_IS_MESHMS             0x00004000
 #define BUNDLE_PRIORITY_LESS_PEERS_HAVE_IT    0x00100000
-#define BUNDLE_PRIORITY_TRANSMIT_NOW          0x40000000
-
-    if (bundles[i].transmit_now) {
-      this_bundle_priority|=BUNDLE_PRIORITY_TRANSMIT_NOW;
-      bundles[i].transmit_now=0;
-    }
+#define BUNDLE_PRIORITY_TRANSMIT_NOW          0x04000000
 
     long long time_delta=0;
     
@@ -233,6 +228,10 @@ int find_highest_priority_bundle()
       this_bundle_priority = lengthToPriority(bundles[i].length);
     } else time_delta=0;
 
+    if (bundles[i].transmit_now<=time(0)) {
+      this_bundle_priority|=BUNDLE_PRIORITY_TRANSMIT_NOW;
+    }
+    
     if (time_delta>0LL) {
       // XXX Consider having the time delta influence the priority in a
       // smoother way, so that very large files will still get sent from time
