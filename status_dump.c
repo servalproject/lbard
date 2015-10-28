@@ -116,6 +116,10 @@ int status_dump()
   fprintf(f,"<h2>Bundles held by peers</h2>\n<table border=1 padding=2 spacing=2><tr><th>Peer</th><th>Bundle prefix</th><th>Bundle version</th></tr>\n");
 
   for(peer=0;peer<peer_count;peer++) {
+    // Don't show timed out peers
+    if ((time(0)-peer_records[i]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
+      continue;
+    
     char *peer_prefix=peer_records[peer]->sid_prefix;
     for(i=0;i<peer_records[peer]->bundle_count;i++) {
       if (peer_records[peer]->partials[i].bid_prefix) {
