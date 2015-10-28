@@ -119,7 +119,7 @@ int status_dump()
 
   for(peer=0;peer<peer_count;peer++) {
     // Don't show timed out peers
-    if ((time(0)-peer_records[i]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
+    if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
       continue;
     
     char *peer_prefix=peer_records[peer]->sid_prefix;
