@@ -516,7 +516,12 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	  for(int i=0;i<bundle_count;i++) {
 	    if (!strncasecmp(bid_prefix,bundles[i].bid,16)) {
 	      if (debug_pull) fprintf(stderr,"  -> found the bundle.\n");
-	      bundles[i].transmit_now=1;
+	      bundles[i].transmit_now=time(0)+TRANSMIT_NOW_TIMEOUT;
+	      if (debug_announce) {
+		fprintf(stderr,"*** Setting transmit_now flag on %s*\n",
+			bundles[i].bid);
+	      }
+
 	      // When adjusting the offset, don't adjust it if we are going to reach
 	      // that point within a few hundred bytes, as it won't save any time, and
 	      // it might just cause confusion and delay because of the latency of us
