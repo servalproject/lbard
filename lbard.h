@@ -67,7 +67,7 @@ struct bundle_record {
   long long version;
   char *author;
   int originated_here_p;
-#define TRANSMIT_NOW_TIMEOUT 3
+#define TRANSMIT_NOW_TIMEOUT 2
   time_t transmit_now;
   int announce_bar_now;
   long long length;
