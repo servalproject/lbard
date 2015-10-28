@@ -110,8 +110,25 @@ int status_dump()
 	    peer_records[i]->sid_prefix,
 	    (long long)(time(0)-peer_records[i]->last_message_time));
   fprintf(f,"</table>\n");
-  
+
   int peer;
+
+  fprintf(f,"<h2>Bundles held by peers</h2>\n<table border=1 padding=2 spacing=2><tr><th>Peer</th><th>Bundle prefix</th><th>Bundle version</th></tr>\n");
+
+  for(peer=0;peer<peer_count;peer++) {
+    char *peer_prefix=peer_records[peer]->sid_prefix;
+    for(i=0;i<peer_records[peer]->bundle_count;i++) {
+      if (peer_records[peer]->partials[i].bid_prefix) {
+	// Here is a bundle in flight
+	char *bid_prefix=peer_records[peer]->bid_prefixes[i];
+	long long version=peer_records[peer]->versions[i];
+	fprintf(f,"<tr><td>%s*</td><td>%s*</td><td>%-18lld</td></tr>\n",
+		peer_prefix,bid_prefix,version);
+      }
+    }
+  }
+  fprintf(f,"</table>\n");
+  
   fprintf(f,"<h2>Bundles in flight</h2>\n<table border=1 padding=2 spacing=2><tr><th>Peer</th><th>Bundle prefix</th><th>Bundle version</th><th>Progress<th></tr>\n");
 
   for(peer=0;peer<peer_count;peer++) {
@@ -132,7 +149,7 @@ int status_dump()
   }
   fprintf(f,"</table>\n");
 
-    fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>Time</th><th>Announced content</th></tr>\n");
+  fprintf(f,"<h2>Announced material</h2>\n<table border=1 padding=2 spacing=2><tr><th>Time</th><th>Announced content</th></tr>\n");
   fprintf(f,"</table>\n");
   long long now=gettime_ms();
   for(i=0;i<msg_count;i++) {
