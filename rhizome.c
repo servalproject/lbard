@@ -290,6 +290,11 @@ int find_highest_priority_bundle()
 
     // Add to priority according to the number of peers that don't have the bundle
     this_bundle_priority+=num_peers_that_dont_have_it;
+    if (num_peers_that_dont_have_it>bundles[i].num_peers_that_dont_have_it) {
+      // More peer(s) have arrived who have not got this bundle yet, so reset the
+      // last sent time for this bundle.
+      bundles[i].last_announced_time=0;
+    }
     bundles[i].num_peers_that_dont_have_it=num_peers_that_dont_have_it;
 
     if ((time_delta>=0LL)&& num_peers_that_dont_have_it) {
