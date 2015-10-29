@@ -217,10 +217,12 @@ int find_highest_priority_bundle()
     // Size-based priority is a value between 0 - 0x3FF
     // Number of peers who lack a bundle is added to this to boost priority a little
     // for bundles which are wanted by more peers
-#define BUNDLE_PRIORITY_SENT_LESS_RECENTLY    0x00010000
+#define BUNDLE_PRIORITY_SENT_LESS_RECENTLY    0x00000400
 #define BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER   0x00002000
 #define BUNDLE_PRIORITY_IS_MESHMS             0x00004000
-#define BUNDLE_PRIORITY_TRANSMIT_NOW          0x04000000
+    // Transmit now only gently escalates priority, so that we can override it if
+    // we think we have a bundle that they should receive
+#define BUNDLE_PRIORITY_TRANSMIT_NOW          0x00000040
 
     long long time_delta=0;
     
@@ -233,16 +235,9 @@ int find_highest_priority_bundle()
 
     if (bundles[i].transmit_now)
       if (bundles[i].transmit_now>=time(0)) {
-	this_bundle_priority|=BUNDLE_PRIORITY_TRANSMIT_NOW;
+	this_bundle_priority+=BUNDLE_PRIORITY_TRANSMIT_NOW;
       }
     
-    if (time_delta>0LL) {
-      // XXX Consider having the time delta influence the priority in a
-      // smoother way, so that very large files will still get sent from time
-      // to time.
-      this_bundle_priority|=BUNDLE_PRIORITY_SENT_LESS_RECENTLY;
-    }
-
     if ((!strcasecmp("MeshMS1",bundles[i].service))
 	||(!strcasecmp("MeshMS2",bundles[i].service))) {
       this_bundle_priority|=BUNDLE_PRIORITY_IS_MESHMS;
@@ -296,6 +291,16 @@ int find_highest_priority_bundle()
     // Add to priority according to the number of peers that don't have the bundle
     this_bundle_priority+=num_peers_that_dont_have_it;
 
+    if ((time_delta>=0LL)&& num_peers_that_dont_have_it) {
+      // We only apply the less-recently-sent priority flag if there are peers who
+      // don't yet have it.
+      // XXX - This is still a bit troublesome, because we may not have announced the
+      // bar, and the segment headers don't have enough information for the far end
+      // to start actively requesting the bundle. To solve this, we should provide the
+      // BAR of a bundle at least some of the time when presenting pieces of it.
+      this_bundle_priority+=BUNDLE_PRIORITY_SENT_LESS_RECENTLY;
+    }
+    
     if (0)
       fprintf(stderr,"  bundle %s was last announced %ld seconds ago.  "
 	      "Priority = 0x%llx, %d peers don't have it.\n",
