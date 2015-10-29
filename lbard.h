@@ -88,6 +88,7 @@ struct bundle_record {
 
   
   long long last_priority;
+  int num_peers_that_dont_have_it;
 };
 
 #define MAX_PEERS 1024

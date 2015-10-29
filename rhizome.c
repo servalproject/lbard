@@ -290,6 +290,7 @@ int find_highest_priority_bundle()
 
     // Add to priority according to the number of peers that don't have the bundle
     this_bundle_priority+=num_peers_that_dont_have_it;
+    bundles[i].num_peers_that_dont_have_it=num_peers_that_dont_have_it;
 
     if ((time_delta>=0LL)&& num_peers_that_dont_have_it) {
       // We only apply the less-recently-sent priority flag if there are peers who
