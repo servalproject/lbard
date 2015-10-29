@@ -342,7 +342,11 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 	}
 
 	// The most interesting bundle is not currently in flight, so request first piece of it.
-	return request_segment(peer,peer_records[peer]->bid_prefixes[most_interesting_bundle],
+	// XXX Don't do this now, as it just wastes a lot of bandwidth when nodes are
+	// synchronising bundle lists.  It is better to just let the nodes exchange BARs until
+	// they have something useful to transmit.
+	if (0)
+	  return request_segment(peer,peer_records[peer]->bid_prefixes[most_interesting_bundle],
 			       -1,
 
 			       0,0 /* not manifest */,offset,mtu,msg_out);
