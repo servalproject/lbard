@@ -304,13 +304,18 @@ int find_highest_priority_bundle()
     }
     bundles[i].num_peers_that_dont_have_it=num_peers_that_dont_have_it;
 
-    if ((time_delta>=0LL)&& num_peers_that_dont_have_it) {
-      // We only apply the less-recently-sent priority flag if there are peers who
-      // don't yet have it.
-      // XXX - This is still a bit troublesome, because we may not have announced the
-      // bar, and the segment headers don't have enough information for the far end
-      // to start actively requesting the bundle. To solve this, we should provide the
-      // BAR of a bundle at least some of the time when presenting pieces of it.
+    // We only apply the less-recently-sent priority flag if there are peers who
+    // don't yet have it.
+    // XXX - This is still a bit troublesome, because we may not have announced the
+    // bar, and the segment headers don't have enough information for the far end
+    // to start actively requesting the bundle. To solve this, we should provide the
+    // BAR of a bundle at least some of the time when presenting pieces of it.
+    
+    // Actually, this is really just a pain all round. We need it so that we sequence
+    // through all bundles. But any bundle that has peers who don't have it, then we
+    // should not allow other things to be advanced ahead of the bunch that includes
+    // this one.  So we should probably just ignore time_delta if peers need this one.
+    if ((time_delta>=0LL)||num_peers_that_dont_have_it) {      
       this_bundle_priority+=BUNDLE_PRIORITY_SENT_LESS_RECENTLY;
     }
     
