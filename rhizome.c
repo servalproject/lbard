@@ -165,11 +165,18 @@ int bundle_bar_counter=0;
 int find_highest_priority_bar()
 {
   int bar_number;
-  for(bar_number=0;bar_number<bundle_count;bar_number++) 
-    if (bundles[bar_number].announce_bar_now) {
-      bundles[bar_number].announce_bar_now=0;
-      return bar_number;
-    }
+  // XXX This can probably get stuck in a loop announcing the same
+  // BAR over and over in an attempt to stop another node announcing
+  // segments of a bundle to a different peer who doesn't have it yet.
+  // So for now we have the crude mechanism of only making such announcements
+  // 1/2 the time, so that we can keep announcing new BARs to our peers.
+  if (random()&1) {
+    for(bar_number=0;bar_number<bundle_count;bar_number++) 
+      if (bundles[bar_number].announce_bar_now) {
+	bundles[bar_number].announce_bar_now=0;
+	return bar_number;
+      }
+  }
   
   bundle_bar_counter++;
   if (bundle_bar_counter>=bundle_count) bundle_bar_counter=0;
