@@ -161,13 +161,13 @@ int status_dump()
   fflush(f);
 
   fprintf(f,"<h2>Announced material</h2>\n<table border=1 padding=2 spacing=2><tr><th>Time</th><th>Announced content</th></tr>\n");
-  fprintf(f,"</table>\n");
   long long now=gettime_ms();
   for(i=0;i<msg_count;i++) {
     fprintf(f,"<tr><td>T-%lldms</td><td>%s</td></tr>\n",
 	    now-msg_times[i],msgs[i]);
     free(msgs[i]); msgs[i]=NULL;
   }
+  fprintf(f,"</table>\n");
   msg_count=0;
   
   fprintf(f,"</body>\n");
