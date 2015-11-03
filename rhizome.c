@@ -48,6 +48,8 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
     return written;
 }
 
+int meshms_only=0;
+
 int register_bundle(char *service,
 		    char *bid,
 		    char *version,
@@ -60,6 +62,12 @@ int register_bundle(char *service,
 {
   int i,peer;
 
+  // Ignore non-meshms bundles when in meshms-only mode
+  if (meshms_only) {
+    if (strncasecmp("meshms",service,6))
+      return 0;
+  }
+  
   long long versionll=strtoll(version,NULL,10);
 
   // Remove bundle from partial lists of all peers if we have other transmissions

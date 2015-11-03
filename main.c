@@ -128,6 +128,9 @@ int main(int argc, char **argv)
   while (n<argc) {
     if (argv[n]) {
       if (!strcasecmp("monitor",argv[n])) monitor_mode=1;
+      else if (!strcasecmp("meshmsonly",argv[n])) { meshms_only=1;
+	fprintf(stderr,"Only MeshMS bundles will be carried.\n");
+      }
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
       else if (!strcasecmp("announce",argv[n])) debug_announce=1;
