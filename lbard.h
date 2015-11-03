@@ -5,6 +5,13 @@
 #define AVG_PACKET_TX_INTERVAL 1000
 #define PACKET_TX_INTERVAL_RANDOMNESS 250
 
+// BAR consists of:
+// 8 bytes : BID prefix
+// 8 bytes : version
+// 4 bytes : recipient prefix
+// 1 byte : size and meshms flag byte
+#define BAR_LENGTH (8+8+4+1)
+
 struct segment_list {
   unsigned char *data;
   int start_offset;
@@ -91,6 +98,52 @@ struct bundle_record {
   int num_peers_that_dont_have_it;
 };
 
+// New unified BAR + optional bundle record for BAR tree structure
+typedef struct bar_data {
+  // BAR fields
+  long long bid_prefix_bin;
+  long long version;
+  long long recipient_sid_prefix_bin;
+  int size_byte;
+  
+} bar_data;
+
+typedef struct bundle_data {
+  // Bundle fields, only valid if have_bundle != 0
+  // All fields are initialised as fixed-length strings so that we can avoid
+  // malloc.
+  char service[40];
+  char bid_hex[32*2+1];
+  char author[32*2+1];
+  int originated_here_p;
+  char filehash[64*2+1];
+  char sender[32*2+1];
+  char recipient[32*2+1];
+} bundle_data;
+
+typedef struct bundle_node {
+  // Do we have the bundle?
+  // If the node exists, we must have the BAR, because we can make the BAR from a
+  // locally stored bundle.  However, a BAR received from a peer can be present,
+  // without us having the bundle in Rhizome (yet).
+  int have_bundle;
+  int have_manifest;
+  int have_payload;
+
+  bar_data *bar;
+  bundle_data *bundle;
+  
+  // Priority of bundle based on attributes
+  int intrinsic_priority;
+
+  // XOR of all BARs of nodes below this one.
+  unsigned char node_xor[BAR_LENGTH];
+  
+  // Links to other elements in the tree
+  struct bundle_node *parent,*left, *right;
+} bundle_node;
+  
+
 #define MAX_PEERS 1024
 extern struct peer_state *peer_records[MAX_PEERS];
 extern int peer_count;
@@ -98,13 +151,6 @@ extern int peer_count;
 #define MAX_BUNDLES 10000
 extern struct bundle_record bundles[MAX_BUNDLES];
 extern int bundle_count;
-
-// BAR consists of:
-// 8 bytes : BID prefix
-// 8 bytes : version
-// 4 bytes : recipient prefix
-// 1 byte : size and meshms flag byte
-#define BAR_LENGTH (8+8+4+1)
 
 extern char *bid_of_cached_bundle;
 extern long long cached_version;
@@ -116,6 +162,7 @@ extern unsigned char *cached_body;
 extern int debug_pieces;
 extern int debug_announce;
 extern int debug_pull;
+extern int meshms_only;
 
 int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      long long piece_offset,int piece_bytes,int is_end_piece,
