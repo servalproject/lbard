@@ -61,6 +61,9 @@ int peer_note_bar(struct peer_state *p,
 {
   int b=-1;
 
+  // Ignore bundles that are too old
+  if (version<min_version) return 0;
+  
   if (0) {
     for(int i=0;i<p->bundle_count;i++)
       fprintf(stderr,"  bundle #%d/%d: %s* version %lld\n",

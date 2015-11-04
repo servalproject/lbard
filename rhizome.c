@@ -48,7 +48,9 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
     return written;
 }
 
+// By default don't filter bundles.
 int meshms_only=0;
+long long min_version=0;
 
 int register_bundle(char *service,
 		    char *bid,
@@ -62,14 +64,18 @@ int register_bundle(char *service,
 {
   int i,peer;
 
-  // Ignore non-meshms bundles when in meshms-only mode
+  // Ignore non-meshms bundles when in meshms-only mode.
   if (meshms_only) {
     if (strncasecmp("meshms",service,6))
-      return 0;
+      return 0;   
   }
   
   long long versionll=strtoll(version,NULL,10);
 
+  // Ignore bundles that are too old.
+  if (versionll<min_version)
+    return 0;
+  
   // Remove bundle from partial lists of all peers if we have other transmissions
   // to us in progress of this bundle
   // XXX - Linear searches! Replace with hash table etc
