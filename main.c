@@ -132,9 +132,9 @@ int main(int argc, char **argv)
 	fprintf(stderr,"Only MeshMS bundles will be carried.\n");
       }
       else if (!strncasecmp("minversion=",argv[n],11)) {
-	min_version=strtoll(&argv[n][11],NULL,10);
-	time_t mv=min_version;
-	fprintf(stderr,"Only bundles newer than epoch+%lldsec (%s) will be carried.\n",
+	min_version=strtoll(&argv[n][11],NULL,10)*1000LL;
+	time_t mv=(min_version/1000LL);
+	fprintf(stderr,"Only bundles newer than epoch+%lld msec (%s) will be carried.\n",
 		(long long)min_version,ctime(&mv));
       }
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
