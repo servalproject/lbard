@@ -132,7 +132,19 @@ int main(int argc, char **argv)
 	fprintf(stderr,"Only MeshMS bundles will be carried.\n");
       }
       else if (!strncasecmp("minversion=",argv[n],11)) {
+	int day,month,year;
 	min_version=strtoll(&argv[n][11],NULL,10)*1000LL;
+	if (sscanf(argv[n],"minversion=%d/%d/%d",&year,&month,&day)==3) {
+	  // Minimum date has been specified using year/month/day
+	  // Calculate min_version from that.
+	  struct tm tm;
+	  bzero(&tm,sizeof(struct tm));
+	  tm.tm_mday=day;
+	  tm.tm_mon=month-1;
+	  tm.tm_year=year-1900;
+	  time_t thetime = mktime(&tm);
+	  min_version=((long long)thetime)*1000LL;
+	}
 	time_t mv=(min_version/1000LL);
 	fprintf(stderr,"Only bundles newer than epoch+%lld msec (%s) will be carried.\n",
 		(long long)min_version,ctime(&mv));
