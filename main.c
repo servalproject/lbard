@@ -146,8 +146,14 @@ int main(int argc, char **argv)
 	  min_version=((long long)thetime)*1000LL;
 	}
 	time_t mv=(min_version/1000LL);
+
+	// Get minimum time as non NL terminated string
+	char stringtime[1024];
+	snprintf(stringtime,1024,"%s",ctime(&mv));
+	if (stringtime[strlen(stringtime)-1]=='\n') stringtime[strlen(stringtime)-1]=0;
+
 	fprintf(stderr,"Only bundles newer than epoch+%lld msec (%s) will be carried.\n",
-		(long long)min_version,ctime(&mv));
+		(long long)min_version,stringtime);
       }
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
