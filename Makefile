@@ -1,4 +1,4 @@
-all:	lbard
+all:	lbard fakecsmaradio
 
 SRCS=	main.c rhizome.c txmessages.c rxmessages.c bundle_cache.c json.c peers.c \
 	serial.c radio.c golay.c httpclient.c progress.c \
@@ -25,3 +25,7 @@ lbard:	$(SRCS) $(HDRS)
 
 echotest:	Makefile echotest.c
 	$(CC) -g -std=gnu99 -Wall -o echotest echotest.c
+
+fakecsmaradio:	Makefile fakecsmaradio.c
+	$(CC) -g -std=gnu99 -Wall -o fakecsmaradio fakecsmaradio.c
+
