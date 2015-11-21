@@ -72,8 +72,10 @@ int register_bundle(char *service,
   
   long long versionll=strtoll(version,NULL,10);
 
-  // Ignore bundles that are too old.
-  if (versionll<min_version)
+  // Ignore bundles that are too old
+  // (except if MeshMS2, since that uses journal bundles, and so the version does
+  // not represent the age of a bundle.)
+  if ((versionll<min_version)&&strncasecmp("meshms2",service,7))
     return 0;
   
   // Remove bundle from partial lists of all peers if we have other transmissions
