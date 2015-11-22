@@ -230,6 +230,8 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
     bcopy(&radio_rx_buffer[1],&radio_rx_buffer[0],RADIO_RXBUFFER_SIZE-1);
     radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]=bytes[i];
 
+    int packet=0;
+    
     if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0x55)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0x55)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xaa))
@@ -248,6 +250,7 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 		   "Saw RFD900 CSMA Data frame: temp=%dC, last rx RSSI=%d, mean remote RSSI=%d, frame len=%d\n",
 		   radio_temperature, last_rx_rssi, average_remote_rssi,
 		   packet_len);
+	packet=1;
       }
 
     // Decode end of packet length field
@@ -255,7 +258,17 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
     int end_length=golay_decode(&golay_end_errors,&radio_rx_buffer[RADIO_RXBUFFER_SIZE-3])-(FEC_MAX_BYTES+1);
 
     // Ignore packet if it does not satisfy !((n-FEC_MAX_BYTES-1)%13)
-    if (end_length%13) continue;
+    if (end_length%13) {
+      if (packet) {
+	message_buffer_length--; // chop NL
+	message_buffer_length+=
+	  snprintf(&message_buffer[message_buffer_length],
+		   message_buffer_size-message_buffer_length,
+		   ", LENGTH MODULO CHECK FAIL (end_length=%d)\n",
+		   end_length);
+      }
+      continue;
+    }
     // Get actual length of packet
     int length=end_length/13;
     // Work out where start length will be. This will be 3+length+FEC_LENGTH+3 bytes before the end
@@ -269,7 +282,17 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
     // length,start_length);
     
     // Ignore packet if the two length fields do not agree.
-    if (start_length!=length) continue;
+    if (start_length!=length) {
+      if (packet) {
+	message_buffer_length--; // chop NL
+	message_buffer_length+=
+	  snprintf(&message_buffer[message_buffer_length],
+		   message_buffer_size-message_buffer_length,
+		   ", LENGTH CHECK FAIL (start_length=%d, length=%d)\n",
+		   start_length,length);
+      }
+      continue;
+    }
 
     // Now do RS check on packet contents
     unsigned char *body = &radio_rx_buffer[candidate_start_offset+3];
@@ -281,6 +304,22 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 	      golay_end_errors,rs_error_count,golay_start_errors,length);
       saw_message(body,length,
 		  my_sid_hex,prefix,servald_server,credential);
+
+      // attach presumed SID prefix
+      message_buffer_length--; // chop NL
+      message_buffer_length+=
+	snprintf(&message_buffer[message_buffer_length],
+		 message_buffer_size-message_buffer_length,
+		 ", FEC OK : sender SID=%02x%02x%02x%02x%02x%02x*\n",
+		 body[0],body[1],body[2],body[3],body[4],body[5]);
+
+    } else {
+      message_buffer_length--; // chop NL
+      message_buffer_length+=
+	snprintf(&message_buffer[message_buffer_length],
+		 message_buffer_size-message_buffer_length,
+		 ", FEC FAIL (rs_error_count=%d)\n",
+		 rs_error_count);
     }
     
   }
