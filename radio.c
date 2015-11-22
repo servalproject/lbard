@@ -230,7 +230,6 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
     bcopy(&radio_rx_buffer[1],&radio_rx_buffer[0],RADIO_RXBUFFER_SIZE-1);
     radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]=bytes[i];
 
-    int packet=0;
     
     if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0x55)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0x55)
@@ -238,7 +237,7 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
       {
 	// Found RFD900 CSMA envelope
 	int last_rx_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-7];
-	int average_remote_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-6];
+	// int average_remote_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-6];
 	int radio_temperature=radio_rx_buffer[RADIO_RXBUFFER_SIZE-5];
 	int packet_len=radio_rx_buffer[RADIO_RXBUFFER_SIZE-4];
 	int buffer_space=radio_rx_buffer[RADIO_RXBUFFER_SIZE-3];
@@ -247,82 +246,80 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 	message_buffer_length+=
 	  snprintf(&message_buffer[message_buffer_length],
 		   message_buffer_size-message_buffer_length,
-		   "Saw RFD900 CSMA Data frame: temp=%dC, last rx RSSI=%d, mean remote RSSI=%d, frame len=%d\n",
-		   radio_temperature, last_rx_rssi, average_remote_rssi,
+		   "Saw RFD900 CSMA Data frame: temp=%dC, last rx RSSI=%d, frame len=%d\n",
+		   radio_temperature, last_rx_rssi,
 		   packet_len);
-	packet=1;
+
+#define TRAILER_LEN 9
+	// Decode end of packet length field
+	int golay_end_errors;
+	int end_length=golay_decode(&golay_end_errors,&radio_rx_buffer[RADIO_RXBUFFER_SIZE-3-TRAILER_LEN])-(FEC_MAX_BYTES+1);
+	// Get actual length of packet
+	int length=end_length/13;
+	// Work out where start length will be. This will be 3+length+FEC_LENGTH+3 bytes before the end
+	// But take another 9 bytes for the radio frame trailer
+	int candidate_start_offset=
+	  RADIO_RXBUFFER_SIZE-(3+length+FEC_LENGTH+3)-TRAILER_LEN;
+	int golay_start_errors=0;
+	int start_length=golay_decode(&golay_start_errors,
+				      &radio_rx_buffer[candidate_start_offset]);
+
+	// Ignore packet if it does not satisfy !((n-FEC_MAX_BYTES-1)%13)
+	if (end_length%13) {
+	  if (message_buffer_length) message_buffer_length--; // chop NL
+	  message_buffer_length+=
+	    snprintf(&message_buffer[message_buffer_length],
+		     message_buffer_size-message_buffer_length,
+		     ", LENGTH MODULO CHECK FAIL (end_length=%d, mod 13 = %d, start_length=%d)\n",
+		     end_length,end_length%13,start_length);
+	  
+	  continue;
+	}
+	
+	// fprintf(stderr,"  This isn't a packet of %d bytes (start_length=%d)\n",
+	// length,start_length);
+	
+	// Ignore packet if the two length fields do not agree.
+	if (start_length!=length) {
+	  if (message_buffer_length) message_buffer_length--; // chop NL
+	  message_buffer_length+=
+	    snprintf(&message_buffer[message_buffer_length],
+		     message_buffer_size-message_buffer_length,
+		     ", LENGTH CHECK FAIL (start_length=%d, length=%d)\n",
+		     start_length,length);
+	  continue;
+	}
+	
+	// Now do RS check on packet contents
+	unsigned char *body = &radio_rx_buffer[candidate_start_offset+3];
+	int rs_error_count = decode_rs_8(body,NULL,0,FEC_MAX_BYTES-length);
+	
+	if (rs_error_count>=0&&rs_error_count<8) {
+	  if (0) fprintf(stderr,"CHECKPOINT: %s:%d %s() error counts = %d,%d,%d for packet of %d bytes.\n",
+			 __FILE__,__LINE__,__FUNCTION__,
+			 golay_end_errors,rs_error_count,golay_start_errors,length);
+	  
+	  saw_message(body,length,
+		      my_sid_hex,prefix,servald_server,credential);
+	  
+	  // attach presumed SID prefix
+	  if (message_buffer_length) message_buffer_length--; // chop NL
+	  message_buffer_length+=
+	    snprintf(&message_buffer[message_buffer_length],
+		     message_buffer_size-message_buffer_length,
+		     ", FEC OK : sender SID=%02x%02x%02x%02x%02x%02x*\n",
+		     body[0],body[1],body[2],body[3],body[4],body[5]);
+	  
+	} else {
+	  if (message_buffer_length) message_buffer_length--; // chop NL
+	  message_buffer_length+=
+	    snprintf(&message_buffer[message_buffer_length],
+		     message_buffer_size-message_buffer_length,
+		     ", FEC FAIL (rs_error_count=%d)\n",
+		     rs_error_count);
+	}
+	
       }
-
-    // Decode end of packet length field
-    int golay_end_errors;
-    int end_length=golay_decode(&golay_end_errors,&radio_rx_buffer[RADIO_RXBUFFER_SIZE-3])-(FEC_MAX_BYTES+1);
-
-    // Ignore packet if it does not satisfy !((n-FEC_MAX_BYTES-1)%13)
-    if (end_length%13) {
-      if (packet) {
-	message_buffer_length--; // chop NL
-	message_buffer_length+=
-	  snprintf(&message_buffer[message_buffer_length],
-		   message_buffer_size-message_buffer_length,
-		   ", LENGTH MODULO CHECK FAIL (end_length=%d)\n",
-		   end_length);
-      }
-      continue;
-    }
-    // Get actual length of packet
-    int length=end_length/13;
-    // Work out where start length will be. This will be 3+length+FEC_LENGTH+3 bytes before the end
-    int candidate_start_offset=
-      RADIO_RXBUFFER_SIZE-(3+length+FEC_LENGTH+3);
-    int golay_start_errors=0;
-    int start_length=golay_decode(&golay_start_errors,
-				  &radio_rx_buffer[candidate_start_offset]);
-
-    // fprintf(stderr,"  This isn't a packet of %d bytes (start_length=%d)\n",
-    // length,start_length);
-    
-    // Ignore packet if the two length fields do not agree.
-    if (start_length!=length) {
-      if (packet) {
-	message_buffer_length--; // chop NL
-	message_buffer_length+=
-	  snprintf(&message_buffer[message_buffer_length],
-		   message_buffer_size-message_buffer_length,
-		   ", LENGTH CHECK FAIL (start_length=%d, length=%d)\n",
-		   start_length,length);
-      }
-      continue;
-    }
-
-    // Now do RS check on packet contents
-    unsigned char *body = &radio_rx_buffer[candidate_start_offset+3];
-    int rs_error_count = decode_rs_8(body,NULL,0,FEC_MAX_BYTES-length);
-
-    if (rs_error_count>=0&&rs_error_count<8) {
-      if (0) fprintf(stderr,"CHECKPOINT: %s:%d %s() error counts = %d,%d,%d for packet of %d bytes.\n",
-	      __FILE__,__LINE__,__FUNCTION__,
-	      golay_end_errors,rs_error_count,golay_start_errors,length);
-      saw_message(body,length,
-		  my_sid_hex,prefix,servald_server,credential);
-
-      // attach presumed SID prefix
-      message_buffer_length--; // chop NL
-      message_buffer_length+=
-	snprintf(&message_buffer[message_buffer_length],
-		 message_buffer_size-message_buffer_length,
-		 ", FEC OK : sender SID=%02x%02x%02x%02x%02x%02x*\n",
-		 body[0],body[1],body[2],body[3],body[4],body[5]);
-
-    } else {
-      message_buffer_length--; // chop NL
-      message_buffer_length+=
-	snprintf(&message_buffer[message_buffer_length],
-		 message_buffer_size-message_buffer_length,
-		 ", FEC FAIL (rs_error_count=%d)\n",
-		 rs_error_count);
-    }
-    
   }
-
   return 0;
 }
