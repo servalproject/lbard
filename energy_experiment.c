@@ -169,7 +169,10 @@ int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
       wifi_down_time=gettime_us()+wifiup_hold_time_ms*1000;
       if (wifi_down) { wifi_enable(); wifi_down=0; }
     } else {
-      if (now>wifi_down_time) { wifi_disable(); wifi_down=1; }
+      if (now>wifi_down_time) {
+	if (wifi_down==0) wifi_disable();
+	wifi_down=1;
+      }
     }
   }    
   
