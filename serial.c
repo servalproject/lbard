@@ -82,6 +82,7 @@ int serial_setup_port_with_speed(int fd,int speed)
   tcgetattr(fd, &t);
 
   fprintf(stderr,"Before serial port setup: t.c_cflag&CTSRTS=0x%lx\n",
+	  (long unsigned int)
 #ifndef CNEW_RTSCTS
 	  t.c_cflag & CRTSCTS
 #else
@@ -90,7 +91,7 @@ int serial_setup_port_with_speed(int fd,int speed)
 	  );
 	  
   speed_t baud_rate;
-  switch(baud){
+  switch(speed){
   case 0: baud_rate = B0; break;
   case 50: baud_rate = B50; break;
   case 75: baud_rate = B75; break;
@@ -150,6 +151,7 @@ int serial_setup_port_with_speed(int fd,int speed)
     tcgetattr(fd, &t);
 
   fprintf(stderr,"After serial port setup: t.c_cflag&CTSRTS=0x%lx\n",
+	  (long unsigned int)
 #ifndef CNEW_RTSCTS
 	  t.c_cflag & CRTSCTS
 #else
