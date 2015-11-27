@@ -68,12 +68,27 @@ int wifi_enable()
 int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
 		      int wifiup_hold_time_ms, char *interface_name)
 {
+
+  double cycle_duration = 1000.0/pulse_frequency;
+  double duty_cycle=pulse_width_ms/cycle_duration;
+  
   fprintf(stderr,"Running energy sample experiment:\n");
   fprintf(stderr,"  pulse width = %.4fms\n",pulse_width_ms);
   fprintf(stderr,"  pulse frequency = %dHz\n",pulse_frequency);
+  fprintf(stderr,"  cycle duration (1/freq) = %3.2fms",cycle_duration);
+  fprintf(stderr,"  duty cycle = %3.2f%%\n",duty_cycle);
   fprintf(stderr,"  wifi hold time = %dms\n",wifiup_hold_time_ms);
   fprintf(stderr,"  wifi interface = %s\n",interface_name);
 
+  if (duty_cycle>99) {
+    fprintf(stderr,"ERROR: Duty cycle cannot exceed 99%%\n");
+    exit(-1);
+  }
+
+  if (duty_cycle>90) {
+    fprintf(stderr,"WARNING: Duty cycle is close to 100%% -- accuracy may suffer.\n");
+  }
+  
   wifi_interface_name=interface_name;
   
   // Work out correct serial port speed to produce the required pulse width
