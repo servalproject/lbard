@@ -84,7 +84,7 @@ int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
 {
 
   double cycle_duration = 1000.0/pulse_frequency;
-  double duty_cycle=pulse_width_ms/cycle_duration;
+  double duty_cycle=pulse_width_ms*100.0/cycle_duration;
   
   fprintf(stderr,"Running energy sample experiment:\n");
   fprintf(stderr,"  pulse width = %.4fms\n",pulse_width_ms);
