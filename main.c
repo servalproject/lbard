@@ -46,6 +46,9 @@ int debug_pieces=0;
 int debug_announce=0;
 int debug_pull=0;
 
+int reboot_when_stuck=0;
+extern int serial_errors;
+
 unsigned char my_sid[32];
 char *my_sid_hex=NULL;
 char *servald_server="";
@@ -155,6 +158,7 @@ int main(int argc, char **argv)
 	fprintf(stderr,"Only bundles newer than epoch+%lld msec (%s) will be carried.\n",
 		(long long)min_version,stringtime);
       }
+      else if (!strcasecmp("rebootwhenstuck",argv[n])) reboot_when_stuck=1;
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
       else if (!strcasecmp("announce",argv[n])) debug_announce=1;
@@ -260,6 +264,13 @@ int main(int argc, char **argv)
       }
     }
 
+    if ((serial_errors>20)&&reboot_when_stuck) {
+      // If we are unable to write to the serial port repeatedly for a while,
+      // we could be facing funny serial port behaviour bugs that we see on the MR3020.
+      // In which case, if authorised, ask the MR3020 to reboot
+      system("reboot");
+    }
+    
     usleep(10000);
 
     if (time(0)>last_summary_time) {

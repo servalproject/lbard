@@ -45,6 +45,8 @@ extern char *servald_server;
 extern char *credential;
 extern char *prefix;
 
+int serial_errors=0;
+
 int radio_read_bytes(int serialfd,int monitor_mode)
 {
   unsigned char buf[8192];
@@ -108,11 +110,11 @@ int radio_set_tx_power(int serialfd)
 
   if (hipower_switch_set&&hipower_en) {
     fprintf(stderr,"Setting radio to hipower -- you need a special spectrum license to do this!\n");
-    write_all(serialfd,"!H",2);
+    if (write_all(serialfd,"!H",2)==-1) serial_errors++; else serial_errors=0;
   } else {
     if (0) fprintf(stderr,"Setting radio to lowpower mode (flags %d:%d) -- probably ok under Australian LIPD class license, but you should check.\n",
 		   hipower_switch_set,hipower_en);
-    write_all(serialfd,"!L",2);
+    if (write_all(serialfd,"!L",2)==-1) serial_errors++; else serial_errors=0;
   }
 
   return 0;
@@ -194,7 +196,7 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   
   radio_set_tx_power(serialfd);
   
-  write_all(serialfd,escaped,elen);
+  if (write_all(serialfd,escaped,elen)==-1) serial_errors++; else serial_errors=0;
 
   return -1;
 }
