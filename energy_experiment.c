@@ -164,7 +164,7 @@ int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
     long long now=gettime_us();
     if (now>report_time) {
       report_time+=1000000;
-      if ((sent_pules != pulse_frequency)||missed_pulses)
+      if ((sent_pulses != pulse_frequency)||missed_pulses)
 	fprintf(stderr,"Sent %d pulses in the past second, and missed %d deadlines (target is %d).\n",
 		sent_pulses,missed_pulses,pulse_frequency);
       sent_pulses=0;
