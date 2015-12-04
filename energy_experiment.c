@@ -164,8 +164,9 @@ int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
     long long now=gettime_us();
     if (now>report_time) {
       report_time+=1000000;
-      fprintf(stderr,"Sent %d pulses in the past second, and missed %d deadlines (target is %d).\n",
-	      sent_pulses,missed_pulses,pulse_frequency);
+      if ((sent_pules != pulse_frequency)||missed_pulses)
+	fprintf(stderr,"Sent %d pulses in the past second, and missed %d deadlines (target is %d).\n",
+		sent_pulses,missed_pulses,pulse_frequency);
       sent_pulses=0;
       missed_pulses=0;
     }
@@ -196,6 +197,8 @@ int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
     if (bytes>0) {
       // Work out when to take wifi low
       wifi_down_time=gettime_us()+wifiup_hold_time_ms*1000;
+      fprintf(stderr,"Saw energy on channel @ %lldms, holding Wi-Fi for %lld more usec\n",
+	      gettime_ms(),wifi_down_time-gettime_us());
       if (wifi_down) { wifi_enable(); wifi_down=0; }
     } else {
       if (now>wifi_down_time) {
