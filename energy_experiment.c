@@ -34,14 +34,21 @@ int wifi_disable()
   fprintf(stderr,"Disabling wifi interface %s @ %lldms\n",
 	  wifi_interface_name,gettime_ms());
   if (wifi_fd==-1)
-    wifi_fd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP);
+    wifi_fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
   struct ifreq ifr;
   memset(&ifr, 0, sizeof(ifr));
   strcpy(ifr.ifr_name, wifi_interface_name);
-  if (ioctl(wifi_fd,SIOCGIFFLAGS,&ifr)) return -1;
+  if (ioctl(wifi_fd,SIOCGIFFLAGS,&ifr)) {
+    perror("SIOCGIFFLAGS failed");
+    return -1;
+  }
   ifr.ifr_flags&=!IFF_UP;
-  if (ioctl(wifi_fd,SIOCSIFFLAGS,&ifr)) return -1;
+  if (ioctl(wifi_fd,SIOCSIFFLAGS,&ifr)) {
+    perror("SIOCSIFFLAGS failed");
+    return -1;
+  }
 #else
+  fprintf(stderr,"wifi_disable() not implemented for this platform.\n");
   return -1;
 #endif
 }
@@ -52,14 +59,21 @@ int wifi_enable()
   fprintf(stderr,"Enabling wifi interface %s @ %lldms\n",
 	  wifi_interface_name,gettime_ms());
  if (wifi_fd==-1)
-   wifi_fd = socket(PF_INET6, SOCK_DGRAM, IPPROTO_IP);
+   wifi_fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
  struct ifreq ifr;
  memset(&ifr, 0, sizeof(ifr));
  strcpy(ifr.ifr_name, wifi_interface_name);
- if (ioctl(wifi_fd,SIOCGIFFLAGS,&ifr)) return -1;
+ if (ioctl(wifi_fd,SIOCGIFFLAGS,&ifr)) {
+   perror("SIOCGIFFLAGS failed");
+   return -1;
+ }
  ifr.ifr_flags|=IFF_UP;
- if (ioctl(wifi_fd,SIOCSIFFLAGS,&ifr)) return -1;
+ if (ioctl(wifi_fd,SIOCSIFFLAGS,&ifr)) {
+    perror("SIOCSIFFLAGS failed");
+   return -1;
+ }
 #else
+  fprintf(stderr,"wifi_disable() not implemented for this platform.\n");
   return -1;
 #endif 
 }
