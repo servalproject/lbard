@@ -45,6 +45,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 int debug_pieces=0;
 int debug_announce=0;
 int debug_pull=0;
+int debug_insert=0;
 
 int reboot_when_stuck=0;
 extern int serial_errors;
@@ -159,6 +160,7 @@ int main(int argc, char **argv)
 		(long long)min_version,stringtime);
       }
       else if (!strcasecmp("rebootwhenstuck",argv[n])) reboot_when_stuck=1;
+      else if (!strcasecmp("logrejects",argv[n])) debug_insert=1;
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
       else if (!strcasecmp("announce",argv[n])) debug_announce=1;

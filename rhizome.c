@@ -40,6 +40,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "lbard.h"
 
+extern int debug_insert;
+
 struct bundle_record bundles[MAX_BUNDLES];
 int bundle_count=0;
 
@@ -51,6 +53,32 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
 // By default don't filter bundles.
 int meshms_only=0;
 long long min_version=0;
+
+int rhizome_log(char *service,
+		char *bid,
+		char *version,
+		char *author,
+		char *originated_here,
+		long long length,
+		char *filehash,
+		char *sender,
+		char *recipient,
+
+		char *message)
+{
+  if (debug_insert) {
+    FILE *f=fopen("/tmp/lbard-rhizome.log","w+");
+    if (!f) return -1;
+    time_t now = time(0);
+    fprintf(f,"--------------------\n%sservice=%s, bid=%s,\nversion=%s, author=%s,\noriginated_here=%s, length=%lld,\nfilehash=%s,\nsender=%s, recipient=%s:\n\n%s\n\n",
+	    ctime(&now),
+	    service,bid,version,author,originated_here,length,filehash,sender,recipient,
+	    message);
+    fclose(f);
+  }
+  return 0;
+}
+
 
 int register_bundle(char *service,
 		    char *bid,
@@ -66,8 +94,11 @@ int register_bundle(char *service,
 
   // Ignore non-meshms bundles when in meshms-only mode.
   if (meshms_only) {
-    if (strncasecmp("meshms",service,6))
-      return 0;   
+    if (strncasecmp("meshms",service,6)) {
+      rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
+		  "Rejected non-meshms bundle seen while meshms_only=1");
+      return 0;
+    }
   }
   
   long long versionll=strtoll(version,NULL,10);
@@ -75,8 +106,11 @@ int register_bundle(char *service,
   // Ignore bundles that are too old
   // (except if MeshMS2, since that uses journal bundles, and so the version does
   // not represent the age of a bundle.)
-  if ((versionll<min_version)&&strncasecmp("meshms2",service,7))
+  if ((versionll<min_version)&&strncasecmp("meshms2",service,7)) {
+    rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
+		"Rejected bundle because it was too old (version<min_version), and service!=meshms2");
     return 0;
+  }
   
   // Remove bundle from partial lists of all peers if we have other transmissions
   // to us in progress of this bundle
@@ -155,7 +189,9 @@ int register_bundle(char *service,
   bundles[bundle_number].filehash=strdup(filehash);
   bundles[bundle_number].sender=strdup(sender);
   bundles[bundle_number].recipient=strdup(recipient);
-  
+
+  rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
+	      "Bundle registered");
   return 0;
 }
 
@@ -510,10 +546,26 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 				   "/rhizome/import",
 				   manifest_data,manifest_length,
 				   body_data,body_length,
-				   15000);
+				   15000);  
   
   if(result_code<200|| result_code>202) {
     fprintf(stderr,"POST bundle to rhizome failed: http result = %d\n",result_code);
+
+    if (debug_insert) {
+      char filename[1024];
+      snprintf(filename,1024,"/tmp/lbard.rejected.manifest");
+      FILE *f=fopen(filename,"w");
+      if (f) { fwrite(manifest_data,manifest_length,1,f); fclose(f); }
+      snprintf(filename,1024,"/tmp/lbard.rejected.body");
+      f=fopen(filename,"w");
+      if (f) { fwrite(body_data,body_length,1,f); fclose(f); }
+      snprintf(filename,1024,"/tmp/lbard.rejected.result");
+      f=fopen(filename,"w");
+      if (f) {
+	fprintf(stderr,"http result code = %d\n",result_code);
+	fclose(f);
+      }
+    }
     
     return -1;
   }
