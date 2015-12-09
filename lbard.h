@@ -92,7 +92,6 @@ struct bundle_record {
   long long last_offset_announced;
   // Similarly for the manifest
   long long last_manifest_offset_announced;
-
   
   long long last_priority;
   int num_peers_that_dont_have_it;
@@ -226,3 +225,10 @@ int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
 int serial_setup_port_with_speed(int fd,int speed);
 int status_dump();
 int status_log(char *msg);
+
+long long calculate_bundle_intrinsic_priority(char *bid,
+					      long long length,
+					      long long version,
+					      char *service,
+					      char *recipient,
+					      int insert_failures);

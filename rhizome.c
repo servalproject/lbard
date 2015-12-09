@@ -254,6 +254,82 @@ int lengthToPriority(long long value)
   return (result<<4)|part;
 }
 
+// Bigger values in this list means that factor is more important in selecting
+// which bundle to announce next.
+// Sent less recently is less important than size or whether it is meshms.
+// This ensures that we rotate through the bundles we have.
+// If a peer comes along who doesn't have a smaller or meshms bundle, then
+// the less-peers-have-it priority will kick in.
+
+// Size-based priority is a value between 0 - 0x3FF
+// Number of peers who lack a bundle is added to this to boost priority a little
+// for bundles which are wanted by more peers
+#define BUNDLE_PRIORITY_SENT_LESS_RECENTLY    0x00000400
+#define BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER   0x00002000
+#define BUNDLE_PRIORITY_IS_MESHMS             0x00004000
+// Transmit now only gently escalates priority, so that we can override it if
+// we think we have a bundle that they should receive
+#define BUNDLE_PRIORITY_TRANSMIT_NOW          0x00000040
+// HAving a priority flag for bundles we don't have
+#define BUNDLE_PRIORITY_WE_DONT_HAVE_IT       0x10000000
+
+long long calculate_bundle_intrinsic_priority(char *bid,
+					      long long length,
+					      long long version,
+					      char *service,
+					      char *recipient,
+					      int insert_failures)
+{
+  // Start with length
+  long long this_bundle_priority = lengthToPriority(length);
+
+  // Prioritise MeshMS over others (and new style MeshMS over any old meshms v1
+  // messages).
+  if (!strcasecmp("MeshMS1",service))
+    this_bundle_priority+=BUNDLE_PRIORITY_IS_MESHMS;
+  if (!strcasecmp("MeshMS2",service))
+    this_bundle_priority+=2*BUNDLE_PRIORITY_IS_MESHMS;
+  
+  // Is bundle addressed to a peer?
+  int j;
+  int addressed_to_peer=0;
+  for(j=0;j<peer_count;j++) {
+    if (!strncmp(recipient,
+		 peer_records[j]->sid_prefix,
+		 (8*2))) {
+      // Bundle is addressed to a peer.
+      // Increase priority if we do not have positive confirmation that peer
+      // has this version of this bundle.
+      addressed_to_peer=1;
+      
+      int k;
+      for(k=0;k<peer_records[j]->bundle_count;k++) {
+	if (!strncmp(peer_records[j]->bid_prefixes[k],bid,
+		     8*2)) {
+	  // Peer knows about this bundle, but which version?
+	  if (peer_records[j]->versions[k]<version) {
+	    // They only know about an older version.
+	    // XXX Advance bundle announced offset to last known offset for
+	    // journal bundles (MeshMS1 & MeshMS2 types, and possibly others)
+	  } else {
+	    // The peer has this version (or possibly a newer version!), so there
+	    // is no point us announcing it.
+	    addressed_to_peer=0;
+	  }
+	}
+      }
+      
+      // We found who this bundle was addressed to, so there is no point looking
+      // further.
+      break;
+    }
+  }
+  if (addressed_to_peer)
+    this_bundle_priority+=BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER;
+
+  return this_bundle_priority;
+}
+
 int find_highest_priority_bundle()
 {
   long long this_bundle_priority=0;
@@ -264,32 +340,25 @@ int find_highest_priority_bundle()
 
   for(i=0;i<bundle_count;i++) {
 
-    this_bundle_priority=0;
-
-    // Bigger values in this list means that factor is more important in selecting
-    // which bundle to announce next.
-    // Sent less recently is less important than size or whether it is meshms.
-    // This ensures that we rotate through the bundles we have.
-    // If a peer comes along who doesn't have a smaller or meshms bundle, then
-    // the less-peers-have-it priority will kick in.
-
-    // Size-based priority is a value between 0 - 0x3FF
-    // Number of peers who lack a bundle is added to this to boost priority a little
-    // for bundles which are wanted by more peers
-#define BUNDLE_PRIORITY_SENT_LESS_RECENTLY    0x00000400
-#define BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER   0x00002000
-#define BUNDLE_PRIORITY_IS_MESHMS             0x00004000
-    // Transmit now only gently escalates priority, so that we can override it if
-    // we think we have a bundle that they should receive
-#define BUNDLE_PRIORITY_TRANSMIT_NOW          0x00000040
-
+    // Start with intrinsic priority of the bundle based on size, service,
+    // who it is addressed to, and whether we have had problems inserting it
+    // into rhizome.
+    this_bundle_priority=
+      calculate_bundle_intrinsic_priority(bundles[i].bid,
+					  bundles[i].length,
+					  bundles[i].version,
+					  bundles[i].service,
+					  bundles[i].recipient,
+					  0 /* it is a bundle in rhizome, so
+					       insert_failures is meaningless here. */
+					  );
+					  
     long long time_delta=0;
     
     if (highest_priority_bundle>=0) {
       time_delta=bundles[highest_priority_bundle].last_announced_time
 	-bundles[i].last_announced_time;
       
-      this_bundle_priority = lengthToPriority(bundles[i].length);
     } else time_delta=0;
 
     if (bundles[i].transmit_now)
@@ -297,45 +366,6 @@ int find_highest_priority_bundle()
 	this_bundle_priority+=BUNDLE_PRIORITY_TRANSMIT_NOW;
       }
     
-    if ((!strcasecmp("MeshMS1",bundles[i].service))
-	||(!strcasecmp("MeshMS2",bundles[i].service))) {
-      this_bundle_priority|=BUNDLE_PRIORITY_IS_MESHMS;
-    }
-    
-    // Is bundle addressed to a peer?
-    int j;
-    for(j=0;j<peer_count;j++) {
-      if (!strncmp(bundles[i].recipient,
-		   peer_records[j]->sid_prefix,
-		   (8*2))) {
-	// Bundle is addressed to a peer.
-	// Increase priority if we do not have positive confirmation that peer
-	// has this version of this bundle.
-	this_bundle_priority|=BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER;
-
-	int k;
-	for(k=0;k<peer_records[j]->bundle_count;k++) {
-	  if (!strncmp(peer_records[j]->bid_prefixes[k],bundles[i].bid,
-		       8*2)) {
-	    // Peer knows about this bundle, but which version?
-	    if (peer_records[j]->versions[k]<bundles[i].version) {
-	      // They only know about an older version.
-	      // XXX Advance bundle announced offset to last known offset for
-	      // journal bundles (MeshMS1 & MeshMS2 types, and possibly others)
-	    } else {
-	      // The peer has this version (or possibly a newer version!), so there
-	      // is no point us announcing it.
-	      this_bundle_priority&=~BUNDLE_PRIORITY_RECIPIENT_IS_A_PEER;
-	    }
-	  }
-	}
-
-	// We found who this bundle was addressed to, so there is no point looking
-	// further.
-	break;
-      }
-    }
-
     int num_peers_that_dont_have_it=0;
     int peer;
     time_t peer_observation_time_cutoff=time(0)-PEER_KEEPALIVE_INTERVAL;
@@ -346,15 +376,6 @@ int find_highest_priority_bundle()
 					   bundles[i].version))
 	  num_peers_that_dont_have_it++;
     }
-
-    // Add to priority according to the number of peers that don't have the bundle
-    this_bundle_priority+=num_peers_that_dont_have_it;
-    if (num_peers_that_dont_have_it>bundles[i].num_peers_that_dont_have_it) {
-      // More peer(s) have arrived who have not got this bundle yet, so reset the
-      // last sent time for this bundle.
-      bundles[i].last_announced_time=0;
-    }
-    bundles[i].num_peers_that_dont_have_it=num_peers_that_dont_have_it;
 
     // We only apply the less-recently-sent priority flag if there are peers who
     // don't yet have it.
@@ -376,7 +397,16 @@ int find_highest_priority_bundle()
 	      "Priority = 0x%llx, %d peers don't have it.\n",
 	      bundles[i].bid,time(0)-bundles[i].last_announced_time,
 	      this_bundle_priority,num_peers_that_dont_have_it);
-
+    
+    // Add to priority according to the number of peers that don't have the bundle
+    this_bundle_priority+=num_peers_that_dont_have_it;
+    if (num_peers_that_dont_have_it>bundles[i].num_peers_that_dont_have_it) {
+      // More peer(s) have arrived who have not got this bundle yet, so reset the
+      // last sent time for this bundle.
+      bundles[i].last_announced_time=0;
+    }
+    bundles[i].num_peers_that_dont_have_it=num_peers_that_dont_have_it;
+    
     // Indicate this bundle as highest priority, unless we have found another one that
     // is higher priority.
     // Replace if priority is equal, so that newer bundles take priorty over older
@@ -392,7 +422,7 @@ int find_highest_priority_bundle()
 	highest_priority_bundle_peers_dont_have_it=num_peers_that_dont_have_it;
       }
     }
-
+    
     // Remember last calculated priority so that we can help debug problems with
     // priority calculation.
     bundles[i].last_priority=this_bundle_priority;
