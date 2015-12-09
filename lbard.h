@@ -50,6 +50,7 @@ struct peer_state {
   char **bid_prefixes;
   long long *versions;
   unsigned char *size_bytes;
+  unsigned char *insert_failures;
 
   // Bundles this peer is transferring.
   // The bundle prioritisation algorithm means that the peer may announce pieces
@@ -232,3 +233,5 @@ long long calculate_bundle_intrinsic_priority(char *bid,
 					      char *service,
 					      char *recipient,
 					      int insert_failures);
+int bid_to_peer_bundle_index(int peer,char *bid_hex);
+int manifest_extract_bid(unsigned char *manifest_data,char *bid_hex);

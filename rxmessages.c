@@ -326,15 +326,36 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       // We have a single segment for body and manifest that span the complete
       // size.
       fprintf(stderr,">>> We have the entire bundle now.\n");
-      rhizome_update_bundle(peer_records[peer]->partials[i].manifest_segments->data,
-			    peer_records[peer]->partials[i].manifest_length,
-			    peer_records[peer]->partials[i].body_segments->data,
-			    peer_records[peer]->partials[i].body_length,
-			    servald_server,credential);
+      int insert_result=
+	rhizome_update_bundle(peer_records[peer]->partials[i].manifest_segments->data,
+			      peer_records[peer]->partials[i].manifest_length,
+			      peer_records[peer]->partials[i].body_segments->data,
+			      peer_records[peer]->partials[i].body_length,
+			      servald_server,credential);
+      if (insert_result) {
+	// Failed to insert, so mark this bundle for deprioritisation, so that we
+	// don't just keep asking for it.
+	char bid[32*2+1];
+	if (!manifest_extract_bid(peer_records[peer]->partials[i].manifest_segments->data,
+				  bid)) {
+	  int bundle=bid_to_peer_bundle_index(peer,bid);
+	  if (peer_records[peer]->insert_failures[bundle]<255)
+	    peer_records[peer]->insert_failures[bundle]++;
+	}
+      } else {
+	// Insert succeeded, so clear any failure deprioritisation (although it
+	// shouldn't matter).
+	char bid[32*2+1];
+	if (!manifest_extract_bid(peer_records[peer]->partials[i].manifest_segments->data,
+				  bid)) {
+	  int bundle=bid_to_peer_bundle_index(peer,bid);
+	  peer_records[peer]->insert_failures[bundle]=0;
+	}
+      }
       // Now release this partial.
       clear_partial(&peer_records[peer]->partials[i]);
     }
-
+  
   return 0;
 }
 

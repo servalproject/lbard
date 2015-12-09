@@ -51,6 +51,7 @@ int free_peer(struct peer_state *p)
   free(p->bid_prefixes); p->bid_prefixes=NULL;
   free(p->versions); p->versions=NULL;
   free(p->size_bytes); p->size_bytes=NULL;
+  free(p->insert_failures); p->insert_failures=NULL;
   free(p);
   return 0;
 }
@@ -99,6 +100,8 @@ int peer_note_bar(struct peer_state *p,
       assert(p->versions);
       p->size_bytes=realloc(p->size_bytes,p->bundle_count_alloc);
       assert(p->size_bytes);
+      p->insert_failures=realloc(p->insert_failures,p->bundle_count_alloc);
+      assert(p->insert_failures);
     }
     b=p->bundle_count;
     if (debug_pieces) fprintf(stderr,"Peer %s* bundle %s* will go in index %d (current count = %d)\n",
@@ -109,6 +112,7 @@ int peer_note_bar(struct peer_state *p,
   assert(p);
   p->versions[b]=version;
   p->size_bytes[b]=size_byte;
+  p->insert_failures[b]=0;
   
   return 0;
 }
@@ -357,4 +361,18 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
       
     }
   return 0;
+}
+
+int bid_to_peer_bundle_index(int peer,char *bid_hex)
+{
+  // Find the bundle id of this bid in a peer's list of bundles
+  if ((peer<0)||(peer>peer_count)) return -1;
+  
+  struct peer_state *p=peer_records[peer];
+  
+  for(int i=0;i<p->bundle_count;i++) {
+    if (!strncasecmp(bid_hex,p->bid_prefixes[i],strlen(p->bid_prefixes[i])))
+      return i;
+  }
+  return -1;
 }
