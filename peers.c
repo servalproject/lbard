@@ -143,39 +143,47 @@ int find_peer_by_prefix(char *peer_prefix)
 int peers_most_interesting_bundle(int peer)
 {
   int best_bundle=-1;
+  long long best_priority=-1;
   int bundle;
-  int i;
+
   // XXX - More linear searches!
   for (bundle=0;bundle<peer_records[peer]->bundle_count;bundle++) {
-    int not_interesting=0;
-    if (!peer_records[peer]->bid_prefixes[bundle]) not_interesting=1;
+    int interesting=1;
+    if (!peer_records[peer]->bid_prefixes[bundle]) interesting=0;
     else {
-      for(i=0;i<bundle_count;i++) {
-	if (!strncasecmp(bundles[i].bid,peer_records[peer]->bid_prefixes[bundle],
-			 strlen(peer_records[peer]->bid_prefixes[bundle]))) {
-	  // We have this bundle, but do we have this version?
-	  if (bundles[i].version>=peer_records[peer]->versions[bundle]) {
-	    // Ok, we have this already, so it is not interesting.
-	    not_interesting=1;
-	    break;
-	  }
-	}
-      }
+      if (we_have_this_bundle(peer_records[peer]->bid_prefixes[bundle],
+			      peer_records[peer]->versions[bundle]))
+	interesting=0;
     }
-    if (!not_interesting) {
+    if (interesting) {
+      // Get everything that we need handy to work out the intrinsic priority of
+      // this bundle.
+      char *bid = peer_records[peer]->bid_prefixes[bundle];
+      long long size_estimate
+	= size_byte_to_length(peer_records[peer]->size_bytes[bundle]&0x7f);
+      long long version = peer_records[peer]->versions[bundle];
+      char *service = "file";
+      if (peer_records[peer]->size_bytes[bundle]&0x80) service="MeshMS2";
+      char *recipient = bundle_recipient_if_known(bid);
+      int insert_failures = peer_records[peer]->insert_failures[bundle];
+
+      long long this_priority =
+	calculate_bundle_intrinsic_priority(bid,size_estimate,version,service,
+					    recipient,insert_failures);
+      
       // Bundle is more interesting if it is smaller or meshms and the best so far is
       // not. We do this by comparing size_bytes first, which will put all meshms to
       // the front of the queue, and then version, which will allow finer
       // discrimination of size differences if size_bytes are identical.
 
-      if ((best_bundle==-1)
-	  ||(peer_records[peer]->size_bytes[bundle]<peer_records[peer]->size_bytes[best_bundle])
-	  ||((peer_records[peer]->size_bytes[bundle]==peer_records[peer]->size_bytes[best_bundle])
-	     &&(peer_records[peer]->versions[bundle]<peer_records[peer]->versions[best_bundle])))
-	best_bundle=bundle;
+      if ((best_bundle==-1)||(this_priority>best_priority))
+	{
+	  best_bundle=bundle;
+	  best_priority=this_priority;
+	}
     }
   }
-
+  
   return best_bundle;
 }
 

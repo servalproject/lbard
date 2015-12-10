@@ -127,35 +127,37 @@ long long calculate_bundle_intrinsic_priority(char *bid,
   // Is bundle addressed to a peer?
   int j;
   int addressed_to_peer=0;
-  for(j=0;j<peer_count;j++) {
-    if (!strncmp(recipient,
-		 peer_records[j]->sid_prefix,
-		 (8*2))) {
-      // Bundle is addressed to a peer.
-      // Increase priority if we do not have positive confirmation that peer
-      // has this version of this bundle.
-      addressed_to_peer=1;
-      
-      int k;
-      for(k=0;k<peer_records[j]->bundle_count;k++) {
-	if (!strncmp(peer_records[j]->bid_prefixes[k],bid,
-		     8*2)) {
-	  // Peer knows about this bundle, but which version?
-	  if (peer_records[j]->versions[k]<version) {
-	    // They only know about an older version.
-	    // XXX Advance bundle announced offset to last known offset for
-	    // journal bundles (MeshMS1 & MeshMS2 types, and possibly others)
-	  } else {
-	    // The peer has this version (or possibly a newer version!), so there
-	    // is no point us announcing it.
-	    addressed_to_peer=0;
+  if (recipient) {
+    for(j=0;j<peer_count;j++) {
+      if (!strncmp(recipient,
+		   peer_records[j]->sid_prefix,
+		   (8*2))) {
+	// Bundle is addressed to a peer.
+	// Increase priority if we do not have positive confirmation that peer
+	// has this version of this bundle.
+	addressed_to_peer=1;
+	
+	int k;
+	for(k=0;k<peer_records[j]->bundle_count;k++) {
+	  if (!strncmp(peer_records[j]->bid_prefixes[k],bid,
+		       8*2)) {
+	    // Peer knows about this bundle, but which version?
+	    if (peer_records[j]->versions[k]<version) {
+	      // They only know about an older version.
+	      // XXX Advance bundle announced offset to last known offset for
+	      // journal bundles (MeshMS1 & MeshMS2 types, and possibly others)
+	    } else {
+	      // The peer has this version (or possibly a newer version!), so there
+	      // is no point us announcing it.
+	      addressed_to_peer=0;
+	    }
 	  }
 	}
+	
+	// We found who this bundle was addressed to, so there is no point looking
+	// further.
+	break;
       }
-      
-      // We found who this bundle was addressed to, so there is no point looking
-      // further.
-      break;
     }
   }
   if (addressed_to_peer)

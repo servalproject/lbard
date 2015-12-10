@@ -235,3 +235,26 @@ long long calculate_bundle_intrinsic_priority(char *bid,
 					      int insert_failures);
 int bid_to_peer_bundle_index(int peer,char *bid_hex);
 int manifest_extract_bid(unsigned char *manifest_data,char *bid_hex);
+int we_have_this_bundle(char *bid_prefix, long long version);
+int register_bundle(char *service,
+		    char *bid,
+		    char *version,
+		    char *author,
+		    char *originated_here,
+		    long long length,
+		    char *filehash,
+		    char *sender,
+		    char *recipient);
+long long size_byte_to_length(unsigned char size_byte);
+char *bundle_recipient_if_known(char *bid_prefix);
+int rhizome_log(char *service,
+		char *bid,
+		char *version,
+		char *author,
+		char *originated_here,
+		long long length,
+		char *filehash,
+		char *sender,
+		char *recipient,
+		char *message);
+

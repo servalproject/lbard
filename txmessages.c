@@ -50,6 +50,12 @@ int log2ish(int value)
   return result;
 }
 
+long long size_byte_to_length(unsigned char size_byte)
+{
+  return 1<<size_byte;
+}
+
+
 
 int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
 {

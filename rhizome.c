@@ -42,9 +42,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 extern int debug_insert;
 
-struct bundle_record bundles[MAX_BUNDLES];
-int bundle_count=0;
-
 size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
     size_t written = fwrite(ptr, size, nmemb, stream);
     return written;
@@ -76,122 +73,6 @@ int rhizome_log(char *service,
 	    message);
     fclose(f);
   }
-  return 0;
-}
-
-
-int register_bundle(char *service,
-		    char *bid,
-		    char *version,
-		    char *author,
-		    char *originated_here,
-		    long long length,
-		    char *filehash,
-		    char *sender,
-		    char *recipient)
-{
-  int i,peer;
-
-  // Ignore non-meshms bundles when in meshms-only mode.
-  if (meshms_only) {
-    if (strncasecmp("meshms",service,6)) {
-      rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
-		  "Rejected non-meshms bundle seen while meshms_only=1");
-      return 0;
-    }
-  }
-  
-  long long versionll=strtoll(version,NULL,10);
-
-  // Ignore bundles that are too old
-  // (except if MeshMS2, since that uses journal bundles, and so the version does
-  // not represent the age of a bundle.)
-  if ((versionll<min_version)&&strncasecmp("meshms2",service,7)) {
-    rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
-		"Rejected bundle because it was too old (version<min_version), and service!=meshms2");
-    return 0;
-  }
-  
-  // Remove bundle from partial lists of all peers if we have other transmissions
-  // to us in progress of this bundle
-  // XXX - Linear searches! Replace with hash table etc
-  for(peer=0;peer<peer_count;peer++) {
-    for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
-      if (peer_records[peer]->partials[i].bid_prefix) {
-	// Here is a bundle in flight
-	char *bid_prefix=peer_records[peer]->partials[i].bid_prefix;
-	long long bid_version=peer_records[peer]->partials[i].bundle_version;
-
-	if (versionll>=bid_version)
-	  if (!strncasecmp(bid,bid_prefix,strlen(bid_prefix)))
-	    {
-	      fprintf(stderr,"--- Culling in-progress transfer for bundle that has shown up in Rhizome.\n");
-	      clear_partial(&peer_records[peer]->partials[i]);
-	      break;
-	    }
-      }
-    }
-  }
-
-  
-  // XXX - Linear search through bundles!
-  // Use a hash table or something so that it doesn't cost O(n^2) with number
-  // of bundles.
-  int bundle_number=bundle_count;
-  for(i=0;i<bundle_count;i++) {
-    if (!strcmp(bundles[i].bid,bid)) {
-      // Updating an existing bundle
-      bundle_number=i; break;
-    }
-  }
-
-  if (bundle_number>=MAX_BUNDLES) return -1;
-  
-  if (bundle_number<bundle_count) {
-    // Replace old bundle values, ...
-
-    // ... unless we already hold a newer version
-    if (bundles[bundle_number].version>=versionll)
-      return 0;
-    
-    free(bundles[bundle_number].service);
-    bundles[bundle_number].service=NULL;
-    free(bundles[bundle_number].author);
-    bundles[bundle_number].author=NULL;
-    free(bundles[bundle_number].filehash);
-    bundles[bundle_number].filehash=NULL;
-    free(bundles[bundle_number].sender);
-    bundles[bundle_number].sender=NULL;
-    free(bundles[bundle_number].recipient);
-    bundles[bundle_number].recipient=NULL;
-  } else {    
-    // New bundle
-    bundles[bundle_number].bid=strdup(bid);
-    // Never announced
-    bundles[bundle_number].last_offset_announced=0;
-    bundles[bundle_number].last_version_of_manifest_announced=0;
-    bundles[bundle_number].last_announced_time=0;
-    bundle_count++;
-  }
-
-  // Clear latest announcement time for bundles that get updated with a new version
-  if (bundles[bundle_number].version<strtoll(version,NULL,10)) {
-    bundles[bundle_number].last_offset_announced=0;
-    bundles[bundle_number].last_version_of_manifest_announced=0;
-    bundles[bundle_number].last_announced_time=0;
-  }
-  
-  bundles[bundle_number].service=strdup(service);
-  bundles[bundle_number].version=strtoll(version,NULL,10);
-  bundles[bundle_number].author=strdup(author);
-  bundles[bundle_number].originated_here_p=atoi(originated_here);
-  bundles[bundle_number].length=length;
-  bundles[bundle_number].filehash=strdup(filehash);
-  bundles[bundle_number].sender=strdup(sender);
-  bundles[bundle_number].recipient=strdup(recipient);
-
-  rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
-	      "Bundle registered");
   return 0;
 }
 
@@ -367,88 +248,6 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
   return 0;
 }
 
-int clear_partial(struct partial_bundle *p)
-{
-  fprintf(stderr,"+++++ clearing partial\n");
-  while(p->manifest_segments) {
-    struct segment_list *s=p->manifest_segments;
-    p->manifest_segments=s->next;
-    if (s->data) free(s->data); s->data=NULL;
-    free(s);
-    s=NULL;
-  }
-  while(p->body_segments) {
-    struct segment_list *s=p->body_segments;
-    p->body_segments=s->next;
-    if (s->data) free(s->data); s->data=NULL;
-    free(s);
-    s=NULL;
-  }
-
-  bzero(p,sizeof(struct partial_bundle));
-  return -1;
-}
-
-int dump_segment_list(struct segment_list *s)
-{
-  if (!s) return 0;
-  while(s) {
-    fprintf(stderr,"    [%d,%d)\n",s->start_offset,s->start_offset+s->length);
-    s=s->next;
-  }
-  return 0;
-}
-
-int dump_partial(struct partial_bundle *p)
-{
-  fprintf(stderr,"Progress receiving BID=%s* version %lld:\n",
-	  p->bid_prefix,p->bundle_version);
-  fprintf(stderr,"  manifest is %d bytes long, and body %d bytes long.\n",
-	  p->manifest_length,p->body_length);
-  fprintf(stderr,"  Manifest pieces received:\n");
-  dump_segment_list(p->manifest_segments);
-  fprintf(stderr,"  Body pieces received:\n");
-  dump_segment_list(p->body_segments);
-  return 0;
-}
-
-int merge_segments(struct segment_list **s)
-{
-  if (!s) return -1;
-  if (!(*s)) return -1;
-
-  // Segments are sorted in descending order
-  while((*s)&&(*s)->next) {
-    struct segment_list *me=*s;
-    struct segment_list *next=(*s)->next;
-    if (me->start_offset<=(next->start_offset+next->length)) {
-      // Merge this piece onto the end of the next piece
-      if (debug_pieces)
-	fprintf(stderr,"Merging [%d..%d) and [%d..%d)\n",
-		me->start_offset,me->start_offset+me->length,
-		next->start_offset,next->start_offset+next->length);
-      int extra_bytes
-	=(me->start_offset+me->length)-(next->start_offset+next->length);
-      int new_length=next->length+extra_bytes;
-      next->data=realloc(next->data,new_length);
-      assert(next->data);
-      bcopy(&me->data[me->length-extra_bytes],&next->data[next->length],
-	    extra_bytes);
-      next->length=new_length;
-
-      // Excise redundant segment from list
-      *s=next;
-      next->prev=me->prev;
-      if (me->prev) me->prev->next=next;
-
-      // Free redundant segment.
-      free(me->data); me->data=NULL;
-      free(me); me=NULL;
-    } else 
-      s=&(*s)->next;
-  }
-  return 0;
-}
 
 int manifest_extract_bid(unsigned char *manifest_data,char *bid_hex)
 {
@@ -463,4 +262,3 @@ int manifest_extract_bid(unsigned char *manifest_data,char *bid_hex)
     }
   return -1;
 }
-
