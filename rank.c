@@ -164,7 +164,7 @@ long long calculate_bundle_intrinsic_priority(char *bid,
   // Halve priority for every time we have failed to insert the complete thing in
   // rhizome.
   for(int i=0;i<insert_failures;i++)
-    if (this_bunle_priority>=BUNDLE_PRIORITY_PENALTY_FOR_FAILED_INSERT)
+    if (this_bundle_priority>=BUNDLE_PRIORITY_PENALTY_FOR_FAILED_INSERT)
 	this_bundle_priority-=BUNDLE_PRIORITY_PENALTY_FOR_FAILED_INSERT;
     else {
       // There isn't enough priority left to penalise again, so we will
