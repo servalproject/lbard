@@ -50,6 +50,7 @@ int debug_insert=0;
 
 int time_slave=0;
 int time_server=0;
+char time_broadcast_addr[1024]="255.255.255.255";
 extern int my_time_stratum;
 
 int reboot_when_stuck=0;
@@ -167,6 +168,8 @@ int main(int argc, char **argv)
       else if (!strcasecmp("rebootwhenstuck",argv[n])) reboot_when_stuck=1;
       else if (!strcasecmp("timeslave",argv[n])) time_slave=1;
       else if (!strcasecmp("timemaster",argv[n])) time_server=1;
+      else if (!strncasecmp("timebroadcast=",argv[n],14))
+	       strcpy(time_broadcast_addr,&argv[n][14]);
       else if (!strcasecmp("logrejects",argv[n])) debug_insert=1;
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
@@ -298,7 +301,7 @@ int main(int argc, char **argv)
 	bzero(&addr, sizeof(addr)); 
         addr.sin_family = PF_INET; 
         addr.sin_port = htons(0x5401); 
-        addr.sin_addr.s_addr = inet_addr("255.255.255.255"); 
+        addr.sin_addr.s_addr = inet_addr(time_broadcast_addr); 
 	sendto(timesocket,msg_out,
 	       MSG_DONTROUTE|MSG_DONTWAIT
 #ifdef MSG_NOSIGNAL
