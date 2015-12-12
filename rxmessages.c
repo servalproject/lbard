@@ -582,6 +582,23 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	bzero(&tv,sizeof (struct timeval));
 	for(int i=0;i<8;i++) tv.tv_sec|=msg[offset++]<<(i*8);
 	for(int i=0;i<3;i++) tv.tv_usec|=msg[offset++]<<(i*8);
+	/* XXX - We don't do any clever NTP-style time correction here.
+	   The result will be only approximate, probably accurate to only
+	   ~10ms - 100ms per stratum, and always running earlier and earlier
+	   with each stratum, as we fail to correct the received time for 
+	   transmission duration.
+	   We can at least try to fix this a little:
+	   1. UHF radio serial speed = 230400bps = 23040cps.
+	   2. Packets are typically ~250 bytes long.
+	   3. Serial TX speed to radio is thus ~10.8ms
+	   4. UHF Radio air speed is 128000bps.
+	   5. Radio TX time is thus 250*8/128000= ~15.6ms
+	   6. Total minimum delay is thus ~26.4ms
+
+	   Thus we will make this simple correction of adding 26.4ms
+	 */
+	tv.tv_usec+=26400;
+	if (tv.tv_usec>999999) { tv.tv_sec++; tv.tv_usec-=1000000; }
 	if ((stratum<my_time_stratum)&&time_slave) {
 	  // Found a lower-stratum time than our own, and we have enabled time
 	  // slave mode, so set system time.
