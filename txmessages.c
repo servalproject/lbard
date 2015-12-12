@@ -38,6 +38,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <dirent.h>
 #include <assert.h>
 #include <math.h>
+#include <time.h>
+#include <sys/time.h>
 
 #include "lbard.h"
 
@@ -325,6 +327,14 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 
 }
 
+/* Our time stratum. 0xff means that we have not had any external time input,
+   other values are hops from a time authority (who may or may not actually be
+   accurate).  The time is used for logging purposes, and while more accurate would
+   be better, having the time to within a few seconds is a huge step up from every
+   Mesh Extender thinking it is January 1970.
+*/
+int my_time_stratum=0xff;
+
 int message_counter=0;
 int update_my_message(int serialfd,
 		      unsigned char *my_sid, int mtu,unsigned char *msg_out,
@@ -387,6 +397,22 @@ int update_my_message(int serialfd,
   msg_out[7]=(message_counter>>8)&0x7f;
 
   int offset=8;
+
+  if (random()%10) {
+    // Occassionally announce our time
+    // T + (our stratum) + (64 bit seconds since 1970) +
+    // + (24 bit microseconds)
+    // = 1+1+8+3 = 13 bytes
+    struct timeval tv;
+    gettimeofday(&tv,NULL);    
+    
+    msg_out[offset++]='T';
+    msg_out[offset++]=my_time_stratum;
+    for(int i=0;i<8;i++)
+      msg_out[offset++]=(tv.tv_sec>>(i*8))&0xff;
+    for(int i=0;i<3;i++)
+      msg_out[offset++]=(tv.tv_usec>>(i*8))&0xff;    
+  }
   
   // Put one or more BARs
   int bar_number=find_highest_priority_bar();
