@@ -164,6 +164,7 @@ extern int debug_announce;
 extern int debug_pull;
 extern int meshms_only;
 extern long long min_version;
+extern int time_slave;
 
 int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	      long long piece_offset,int piece_bytes,int is_end_piece,
