@@ -38,6 +38,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <assert.h>
 #include <fcntl.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include "lbard.h"
 #include "serial.h"
@@ -228,6 +229,15 @@ int main(int argc, char **argv)
 
   // Open UDP socket to listen for time updates from other LBARD instances
   // (poor man's NTP for LBARD nodes that lack internal clocks)
+  int timesocket=socket(AF_INET, SOCK_DGRAM, 0);
+  if (timesocket!=-1) {
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(0x5401);
+    bind(timesocket, (struct sockaddr *) &addr, sizeof(addr));
+  }
   
   long long next_rhizome_db_load_time=0;
   while(1) {
@@ -262,6 +272,66 @@ int main(int argc, char **argv)
 	// Decay my time stratum slightly
 	my_time_stratum++;
       } else my_time_stratum=1;
+      // Send time packet
+      {
+	// Occassionally announce our time
+	// T + (our stratum) + (64 bit seconds since 1970) +
+	// + (24 bit microseconds)
+	// = 1+1+8+3 = 13 bytes
+	struct timeval tv;
+	gettimeofday(&tv,NULL);    
+
+	unsigned char msg_out[1024];
+	int offset=0;
+	msg_out[offset++]='T';
+	msg_out[offset++]=my_time_stratum>>8;
+	for(int i=0;i<8;i++)
+	  msg_out[offset++]=(tv.tv_sec>>(i*8))&0xff;
+	for(int i=0;i<3;i++)
+	  msg_out[offset++]=(tv.tv_usec>>(i*8))&0xff;
+	// Now broadcast on every interface to port 0x5401
+	// Oh that's right, UDP sockets don't have an easy way to do that.
+	// We could interrogate the OS to ask about all interfaces, but we
+	// can instead get away with having a single simple broadcast address
+	// supplied as part of the timeserver command line argument.
+	struct sockaddr_in addr;
+	bzero(&addr, sizeof(addr)); 
+        addr.sin_family = PF_INET; 
+        addr.sin_port = htons(0x5401); 
+        addr.sin_addr.s_addr = inet_addr("255.255.255.255"); 
+	sendto(timesocket,msg_out,
+	       MSG_DONTROUTE|MSG_DONTWAIT
+#ifdef MSG_NOSIGNAL
+	       |MSG_NOSIGNAL
+#endif	       
+	       ,offset,(const struct sockaddr *)&addr,sizeof(addr));
+      }
+      // Check for time packet
+      {
+	unsigned char msg[1024];
+	int offset=0;
+	int r=recvfrom(timesocket,msg,1024,0,NULL,0);
+	if (r==(1+1+8+3)) {
+	  // see rxmessages.c for more explanation
+	  int stratum=msg[offset++];
+	  struct timeval tv;
+	  bzero(&tv,sizeof (struct timeval));
+	  for(int i=0;i<8;i++) tv.tv_sec|=msg[offset++]<<(i*8);
+	  for(int i=0;i<3;i++) tv.tv_usec|=msg[offset++]<<(i*8);
+	  // ethernet delay is typically 0.1 - 5ms, so assume 5ms
+	  tv.tv_usec+=5000;
+	  if (tv.tv_usec>999999) { tv.tv_sec++; tv.tv_usec-=1000000; }
+	  if ((stratum<(my_time_stratum>>8))&&time_slave) {
+	    // Found a lower-stratum time than our own, and we have enabled time
+	    // slave mode, so set system time.
+	    settimeofday(&tv,NULL);
+	    // By adding only one milli-strata, we effectively match the stratum that
+	    // updated us for the next 256 UHF packet transmissions. This should give
+	    // us the stability we desire.
+	    my_time_stratum=(stratum<<8)+1;
+	  }	  
+	}
+      }
       
       if (!monitor_mode)
 	update_my_message(serialfd,
