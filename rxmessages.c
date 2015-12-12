@@ -37,6 +37,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <assert.h>
+#include <sys/time.h>
 
 #include "lbard.h"
 
@@ -359,6 +360,7 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
   return 0;
 }
 
+extern int my_time_stratum;
 
 int saw_message(unsigned char *msg,int len,char *my_sid,
 		char *prefix, char *servald_server,char *credential)
@@ -572,6 +574,20 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	}
       }
       break;
+    case 'T':
+      // Time stamp
+      {
+	int stratum=msg[offset++];
+	struct timeval tv;
+	bzero(&tv,sizeof (struct timeval));
+	for(int i=0;i<8;i++) tv.tv_sec|=msg[offset++]<<(i*8);
+	for(int i=0;i<3;i++) tv.tv_usec|=msg[offset++]<<(i*8);
+	if ((stratum<my_time_stratum)&&time_slave) {
+	  // Found a lower-stratum time than our own, and we have enabled time
+	  // slave mode, so set system time.
+	  settimeofday(&tv,NULL);
+	}
+      }
     default:
       // invalid message field.
       return -1;

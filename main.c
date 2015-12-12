@@ -47,6 +47,7 @@ int debug_announce=0;
 int debug_pull=0;
 int debug_insert=0;
 
+int time_slave=0;
 int reboot_when_stuck=0;
 extern int serial_errors;
 
@@ -160,6 +161,7 @@ int main(int argc, char **argv)
 		(long long)min_version,stringtime);
       }
       else if (!strcasecmp("rebootwhenstuck",argv[n])) reboot_when_stuck=1;
+      else if (!strcasecmp("timeslave",argv[n])) time_slave=1;
       else if (!strcasecmp("logrejects",argv[n])) debug_insert=1;
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
