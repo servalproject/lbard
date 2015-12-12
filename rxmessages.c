@@ -586,6 +586,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	  // Found a lower-stratum time than our own, and we have enabled time
 	  // slave mode, so set system time.
 	  settimeofday(&tv,NULL);
+	  my_time_stratum=stratum+1;
 	}
       }
     default:
