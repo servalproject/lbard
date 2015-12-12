@@ -407,7 +407,7 @@ int update_my_message(int serialfd,
     gettimeofday(&tv,NULL);    
     
     msg_out[offset++]='T';
-    msg_out[offset++]=my_time_stratum;
+    msg_out[offset++]=my_time_stratum>>8;
     for(int i=0;i<8;i++)
       msg_out[offset++]=(tv.tv_sec>>(i*8))&0xff;
     for(int i=0;i<3;i++)

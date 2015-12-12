@@ -595,15 +595,29 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	   5. Radio TX time is thus 250*8/128000= ~15.6ms
 	   6. Total minimum delay is thus ~26.4ms
 
-	   Thus we will make this simple correction of adding 26.4ms
+	   Thus we will make this simple correction of adding 26.4ms.
+
+	   The next challenge is if we have multiple sources with the same stratum
+	   giving us the time.  In that case, we need a way to choose a winner, since
+	   we are not implementing fancy NTP-style time integration algorithms. The
+	   trick is to get something simple, that stops clocks jumping backwards and
+	   forwards allover the shop.  A really simple approach is to have a timeout
+	   when updating the time, and ignore updates from the same time stratum for
+	   the next several minutes.  We should also decay our stratum if we have not
+	   heard from an up-stream clock lately, so that we always converge on the
+	   freshest clock.  In fact, we can use the slow decay to implement this
+	   quasi-stability that we seek.
 	 */
 	tv.tv_usec+=26400;
 	if (tv.tv_usec>999999) { tv.tv_sec++; tv.tv_usec-=1000000; }
-	if ((stratum<my_time_stratum)&&time_slave) {
+	if ((stratum<(my_time_stratum>>8))&&time_slave) {
 	  // Found a lower-stratum time than our own, and we have enabled time
 	  // slave mode, so set system time.
 	  settimeofday(&tv,NULL);
-	  my_time_stratum=stratum+1;
+	  // By adding only one milli-strata, we effectively match the stratum that
+	  // updated us for the next 256 UHF packet transmissions. This should give
+	  // us the stability we desire.
+	  my_time_stratum=(stratum<<8)+1;
 	}
       }
     default:

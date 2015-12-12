@@ -48,6 +48,9 @@ int debug_pull=0;
 int debug_insert=0;
 
 int time_slave=0;
+int time_server=0;
+extern int my_time_stratum;
+
 int reboot_when_stuck=0;
 extern int serial_errors;
 
@@ -162,6 +165,7 @@ int main(int argc, char **argv)
       }
       else if (!strcasecmp("rebootwhenstuck",argv[n])) reboot_when_stuck=1;
       else if (!strcasecmp("timeslave",argv[n])) time_slave=1;
+      else if (!strcasecmp("timemaster",argv[n])) time_server=1;
       else if (!strcasecmp("logrejects",argv[n])) debug_insert=1;
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
@@ -222,6 +226,9 @@ int main(int argc, char **argv)
   if (argc>2) credential=argv[2];
   if (argc>1) servald_server=argv[1];
 
+  // Open UDP socket to listen for time updates from other LBARD instances
+  // (poor man's NTP for LBARD nodes that lack internal clocks)
+  
   long long next_rhizome_db_load_time=0;
   while(1) {
 
@@ -250,6 +257,12 @@ int main(int argc, char **argv)
     radio_read_bytes(serialfd,monitor_mode);
     
     if ((gettime_ms()-last_message_update_time)>=message_update_interval) {
+
+      if (!time_server) {
+	// Decay my time stratum slightly
+	my_time_stratum++;
+      } else my_time_stratum=1;
+      
       if (!monitor_mode)
 	update_my_message(serialfd,
 			  my_sid,
