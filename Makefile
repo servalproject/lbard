@@ -2,6 +2,7 @@ all:	lbard fakecsmaradio
 
 SRCS=	main.c rhizome.c txmessages.c rxmessages.c bundle_cache.c json.c peers.c \
 	serial.c radio.c golay.c httpclient.c progress.c rank.c bundles.c partials.c \
+	manifests.c \
 	energy_experiment.c status_dump.c \
 	fec-3.0.1/ccsds_tables.c \
 	fec-3.0.1/encode_rs_8.c \
