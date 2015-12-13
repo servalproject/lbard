@@ -68,22 +68,76 @@ struct manifest_field fields[]={
   {0xa3,"crypt",0,0,1,NULL},
 
   // enums (CASE SENSITIVE!)
-  {0xb0,"service",0,0,1,"file,MeshMS1,MeshMS2"},
+  // (a comma MUST appear after the last option (it simplifies the parser)
+  {0xb0,"service",0,0,1,"file,MeshMS1,MeshMS2,"},
   
   {0,NULL,0,0}
 };
 
+int chartohex(int c)
+{
+  if ((c>='0')&&(c<='9')) return c-'0';
+  if ((c>='A')&&(c<='F')) return c-'A'+10;
+  return -1;
+}
+
 int field_encode(int field_number,unsigned char *key,unsigned char *value,
 		 unsigned char *bin_out,int *out_offset)
 {
+  int offset=*out_offset;
+  bin_out[offset++]=fields[field_number].token;
+  
   if (fields[field_number].hex_bytes) {
+    // Encode string of hex.
+    // MUST be uppercase
+    for(int i=0;i<fields[field_number].hex_bytes;i++) {
+      int hi=chartohex(value[i*2+0]);
+      int lo=chartohex(value[i*2+1]);
+      if ((hi<0)||(lo<0)) return -1;
+      bin_out[offset++]=(hi<<4)|lo;
+    }
+    *out_offset=offset;
+    return 0;
   } else if (fields[field_number].int_bytes) {
+    if (fields[field_number].int_bytes==0xff) {
+      // Variable length encoding: 7-bits per byte has
+      // value. MSB set indicates another bit follows
+      long long v=strtoll((char *)value,NULL,10);
+      do {
+	bin_out[offset]=v&0x7f;
+	v=v>>7;
+	if (v) bin_out[offset]|=0x80;
+	offset++;
+      } while(v);
+      *out_offset=offset;
+      return 0;      
+    } else
+      return -1;
   } else if (fields[field_number].is_enum) {
+    // Search through enum options and encode if we can.
+    unsigned char option[1024];
+    int option_len=0;
+    int option_number=0;
+    for(int o=0;fields[field_number].enum_options[o];o++) {
+      if (fields[field_number].enum_options[o]==',') {
+	option[option_len]=0;
+	if (!strcmp((char *)option,(char*)value)) {
+	  bin_out[offset++]=option_number;
+	  *out_offset=offset;
+	  return 0;      
+	}
+	option_len=0;
+	option_number++;
+      } else {
+	option[option_len++]=(unsigned char)fields[field_number].enum_options[o];
+      }
+    }
+    // Unknown enum value
+    return -1;
   } else {
     // Unknown field type: should never happen
     return -1;
   }
-  return -1;
 }
 
 int field_decode(int field_number,unsigned char *bin_in,int *in_offset,
