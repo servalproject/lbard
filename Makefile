@@ -1,4 +1,4 @@
-all:	lbard fakecsmaradio
+all:	lbard manifesttest fakecsmaradio
 
 SRCS=	main.c rhizome.c txmessages.c rxmessages.c bundle_cache.c json.c peers.c \
 	serial.c radio.c golay.c httpclient.c progress.c rank.c bundles.c partials.c \
@@ -30,3 +30,5 @@ echotest:	Makefile echotest.c
 fakecsmaradio:	Makefile fakecsmaradio.c
 	$(CC) -g -std=gnu99 -Wall -o fakecsmaradio fakecsmaradio.c
 
+manifesttest:	Makefile manifests.c
+	$(CC) -g -std=gnu99 -DTEST -Wall -o manifesttest manifests.c

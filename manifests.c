@@ -261,3 +261,33 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
 
 }
 
+#ifdef TEST
+int main(int argc,char **argv)
+{
+  if (argc!=2) {
+    fprintf(stderr,"Test manifest binary representation conversion code.\n");
+    fprintf(stderr,"usage: manifesttest <manifest>\n");
+    exit(-1);
+  }
+
+  FILE *f=fopen(argv[1],"r");
+  if (!f) {
+    fprintf(stderr,"Could not read from '%s'\n",argv[1]);
+    exit(-1);
+  }
+  unsigned char text_in[8192];
+  int in_len=fread(text_in,1,8192,f);
+  fprintf(stderr,"Read %d bytes.\n",in_len);  
+  fclose(f);
+  if ((in_len>1023)||(in_len<100)) {
+    fprintf(stderr,"Manifest too short or too long. Must be between 100 and 1023 bytes.\n");
+    exit(-1);
+  }
+
+  unsigned char bin_out[1024];
+  int bin_len=0;
+  int r=manifest_text_to_binary(text_in,in_len,bin_out,&bin_len);
+  fprintf(stderr,"Compression result = %d.\n",r);
+  fprintf(stderr,"Binary encoding of manifest requires %d bytes.\n",bin_len);
+}
+#endif
