@@ -84,7 +84,7 @@ int chartohex(int c)
 int hextochar(int h)
 {
   if ((h>=0)&&(h<10)) return h+'0';
-  if ((h>=10)&&(h<15)) return h+'A'-10;
+  if ((h>=10)&&(h<16)) return h+'A'-10;
   return '?';
 }
 
@@ -171,10 +171,10 @@ int field_decode(int field_number,unsigned char *bin_in,int *in_offset,
     return 0;
   } else if (fields[field_number].int_bytes) {
     if (fields[field_number].int_bytes==0xff) {
-      long long v=0;
-      int shift=0;
+      unsigned long long v=0LL;
+      long long shift=0;
       while(1) {
-	v|=((bin_in[(*in_offset)]&0x7f)<<shift);
+	v|=(((unsigned long long)(bin_in[(*in_offset)]&0x7f))<<shift);
 	shift+=7;
 	if (bin_in[(*in_offset)++]&0x80)
 	  continue;
@@ -182,7 +182,7 @@ int field_decode(int field_number,unsigned char *bin_in,int *in_offset,
 	  break;
       }
       offset+=snprintf((char *)&text_out[offset],1024-offset,"%lld\n",v);
-
+      
       *out_offset=offset;
       return 0;      
     } else
@@ -198,6 +198,7 @@ int field_decode(int field_number,unsigned char *bin_in,int *in_offset,
 	option[option_len]=0;
 	if (option_number==selected_option) {
 	  offset+=snprintf((char *)&text_out[offset],1024-offset,"%s\n",option);
+	  return 0;
 	}
 	option_len=0;
 	option_number++;
@@ -226,12 +227,18 @@ int manifest_binary_to_text(unsigned char *bin_in, int len_in,
 			    unsigned char *text_out, int *len_out)
 {
   printf("decoding %d bytes\n",len_in);
-  int offset;
+  int offset=0;
   int out_offset=0;
   int start_of_line=1;
-  for(offset=0;offset<len_in;offset++) {
+  while(offset<len_in) {
+    printf("  offset=%d\n",offset);
     if (!bin_in[offset]) {
+      // Copy remainder of encoded manifest out
+      bcopy(&bin_in[offset],&text_out[out_offset],len_in-offset+1);
+      out_offset+=len_in-offset+1;
+      offset+=len_in-offset+1;
     } else {
+      printf("Considering byte 0x%02x @ offset %d\n",bin_in[offset],offset);
       if (start_of_line&&(bin_in[offset]&0x80)) {
 	// It's a token
 	printf("Decoding token 0x%02x\n",bin_in[offset]);
@@ -245,20 +252,23 @@ int manifest_binary_to_text(unsigned char *bin_in, int len_in,
 	  return -1;
 	}
 	// Also fail if we cannot decode a token
+	offset++;
 	if (field_decode(field,bin_in,&offset,text_out,&out_offset)) {
-	  printf("Failed to decode token type 0x%02x\n",bin_in[offset]);
+	  printf("Failed to decode token 0x%02x @ offset %d\n",bin_in[offset],offset);
 	  return -1;
 	}
+	text_out[out_offset]=0;
+	printf("So far:\n-----\n%s-----\n",text_out);
       } else if (bin_in[offset]=='\n') {
 	// new line, so remember it is the start of a line
 	start_of_line=1;
-	text_out[out_offset++]=bin_in[offset];
+	text_out[out_offset++]=bin_in[offset++];
       } else {
 	printf("Decoding char 0x%02x\n",bin_in[offset]);
 	// not a new line, so clear start of line flag, so that
 	// we don't try to interpret UTF-8 value strings as tokens.
 	start_of_line=0;
-	text_out[out_offset++]=bin_in[offset];
+	text_out[out_offset++]=bin_in[offset++];
       }
     }
   }
