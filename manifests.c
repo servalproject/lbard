@@ -81,6 +81,13 @@ int chartohex(int c)
   return -1;
 }
 
+int hextochar(int h)
+{
+  if ((h>=0)&&(h<10)) return h+'0';
+  if ((h>=10)&&(h<15)) return h+'A'-10;
+  return '?';
+}
+
 int field_encode(int field_number,unsigned char *key,unsigned char *value,
 		 unsigned char *bin_out,int *out_offset)
 {
@@ -143,7 +150,68 @@ int field_encode(int field_number,unsigned char *key,unsigned char *value,
 int field_decode(int field_number,unsigned char *bin_in,int *in_offset,
 		 unsigned char *text_out,int *out_offset)
 {
-  return -1;
+  int offset=*out_offset;
+
+  //  Make sure a malicious binary encoded manifest can't overflow output.
+  if (offset>900) return -1;
+  
+  // output field name
+  sprintf((char *)&text_out[offset],"%s=",fields[field_number].name);
+  offset+=strlen(fields[field_number].name)+1;
+
+  if (fields[field_number].hex_bytes) {
+    // Decode string of hex.
+    for(int i=0;i<fields[field_number].hex_bytes;i++) {
+      int v=bin_in[(*in_offset)++];
+      text_out[offset++]=hextochar(v>>4);
+      text_out[offset++]=hextochar(v&0xf);
+    }
+    text_out[offset++]='\n';
+    *out_offset=offset;
+    return 0;
+  } else if (fields[field_number].int_bytes) {
+    if (fields[field_number].int_bytes==0xff) {
+      long long v=0;
+      int shift=0;
+      while(1) {
+	v|=((bin_in[(*in_offset)]&0x7f)<<shift);
+	shift+=7;
+	if (bin_in[(*in_offset)++]&0x80)
+	  continue;
+	else
+	  break;
+      }
+      offset+=snprintf((char *)&text_out[offset],1024-offset,"%lld\n",v);
+
+      *out_offset=offset;
+      return 0;      
+    } else
+      return -1;
+  } else if (fields[field_number].is_enum) {
+    // Search through enum options and encode if we can.
+    int selected_option=bin_in[(*in_offset)++];
+    unsigned char option[1024];
+    int option_len=0;
+    int option_number=0;
+    for(int o=0;fields[field_number].enum_options[o];o++) {
+      if (fields[field_number].enum_options[o]==',') {
+	option[option_len]=0;
+	if (option_number==selected_option) {
+	  offset+=snprintf((char *)&text_out[offset],1024-offset,"%s\n",option);
+	}
+	option_len=0;
+	option_number++;
+      } else {
+	option[option_len++]=(unsigned char)fields[field_number].enum_options[o];
+      }
+    }
+    // Invalid enum value
+    return -1;
+  } else {
+    // Unknown field type: should never happen
+    return -1;
+  }
+
 }
 
 /*
@@ -157,6 +225,7 @@ int field_decode(int field_number,unsigned char *bin_in,int *in_offset,
 int manifest_binary_to_text(unsigned char *bin_in, int len_in,
 			    unsigned char *text_out, int *len_out)
 {
+  printf("decoding %d bytes\n",len_in);
   int offset;
   int out_offset=0;
   int start_of_line=1;
@@ -165,19 +234,27 @@ int manifest_binary_to_text(unsigned char *bin_in, int len_in,
     } else {
       if (start_of_line&&(bin_in[offset]&0x80)) {
 	// It's a token
+	printf("Decoding token 0x%02x\n",bin_in[offset]);
 	int field;
 	for(field=0;fields[field].token;field++) {
 	  if (bin_in[offset]==fields[field].token) break;
 	}
 	// Fail decode if we hit an unknown token
-	if (!fields[field].token) return -1;
+	if (!fields[field].token) {
+	  printf("Unknown token: 0x%02x\n",bin_in[offset]);
+	  return -1;
+	}
 	// Also fail if we cannot decode a token
-	if (field_decode(field,bin_in,&offset,text_out,&out_offset)) return -1;
+	if (field_decode(field,bin_in,&offset,text_out,&out_offset)) {
+	  printf("Failed to decode token type 0x%02x\n",bin_in[offset]);
+	  return -1;
+	}
       } else if (bin_in[offset]=='\n') {
 	// new line, so remember it is the start of a line
 	start_of_line=1;
 	text_out[out_offset++]=bin_in[offset];
       } else {
+	printf("Decoding char 0x%02x\n",bin_in[offset]);
 	// not a new line, so clear start of line flag, so that
 	// we don't try to interpret UTF-8 value strings as tokens.
 	start_of_line=0;
@@ -185,7 +262,8 @@ int manifest_binary_to_text(unsigned char *bin_in, int len_in,
       }
     }
   }
-
+  
+  *len_out=out_offset;
   return 0;
 }
 
@@ -206,7 +284,7 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
     if (sscanf((const char *)&text_in[offset],"%[^=]=%[^\n]%n",
 	       key,value,&length)==2) {
       // We think we have a field
-      printf("line: [%s]=[%s]\n",key,value);
+      printf("line: [%s]=[%s] (out_offset=%d)\n",key,value,out_offset);
       // See if we know about this field to binary encode it:
       int f=0;
       for(f=0;fields[f].token;f++)
@@ -231,7 +309,10 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
       // break out of the loop.
       if (text_in[offset]==0x00) {
 	int count=len_in-offset;
+	printf("Hit 0x00 byte, copying last %d bytes (out_offset=%d).\n",
+	       count,out_offset);
 	bcopy(&text_in[offset],&bin_out[out_offset],count);
+	out_offset+=count;
 	break;
       } else {
 	bin_out[out_offset++]=text_in[offset];
@@ -242,7 +323,7 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
   printf("Text input length = %d, binary version length = %d\n",
 	 len_in,out_offset);
 
-  // Now verify that we can decompress it losslessly (otherwise signatures will
+  // Now verify that we can decode it correctly (otherwise signatures will
   // fail)
   unsigned char verify_out[1024];
   int verify_length=0;
@@ -250,11 +331,13 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
   if ((verify_length!=len_in)
       ||bcmp(text_in,verify_out,len_in)) {
     printf("Verify error with binary manifest: reverting to plain text.\n");
+    printf("  decoded to %d bytes (should be %d)\n",
+	   verify_length,len_in);
     bcopy(text_in,bin_out,len_in);
     *len_out=len_in;
     return -1;
   } else {
-    // Compression was successful
+    // Encoding was successful
     *len_out=out_offset;
     return 0;
   }
@@ -287,7 +370,7 @@ int main(int argc,char **argv)
   unsigned char bin_out[1024];
   int bin_len=0;
   int r=manifest_text_to_binary(text_in,in_len,bin_out,&bin_len);
-  fprintf(stderr,"Compression result = %d.\n",r);
+  fprintf(stderr,"Encoding return value = %d.\n",r);
   fprintf(stderr,"Binary encoding of manifest requires %d bytes.\n",bin_len);
 }
 #endif
