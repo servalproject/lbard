@@ -207,13 +207,13 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 
   int end_of_item=0;
   
-  if (bundles[bundle_number].last_manifest_offset_announced<cached_manifest_len) {
+  if (bundles[bundle_number].last_manifest_offset_announced<cached_manifest_encoded_len) {
     // Send some manifest
-    bytes_available=cached_manifest_len-
+    bytes_available=cached_manifest_encoded_len-
       bundles[bundle_number].last_manifest_offset_announced;
     is_manifest=1;
     start_offset=bundles[bundle_number].last_manifest_offset_announced;
-    p=&cached_manifest[bundles[bundle_number].last_manifest_offset_announced];
+    p=&cached_manifest_encoded[bundles[bundle_number].last_manifest_offset_announced];
   } else if (bundles[bundle_number].last_offset_announced<cached_body_len) {
     // Send some body
     bytes_available=cached_body_len-
