@@ -227,12 +227,10 @@ int field_decode(int field_number,unsigned char *bin_in,int *in_offset,
 int manifest_binary_to_text(unsigned char *bin_in, int len_in,
 			    unsigned char *text_out, int *len_out)
 {
-  printf("decoding %d bytes\n",len_in);
   int offset=0;
   int out_offset=0;
   int start_of_line=1;
   while(offset<len_in) {
-    printf("  offset=%d\n",offset);
     if (!bin_in[offset]) {
       // Copy remainder of encoded manifest out
 
@@ -243,34 +241,30 @@ int manifest_binary_to_text(unsigned char *bin_in, int len_in,
       out_offset+=len_in-offset;
       offset+=len_in-offset;
     } else {
-      printf("Considering byte 0x%02x @ offset %d\n",bin_in[offset],offset);
       if (start_of_line&&(bin_in[offset]&0x80)) {
 	// It's a token
-	printf("Decoding token 0x%02x\n",bin_in[offset]);
 	int field;
 	for(field=0;fields[field].token;field++) {
 	  if (bin_in[offset]==fields[field].token) break;
 	}
 	// Fail decode if we hit an unknown token
 	if (!fields[field].token) {
-	  printf("Unknown token: 0x%02x\n",bin_in[offset]);
+	  // printf("Unknown token: 0x%02x\n",bin_in[offset]);
 	  return -1;
 	}
 	// Also fail if we cannot decode a token
 	offset++;
 	if (field_decode(field,bin_in,&offset,text_out,&out_offset)) {
-	  printf("Failed to decode token 0x%02x @ offset %d\n",bin_in[offset],offset);
+	  // printf("Failed to decode token 0x%02x @ offset %d\n",bin_in[offset],offset);
 	  return -1;
 	}
 	text_out[out_offset]=0;
-	printf("So far:\n-----\n%s-----\n",text_out);
       } else if (bin_in[offset]=='\n') {
 	// new line, so remember it is the start of a line
 	start_of_line=1;
 	if (out_offset>1023) return -1;
 	text_out[out_offset++]=bin_in[offset++];
       } else {
-	printf("Decoding char 0x%02x\n",bin_in[offset]);
 	// not a new line, so clear start of line flag, so that
 	// we don't try to interpret UTF-8 value strings as tokens.
 	start_of_line=0;
@@ -301,7 +295,7 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
     if (sscanf((const char *)&text_in[offset],"%[^=]=%[^\n]%n",
 	       key,value,&length)==2) {
       // We think we have a field
-      printf("line: [%s]=[%s] (out_offset=%d)\n",key,value,out_offset);
+      // printf("line: [%s]=[%s] (out_offset=%d)\n",key,value,out_offset);
       // See if we know about this field to binary encode it:
       int f=0;
       for(f=0;fields[f].token;f++)
@@ -326,8 +320,6 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
       // break out of the loop.
       if (text_in[offset]==0x00) {
 	int count=len_in-offset;
-	printf("Hit 0x00 byte, copying last %d bytes (out_offset=%d).\n",
-	       count,out_offset);
 	bcopy(&text_in[offset],&bin_out[out_offset],count);
 	out_offset+=count;
 	break;
@@ -343,10 +335,10 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
     fwrite(bin_out,out_offset,1,f);
     fclose(f);
   }
-#endif
 
   printf("Text input length = %d, binary version length = %d\n",
 	 len_in,out_offset);
+#endif
 
   // Now verify that we can decode it correctly (otherwise signatures will
   // fail)
@@ -365,9 +357,11 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
 
   if ((verify_length!=len_in)
       ||bcmp(text_in,verify_out,len_in)) {
+#ifdef TEXT
     printf("Verify error with binary manifest: reverting to plain text.\n");
     printf("  decoded to %d bytes (should be %d)\n",
 	   verify_length,len_in);
+#endif
     bcopy(text_in,bin_out,len_in);
     *len_out=len_in;
     return -1;
