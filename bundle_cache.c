@@ -44,6 +44,8 @@ char *bid_of_cached_bundle=NULL;
 long long cached_version=0;
 int cached_manifest_len=0;
 unsigned char *cached_manifest=NULL;
+int cached_manifest_encoded_len=0;
+unsigned char *cached_manifest_encoded=NULL;
 int cached_body_len=0;
 unsigned char *cached_body=NULL;
 
@@ -58,6 +60,7 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     if (bid_of_cached_bundle) {
       free(bid_of_cached_bundle); bid_of_cached_bundle=NULL;
       free(cached_manifest); cached_manifest=NULL;
+      free(cached_manifest_encoded); cached_manifest_encoded=NULL;
       free(cached_body); cached_body=NULL;
     }
 
@@ -96,7 +99,22 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     fclose(f);
     unlink(filename);
     if (0) fprintf(stderr,"  manifest is %d bytes long.\n",cached_manifest_len);
+
+    // Reject over-length manifests
+    if (cached_manifest_len>1024) return -1;
     
+    // Generate binary encoded manifest from plain text version
+    if (cached_manifest_encoded) free(cached_manifest_encoded);
+    cached_manifest_encoded=malloc(1024);
+    assert(cached_manifest_encoded);
+    cached_manifest_encoded_len=0;
+    if (manifest_text_to_binary(cached_manifest,cached_manifest_len,
+				cached_manifest_encoded,
+				&cached_manifest_encoded_len)) {
+      // Failed to binary encode manifest, so just copy it
+      bcopy(cached_manifest,cached_manifest_encoded,cached_manifest_len);
+      cached_manifest_encoded_len = cached_manifest_len;	
+    }        
     
     snprintf(path,8192,"/restful/rhizome/%s/raw.bin",
 	     bundles[bundle_number].bid);
