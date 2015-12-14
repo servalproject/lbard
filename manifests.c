@@ -234,6 +234,10 @@ int manifest_binary_to_text(unsigned char *bin_in, int len_in,
     printf("  offset=%d\n",offset);
     if (!bin_in[offset]) {
       // Copy remainder of encoded manifest out
+
+      // Abort if overflow would occur
+      if ((out_offset+len_in-offset+1)>=1024) return -1;
+
       bcopy(&bin_in[offset],&text_out[out_offset],len_in-offset+1);
       out_offset+=len_in-offset+1;
       offset+=len_in-offset+1;
@@ -262,12 +266,14 @@ int manifest_binary_to_text(unsigned char *bin_in, int len_in,
       } else if (bin_in[offset]=='\n') {
 	// new line, so remember it is the start of a line
 	start_of_line=1;
+	if (out_offset>1023) return -1;
 	text_out[out_offset++]=bin_in[offset++];
       } else {
 	printf("Decoding char 0x%02x\n",bin_in[offset]);
 	// not a new line, so clear start of line flag, so that
 	// we don't try to interpret UTF-8 value strings as tokens.
 	start_of_line=0;
+	if (out_offset>1023) return -1;
 	text_out[out_offset++]=bin_in[offset++];
       }
     }
