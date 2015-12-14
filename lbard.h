@@ -154,8 +154,10 @@ extern int bundle_count;
 
 extern char *bid_of_cached_bundle;
 extern long long cached_version;
-extern int cached_manifest_len;
-extern unsigned char *cached_manifest;
+// extern int cached_manifest_len;
+// extern unsigned char *cached_manifest;
+extern int cached_manifest_encoded_len;
+extern unsigned char *cached_manifest_encoded;
 extern int cached_body_len;
 extern unsigned char *cached_body;
 
@@ -258,4 +260,9 @@ int rhizome_log(char *service,
 		char *sender,
 		char *recipient,
 		char *message);
+int manifest_text_to_binary(unsigned char *text_in, int len_in,
+			    unsigned char *bin_out, int *len_out);
+int manifest_binary_to_text(unsigned char *bin_in, int len_in,
+			    unsigned char *text_out, int *len_out);
+
 
