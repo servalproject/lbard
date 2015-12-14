@@ -55,7 +55,7 @@ struct manifest_field {
 struct manifest_field fields[]={
   // Hex fields
   {0x80,"id",0x20,0,0,NULL},
-  {0x81,"bk",0x20,0,0,NULL},
+  {0x81,"BK",0x20,0,0,NULL},
   {0x82,"sender",0x20,0,0,NULL},
   {0x83,"recipient",0x20,0,0,NULL},
 
@@ -198,6 +198,7 @@ int field_decode(int field_number,unsigned char *bin_in,int *in_offset,
 	option[option_len]=0;
 	if (option_number==selected_option) {
 	  offset+=snprintf((char *)&text_out[offset],1024-offset,"%s\n",option);
+	  *out_offset=offset;
 	  return 0;
 	}
 	option_len=0;
@@ -238,9 +239,9 @@ int manifest_binary_to_text(unsigned char *bin_in, int len_in,
       // Abort if overflow would occur
       if ((out_offset+len_in-offset+1)>=1024) return -1;
 
-      bcopy(&bin_in[offset],&text_out[out_offset],len_in-offset+1);
-      out_offset+=len_in-offset+1;
-      offset+=len_in-offset+1;
+      bcopy(&bin_in[offset],&text_out[out_offset],len_in-offset);
+      out_offset+=len_in-offset;
+      offset+=len_in-offset;
     } else {
       printf("Considering byte 0x%02x @ offset %d\n",bin_in[offset],offset);
       if (start_of_line&&(bin_in[offset]&0x80)) {
@@ -334,7 +335,15 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
 	bin_out[out_offset++]=text_in[offset];
       }
     }
-  } 
+  }
+
+#ifdef TEST
+  {
+    FILE *f=fopen("test.bmanifest","w");
+    fwrite(bin_out,out_offset,1,f);
+    fclose(f);
+  }
+#endif
 
   printf("Text input length = %d, binary version length = %d\n",
 	 len_in,out_offset);
@@ -344,6 +353,16 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
   unsigned char verify_out[1024];
   int verify_length=0;
   manifest_binary_to_text(bin_out,out_offset,verify_out,&verify_length);
+
+#ifdef TEST
+  {
+    FILE *f=fopen("verify.manifest","w");
+    fwrite(verify_out,verify_length,1,f);
+    fclose(f);
+  }
+#endif
+
+
   if ((verify_length!=len_in)
       ||bcmp(text_in,verify_out,len_in)) {
     printf("Verify error with binary manifest: reverting to plain text.\n");
