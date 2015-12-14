@@ -65,7 +65,8 @@ struct manifest_field fields[]={
   {0xa0,"version",0,0xff,0,NULL},
   {0xa1,"filesize",0,0xff,0,NULL},
   {0xa2,"date",0,0xff,0,NULL},
-  {0xa3,"crypt",0,0,1,NULL},
+  {0xa3,"crypt",0,0xff,0,NULL},
+  {0xa4,"tail",0,0xff,0,NULL},
 
   // enums (CASE SENSITIVE!)
   // (a comma MUST appear after the last option (it simplifies the parser)
