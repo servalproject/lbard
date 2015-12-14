@@ -327,12 +327,23 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       // We have a single segment for body and manifest that span the complete
       // size.
       fprintf(stderr,">>> We have the entire bundle now.\n");
-      int insert_result=
-	rhizome_update_bundle(peer_records[peer]->partials[i].manifest_segments->data,
-			      peer_records[peer]->partials[i].manifest_length,
-			      peer_records[peer]->partials[i].body_segments->data,
-			      peer_records[peer]->partials[i].body_length,
-			      servald_server,credential);
+
+      // First, reconstitute the manifest from the binary encoded format
+      unsigned char manifest[1024];
+      int manifest_len;
+
+      int insert_result=-999;
+      
+      if (!manifest_binary_to_text
+	  (peer_records[peer]->partials[i].manifest_segments->data,
+	   peer_records[peer]->partials[i].manifest_length,
+	   manifest,&manifest_len)) {      
+	insert_result=
+	  rhizome_update_bundle(manifest,manifest_len,
+				peer_records[peer]->partials[i].body_segments->data,
+				peer_records[peer]->partials[i].body_length,
+				servald_server,credential);
+      }
       if (insert_result) {
 	// Failed to insert, so mark this bundle for deprioritisation, so that we
 	// don't just keep asking for it.
