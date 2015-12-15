@@ -155,6 +155,10 @@ int serial_setup_port_with_speed(int fd,int speed)
   // no output processing
   t.c_oflag &= ~OPOST;
 
+  // Try to set flags the same way that minicom does that makes it all work
+  t.c_cflag|=PARENB;
+  t.c_iflag|=IGNBRK;
+  
   tcsetattr(fd, TCSANOW, &t);
   
   set_nonblock(fd);
