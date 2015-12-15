@@ -249,9 +249,7 @@ int main(int argc, char **argv)
   }
   
   long long next_rhizome_db_load_time=0;
-  while(1) {
-    fprintf(stderr,"Serial port is fd %d\n",serialfd);
-    
+  while(1) {    
     if (argc>2)
       if (next_rhizome_db_load_time<=gettime_ms()) {
 	long long load_timeout=message_update_interval
