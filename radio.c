@@ -183,7 +183,7 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   int i;
 
   // Begin with clear TX buffer command
-  escaped[elen++]='!'; escaped[elen++]='0';
+  escaped[elen++]='!'; escaped[elen++]='C';
 
   // Then stuff the escaped bytes to send
   for(i=0;i<offset;i++) {
