@@ -240,6 +240,7 @@ int main(int argc, char **argv)
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(0x5401);
     bind(timesocket, (struct sockaddr *) &addr, sizeof(addr));
+    set_nonblock(timesocket);
   }
   
   long long next_rhizome_db_load_time=0;
