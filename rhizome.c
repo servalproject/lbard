@@ -82,6 +82,8 @@ int load_rhizome_db(int timeout,
 		    char *credential, char **token)
 {
   char path[8192];
+
+  fprintf(stderr,"%s(): ENTERED\n",__FUNCTION__);
   
   // A timeout of zero means forever. Never do this.
   if (!timeout) timeout=1;
@@ -106,7 +108,7 @@ int load_rhizome_db(int timeout,
   }
 
   int ignore_token=0;
-  long long last_read_time=0LL;
+  long long last_read_time=0LL;  
   int result_code=http_get_simple(servald_server,
 				  credential,path,f,timeout,&last_read_time);
   // Did we keep reading upto the last fraction of a second?
@@ -119,6 +121,8 @@ int load_rhizome_db(int timeout,
   if(result_code!=200) {
     fprintf(stderr,"rhizome HTTP API request failed. URLPATH:%s\n",path);
     return -1;
+  } else {
+    fprintf(stderr,"rhizome HTTP API request succeeded. URLPATH:%s\n",path);
   }
 
   // fprintf(stderr,"Read bundle list.\n");
