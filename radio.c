@@ -237,8 +237,18 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
     bcopy(&radio_rx_buffer[1],&radio_rx_buffer[0],RADIO_RXBUFFER_SIZE-1);
     radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]=bytes[i];
 
-    
-    if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0x55)
+    if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0xdd)
+	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0xec)
+	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xce))
+      {
+	fprintf(stderr,"GPIO ADC values = ");
+	for(int j=0;j<6;j++) {
+	  fprintf(stderr,"%s0x%02x",
+		  j?",":"",
+		  radio_rx_buffer[RADIO_RXBUFFER_SIZE-7+j]);
+	}
+	fprintf(stderr,"\n");
+      } else if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0x55)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0x55)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xaa))
       {
