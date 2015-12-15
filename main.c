@@ -39,6 +39,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <fcntl.h>
 #include <time.h>
 #include <sys/time.h>
+#include <termios.h>
 
 #include "lbard.h"
 #include "serial.h"
@@ -347,6 +348,12 @@ int main(int argc, char **argv)
 			  LINK_MTU,msg_out,
 			  servald_server,credential);
 
+      {
+	struct termios t;	
+	tcgetattr(serialfd, &t);       
+	fprintf(stderr,"t.c_cflag=0x%lx\n",(long unsigned int)t.c_cflag);
+      }
+      
       // Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
       last_message_update_time=gettime_ms()+(random()%message_update_interval_randomness);
 
