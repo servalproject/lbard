@@ -198,6 +198,10 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 	}	
       }
     }
+
+    // If no peers, we can't make inferences about who has what bytes
+    if (!peer_count) first_byte=0;
+    
     if (bundles[bundle_number].last_offset_announced<first_byte) {
       fprintf(stderr,"Skipping from byte %lld straight to %lld, because recipient or all peers have the intervening bytes\n",
 	      bundles[bundle_number].last_offset_announced,first_byte);
