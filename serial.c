@@ -75,6 +75,12 @@ ssize_t write_all(int fd, const void *buf, size_t len)
 
   fprintf(stderr,"write_all(%d) sent %d bytes.\n",
 	  (int)len,(int)written);
+
+  FILE *f=fopen("/tmp/serial.dat","w");
+  if (f) {
+    fwrite(buf,len,1,f);
+    fclose(f);
+  }
   
   return written;
 }
