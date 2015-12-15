@@ -196,9 +196,13 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   
   radio_set_tx_power(serialfd);
   
-  if (write_all(serialfd,escaped,elen)==-1) serial_errors++; else serial_errors=0;
-
-  return -1;
+  if (write_all(serialfd,escaped,elen)==-1) {
+    serial_errors++;
+    return -1;
+  } else {
+    serial_errors=0;
+    return 0;
+  }
 }
 
 // This need only be the maximum packet size
