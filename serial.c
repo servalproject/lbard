@@ -133,6 +133,7 @@ int serial_setup_port_with_speed(int fd,int speed)
   t.c_cflag &= ~CSTOPB;
   t.c_cflag &= ~CSIZE;
   t.c_cflag |= CS8;
+  t.c_cflag |= CLOCAL;
 
   t.c_lflag &= ~(ICANON | ISIG | IEXTEN | ECHO | ECHOE);
   /* Noncanonical mode, disable signals, extended
