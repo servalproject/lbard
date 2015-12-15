@@ -351,7 +351,14 @@ int main(int argc, char **argv)
       {
 	struct termios t;	
 	tcgetattr(serialfd, &t);       
-	fprintf(stderr,"t.c_cflag=0x%lx\n",(long unsigned int)t.c_cflag);
+	fprintf(stderr,
+		"t.c_cflag=0x%lx, t.c_iflag=0x%lx,"
+		" t.c_oflag=0x%lx, t.c_lflag=0x%lx\n",
+		(long unsigned int)t.c_cflag,
+		(long unsigned int)t.c_iflag,
+		(long unsigned int)t.c_oflag,
+		(long unsigned int)t.c_lflag
+		);
       }
       
       // Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
