@@ -90,15 +90,6 @@ int serial_setup_port_with_speed(int fd,int speed)
   struct termios t;
 
   tcgetattr(fd, &t);
-
-  fprintf(stderr,"Before serial port setup: t.c_cflag&CTSRTS=0x%lx\n",
-	  (long unsigned int)
-#ifndef CNEW_RTSCTS
-	  t.c_cflag & CRTSCTS
-#else
-	  t.c_cflag & CNEW_RTSCTS
-#endif
-	  );
 	  
   speed_t baud_rate;
   switch(speed){
@@ -158,18 +149,7 @@ int serial_setup_port_with_speed(int fd,int speed)
   tcsetattr(fd, TCSANOW, &t);
   
   set_nonblock(fd);
-
-    tcgetattr(fd, &t);
-
-  fprintf(stderr,"After serial port setup: t.c_cflag&CTSRTS=0x%lx\n",
-	  (long unsigned int)
-#ifndef CNEW_RTSCTS
-	  t.c_cflag & CRTSCTS
-#else
-	  t.c_cflag & CNEW_RTSCTS
-#endif
-	  );
-
+  
   return 0;
 }
 
