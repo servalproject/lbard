@@ -710,8 +710,8 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	    
 	    monitor_log(sender_prefix,NULL,monitor_log_buf);
 	  }
-
       }
+      break;
     default:
       // invalid message field.
       return -1;
