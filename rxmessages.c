@@ -648,6 +648,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
     case 'T':
       // Time stamp
       {
+	offset++;
 	int stratum=msg[offset++];
 	struct timeval tv;
 	bzero(&tv,sizeof (struct timeval));
@@ -714,6 +715,18 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       break;
     default:
       // invalid message field.
+	if (monitor_mode)
+	  {
+	    char sender_prefix[128];
+	    char monitor_log_buf[1024];
+	    sprintf(sender_prefix,"%s*",p->sid_prefix);
+
+	    snprintf(monitor_log_buf,sizeof(monitor_log_buf),
+		     "Illegal message field 0x%02X at radio packet offset %d",
+		     msg[offset],offset);
+	    
+	    monitor_log(sender_prefix,NULL,monitor_log_buf);
+	  }      
       return -1;
     }
   }
