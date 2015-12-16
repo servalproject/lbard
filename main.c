@@ -116,9 +116,10 @@ long long last_message_update_time=0;
 time_t last_summary_time=0;
 time_t last_status_time=0;
 
+int monitor_mode=0;
+
 int main(int argc, char **argv)
 {
-  int monitor_mode=0;
 
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==7)&&(!strcasecmp(argv[1],"energysample"))) {

@@ -465,6 +465,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 		" (we know of %d bundles held by that peer)\n",
 		p->sid_prefix,bid_prefix,version,size_byte,p->bundle_count);
 
+      if (monitor_mode)
       {
 	char sender_prefix[128];
 	char monitor_log_buf[1024];
@@ -485,6 +486,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       // Length of bundle announcement for receivers
       offset++;
       if (len-offset<(1+8+8+4)) return -3;
+      int bid_prefix_offset=offset;
       snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
 	       msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
 	       msg[offset+4],msg[offset+5],msg[offset+6],msg[offset+7]);
@@ -495,6 +497,21 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       offset_compound=0;
       for(int i=0;i<4;i++) offset_compound|=((long long)msg[offset+i])<<(i*8LL);
       offset+=4;
+
+      if (monitor_mode)
+      {
+	char sender_prefix[128];
+	char monitor_log_buf[1024];
+	sprintf(sender_prefix,"%s*",p->sid_prefix);
+	char bid_prefix[128];
+	bytes_to_prefix(&msg[bid_prefix_offset],bid_prefix);
+	snprintf(monitor_log_buf,sizeof(monitor_log_buf),
+		 "Payload length: BID=%s*, version 0x%010llx, length = %d bytes",
+		 bid_prefix,version,offset_compound);
+	
+	monitor_log(sender_prefix,NULL,monitor_log_buf);
+      }
+
       saw_length(peer_prefix,bid_prefix,version,offset_compound);
       break;
     case 'P': case 'p': case 'Q': case 'q':
