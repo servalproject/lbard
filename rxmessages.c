@@ -464,6 +464,21 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 		"Saw a BAR from %s*: %s* version %lld size byte 0x%02x"
 		" (we know of %d bundles held by that peer)\n",
 		p->sid_prefix,bid_prefix,version,size_byte,p->bundle_count);
+
+      {
+	char sender_prefix[128];
+	char monitor_log_buf[1024];
+	sprintf(sender_prefix,"%s*",p->sid_prefix);
+	snprintf(monitor_log_buf,sizeof(monitor_log_buf),
+		 "BAR: BID=%s*, version 0x%010llx, payload %lld--%lld bytes, (%d unique)",
+		 bid_prefix,version,
+		 size_byte_to_length(size_byte),
+		 size_byte_to_length(size_byte+1)-1,
+		 p->bundle_count);	
+	
+	monitor_log(sender_prefix,NULL,monitor_log_buf);
+      }
+
       peer_note_bar(p,bid_prefix,version,recipient_prefix,size_byte);
       break;
     case 'L':
