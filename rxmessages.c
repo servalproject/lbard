@@ -537,6 +537,22 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       piece_bytes=(offset_compound>>20)&0x7ff;
       piece_is_manifest=offset_compound&0x80000000;
 
+      if (monitor_mode)
+	{
+	  char sender_prefix[128];
+	  char monitor_log_buf[1024];
+	  sprintf(sender_prefix,"%s*",p->sid_prefix);
+	  snprintf(monitor_log_buf,sizeof(monitor_log_buf),
+		   "Piece of bundle: BID=%s*, [%lld--%lld) of %s.%s",
+		   bid_prefix,
+		   piece_offset,piece_offset+piece_bytes-1,
+		   piece_is_manifest?"manifest":"payload",
+		   is_end_piece?" This is the last piece of that.":""
+		   );
+	  
+	  monitor_log(sender_prefix,NULL,monitor_log_buf);
+	}
+            
       saw_piece(peer_prefix,bid_prefix,version,piece_offset,piece_bytes,is_end_piece,
 		piece_is_manifest,&msg[offset],
 		prefix, servald_server,credential);
@@ -578,6 +594,19 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 		   target_sid);
 	  status_log(status_msg);
 	}
+
+      if (monitor_mode)
+	{
+	  char sender_prefix[128];
+	  char monitor_log_buf[1024];
+	  sprintf(sender_prefix,"%s*",p->sid_prefix);
+	  snprintf(monitor_log_buf,sizeof(monitor_log_buf),
+		   "Request for BID=%s*, beginning at offset %d of %s.",
+		   bid_prefix,bundle_offset,is_manifest?"manifest":"payload");
+	  
+	  monitor_log(sender_prefix,NULL,monitor_log_buf);
+	}
+
 	
 	// Are we the target SID?
 	if (!strncasecmp(my_sid,target_sid,4)) {
