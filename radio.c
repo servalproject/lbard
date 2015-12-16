@@ -326,7 +326,19 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 		     message_buffer_size-message_buffer_length,
 		     ", FEC OK : sender SID=%02x%02x%02x%02x%02x%02x*\n",
 		     body[0],body[1],body[2],body[3],body[4],body[5]);
-	  
+
+	  {
+	    char sender_prefix[128];
+	    char monitor_log_buf[1024];
+	    bytes_to_prefix(&body[0],sender_prefix);
+	    snprintf(monitor_log_buf,sizeof(monitor_log_buf),
+		     "Saw RFD900 CSMA Data frame: temp=%dC, last rx RSSI=%d,"
+		     " frame len=%d, FEC OK",
+		     radio_temperature, last_rx_rssi,
+		     packet_len);
+	    
+	    monitor_log(sender_prefix,NULL,monitor_log_buf);
+	  }
 	} else {
 	  if (message_buffer_length) message_buffer_length--; // chop NL
 	  message_buffer_length+=

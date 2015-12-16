@@ -218,6 +218,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 		     unsigned char *body_data, int body_length,
 		     int timeout_ms);
 long long gettime_ms();
+long long gettime_us();
 int generate_progress_string(struct partial_bundle *partial,
 			     char *progress,int progress_size);
 int show_progress();
@@ -264,5 +265,6 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
 			    unsigned char *bin_out, int *len_out);
 int manifest_binary_to_text(unsigned char *bin_in, int len_in,
 			    unsigned char *text_out, int *len_out);
-
+int monitor_log(char *sender_prefix, char *recipient_prefix,char *msg);
+int bytes_to_prefix(unsigned char *bytes_in,char *prefix_out);
 
