@@ -121,6 +121,7 @@ int main(int argc, char **argv)
 {
   int monitor_mode=0;
 
+  // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==7)&&(!strcasecmp(argv[1],"energysample"))) {
     char *port=argv[2];
     float pulse_width_ms=atof(argv[3]);
@@ -130,12 +131,35 @@ int main(int argc, char **argv)
     return energy_experiment(port,pulse_frequency,pulse_width_ms,wifiup_hold_time_ms,
 			     interface);
   }
-  
-  if (argc<5) {
-    fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <serial port> [monitor]\n");
-    exit(-1);
+
+  char *serial_port = "/dev/null";
+
+  if ((argc==3)&&(!strcasecmp(argv[1],"monitor"))) {
+    monitor_mode=1;
+    serial_port=argv[2];
+  } else {  
+    if (argc<5) {
+      fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <serial port> [options ...]\n");
+      fprintf(stderr,"usage: lbard monitor <serial port>\n");
+      exit(-1);
+    }
+    serial_port = argv[4];
   }
 
+  int serialfd=-1;
+  serialfd = open(serial_port,O_RDWR);
+  if (serialfd<0) {
+    perror("Opening serial port");
+    exit(-1);
+  }
+  if (serial_setup_port(serialfd))
+    {
+      fprintf(stderr,"Failed to setup serial port. Exiting.\n");
+      exit(-1);
+    }
+  fprintf(stderr,"Serial port open as fd %d\n",serialfd);
+
+      
   int n=5;
   while (n<argc) {
     if (argv[n]) {
@@ -193,42 +217,30 @@ int main(int argc, char **argv)
   
   last_message_update_time=0;
   
-  int serialfd=-1;
-  char *serial_port = argv[4];
-  serialfd = open(serial_port,O_RDWR);
-  if (serialfd<0) {
-    perror("Opening serial port");
-    exit(-1);
-  }
-  if (serial_setup_port(serialfd))
-    {
-      fprintf(stderr,"Failed to setup serial port. Exiting.\n");
-      exit(-1);
-    }
-  fprintf(stderr,"Serial port open as fd %d\n",serialfd);
-  
-  prefix=strdup(argv[3]);
-  if (strlen(prefix)<32) {
+  my_sid_hex="00000000000000000000000000000000";
+  prefix="000000";
+  if (!monitor_mode) {
+    prefix=strdup(argv[3]);
+    if (strlen(prefix)<32) {
       fprintf(stderr,"You must provide a valid SID for the ID of the local node.\n");
       exit(-1);
     }
-  prefix[6]=0;
-  
-  if (argc>3) {
-    // set my_sid from argv[3]
-    for(int i=0;i<32;i++) {
-      char hex[3];
-      hex[0]=argv[3][i*2];
-      hex[1]=argv[3][i*2+1];
-      hex[2]=0;
-      my_sid[i]=strtoll(hex,NULL,16);
+    prefix[6]=0;  
+    if (argc>3) {
+      // set my_sid from argv[3]
+      for(int i=0;i<32;i++) {
+	char hex[3];
+	hex[0]=argv[3][i*2];
+	hex[1]=argv[3][i*2+1];
+	hex[2]=0;
+	my_sid[i]=strtoll(hex,NULL,16);
+      }
+      my_sid_hex=argv[3];
     }
-    my_sid_hex=argv[3];
   }
 
   printf("My SID prefix is %02X%02X%02X%02X%02X%02X\n",
 	 my_sid[0],my_sid[1],my_sid[2],my_sid[3],my_sid[4],my_sid[5]);
-  
   
   if (argc>2) credential=argv[2];
   if (argc>1) servald_server=argv[1];
