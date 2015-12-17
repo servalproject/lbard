@@ -290,7 +290,8 @@ int main(int argc, char **argv)
 
       if (!time_server) {
 	// Decay my time stratum slightly
-	my_time_stratum++;
+	if (my_time_stratum<0xffff)
+	  my_time_stratum++;
       } else my_time_stratum=1;
       // Send time packet
       if (udp_time) {
