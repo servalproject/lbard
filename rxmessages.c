@@ -471,10 +471,11 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	char monitor_log_buf[1024];
 	sprintf(sender_prefix,"%s*",p->sid_prefix);
 	snprintf(monitor_log_buf,sizeof(monitor_log_buf),
-		 "BAR: BID=%s*, version 0x%010llx, payload has %lld--%lld bytes, (%d unique)",
+		 "BAR: BID=%s*, version 0x%010llx, %smeshms payload has %lld--%lld bytes, (%d unique)",
 		 bid_prefix,version,
-		 size_byte_to_length(size_byte),
-		 size_byte_to_length(size_byte+1)-1,
+		 (size_byte&0x80)?"non-":"",
+		 size_byte_to_length((size_byte&0x7f)),
+		 size_byte_to_length((size_byte&0x7f)+1)-1,
 		 p->bundle_count);	
 	
 	monitor_log(sender_prefix,NULL,monitor_log_buf);
