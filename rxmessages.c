@@ -474,8 +474,8 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 		 "BAR: BID=%s*, version 0x%010llx, %smeshms payload has %lld--%lld bytes, (%d unique)",
 		 bid_prefix,version,
 		 (size_byte&0x80)?"non-":"",
-		 size_byte_to_length((size_byte&0x7f)),
-		 size_byte_to_length((size_byte&0x7f)+1)-1,
+		 size_byte_to_length((size_byte&0x7f)-1),
+		 size_byte_to_length((size_byte&0x7f))-1,
 		 p->bundle_count);	
 	
 	monitor_log(sender_prefix,NULL,monitor_log_buf);
