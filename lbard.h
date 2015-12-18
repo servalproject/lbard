@@ -65,6 +65,8 @@ struct peer_state {
   struct partial_bundle partials[MAX_BUNDLES_IN_FLIGHT];  
 }; 
 
+extern int my_time_stratum;
+
 extern int monitor_mode;
 
 extern char message_buffer[];
@@ -269,4 +271,4 @@ int manifest_binary_to_text(unsigned char *bin_in, int len_in,
 			    unsigned char *text_out, int *len_out);
 int monitor_log(char *sender_prefix, char *recipient_prefix,char *msg);
 int bytes_to_prefix(unsigned char *bytes_in,char *prefix_out);
-
+int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv);

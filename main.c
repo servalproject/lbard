@@ -52,7 +52,6 @@ int udp_time=0;
 int time_slave=0;
 int time_server=0;
 char time_broadcast_addr[1024]="255.255.255.255";
-extern int my_time_stratum;
 
 int reboot_when_stuck=0;
 extern int serial_errors;
@@ -342,16 +341,7 @@ int main(int argc, char **argv)
 	    for(int i=0;i<3;i++) tv.tv_usec|=msg[offset++]<<(i*8);
 	    // ethernet delay is typically 0.1 - 5ms, so assume 5ms
 	    tv.tv_usec+=5000;
-	    if (tv.tv_usec>999999) { tv.tv_sec++; tv.tv_usec-=1000000; }
-	    if ((stratum<(my_time_stratum>>8))&&time_slave) {
-	      // Found a lower-stratum time than our own, and we have enabled time
-	      // slave mode, so set system time.
-	      settimeofday(&tv,NULL);
-	      // By adding only one milli-strata, we effectively match the stratum that
-	      // updated us for the next 256 UHF packet transmissions. This should give
-	      // us the stability we desire.
-	      my_time_stratum=(stratum<<8)+1;
-	    }	  
+	    saw_timestamp("UDP",stratum,&tv);
 	  }
 	}
       }

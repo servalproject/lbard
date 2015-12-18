@@ -682,36 +682,11 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	   quasi-stability that we seek.
 	 */	
 	tv.tv_usec+=26400;
-	if (tv.tv_usec>999999) { tv.tv_sec++; tv.tv_usec-=1000000; }
-	if (!monitor_mode)
-	  if ((stratum<(my_time_stratum>>8))&&time_slave) {
-	    // Found a lower-stratum time than our own, and we have enabled time
-	    // slave mode, so set system time.
-	    settimeofday(&tv,NULL);
-	    // By adding only one milli-strata, we effectively match the stratum that
-	    // updated us for the next 256 UHF packet transmissions. This should give
-	    // us the stability we desire.
-	    my_time_stratum=(stratum<<8)+1;
-	  }
-	if (monitor_mode)
-	  {
-	    char sender_prefix[128];
-	    char monitor_log_buf[1024];
-	    sprintf(sender_prefix,"%s*",p->sid_prefix);
-	    time_t current_time=tv.tv_sec;
-	    struct tm tm;
-	    localtime_r(&current_time,&tm);
 
-	    snprintf(monitor_log_buf,sizeof(monitor_log_buf),
-		     "Timestamp: stratum=0x%02X, "
-		     "time %04d/%02d/%02d %02d:%02d.%02d (%14lld.%06lld)",
-		     stratum,
-		     tm.tm_year+1900,tm.tm_mon,tm.tm_mday+1,
-		     tm.tm_hour,tm.tm_min,tm.tm_sec,
-		     (long long)tv.tv_sec,(long long)tv.tv_usec);
-	    
-	    monitor_log(sender_prefix,NULL,monitor_log_buf);
-	  }
+	char sender_prefix[128];	
+	sprintf(sender_prefix,"%s*",p->sid_prefix);
+
+	saw_timestamp(sender_prefix,stratum,&tv);
       }
       break;
     default:
