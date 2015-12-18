@@ -331,13 +331,13 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 
 }
 
-/* Our time stratum. 0xff means that we have not had any external time input,
+/* Our time stratum. 0xff00 means that we have not had any external time input,
    other values are hops from a time authority (who may or may not actually be
    accurate).  The time is used for logging purposes, and while more accurate would
    be better, having the time to within a few seconds is a huge step up from every
    Mesh Extender thinking it is January 1970.
 */
-int my_time_stratum=0xff;
+int my_time_stratum=0xff00;
 
 int message_counter=0;
 int update_my_message(int serialfd,
