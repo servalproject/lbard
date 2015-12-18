@@ -45,10 +45,10 @@ int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
 {
   if (tv->tv_usec>999999) { tv->tv_sec++; tv->tv_usec-=1000000; }
   if (!monitor_mode)
-    if ((stratum<(my_time_stratum>>8))&&time_slave) {
+    if ((stratum<(my_time_stratum>>8))) {
       // Found a lower-stratum time than our own, and we have enabled time
       // slave mode, so set system time.
-      settimeofday(tv,NULL);
+      if (time_slave) settimeofday(tv,NULL);
       // By adding only one milli-strata, we effectively match the stratum that
       // updated us for the next 256 UHF packet transmissions. This should give
       // us the stability we desire.
