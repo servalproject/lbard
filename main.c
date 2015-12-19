@@ -284,6 +284,14 @@ int main(int argc, char **argv)
 
     scan_for_incoming_messages();
     radio_read_bytes(serialfd,monitor_mode);
+
+    // timesync.c can cause the system time to be altered, in which case
+    // our message update timer might end up being badly wrong, e.g., waiting
+    // 45 years before sending the next packet is sent, if time is stepped
+    // backwards.  So limit to 5 seconds always.
+    if ((gettime_ms()-last_message_update_time)>5000) {
+      last_message_update_time=gettime_ms()+5000;
+    }
     
     if ((gettime_ms()-last_message_update_time)>=message_update_interval) {
 
