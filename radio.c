@@ -199,6 +199,9 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   escaped[elen++]='!'; escaped[elen++]='!';
   
   radio_set_tx_power(serialfd);
+
+  // Don't forget to count our own transmissions
+  radio_transmissions_seen++;
   
   if (write_all(serialfd,escaped,elen)==-1) {
     serial_errors++;

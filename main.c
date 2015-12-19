@@ -108,8 +108,8 @@ int scan_for_incoming_messages()
 // 128K air speed / 230K serial speed means that we can in principle send
 // about 128K / 256 = 512 packets per second. However, the FTDI serial USB
 // drivers for Mac crash well before that point.
-int message_update_interval=AVG_PACKET_TX_INTERVAL-(PACKET_TX_INTERVAL_RANDOMNESS/2);  // ms
-int message_update_interval_randomness=PACKET_TX_INTERVAL_RANDOMNESS;
+int message_update_interval=INITIAL_AVG_PACKET_TX_INTERVAL-(INITIAL_PACKET_TX_INTERVAL_RANDOMNESS/2);  // ms
+int message_update_interval_randomness=INITIAL_PACKET_TX_INTERVAL_RANDOMNESS;
 long long last_message_update_time=0;
 long long congestion_update_time=0;
 
@@ -286,6 +286,35 @@ int main(int argc, char **argv)
 
     scan_for_incoming_messages();
     radio_read_bytes(serialfd,monitor_mode);
+
+    if (gettime_ms()>congestion_update_time) {
+      /* Very 4 seconds count how many radio packets we have seen, so that we can
+	 dynamically adjust our packet rate based on our best estimate of the channel
+	 utilisation.  In other words, if there are only two devices on channel, we
+	 should be able to send packets very often. But if there are lots of stations
+	 on channel, then we should back-off.
+       */
+      double ratio = radio_transmissions_seen*1.0/TARGET_TRANSMISSIONS_PER_4SECONDS;
+      if (ratio<0.95) {
+	// Speed up: If we are way too slow, then double our rate
+	// If not too slow, then just trim 10ms from our interval
+	if (ratio<0.25) message_update_interval/=2;
+	else message_update_interval-=10;
+      } else if (ratio>1.0) {
+	// Slow down!  We slow down quickly, so as to try to avoid causing
+	// too many colissions.
+	message_update_interval*=(ratio+1);
+	if (!message_update_interval) message_update_interval=50;
+      }
+      // Make randomness 1/4 of interval, or 25ms, whichever is greater.
+      // The addition of the randomness means that we should never actually reach
+      // our target capacity.
+      message_update_interval_randomness = message_update_interval >> 2;
+      if (message_update_interval_randomness<25)
+	message_update_interval_randomness=25;
+      
+      congestion_update_time=gettime_ms()+4000;
+    }
     
     if ((gettime_ms()-last_message_update_time)>=message_update_interval) {
 
