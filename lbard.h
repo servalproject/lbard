@@ -66,6 +66,9 @@ struct peer_state {
 }; 
 
 extern int my_time_stratum;
+extern int radio_transmissions_seen;
+extern long long last_message_update_time;
+extern long long congestion_update_time;
 
 extern int monitor_mode;
 

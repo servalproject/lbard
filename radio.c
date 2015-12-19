@@ -47,6 +47,10 @@ extern char *prefix;
 
 int serial_errors=0;
 
+// Count radio transmissions seen, so that we can dynamically adjust the packet
+// rate based on an estimate of channel congestion.
+int radio_transmissions_seen=0;
+
 int radio_read_bytes(int serialfd,int monitor_mode)
 {
   unsigned char buf[8192];
@@ -253,6 +257,8 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xaa))
       {
 	// Found RFD900 CSMA envelope
+	radio_transmissions_seen++;
+	
 	int last_rx_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-7];
 	// int average_remote_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-6];
 	int radio_temperature=radio_rx_buffer[RADIO_RXBUFFER_SIZE-5];

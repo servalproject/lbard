@@ -111,6 +111,7 @@ int scan_for_incoming_messages()
 int message_update_interval=AVG_PACKET_TX_INTERVAL-(PACKET_TX_INTERVAL_RANDOMNESS/2);  // ms
 int message_update_interval_randomness=PACKET_TX_INTERVAL_RANDOMNESS;
 long long last_message_update_time=0;
+long long congestion_update_time=0;
 
 time_t last_summary_time=0;
 time_t last_status_time=0;
@@ -215,6 +216,7 @@ int main(int argc, char **argv)
   if (message_update_interval<0) message_update_interval=0;
   
   last_message_update_time=0;
+  congestion_update_time=0;
   
   my_sid_hex="00000000000000000000000000000000";
   prefix="000000";
@@ -284,14 +286,6 @@ int main(int argc, char **argv)
 
     scan_for_incoming_messages();
     radio_read_bytes(serialfd,monitor_mode);
-
-    // timesync.c can cause the system time to be altered, in which case
-    // our message update timer might end up being badly wrong, e.g., waiting
-    // 45 years before sending the next packet is sent, if time is stepped
-    // backwards.  So limit to 5 seconds always.
-    if ((gettime_ms()-last_message_update_time)>5000) {
-      last_message_update_time=gettime_ms()+5000;
-    }
     
     if ((gettime_ms()-last_message_update_time)>=message_update_interval) {
 
