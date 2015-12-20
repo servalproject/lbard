@@ -255,7 +255,8 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 		  j?",":"",
 		  radio_rx_buffer[RADIO_RXBUFFER_SIZE-7+j]);
 	}
-	fprintf(stderr,"\n");
+	fprintf(stderr,".  Radio TX interval = %dms\n",
+		message_update_interval);
       } else if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0x55)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0x55)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xaa))
