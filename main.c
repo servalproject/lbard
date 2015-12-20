@@ -343,6 +343,9 @@ int main(int argc, char **argv)
 	message_update_interval_randomness=25;
       
       congestion_update_time=gettime_ms()+4000;
+
+      radio_transmissions_seen=0;
+      radio_transmissions_byus=0;
     }
     
     if ((gettime_ms()-last_message_update_time)>=message_update_interval) {
