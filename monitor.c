@@ -59,6 +59,7 @@ int monitor_log_message(char *log,
 
 int monitor_log(char *sender_prefix, char *recipient_prefix,char *msg)
 {
+  monitor_log_message("combined",sender_prefix,recipient_prefix,msg);
   if (sender_prefix)
     monitor_log_message(sender_prefix,sender_prefix,recipient_prefix,msg);
   if (recipient_prefix)
