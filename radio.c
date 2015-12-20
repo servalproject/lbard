@@ -50,6 +50,7 @@ int serial_errors=0;
 // Count radio transmissions seen, so that we can dynamically adjust the packet
 // rate based on an estimate of channel congestion.
 int radio_transmissions_seen=0;
+int radio_transmissions_byus=0;
 
 int radio_read_bytes(int serialfd,int monitor_mode)
 {
@@ -201,7 +202,7 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   radio_set_tx_power(serialfd);
 
   // Don't forget to count our own transmissions
-  radio_transmissions_seen++;
+  radio_transmissions_byus++;
   
   if (write_all(serialfd,escaped,elen)==-1) {
     serial_errors++;

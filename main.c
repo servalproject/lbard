@@ -294,7 +294,8 @@ int main(int argc, char **argv)
 	 should be able to send packets very often. But if there are lots of stations
 	 on channel, then we should back-off.
        */
-      double ratio = radio_transmissions_seen*1.0/TARGET_TRANSMISSIONS_PER_4SECONDS;
+      double ratio = (radio_transmissions_seen+radio_transmissions_byus)
+	*1.0/TARGET_TRANSMISSIONS_PER_4SECONDS;
       if (ratio<0.95) {
 	// Speed up: If we are way too slow, then double our rate
 	// If not too slow, then just trim 10ms from our interval
@@ -306,6 +307,14 @@ int main(int argc, char **argv)
 	message_update_interval*=(ratio+1);
 	if (!message_update_interval) message_update_interval=50;
       }
+
+      if (!radio_transmissions_seen) {
+	// If we haven't seen anyone else transmit anything, then only transmit
+	// at a slow rate, so that we don't jam the channel and flatten our battery
+	// while waiting for a peer
+	message_update_interval=1000;
+      }
+      
       // Make randomness 1/4 of interval, or 25ms, whichever is greater.
       // The addition of the randomness means that we should never actually reach
       // our target capacity.
