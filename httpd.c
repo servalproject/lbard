@@ -39,11 +39,67 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <fcntl.h>
 #include <time.h>
 #include <sys/time.h>
+#include <ctype.h>
 
 #include "lbard.h"
 
+int urldecode(char *s)
+{
+  int i,o=0;
+  int len=strlen(s);
+
+  for(i=0;i<len;i++) {
+    switch (s[i]) {
+    case '+':
+      s[o++]=' ';
+      break;
+    case '%':
+      {
+	int c;
+	c=chartohex(toupper(s[i+1]))<<4;
+	c|=chartohex(toupper(s[i+2]));
+	s[o++]=c;
+	i+=2;
+      }
+      break;
+    default:
+      s[o++]=s[i];
+    }
+  }
+  s[o]=0;
+  return o;
+  
+}
+
 int http_process(int socket)
 {
+  char buffer[8192];
+  char uri[8192];
+  int version_major, version_minor;
+  int offset;
+  int request_len = read(socket,buffer,8192);
+  printf("Read %d bytes of request.\n",request_len);
+  int r=sscanf(buffer,"GET %[^ ] HTTP/%d.%d\n%n",
+	       uri,&version_major,&version_minor,&offset);
+  printf("  scanned %d fields.\n",r);
+  printf("    uri=%s\n",uri);
+  printf("    request version=%d.%d\n",version_major,version_minor);
+  if (r==3)
+    {
+      char location[8192]="";
+      char message[8192]="";
+      int f=sscanf(uri,"/submitmessage?location=%[^&]&message=%[^&]",
+		   location,message);
+
+      urldecode(location);
+      urldecode(message);
+      
+      printf("  scanned %d URI fields.\n",f);
+      printf("    location=[%s]\n",location);
+      printf("    message=[%s]\n",message);
+
+      
+    }
   close(socket);
   return 0;
 }
