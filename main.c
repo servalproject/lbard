@@ -48,6 +48,7 @@ int debug_announce=0;
 int debug_pull=0;
 int debug_insert=0;
 
+int http_server=1;
 int udp_time=0;
 int time_slave=0;
 int time_server=0;
@@ -201,6 +202,7 @@ int main(int argc, char **argv)
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
       else if (!strcasecmp("announce",argv[n])) debug_announce=1;
       else if (!strcasecmp("udptime",argv[n])) udp_time=1;
+      else if (!strcasecmp("nohttpd",argv[n])) http_server=0;
       else if (!strcasecmp("rapidfire",argv[n])) {
 	// Send packets fast in this mode -- primarily used for bench testing
 	message_update_interval=200;
@@ -260,6 +262,24 @@ int main(int argc, char **argv)
       bind(timesocket, (struct sockaddr *) &addr, sizeof(addr));
       set_nonblock(timesocket);
     }
+  }
+
+  // HTTP Server socket for accepting MeshMS message submission via web form
+  // (Used for sending anonymous messages to a help desk for a mesh network).
+  int httpsocket=-1;
+  if (http_server) {
+    httpsocket=socket(AF_INET, SOCK_STREAM, 0);
+    if (httpsocket!=-1) {
+      struct sockaddr_in addr;
+      memset(&addr, 0, sizeof(addr));
+      addr.sin_family = AF_INET;
+      addr.sin_addr.s_addr = INADDR_ANY;
+      addr.sin_port = htons(0x5402);
+      bind(httpsocket, (struct sockaddr *) &addr, sizeof(addr));
+      set_nonblock(httpsocket);
+      listen(httpsocket,10);
+    }
+    
   }
   
   long long next_rhizome_db_load_time=0;
@@ -333,7 +353,7 @@ int main(int argc, char **argv)
 	  my_time_stratum++;
       } else my_time_stratum=1;
       // Send time packet
-      if (udp_time) {
+      if (udp_time&&(timesocket!=-1)) {
 	{
 	  // Occassionally announce our time
 	  // T + (our stratum) + (64 bit seconds since 1970) +
@@ -368,23 +388,43 @@ int main(int argc, char **argv)
 		 ,offset,(const struct sockaddr *)&addr,sizeof(addr));
 	}
 	// Check for time packet
-	{
-	  unsigned char msg[1024];
-	  int offset=0;
-	  int r=recvfrom(timesocket,msg,1024,0,NULL,0);
-	  if (r==(1+1+8+3)) {
-	    // see rxmessages.c for more explanation
-	    int stratum=msg[offset++];
-	    struct timeval tv;
-	    bzero(&tv,sizeof (struct timeval));
-	    for(int i=0;i<8;i++) tv.tv_sec|=msg[offset++]<<(i*8);
-	    for(int i=0;i<3;i++) tv.tv_usec|=msg[offset++]<<(i*8);
-	    // ethernet delay is typically 0.1 - 5ms, so assume 5ms
-	    tv.tv_usec+=5000;
-	    saw_timestamp("UDP",stratum,&tv);
-	  }
+	if (timesocket!=-1)
+	  {
+	    unsigned char msg[1024];
+	    int offset=0;
+	    int r=recvfrom(timesocket,msg,1024,0,NULL,0);
+	    if (r==(1+1+8+3)) {
+	      // see rxmessages.c for more explanation
+	      int stratum=msg[offset++];
+	      struct timeval tv;
+	      bzero(&tv,sizeof (struct timeval));
+	      for(int i=0;i<8;i++) tv.tv_sec|=msg[offset++]<<(i*8);
+	      for(int i=0;i<3;i++) tv.tv_usec|=msg[offset++]<<(i*8);
+	      // ethernet delay is typically 0.1 - 5ms, so assume 5ms
+	      tv.tv_usec+=5000;
+	      saw_timestamp("UDP",stratum,&tv);
+	    }
+	  }	
 	}
-      }
+	if (httpsocket!=-1)
+	  {
+	    struct sockaddr cliaddr;
+	    socklen_t addrlen;
+	    int s=accept(httpsocket,&cliaddr,&addrlen);
+	    if (s!=-1) {
+	      // HTTP request socket
+	      printf("HTTP Socket connection\n");
+	      // Process socket
+	      // XXX This is synchronous to keep things simple,
+	      // which is part of why we only check every second or so
+	      // for one new connection.  We also don't allow the request
+	      // to linger: if it doesn't contain the request almost immediately,
+	      // we reject it with a timeout error.
+	      http_process(s);
+	    }
+	  }	
+	
+	
       if (!monitor_mode)
 	update_my_message(serialfd,
 			  my_sid,

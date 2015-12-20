@@ -84,6 +84,7 @@ extern int radio_transmissions_byus;
 extern int radio_transmissions_seen;
 extern long long last_message_update_time;
 extern long long congestion_update_time;
+extern int message_update_interval;
 
 extern int monitor_mode;
 
@@ -290,3 +291,4 @@ int manifest_binary_to_text(unsigned char *bin_in, int len_in,
 int monitor_log(char *sender_prefix, char *recipient_prefix,char *msg);
 int bytes_to_prefix(unsigned char *bytes_in,char *prefix_out);
 int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv);
+int http_process(int socket);
