@@ -58,6 +58,7 @@ int urldecode(char *s)
 	int c;
 	c=chartohex(toupper(s[i+1]))<<4;
 	c|=chartohex(toupper(s[i+2]));
+	
 	s[o++]=c;
 	i+=2;
       }
@@ -98,8 +99,43 @@ int http_process(int socket)
       printf("    location=[%s]\n",location);
       printf("    message=[%s]\n",message);
 
+      char *m="HTTP/1.0 200 OK\nServer: Serval LBARD\n\nYour message has been submitted.";
+
+      // Try to actually send meshms
+      // First: compose the string safely.  It might contain UTF-8 text, so we should
+      // try to be nice about that.
+      {
+	unsigned char combined[8192+8192+1024];
+	snprintf((char *)combined,sizeof(combined),
+		 "Message from message_form.html: Location = %s,"
+		 " Message as follows: %s",
+		 location,message);
+
+	// Create shell-escaped command, using single quotes to protect the combined
+	// message.
+	unsigned char escaped[sizeof(combined)*2+1024];
+	int i,o;
+	// XXX - Values hard-coded for Mesh Extenders!
+	sprintf((char *)escaped,"/serval/servald meshms send message `/serval/servald id self | tail -1` `cat /dos/helpdesk.sid` '");
+	o=strlen((char *)escaped);
+	for(i=0;combined[i];i++) {
+	  if (combined[i]=='\'') escaped[o++]='\\';
+	  escaped[o++]=combined[i];
+	}
+	escaped[o++]='\'';
+	printf("Command is: [%s]\n",escaped);
+	int res=system((char *)escaped);
+	if (res) {
+	  m="HTTP/1.0 500 ERROR\nServer: Serval LBARD\n\nYour message could not be submitted.";
+	}
+      }
       
+      write_all(socket,m,strlen(m));
+      close(socket);
+      return 0;      
     }
+  char *m="HTTP/1.0 400 Couldn't parse message\nServer: Serval LBARD\n\n";
+  write_all(socket,m,strlen(m));
   close(socket);
   return 0;
 }
