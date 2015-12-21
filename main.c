@@ -398,7 +398,7 @@ int main(int argc, char **argv)
 
     // Deal gracefully with clocks that run backwards from time to time.
     if (last_message_update_time>gettime_ms())
-      last_message_update=gettime_ms();
+      last_message_update_time=gettime_ms();
     
     if ((gettime_ms()-last_message_update_time)>=message_update_interval) {
 
