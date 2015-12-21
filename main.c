@@ -55,8 +55,7 @@ int http_server=1;
 int udp_time=0;
 int time_slave=0;
 int time_server=0;
-// XXX - Hard-coded for mesh extenders
-char *time_broadcast_addrs[]={"10.255.255.255","192.168.2.255","192.168.2.1",NULL};
+char *time_broadcast_addrs[]={DEFAULT_BROADCAST_ADDRESSES,NULL};
 
 
 int reboot_when_stuck=0;

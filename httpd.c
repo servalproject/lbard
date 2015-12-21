@@ -116,7 +116,7 @@ int http_process(int socket)
 	unsigned char escaped[sizeof(combined)*2+1024];
 	int i,o;
 	// XXX - Values hard-coded for Mesh Extenders!
-	sprintf((char *)escaped,"/serval/servald meshms send message `/serval/servald id self | tail -1` `cat /dos/helpdesk.sid` '");
+	sprintf((char *)escaped,SEND_HELP_MESSAGE);
 	o=strlen((char *)escaped);
 	for(i=0;combined[i];i++) {
 	  if (combined[i]=='\'') escaped[o++]='\\';

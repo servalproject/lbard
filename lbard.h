@@ -1,4 +1,8 @@
 
+#define SERVALD_STOP "/serval/servald stop"
+#define DEFAULT_BROADCAST_ADDRESSES "10.255.255.255","192.168.2.255","192.168.2.1"
+#define SEND_HELP_MESSAGE "/serval/servald meshms send message `/serval/servald id self | tail -1` `cat /dos/helpdesk.sid` '"
+
 #define C fprintf(stderr,"%s:%d CHECKPOINT in %s()\n",__FILE__,__LINE__,__FUNCTION__)
 
 // Set packet TX interval details (all in ms)
