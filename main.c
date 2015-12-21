@@ -299,7 +299,12 @@ int main(int argc, char **argv)
   }
   
   long long next_rhizome_db_load_time=0;
-  while(1) {    
+  while(1) {
+
+    // Deal gracefully with clocks that run backwards sometimes
+    if ((next_rhizome_db_load_time-gettime_ms())>5000)
+      next_rhizome_db_load_time=gettime_ms()+5000;
+    
     if (argc>2)
       if (next_rhizome_db_load_time<=gettime_ms()) {
 	long long load_timeout=message_update_interval
@@ -323,6 +328,10 @@ int main(int argc, char **argv)
     scan_for_incoming_messages();
     radio_read_bytes(serialfd,monitor_mode);
 
+    // Deal with clocks running backwards sometimes
+    if ((congestion_update_time-gettime_ms())>4000)
+      congestion_update_time=gettime_ms()+4000;
+    
     if (gettime_ms()>congestion_update_time) {
       /* Very 4 seconds count how many radio packets we have seen, so that we can
 	 dynamically adjust our packet rate based on our best estimate of the channel
@@ -386,6 +395,10 @@ int main(int argc, char **argv)
       radio_transmissions_seen=0;
       radio_transmissions_byus=0;
     }
+
+    // Deal gracefully with clocks that run backwards from time to time.
+    if (last_message_update_time>gettime_ms())
+      last_message_update=gettime_ms();
     
     if ((gettime_ms()-last_message_update_time)>=message_update_interval) {
 
