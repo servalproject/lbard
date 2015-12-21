@@ -34,6 +34,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <strings.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <errno.h>
 #include <dirent.h>
 #include <assert.h>
 #include <fcntl.h>
@@ -55,7 +56,7 @@ int udp_time=0;
 int time_slave=0;
 int time_server=0;
 // XXX - Hard-coded for mesh extenders
-char *time_broadcast_addrs[]={"10.255.255.255","192.168.2.255",NULL};
+char *time_broadcast_addrs[]={"10.255.255.255","192.168.2.255","192.168.2.1",NULL};
 
 
 int reboot_when_stuck=0;
@@ -146,7 +147,7 @@ int main(int argc, char **argv)
 	 )
       )
     {
-      if (!strcasecmp(argv[1],"monitorts")) time_server=1;
+      if (!strcasecmp(argv[1],"monitorts")) { time_server=1; udp_time=1; }
       monitor_mode=1;
       serial_port=argv[2];
     } else {  
@@ -268,6 +269,14 @@ int main(int argc, char **argv)
       addr.sin_port = htons(0x5401);
       bind(timesocket, (struct sockaddr *) &addr, sizeof(addr));
       set_nonblock(timesocket);
+
+      // Enable broadcast
+      int one=1;
+      int r=setsockopt(timesocket, SOL_SOCKET, SO_BROADCAST, &one, sizeof(one));
+      if (r) {
+	fprintf(stderr,"WARNING: setsockopt(): Could not enable SO_BROADCAST\n");
+      }
+
     }
   }
 
@@ -410,17 +419,25 @@ int main(int argc, char **argv)
 	  // supplied as part of the timeserver command line argument.
 	  struct sockaddr_in addr;
 	  bzero(&addr, sizeof(addr)); 
-	  addr.sin_family = PF_INET; 
+	  addr.sin_family = AF_INET; 
 	  addr.sin_port = htons(0x5401);
-	  for(int i=0;time_broadcast_addrs[i];i++) {
-	    addr.sin_addr.s_addr = inet_addr(time_broadcast_addrs[i]); 
-	    sendto(timesocket,msg_out,
-		   MSG_DONTROUTE|MSG_DONTWAIT
+	  int i;
+	  for(i=0;time_broadcast_addrs[i];i++) {
+	    addr.sin_addr.s_addr = inet_addr(time_broadcast_addrs[i]);
+	    errno=0;
+	    int r=sendto(timesocket,msg_out,offset,
+			 MSG_DONTROUTE|MSG_DONTWAIT
 #ifdef MSG_NOSIGNAL
-		   |MSG_NOSIGNAL
+			 |MSG_NOSIGNAL
 #endif	       
-		   ,offset,(const struct sockaddr *)&addr,sizeof(addr));
+			 ,(const struct sockaddr *)&addr,sizeof(addr));
+	    if (r==-1) {
+	      fprintf(stderr,"sendto(%s) for time announcement failed (errno=%d)\n",
+		      time_broadcast_addrs[i],errno);
+	      perror("errno");
+	    }
 	  }
+	  printf("--- Sent %d time announcement packets.\n",i);
 	}
 	  
 	// Check for time packet
@@ -431,6 +448,7 @@ int main(int argc, char **argv)
 	    int r=recvfrom(timesocket,msg,1024,0,NULL,0);
 	    if (r==(1+1+8+3)) {
 	      // see rxmessages.c for more explanation
+	      offset++;
 	      int stratum=msg[offset++];
 	      struct timeval tv;
 	      bzero(&tv,sizeof (struct timeval));
