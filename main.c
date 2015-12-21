@@ -456,7 +456,7 @@ int main(int argc, char **argv)
 	      for(int i=0;i<3;i++) tv.tv_usec|=msg[offset++]<<(i*8);
 	      // ethernet delay is typically 0.1 - 5ms, so assume 5ms
 	      tv.tv_usec+=5000;
-	      saw_timestamp("UDP",stratum,&tv);
+	      saw_timestamp("          UDP",stratum,&tv);
 	    }
 	  }	
 	}
