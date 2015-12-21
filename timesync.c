@@ -67,6 +67,12 @@ int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
 	last_message_update_time+=delta;
 	congestion_update_time+=delta;
 
+	if (delta<-2000) {
+	  // Time went backwards: This can cause trouble for servald alarms.
+	  // Best solution: Tell servald to stop and let runservald restart it.
+	  system(SERVALD_STOP);
+	}
+	
 	// Don't touch time again for a little while
 	// (Updating time possibly several times per second might upset things)
 	next_time_update_allowed_after=gettime_ms()+20000;
