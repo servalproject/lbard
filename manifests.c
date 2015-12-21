@@ -358,7 +358,7 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
 
   if ((verify_length!=len_in)
       ||bcmp(text_in,verify_out,len_in)) {
-#ifdef TEXT
+#ifdef TEST
     printf("Verify error with binary manifest: reverting to plain text.\n");
     printf("  decoded to %d bytes (should be %d)\n",
 	   verify_length,len_in);
