@@ -6,7 +6,7 @@
 #define INITIAL_PACKET_TX_INTERVAL_RANDOMNESS 250
 
 /* Ideal number of packets per 4 second period.
-   128K air interface with 256 byte packets = 512 packets per second.
+   128K air interface with 256 byte (=2K bit) packets = 64 packets per second.
    But we don't want to go that high for a few reasons:
    1. It would crash the FTDI serial drivers on Macs (and I develop on one)
    2. With a simple CSMA protocol, we should aim to keep below 30% channel
@@ -15,9 +15,9 @@
    4. We don't want to suck too much power.
 
    So we will aim to keep channel utilisation down around 10%.
-   512 * 10% * 4 seconds = 204 packets per 4 seconds.
+   64 * 10% * 4 seconds = 204 packets per 4 seconds.
  */
-#define TARGET_TRANSMISSIONS_PER_4SECONDS 204
+#define TARGET_TRANSMISSIONS_PER_4SECONDS 26
 
 // BAR consists of:
 // 8 bytes : BID prefix
