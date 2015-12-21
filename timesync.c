@@ -77,7 +77,7 @@ int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
       printf("Saw timestamp from %s with stratum 0x%02x,"
 	     " which is better than our stratum of 0x%02x.0x%02x\n",
 	     sender_prefix,stratum,my_time_stratum>>8,my_time_stratum&0xff);
-      my_time_stratum=(stratum<<8)+1;
+      my_time_stratum=((stratum+1)<<8);
     }
   }
   if (monitor_mode)
