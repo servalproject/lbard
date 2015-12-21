@@ -48,11 +48,14 @@ int debug_announce=0;
 int debug_pull=0;
 int debug_insert=0;
 
+int radio_silence_count=0;
+
 int http_server=1;
 int udp_time=0;
 int time_slave=0;
 int time_server=0;
 char time_broadcast_addr[1024]="255.255.255.255";
+
 
 int reboot_when_stuck=0;
 extern int serial_errors;
@@ -344,6 +347,21 @@ int main(int argc, char **argv)
       
       congestion_update_time=gettime_ms()+4000;
 
+      if (radio_transmissions_seen) {
+	radio_silence_count=0;
+      } else {
+	radio_silence_count++;
+	if (radio_silence_count>3) {
+	  // Radio silence for 4x4sec = 16 sec.
+	  // This might be due to a bug with the UHF radios where they just stop
+	  // receiving packets from other radios. Or it could just be that there is
+	  // no one to talk to. Anyway, resetting the radio is cheap, and fast, so
+	  // it is best to play it safe and just reset the radio.
+	  write_all(serialfd,"!R",2);
+	  radio_silence_count=0;
+	}
+      }
+      
       radio_transmissions_seen=0;
       radio_transmissions_byus=0;
     }
