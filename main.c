@@ -206,11 +206,7 @@ int main(int argc, char **argv)
       else if (!strcasecmp("announce",argv[n])) debug_announce=1;
       else if (!strcasecmp("udptime",argv[n])) udp_time=1;
       else if (!strcasecmp("nohttpd",argv[n])) http_server=0;
-      else if (!strcasecmp("rapidfire",argv[n])) {
-	// Send packets fast in this mode -- primarily used for bench testing
-	message_update_interval=200;
-	message_update_interval_randomness=100;
-      } else {
+      else {
 	fprintf(stderr,"Illegal mode '%s'\n",argv[n]);
 	exit(-3);
       }
@@ -344,6 +340,13 @@ int main(int argc, char **argv)
       message_update_interval_randomness = message_update_interval >> 2;
       if (message_update_interval_randomness<25)
 	message_update_interval_randomness=25;
+
+      // Force message interval to be at least 150ms + randomness
+      // This keeps duty cycle < about 10% always.
+      // 4 - 5 packets per second is therefore the fastest that we will go
+      // (256 byte packet @ 128kbit/sec takes ~20ms)
+      if (message_update_interval<150)
+	message_update_interval=150;
       
       congestion_update_time=gettime_ms()+4000;
 
