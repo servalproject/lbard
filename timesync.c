@@ -41,6 +41,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "lbard.h"
 
+long long next_time_update_allowed_after=0;
+
 int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
 {
   printf("Saw timestamp from %s: stratum=0x%02x, our stratum=0x%02x.0x%02x\n",
@@ -48,29 +50,35 @@ int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
   
   if (tv->tv_usec>999999) { tv->tv_sec++; tv->tv_usec-=1000000; }
 
-  if ((stratum<(my_time_stratum>>8))) {
-    // Found a lower-stratum time than our own, and we have enabled time
-    // slave mode, so set system time.
-    // Then update our internal timers accordingly
-    if (time_slave&&(!monitor_mode)) {
-      struct timeval before,after;
-      gettimeofday(&before,NULL);
-      settimeofday(tv,NULL);
-      gettimeofday(&after,NULL);
-      long long delta=
-	after.tv_sec*1000+(after.tv_usec/1000)
-	-
-	before.tv_sec*1000+(before.tv_usec/1000);
-      last_message_update_time+=delta;
-      congestion_update_time+=delta;
+  if (gettime_ms()>next_time_update_allowed_after) {
+    if ((stratum<(my_time_stratum>>8))) {
+      // Found a lower-stratum time than our own, and we have enabled time
+      // slave mode, so set system time.
+      // Then update our internal timers accordingly
+      if (time_slave&&(!monitor_mode)) {
+	struct timeval before,after;
+	gettimeofday(&before,NULL);
+	settimeofday(tv,NULL);
+	gettimeofday(&after,NULL);
+	long long delta=
+	  after.tv_sec*1000+(after.tv_usec/1000)
+	  -
+	  before.tv_sec*1000+(before.tv_usec/1000);
+	last_message_update_time+=delta;
+	congestion_update_time+=delta;
+
+	// Don't touch time again for a little while
+	// (Updating time possibly several times per second might upset things)
+	next_time_update_allowed_after=gettime_ms()+20000;
+      }
+      // By adding only one milli-strata, we effectively match the stratum that
+      // updated us for the next 256 UHF packet transmissions. This should give
+      // us the stability we desire.
+      printf("Saw timestamp from %s with stratum 0x%02x,"
+	     " which is better than our stratum of 0x%02x.0x%02x\n",
+	     sender_prefix,stratum,my_time_stratum>>8,my_time_stratum&0xff);
+      my_time_stratum=(stratum<<8)+1;
     }
-    // By adding only one milli-strata, we effectively match the stratum that
-    // updated us for the next 256 UHF packet transmissions. This should give
-    // us the stability we desire.
-    printf("Saw timestamp from %s with stratum 0x%02x,"
-	   " which is better than our stratum of 0x%02x.0x%02x\n",
-	   sender_prefix,stratum,my_time_stratum>>8,my_time_stratum&0xff);
-    my_time_stratum=(stratum<<8)+1;
   }
   if (monitor_mode)
     {
