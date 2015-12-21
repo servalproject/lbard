@@ -54,7 +54,8 @@ int http_server=1;
 int udp_time=0;
 int time_slave=0;
 int time_server=0;
-char time_broadcast_addr[1024]="255.255.255.255";
+// XXX - Hard-coded for mesh extenders
+char *time_broadcast_addrs[]={"10.255.255.255","192.168.2.255",NULL};
 
 
 int reboot_when_stuck=0;
@@ -138,10 +139,17 @@ int main(int argc, char **argv)
 
   char *serial_port = "/dev/null";
 
-  if ((argc==3)&&(!strcasecmp(argv[1],"monitor"))) {
-    monitor_mode=1;
-    serial_port=argv[2];
-  } else {  
+  if ((argc==3)
+      &&((!strcasecmp(argv[1],"monitor"))
+	 ||
+	 (!strcasecmp(argv[1],"monitorts"))
+	 )
+      )
+    {
+      if (!strcasecmp(argv[1],"monitorts")) time_server=1;
+      monitor_mode=1;
+      serial_port=argv[2];
+    } else {  
     if (argc<5) {
       fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <serial port> [options ...]\n");
       fprintf(stderr,"usage: lbard monitor <serial port>\n");
@@ -199,7 +207,7 @@ int main(int argc, char **argv)
       else if (!strcasecmp("timeslave",argv[n])) time_slave=1;
       else if (!strcasecmp("timemaster",argv[n])) time_server=1;
       else if (!strncasecmp("timebroadcast=",argv[n],14))
-	       strcpy(time_broadcast_addr,&argv[n][14]);
+	time_broadcast_addrs[0]=strdup(&argv[n][14]);
       else if (!strcasecmp("logrejects",argv[n])) debug_insert=1;
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
@@ -376,7 +384,7 @@ int main(int argc, char **argv)
 	// Decay my time stratum slightly
 	if (my_time_stratum<0xffff)
 	  my_time_stratum++;
-      } else my_time_stratum=1;
+      } else my_time_stratum=0x0100;
       // Send time packet
       if (udp_time&&(timesocket!=-1)) {
 	{
@@ -403,15 +411,18 @@ int main(int argc, char **argv)
 	  struct sockaddr_in addr;
 	  bzero(&addr, sizeof(addr)); 
 	  addr.sin_family = PF_INET; 
-	  addr.sin_port = htons(0x5401); 
-	  addr.sin_addr.s_addr = inet_addr(time_broadcast_addr); 
-	  sendto(timesocket,msg_out,
-		 MSG_DONTROUTE|MSG_DONTWAIT
+	  addr.sin_port = htons(0x5401);
+	  for(int i=0;time_broadcast_addrs[i];i++) {
+	    addr.sin_addr.s_addr = inet_addr(time_broadcast_addrs[i]); 
+	    sendto(timesocket,msg_out,
+		   MSG_DONTROUTE|MSG_DONTWAIT
 #ifdef MSG_NOSIGNAL
-		 |MSG_NOSIGNAL
+		   |MSG_NOSIGNAL
 #endif	       
-		 ,offset,(const struct sockaddr *)&addr,sizeof(addr));
+		   ,offset,(const struct sockaddr *)&addr,sizeof(addr));
+	  }
 	}
+	  
 	// Check for time packet
 	if (timesocket!=-1)
 	  {
