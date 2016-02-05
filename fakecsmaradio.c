@@ -183,53 +183,44 @@ int client_read_byte(int client,unsigned char byte)
 
 int main(int argc,char **argv)
 {
-  int sock=-1;
-  struct sockaddr_un server_address;
-  struct sockaddr_un client_address;
-
-  // Create bare socket
-  sock = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (sock<0) {
-    perror("Could not create server socket.\n");
+  int radio_count=2;
+  FILE *tty_file=NULL;
+  
+  if (argv&&argv[1]) radio_count=atoi(argv[1]);
+  if (argc>2) tty_file=fopen(argv[2],"w");
+  if ((argc!=3)||(!tty_file)||(radio_count<2)||(radio_count>=MAX_CLIENTS)) {
+    fprintf(stderr,"usage: fakecsmaradio <number of radios> <tty file>\n");
+    fprintf(stderr,"\nNumber of radios must be between 2 and %d.\n",MAX_CLIENTS-1);
+    fprintf(stderr,"The name of each tty will be written to <tty file>\n");
     exit(-1);
   }
 
-  // Set socket name
-  bzero(&server_address, sizeof(server_address));
-  server_address.sun_family = AF_UNIX;
-  sprintf(server_address.sun_path,"%s",socketname);
-
-  // Bind name to socket
-  unlink(socketname);
-  if (bind(sock, (const struct sockaddr *) &server_address, sizeof(server_address))<0) {
-    perror("Could not bind server socket");
-    close(sock);
-    exit(-1);
+  for(int i=0;i<radio_count;i++) {
+    int fd=posix_openpt(O_RDWR|O_NOCTTY);
+    if (fd<0) {
+      perror("posix_openpt");
+      exit(-1);
+    }
+    grantpt(fd);
+    unlockpt(fd);
+    fcntl(fd,F_SETFL,fcntl(fd, F_GETFL, NULL)|O_NONBLOCK);
+    fprintf(tty_file,"%s\n",ptsname(fd));
+    printf("Radio #%d is available at %s\n",client_count,ptsname(fd));
+    clients[client_count++].socket=fd;       
   }
-
-  // Set server socket non-blocking
-  set_nonblocking(sock);
-
+  fclose(tty_file);
+  
   long long last_heartbeat_time=0;
   
   // look for new clients, and for traffic from each client.
-  unsigned int client_addr_len = sizeof(client_address);
   while(1) {
     int activity=0;
     
-    // Check for new connections
-    int client_sock = accept(sock,(struct sockaddr *)&client_address,&client_addr_len);
-    if (client_sock>-1) {
-      fprintf(stderr,"New connection.\n");
-      register_client(client_sock);
-      activity++;
-    }
-
     // Read from each client, and see if we have a packet to release
     long long now = gettime_ms();
     for(int i=0;i<client_count;i++) {
       unsigned char buffer[8192];
-      size_t count = read(clients[i].socket,buffer,8192);
+      int count = read(clients[i].socket,buffer,8192);
       if (count>0) {
 	for(int j=0;j<count;j++) client_read_byte(i,buffer[j]);
 	activity++;
