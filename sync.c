@@ -74,6 +74,7 @@ struct node{
   struct node *transmit_next;
   sync_key_t key;
   uint8_t send_state;
+  uint8_t sent_count;
   struct node *children[NODE_CHILDREN];
 };
 
@@ -85,12 +86,12 @@ struct sync_state{
   unsigned sent_record_count;
   unsigned received_record_count;
   unsigned received_uninteresting;
+  unsigned progress;
   struct node root;
-  struct node *transmit_head;
-  struct node *transmit_tail;
+  struct node *transmit_ptr;
 };
 
-
+static unsigned max_retries = 1;
 
 // XOR the source key into the destination key
 // the leading prefix_len bits of the source key will be copied, the remaining bits will be XOR'd
@@ -173,13 +174,20 @@ static void sync_add_key(struct sync_state *state, const sync_key_t *key)
   struct node **node = &root;
   uint8_t min_prefix_len = prefix_len;
   state->key_count++;
+  state->progress=0;
   while(1){
     uint8_t child_index = sync_get_bits(prefix_len, PREFIX_STEP_BITS, key);
     
     if ((*node)->key.prefix_len == prefix_len){
       sync_xor_node((*node), key);
+      
       if ((*node)->send_state == SENT)
 	(*node)->send_state = NOT_SENT;
+      if ((*node)->send_state == QUEUED && (*node)->sent_count>0)
+	(*node)->send_state = DONT_SEND;
+	
+      // reset the send counter
+      (*node)->sent_count=0;
       prefix_len += PREFIX_STEP_BITS;
       min_prefix_len = prefix_len;
       node = &(*node)->children[child_index];
@@ -245,20 +253,45 @@ static size_t sync_build_message(struct sync_state *state, uint8_t *buff, size_t
 {
   size_t offset=0;
   state->sent_messages++;
+  state->progress++;
   
-  while(state->transmit_head && offset + sizeof(sync_key_t)<=len){
-    if (state->transmit_head->send_state == QUEUED){
-      bcopy(&state->transmit_head->key, &buff[offset], sizeof(sync_key_t));
+  struct node *tail = state->transmit_ptr;
+  
+  while(tail && offset + sizeof(sync_key_t)<=len){
+    struct node *head = tail->transmit_next;
+    
+    if (head->send_state == QUEUED){
+      bcopy(&head->key, &buff[offset], sizeof(sync_key_t));
       offset+=sizeof(sync_key_t);
+      head->sent_count++;
       state->sent_record_count++;
-      state->transmit_head->send_state = SENT;
-    }else if(state->transmit_head->send_state == QUEUED)
-      state->transmit_head->send_state = DONT_SEND;
-    state->transmit_head = state->transmit_head->transmit_next;
+      if (head->sent_count>=max_retries)
+	head->send_state = SENT;
+    }
+    
+    if (head->send_state == QUEUED){
+      // advance tail pointer
+      tail = head;
+    }else{
+      struct node *next = head->transmit_next;
+      head->transmit_next = NULL;
+      
+      if (head == tail || next == head){
+	// transmit loop is now empty
+	tail = NULL;
+	break;
+      }else{
+	// remove from the transmit loop
+	tail->transmit_next = next;
+      }
+    }
+    
+    // stop if we just sent everything in the loop once.
+    if (head == state->transmit_ptr)
+      break;
   }
   
-  if (!state->transmit_head)
-    state->transmit_tail = NULL;
+  state->transmit_ptr = tail;
   
   // If we don't have anything else to send, always send our root tree node
   if(offset + sizeof(sync_key_t)<=len && offset==0){
@@ -275,22 +308,23 @@ static size_t sync_build_message(struct sync_state *state, uint8_t *buff, size_t
 // the node can be added to the head or tail of the list.
 static void queue_node(struct sync_state *state, struct node *node, uint8_t head)
 {
-  if (node->send_state!=NOT_SENT)
-    return;
-    
   node->send_state = QUEUED;
+  if (node->transmit_next)
+    return;
   
-  if (!state->transmit_head){
-    state->transmit_head = state->transmit_tail = node;
-    node->transmit_next = NULL;
-  }else if (head){
-    // push onto head
-    node->transmit_next = state->transmit_head;
-    state->transmit_head = node;
+  if (node->key.prefix_len == KEY_LEN_BITS)
+    state->progress=0;
+
+  // insert this node into the transmit loop
+  if (!state->transmit_ptr){
+    state->transmit_ptr = node;
+    node->transmit_next = node;
   }else{
-    node->transmit_next = NULL;
-    state->transmit_tail->transmit_next = node;
-    state->transmit_tail = node;
+    node->transmit_next = state->transmit_ptr->transmit_next;
+    state->transmit_ptr->transmit_next = node;
+    // advance past this node to transmit it last
+    if (!head)
+      state->transmit_ptr = node;
   }
 }
 
@@ -337,6 +371,14 @@ static int cmp_key(const sync_key_t *first, const sync_key_t *second)
   return ret;
 }
 
+static void de_queue(struct node *node){
+  if (node->send_state == QUEUED)
+    node->send_state = DONT_SEND;
+  for (unsigned i=0;i<NODE_CHILDREN;i++)
+    if (node->children[i])
+      de_queue(node->children[i]);
+}
+
 // Proccess one incoming tree record.
 static void recv_key(struct sync_state *state, const sync_key_t *key)
 {
@@ -369,9 +411,8 @@ static void recv_key(struct sync_state *state, const sync_key_t *key)
     // Nothing to do if we have a node that matches.
     if (cmp_key(key, &node->key)==0){
       state->received_uninteresting++;
-      // if we queued this node, there's no point now.
-      if (node->send_state == QUEUED)
-	node->send_state = DONT_SEND;
+      // if we queued this node, there's no point sending it now.
+      de_queue(node);
       return;
     }
     
@@ -457,6 +498,7 @@ static void recv_key(struct sync_state *state, const sync_key_t *key)
     if (key->min_prefix_len <= node->key.prefix_len){
       // send all keys to the other party, except for the child @key_index
       // they don't have any of these siblings
+      state->progress=0;
       queue_leaf_nodes(state, node, key_index);
     }
     
@@ -465,6 +507,7 @@ static void recv_key(struct sync_state *state, const sync_key_t *key)
       // we know nothing about this key
       if (key->prefix_len == KEY_LEN_BITS){
 	//Yay, they told us something we didn't know.
+	state->progress=0;
 	sync_add_key(state, key);
       }else{
 	// hopefully the other party will tell us something,
@@ -544,6 +587,23 @@ static int cmp_trees(
   return ret;
 }
 
+// transmit one message from peer_index to all other peers
+int send_data(struct sync_state *peers, unsigned peer_count, unsigned peer_index)
+{
+  int ret = 1;
+  
+  uint8_t packet_buff[200];
+  size_t len = sync_build_message(&peers[peer_index], packet_buff, sizeof(packet_buff));
+  LOGF("Sending packet from %s", peers[peer_index].name);
+  for (unsigned i=0;i<peer_count;i++){
+    if (i!=peer_index){
+      sync_recv_message(&peers[i], packet_buff, len);
+      if (cmp_key(&peers[peer_index].root.key, &peers[i].root.key)!=0)
+	ret = 0;
+    }
+  }
+  return ret;
+}
 
 // test this synchronisation protocol by;
 // generating sets of keys
@@ -603,22 +663,27 @@ int main(int argc, char **argv)
   LOG("--- SYNCING ---");
   // send messages to discover missing keys
   unsigned sent=0;
+  int ret=0;
   uint8_t trees_match=0;
   
-  while(trees_match==0){
+  // TODO quick test for no progress?
+  while(trees_match==0 && ret==0){
     for (i=0;i<peer_count && trees_match==0;i++){
-      // transmit one message from peer i to all other peers
-      trees_match = 1;
-      uint8_t packet_buff[200];
-      size_t len = sync_build_message(&peers[i], packet_buff, sizeof(packet_buff));
-      sent++;
-      for (j=0;j<peer_count;j++){
-	if (i!=j){
-	  sync_recv_message(&peers[j], packet_buff, len);
-	  if (cmp_key(&peers[i].root.key, &peers[j].root.key)!=0)
-	    trees_match = 0;
+      
+      // stop if this peer has sent 20 packets and not made any progress
+      if (peers[i].progress>50){
+	LOGF("Quitting after no progress for %u packets", peers[i].progress);
+	for (j=0;j<peer_count;j++){
+	  if (i!=j)
+	    cmp_trees(&peers[i], &peers[j], &peers[i].root, &peers[j].root);
 	}
+	ret=1;
+	break;
       }
+	
+      // transmit one message from peer i to all other peers
+      trees_match = send_data(peers, peer_count, i);
+      sent++;
     }
   }
   
@@ -637,5 +702,5 @@ int main(int argc, char **argv)
     sync_clear_keys(&peers[i]);
   }
   
-  return 0;
+  return ret;
 }
