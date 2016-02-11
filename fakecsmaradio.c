@@ -49,6 +49,8 @@ int client_count=0;
 // simultaneous transmission).
 int emulated_bitrate = 128000;
 
+long long start_time;
+
 int set_nonblocking(int fd)
 {
   fcntl(fd,F_SETFL,fcntl(fd, F_GETFL, NULL)|O_NONBLOCK);
@@ -82,7 +84,6 @@ int register_client(int client_socket)
 
 int client_read_byte(int client,unsigned char byte)
 {
-  printf("  Read byte $%02x for client #%d\n",byte,client);
   switch(clients[client].rx_state) {
   case STATE_BANG:
     clients[client].rx_state=STATE_NORMAL;
@@ -123,11 +124,15 @@ int client_read_byte(int client,unsigned char byte)
 	// Set delay according to length of packet and chosen bit rate.
 	// Note that this approach means that colliding packets will cause them to
 	// fail to be delivered, which is probably a good thing
+	printf("Radio #%d sends a packet of %d bytes at T+%lldms\n",
+	       client,packet_len,gettime_ms()-start_time);
 	for(int j=0;j<client_count;j++) {
 	  if (j!=client) {
 	    bcopy(packet,clients[j].rx_queue,packet_len);
+	    long long now=gettime_ms();
 	    if (clients[j].rx_queue_len) {
-	      printf("WARNING: RX colission for radio #%d\n",j);
+	      printf("WARNING: RX colission for radio #%d (embargo time = T%+lldms, last packet = %d bytes)\n",
+		     j,now-clients[j].rx_embargo,clients[j].rx_queue_len);
 	      clients[j].rx_colission=1;
 	    } else clients[j].rx_colission=0;
 	    clients[j].rx_queue_len=packet_len;
@@ -186,6 +191,8 @@ int main(int argc,char **argv)
 {
   int radio_count=2;
   FILE *tty_file=NULL;
+
+  start_time=gettime_ms();
   
   if (argv&&argv[1]) radio_count=atoi(argv[1]);
   if (argc>2) tty_file=fopen(argv[2],"w");
@@ -234,7 +241,10 @@ int main(int argc,char **argv)
 	    write(clients[i].socket,
 		  clients[i].rx_queue,
 		  clients[i].rx_queue_len);
+	    printf("Radio #%d receives a packet of %d bytes\n",
+		   i,clients[i].rx_queue_len);
 	  }
+	  printf("Radio #%d ready to receive.\n",i);
 	  clients[i].rx_queue_len=0;
 	  clients[i].rx_colission=0;
 	  activity++;
