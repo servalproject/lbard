@@ -117,22 +117,24 @@ int client_read_byte(int client,unsigned char byte)
 
 	// Work out when the packet should be delivered
 	// (include 8 bytes time for the preamble)
+	// Calculate first in usec, then divide down to ms
 	int transmission_time = 1000000*8*(8+send_bytes)/emulated_bitrate;
+	transmission_time/=1000;
 	long long delivery_time = gettime_ms()+transmission_time;
 	
 	// Queue bytes for RX by remote side.
 	// Set delay according to length of packet and chosen bit rate.
 	// Note that this approach means that colliding packets will cause them to
 	// fail to be delivered, which is probably a good thing
-	printf("Radio #%d sends a packet of %d bytes at T+%lldms\n",
-	       client,packet_len,gettime_ms()-start_time);
+	printf("Radio #%d sends a packet of %d bytes at T+%lldms (TX will take %dms)\n",
+	       client,packet_len,gettime_ms()-start_time,transmission_time);
 	for(int j=0;j<client_count;j++) {
 	  if (j!=client) {
 	    bcopy(packet,clients[j].rx_queue,packet_len);
 	    long long now=gettime_ms();
 	    if (clients[j].rx_queue_len) {
 	      printf("WARNING: RX colission for radio #%d (embargo time = T%+lldms, last packet = %d bytes)\n",
-		     j,now-clients[j].rx_embargo,clients[j].rx_queue_len);
+		     j,clients[j].rx_embargo-now,clients[j].rx_queue_len);
 	      clients[j].rx_colission=1;
 	    } else clients[j].rx_colission=0;
 	    clients[j].rx_queue_len=packet_len;
@@ -248,7 +250,12 @@ int main(int argc,char **argv)
 	  clients[i].rx_queue_len=0;
 	  clients[i].rx_colission=0;
 	  activity++;
-	}
+	} else {
+	if (clients[i].rx_embargo&&clients[i].rx_queue_len)
+	  printf("Radio #%d WAITING until T+%lld for a packet of %d bytes\n",
+		 i,clients[i].rx_embargo-now,clients[i].rx_queue_len);
+
+      }
     }
 
     if (last_heartbeat_time<(now-500)) {
