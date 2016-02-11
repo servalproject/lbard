@@ -2,7 +2,7 @@
 
 set theradio=
 set n=1
-foreach radio ( `echo /dev/cu.usbserial-*` /dev/null /dev/null )
+foreach radio ( `cat ttys.txt` `echo /dev/cu.usbserial-*` /dev/null /dev/null )
  echo "Radio $n is $radio"
  if ( $n == $1 ) then
     set theradio=$radio

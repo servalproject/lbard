@@ -82,6 +82,7 @@ int register_client(int client_socket)
 
 int client_read_byte(int client,unsigned char byte)
 {
+  printf("  Read byte $%02x for client #%d\n",byte,client);
   switch(clients[client].rx_state) {
   case STATE_BANG:
     clients[client].rx_state=STATE_NORMAL;
