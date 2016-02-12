@@ -266,6 +266,7 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 
 	packet_bytes=packet_len;
 	if (packet_bytes>MAX_PACKET_SIZE) packet_bytes=0;
+	bzero(packet_data,MAX_PACKET_SIZE);
 	packet_bytes_received=-1;
 	radio_transmissions_seen++;
       }
@@ -287,7 +288,7 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 
 	  // XXX - is the last field correct?
 	  int rs_error_count = decode_rs_8(packet_data,NULL,0,
-					   FEC_MAX_BYTES-packet_bytes);
+					   FEC_MAX_BYTES-packet_bytes+FEC_LENGTH);
 
 	  dump_bytes("received packet",packet_data,packet_bytes);
 	  
