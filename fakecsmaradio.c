@@ -82,6 +82,17 @@ int register_client(int client_socket)
   return 0;
 }
 
+int dump_bytes(char *msg,unsigned char *bytes,int length)
+{
+  fprintf(stderr,"%s:\n",msg);
+  for(int i=0;i<length;i+=16) {
+    fprintf(stderr,"%04X: ",i);
+    for(int j=0;j<16;j++) if (i+j<length) fprintf(stderr," %02X",bytes[i+j]);
+    fprintf(stderr,"\n");
+  }
+  return 0;
+}
+
 int client_read_byte(int client,unsigned char byte)
 {
   switch(clients[client].rx_state) {
@@ -128,6 +139,9 @@ int client_read_byte(int client,unsigned char byte)
 	// fail to be delivered, which is probably a good thing
 	printf("Radio #%d sends a packet of %d bytes at T+%lldms (TX will take %dms)\n",
 	       client,packet_len,gettime_ms()-start_time,transmission_time);
+
+	dump_bytes("packet",packet,packet_len);
+	
 	for(int j=0;j<client_count;j++) {
 	  if (j!=client) {
 	    bcopy(packet,clients[j].rx_queue,packet_len);
