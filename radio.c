@@ -161,7 +161,7 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   bcopy(parity,&out[offset],FEC_LENGTH);
   offset+=FEC_LENGTH;
 
-  dump_bytes("sent packet",buffer,offset);
+  // dump_bytes("sent packet",buffer,offset);
 
   
   assert( offset <= (FEC_MAX_BYTES+FEC_LENGTH) );
@@ -286,18 +286,17 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 		     radio_temperature, last_rx_rssi,
 		     packet_bytes);
 
-	  // XXX - is the last field correct?
 	  int rs_error_count = decode_rs_8(packet_data,NULL,0,
 					   FEC_MAX_BYTES-packet_bytes+FEC_LENGTH);
 
-	  dump_bytes("received packet",packet_data,packet_bytes);
+	  // dump_bytes("received packet",packet_data,packet_bytes);
 	  
 	  if (rs_error_count>=0&&rs_error_count<8) {
 	  if (0) fprintf(stderr,"CHECKPOINT: %s:%d %s() error counts = %d for packet of %d bytes.\n",
 			 __FILE__,__LINE__,__FUNCTION__,
 			 rs_error_count,packet_bytes);
 
-	  saw_message(packet_data,packet_bytes,
+	  saw_message(packet_data,packet_bytes-FEC_LENGTH,
 		      my_sid_hex,prefix,servald_server,credential);
 	  
 	  // attach presumed SID prefix
