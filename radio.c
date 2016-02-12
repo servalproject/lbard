@@ -125,6 +125,17 @@ int radio_set_tx_power(int serialfd)
   return 0;
 }
 
+int dump_bytes(char *msg,unsigned char *bytes,int length)
+{
+  fprintf(stderr,"%s:\n",msg);
+  for(int i=0;i<length;i+=16) {
+    fprintf(stderr,"%04X: ",i);
+    for(int j=0;j<16;j++) if (i+j<length) fprintf(stderr," %02X",bytes[i+j]);
+    fprintf(stderr,"\n");
+  }
+  return 0;
+}
+
 int radio_send_message(int serialfd, unsigned char *buffer,int length)
 {
   unsigned char out[3+FEC_MAX_BYTES+FEC_LENGTH+3];
@@ -141,18 +152,6 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
     return -1;
   }
   encode_rs_8(buffer,parity,FEC_MAX_BYTES-length);
-
-  // Golay encode length for safety
-  int len=length;
-  unsigned char golay_len[3];
-
-  golay_len[0]=(len&0xff)>>0;
-  golay_len[1]=(len>>8)&0x0f;
-  golay_len[2]=0;
-  golay_encode(golay_len);
-  out[offset++]=golay_len[0];
-  out[offset++]=golay_len[1];
-  out[offset++]=golay_len[2];
   
   // Then, the packet body
   bcopy(buffer,&out[offset],length);
@@ -162,23 +161,10 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   bcopy(parity,&out[offset],FEC_LENGTH);
   offset+=FEC_LENGTH;
 
-  // Finally, we encode the length again, so that we can more easily verify
-  // that we have a complete and uninterrupted packet.  To avoid ambiguity, we
-  // encode not the actual length, but a value that we know corresponds to the
-  // length, but is not a valid start of packet length.
-  // We have 12 bits to play with, and FEC_MAX_BYTES is only 223 bytes, so let's
-  // multiply the length by 13 and add (FEC_MAX_BYTES+1).  This will give a result
-  // in the range 224 - 3123 bytes.
-  len=(length*13)+FEC_MAX_BYTES+1;
-  golay_len[0]=(len&0xff)>>0;
-  golay_len[1]=(len>>8)&0x0f;
-  golay_len[2]=0;
-  golay_encode(golay_len);
-  out[offset++]=golay_len[0];
-  out[offset++]=golay_len[1];
-  out[offset++]=golay_len[2];
+  dump_bytes("sent packet",buffer,offset);
 
-  assert( offset <= (3+FEC_MAX_BYTES+FEC_LENGTH+3) );
+  
+  assert( offset <= (FEC_MAX_BYTES+FEC_LENGTH) );
 
   // Now escape any ! characters, and append !! to the end for the RFD900 CSMA
   // packetised firmware.
@@ -213,9 +199,16 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   }
 }
 
-// This need only be the maximum packet size
-#define RADIO_RXBUFFER_SIZE 1000
+// This need only be the maximum control header size
+#define RADIO_RXBUFFER_SIZE 16
 unsigned char radio_rx_buffer[RADIO_RXBUFFER_SIZE];
+
+int radio_temperature=-1;
+int last_rx_rssi=-1;
+int packet_bytes=0;
+int packet_bytes_received=0;
+#define MAX_PACKET_SIZE 255
+unsigned char packet_data[MAX_PACKET_SIZE]={0xbb};
 
 int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 {
@@ -248,7 +241,7 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
     if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0xdd)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0xec)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xce))
-      {
+      {	
 	fprintf(stderr,"GPIO ADC values = ");
 	for(int j=0;j<6;j++) {
 	  fprintf(stderr,"%s0x%02x",
@@ -263,73 +256,47 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0x55)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xaa))
       {
-	// Found RFD900 CSMA envelope
-	radio_transmissions_seen++;
-	
-	int last_rx_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-7];
-	// int average_remote_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-6];
-	int radio_temperature=radio_rx_buffer[RADIO_RXBUFFER_SIZE-5];
+	// Found RFD900 CSMA envelope: packet follows after this
 	int packet_len=radio_rx_buffer[RADIO_RXBUFFER_SIZE-4];
+	radio_temperature=radio_rx_buffer[RADIO_RXBUFFER_SIZE-5];
+	last_rx_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-7];
+
 	int buffer_space=radio_rx_buffer[RADIO_RXBUFFER_SIZE-3];
-	buffer_space+=radio_rx_buffer[RADIO_RXBUFFER_SIZE-2]*256;
+	buffer_space+=radio_rx_buffer[RADIO_RXBUFFER_SIZE-2]*256;	
 
-	message_buffer_length+=
-	  snprintf(&message_buffer[message_buffer_length],
-		   message_buffer_size-message_buffer_length,
-		   "Saw RFD900 CSMA Data frame: temp=%dC, last rx RSSI=%d, frame len=%d\n",
-		   radio_temperature, last_rx_rssi,
-		   packet_len);
+	packet_bytes=packet_len;
+	if (packet_bytes>MAX_PACKET_SIZE) packet_bytes=0;
+	packet_bytes_received=-1;
+	radio_transmissions_seen++;
+      }
 
-#define TRAILER_LEN 9
-	// Decode end of packet length field
-	int golay_end_errors;
-	int end_length=golay_decode(&golay_end_errors,&radio_rx_buffer[RADIO_RXBUFFER_SIZE-3-TRAILER_LEN])-(FEC_MAX_BYTES+1);
-	// Get actual length of packet
-	int length=end_length/13;
-	// Work out where start length will be. This will be 3+length+FEC_LENGTH+3 bytes before the end
-	// But take another 9 bytes for the radio frame trailer
-	int candidate_start_offset=
-	  RADIO_RXBUFFER_SIZE-(3+length+FEC_LENGTH+3)-TRAILER_LEN;
-	int golay_start_errors=0;
-	int start_length=golay_decode(&golay_start_errors,
-				      &radio_rx_buffer[candidate_start_offset]);
-
-	// Ignore packet if it does not satisfy !((n-FEC_MAX_BYTES-1)%13)
-	if (end_length%13) {
-	  if (message_buffer_length) message_buffer_length--; // chop NL
+    if (packet_bytes>MAX_PACKET_SIZE) packet_bytes=0;
+    if (packet_bytes) {
+      // Don't use last byte of header as first byte of packet body
+      if (packet_bytes_received<0) packet_bytes_received=0;
+      else packet_data[packet_bytes_received++]=bytes[i];
+      if (packet_bytes_received==packet_bytes)
+	{
+	  // Have whole packet
 	  message_buffer_length+=
 	    snprintf(&message_buffer[message_buffer_length],
 		     message_buffer_size-message_buffer_length,
-		     ", LENGTH MODULO CHECK FAIL (end_length=%d, mod 13 = %d, start_length=%d)\n",
-		     end_length,end_length%13,start_length);
+		     "Saw RFD900 CSMA Data frame: temp=%dC, last rx RSSI=%d, frame len=%d\n",
+		     radio_temperature, last_rx_rssi,
+		     packet_bytes);
+
+	  // XXX - is the last field correct?
+	  int rs_error_count = decode_rs_8(packet_data,NULL,0,
+					   FEC_MAX_BYTES-packet_bytes);
+
+	  dump_bytes("received packet",packet_data,packet_bytes);
 	  
-	  continue;
-	}
-	
-	// fprintf(stderr,"  This isn't a packet of %d bytes (start_length=%d)\n",
-	// length,start_length);
-	
-	// Ignore packet if the two length fields do not agree.
-	if (start_length!=length) {
-	  if (message_buffer_length) message_buffer_length--; // chop NL
-	  message_buffer_length+=
-	    snprintf(&message_buffer[message_buffer_length],
-		     message_buffer_size-message_buffer_length,
-		     ", LENGTH CHECK FAIL (start_length=%d, length=%d)\n",
-		     start_length,length);
-	  continue;
-	}
-	
-	// Now do RS check on packet contents
-	unsigned char *body = &radio_rx_buffer[candidate_start_offset+3];
-	int rs_error_count = decode_rs_8(body,NULL,0,FEC_MAX_BYTES-length);
-	
-	if (rs_error_count>=0&&rs_error_count<8) {
-	  if (0) fprintf(stderr,"CHECKPOINT: %s:%d %s() error counts = %d,%d,%d for packet of %d bytes.\n",
+	  if (rs_error_count>=0&&rs_error_count<8) {
+	  if (0) fprintf(stderr,"CHECKPOINT: %s:%d %s() error counts = %d for packet of %d bytes.\n",
 			 __FILE__,__LINE__,__FUNCTION__,
-			 golay_end_errors,rs_error_count,golay_start_errors,length);
-	  
-	  saw_message(body,length,
+			 rs_error_count,packet_bytes);
+
+	  saw_message(packet_data,packet_bytes,
 		      my_sid_hex,prefix,servald_server,credential);
 	  
 	  // attach presumed SID prefix
@@ -338,18 +305,19 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 	    snprintf(&message_buffer[message_buffer_length],
 		     message_buffer_size-message_buffer_length,
 		     ", FEC OK : sender SID=%02x%02x%02x%02x%02x%02x*\n",
-		     body[0],body[1],body[2],body[3],body[4],body[5]);
+		     packet_data[0],packet_data[1],packet_data[2],
+		     packet_data[3],packet_data[4],packet_data[5]);
 
 	  if (monitor_mode)
 	  {
 	    char sender_prefix[128];
 	    char monitor_log_buf[1024];
-	    bytes_to_prefix(&body[0],sender_prefix);
+	    bytes_to_prefix(&packet_data[0],sender_prefix);
 	    snprintf(monitor_log_buf,sizeof(monitor_log_buf),
 		     "CSMA Data frame: temp=%dC, last rx RSSI=%d,"
 		     " frame len=%d, FEC OK",
 		     radio_temperature, last_rx_rssi,
-		     packet_len);
+		     packet_bytes);
 	    
 	    monitor_log(sender_prefix,NULL,monitor_log_buf);
 	  }
@@ -361,7 +329,11 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 		     ", FEC FAIL (rs_error_count=%d)\n",
 		     rs_error_count);
 	}
-	
+
+
+	  
+	  packet_bytes=0;
+	}
       }
   }
   return 0;
