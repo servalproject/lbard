@@ -439,8 +439,8 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   
   while(offset<len) {
     if (debug_pieces) {
-      fprintf(stderr,"Saw message section with type '%c' (0x%02x) @ offset %d (between '%c' and '%c')\n",
-	      msg[offset],msg[offset],offset,msg[offset-1],msg[offset+1]);
+      fprintf(stderr,"Saw message section with type '%c' (0x%02x) @ offset %d (between '%c' and '%c') len=%d\n",
+	      msg[offset],msg[offset],offset,msg[offset-1],msg[offset+1],len);
     }
     switch(msg[offset]) {
     case 'B':
