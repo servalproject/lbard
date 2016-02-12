@@ -252,7 +252,7 @@ int main(int argc,char **argv)
 	  activity++;
 	} else {
 	if (clients[i].rx_embargo&&clients[i].rx_queue_len)
-	  printf("Radio #%d WAITING until T+%lld for a packet of %d bytes\n",
+	  printf("Radio #%d WAITING until T+%lldms for a packet of %d bytes\n",
 		 i,clients[i].rx_embargo-now,clients[i].rx_queue_len);
 
       }
