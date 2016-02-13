@@ -39,6 +39,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <assert.h>
 
 #include "lbard.h"
+#include "sync.h"
 
 struct bundle_record bundles[MAX_BUNDLES];
 int bundle_count=0;
@@ -55,6 +56,16 @@ int register_bundle(char *service,
 {
   int i,peer;
 
+  // Calculate the key required for the bundle tree used to efficiently determine which
+  // bundles a pair of peers have in common, and thus also the bundles each needs to
+  // send to the other.
+  uint8_t bundle_tree_key[SYNC_KEY_LEN];
+  // XXX - Fixed salt for now.
+  uint8_t bundle_tree_salt[SYNC_SALT_LEN]={0x00};
+  
+  bundle_calculate_tree_key(bundle_tree_key,bundle_tree_salt,
+			    bid,version,length,filehash);
+  
   // Ignore non-meshms bundles when in meshms-only mode.
   if (meshms_only) {
     if (strncasecmp("meshms",service,6)) {
