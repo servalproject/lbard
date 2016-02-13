@@ -61,6 +61,7 @@ struct peer_state {
 #define PEER_KEEPALIVE_INTERVAL 20
   int last_message_number;
 
+#ifdef SYNC_BY_BAR
   // BARs we have seen from them.
   int bundle_count;
 #define MAX_PEER_BUNDLES 100000
@@ -69,6 +70,7 @@ struct peer_state {
   long long *versions;
   unsigned char *size_bytes;
   unsigned char *insert_failures;
+#endif
 
   // Bundles this peer is transferring.
   // The bundle prioritisation algorithm means that the peer may announce pieces
@@ -102,9 +104,11 @@ struct bundle_record {
   long long version;
   char *author;
   int originated_here_p;
+#ifdef SYNC_BY_BAR
 #define TRANSMIT_NOW_TIMEOUT 2
   time_t transmit_now;
   int announce_bar_now;
+#endif
   long long length;
   char *filehash;
   char *sender;

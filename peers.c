@@ -44,18 +44,21 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 int free_peer(struct peer_state *p)
 {
   if (p->sid_prefix) free(p->sid_prefix); p->sid_prefix=NULL;
+  for(int i=0;i<4;i++) p->sid_prefix_bin[i]=0;
+#ifdef SYNC_BY_BAR
   for(int i=0;i<p->bundle_count;i++) {
     if (p->bid_prefixes[i]) free(p->bid_prefixes[i]);    
   }
-  for(int i=0;i<4;i++) p->sid_prefix_bin[i]=0;
   free(p->bid_prefixes); p->bid_prefixes=NULL;
   free(p->versions); p->versions=NULL;
   free(p->size_bytes); p->size_bytes=NULL;
   free(p->insert_failures); p->insert_failures=NULL;
+#endif
   free(p);
   return 0;
 }
 
+#ifdef SYNC_BY_BAR
 int peer_note_bar(struct peer_state *p,
 		  char *bid_prefix,long long version, char *recipient_prefix,
 		  int size_byte)
@@ -64,7 +67,7 @@ int peer_note_bar(struct peer_state *p,
 
   // Ignore bundles that are too old
   if (version<min_version) return 0;
-  
+
   if (0) {
     for(int i=0;i<p->bundle_count;i++)
       fprintf(stderr,"  bundle #%d/%d: %s* version %lld\n",
@@ -116,6 +119,8 @@ int peer_note_bar(struct peer_state *p,
   
   return 0;
 }
+#endif
+
 
 struct peer_state *peer_records[MAX_PEERS];
 int peer_count=0;
@@ -129,6 +134,7 @@ int find_peer_by_prefix(char *peer_prefix)
   return -1;
 }
 
+#ifdef SYNC_BY_BAR
 // The most interesting bundle a peer has is the smallest MeshMS bundle, if any, or
 // else the smallest bundle that it has, but that we do not have.
 // XXX - We should take into account neighbours we can see to prioritise content for
@@ -186,6 +192,7 @@ int peers_most_interesting_bundle(int peer)
   
   return best_bundle;
 }
+#endif
 
 int hex_to_val(int c)
 {
@@ -248,6 +255,7 @@ int request_segment(int peer, char *bid_prefix, int bundle_length,
 
 int last_peer_requested=0;
 
+#ifdef SYNC_BY_BAR
 int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_out)
 {
   int peer;
@@ -384,3 +392,4 @@ int bid_to_peer_bundle_index(int peer,char *bid_hex)
   }
   return -1;
 }
+#endif

@@ -120,6 +120,7 @@ int status_dump()
 
   fprintf(f,"<h2>Bundles held by peers</h2>\n<table border=1 padding=2 spacing=2><tr><th>Peer</th><th>Bundle prefix</th><th>Bundle version</th></tr>\n");
 
+#ifdef SYNC_BY_BAR
   for(peer=0;peer<peer_count;peer++) {
     // Don't show timed out peers
     if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
@@ -137,6 +138,7 @@ int status_dump()
       }
     }
   }
+#endif
   fprintf(f,"</table>\n");
   fflush(f);
 

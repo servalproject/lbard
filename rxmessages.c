@@ -93,9 +93,12 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       if (debug_pieces) fprintf(stderr,"We have version %lld of BID=%s*.  %s is offering us version %lld\n",
 	      bundles[i].version,bid_prefix,peer_prefix,version);
       if (version<=bundles[i].version) {
+#ifdef SYNC_BY_BAR
 	// We have this version already: mark it for announcement to sender,
 	// and then return immediately.
 	bundles[i].announce_bar_now=1;
+
+#endif
 	if (debug_pieces) fprintf(stderr,"We already have %s* version %lld - ignoring piece.\n",
 		bid_prefix,version);
 	return 0;
@@ -350,9 +353,11 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	char bid[32*2+1];
 	if (!manifest_extract_bid(peer_records[peer]->partials[i].manifest_segments->data,
 				  bid)) {
+#ifdef SYNC_BY_BAR
 	  int bundle=bid_to_peer_bundle_index(peer,bid);
 	  if (peer_records[peer]->insert_failures[bundle]<255)
 	    peer_records[peer]->insert_failures[bundle]++;
+#endif
 	}
       } else {
 	// Insert succeeded, so clear any failure deprioritisation (although it
@@ -360,8 +365,10 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	char bid[32*2+1];
 	if (!manifest_extract_bid(peer_records[peer]->partials[i].manifest_segments->data,
 				  bid)) {
+#ifdef SYNC_BY_BAR
 	  int bundle=bid_to_peer_bundle_index(peer,bid);
 	  peer_records[peer]->insert_failures[bundle]=0;
+#endif
 	}
       }
       // Now release this partial.
@@ -459,29 +466,40 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       offset+=4;
       size_byte=msg[offset];
       offset+=1;
+#ifdef SYNC_BY_BAR
       if (debug_pieces)
 	fprintf(stderr,
 		"Saw a BAR from %s*: %s* version %lld size byte 0x%02x"
 		" (we know of %d bundles held by that peer)\n",
 		p->sid_prefix,bid_prefix,version,size_byte,p->bundle_count);
-
+#endif
       if (monitor_mode)
       {
 	char sender_prefix[128];
 	char monitor_log_buf[1024];
 	sprintf(sender_prefix,"%s*",p->sid_prefix);
 	snprintf(monitor_log_buf,sizeof(monitor_log_buf),
-		 "BAR: BID=%s*, version 0x%010llx, %smeshms payload has %lld--%lld bytes, (%d unique)",
+		 "BAR: BID=%s*, version 0x%010llx,"
+		 " %smeshms payload has %lld--%lld bytes,"
+#ifdef SYNC_BY_BAR
+		 " (%d unique)"
+#endif
+		 ,
 		 bid_prefix,version,
 		 (size_byte&0x80)?"non-":"",
 		 (size_byte&0x7f)?(size_byte_to_length((size_byte&0x7f)-1)):0,
-		 size_byte_to_length((size_byte&0x7f))-1,
-		 p->bundle_count);	
+		 size_byte_to_length((size_byte&0x7f))-1
+#ifdef SYNC_BY_BAR
+		 ,p->bundle_count
+#endif
+		 );	
 	
 	monitor_log(sender_prefix,NULL,monitor_log_buf);
       }
 
+#ifdef SYNC_BY_BAR
       peer_note_bar(p,bid_prefix,version,recipient_prefix,size_byte);
+#endif
       break;
     case 'L':
       // Length of bundle announcement for receivers
@@ -607,7 +625,8 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	  
 	  monitor_log(sender_prefix,NULL,monitor_log_buf);
 	}
-	
+
+#ifdef SYNC_BY_BAR
 	// Are we the target SID?
 	if (!strncasecmp(my_sid,target_sid,4)) {
 	  if (debug_pull) fprintf(stderr,"  -> request is for us.\n");
@@ -644,6 +663,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	    }
 	  }
 	}
+#endif
       }
       break;
     case 'T':

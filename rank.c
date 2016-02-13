@@ -45,6 +45,7 @@ extern int debug_insert;
 extern struct bundle_record bundles[MAX_BUNDLES];
 extern int bundle_count;
 
+#ifdef SYNC_BY_BAR
 int peer_has_this_bundle_or_newer(int peer,char *bid_or_bidprefix, long long version)
 {
   // XXX - Another horrible linear search!
@@ -62,6 +63,7 @@ int peer_has_this_bundle_or_newer(int peer,char *bid_or_bidprefix, long long ver
   
   return 0;
 }
+#endif
 
 // Bigger values in this list means that factor is more important in selecting
 // which bundle to announce next.
@@ -136,7 +138,8 @@ long long calculate_bundle_intrinsic_priority(char *bid,
 	// Increase priority if we do not have positive confirmation that peer
 	// has this version of this bundle.
 	addressed_to_peer=1;
-	
+
+#ifdef SYNC_BY_BAR
 	int k;
 	for(k=0;k<peer_records[j]->bundle_count;k++) {
 	  if (!strncmp(peer_records[j]->bid_prefixes[k],bid,
@@ -153,6 +156,7 @@ long long calculate_bundle_intrinsic_priority(char *bid,
 	    }
 	  }
 	}
+#endif
 	
 	// We found who this bundle was addressed to, so there is no point looking
 	// further.
@@ -199,13 +203,16 @@ int calculate_stored_bundle_priority(int i,int versus)
       -bundles[i].last_announced_time;
     
   } else time_delta=0;
-  
+
+#ifdef SYNC_BY_BAR
   if (bundles[i].transmit_now)
     if (bundles[i].transmit_now>=time(0)) {
       this_bundle_priority+=BUNDLE_PRIORITY_TRANSMIT_NOW;
     }
+#endif
   
   int num_peers_that_dont_have_it=0;
+#ifdef SYNC_BY_BAR
   int peer;
   time_t peer_observation_time_cutoff=time(0)-PEER_KEEPALIVE_INTERVAL;
   for(peer=0;peer<peer_count;peer++) {
@@ -215,6 +222,7 @@ int calculate_stored_bundle_priority(int i,int versus)
 					 bundles[i].version))
 	num_peers_that_dont_have_it++;
   }
+#endif
   
   // We only apply the less-recently-sent priority flag if there are peers who
   // don't yet have it.
@@ -285,6 +293,7 @@ int find_highest_priority_bundle()
   return highest_priority_bundle;
 }
 
+#ifdef SYNC_BY_BAR
 int bundle_bar_counter=0;
 int find_highest_priority_bar()
 {
@@ -306,3 +315,4 @@ int find_highest_priority_bar()
   if (bundle_bar_counter>=bundle_count) bundle_bar_counter=0;
   return bundle_bar_counter;
 }
+#endif

@@ -159,9 +159,16 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   // By checking this each time we send a piece, we will automatically skip bytes
   // that we have just heard about a peer having received.
 
-  // Is the bundle a journalled bundle?
+  /* Is the bundle a journalled bundle?
+     This only works if we sync by BARs, as in sync by key mode we don't have
+     direct information about the versions of a given bundle that a peer might
+     have. That said, the peer will automatically acknowledge the bytes it has,
+     so the end result is only one wasted packet per bundle.  Not ideal, but 
+     not unreasonable either. 
+  */
   if (cached_version<0x100000000LL) {
     long long first_byte=0;
+#ifdef SYNC_BY_BAR
     int j;
     for(j=0;j<peer_count;j++) {
       if (!strncmp(bundles[bundle_number].recipient,
@@ -198,6 +205,7 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 	}	
       }
     }
+#endif    
 
     // If no peers, we can't make inferences about who has what bytes
     if (!peer_count) first_byte=0;
@@ -417,7 +425,8 @@ int update_my_message(int serialfd,
     for(int i=0;i<3;i++)
       msg_out[offset++]=(tv.tv_usec>>(i*8))&0xff;    
   }
-  
+
+#ifdef SYNC_BY_BAR
   // Put one or more BARs
   int bar_number=find_highest_priority_bar();
   if (bundle_count&&((mtu-offset)>=BAR_LENGTH)) {
@@ -457,6 +466,13 @@ int update_my_message(int serialfd,
     bar_count++;
   }
   if (debug_announce) fprintf(stderr,"bar_count=%d\n",bar_count);
+#else
+  // XXX - Sync by tree.
+  // Ask for retransmissions as required, and otherwise participate in
+  // synchronisation process.  Also send relevant content based on what we
+  // know from the sync process
+  
+#endif
 
   // Increment message counter
   message_counter++;
