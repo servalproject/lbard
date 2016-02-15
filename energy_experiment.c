@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
+#include "sync.h"
 #include "lbard.h"
 #ifdef linux
 #include <sys/ioctl.h>

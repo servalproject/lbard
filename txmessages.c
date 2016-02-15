@@ -41,6 +41,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <time.h>
 #include <sys/time.h>
 
+#include "sync.h"
 #include "lbard.h"
 
 int log2ish(int value)
@@ -58,7 +59,17 @@ long long size_byte_to_length(unsigned char size_byte)
 }
 
 
+int append_bytes(int *offset,int mtu,unsigned char *msg_out,
+		 unsigned char *data,int count)
+{
+  if (((*offset)+count)<=mtu) {
+    bcopy(data,&msg_out[*offset],count);
+    return 0;
+  }
+  return -1;
+}
 
+#ifdef SYNC_BY_BAR
 int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
 {
   // BAR consists of:
@@ -94,6 +105,7 @@ int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
   
   return 0;
 }
+#endif
 
 int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *msg,
 			  char *prefix,char *servald_server, char *credential)
@@ -352,6 +364,7 @@ int update_my_message(int serialfd,
 		      unsigned char *my_sid, int mtu,unsigned char *msg_out,
 		      char *servald_server,char *credential)
 {
+#ifdef SYNC_BY_BAR
   /* There are a few possible options here.
      1. We have no peers. In which case, there is little point doing anything.
         EXCEPT that some people might be able to hear us, even though we can't
@@ -388,6 +401,14 @@ int update_my_message(int serialfd,
 	without terribly upsetting the whole thing, unless the transport is known to be
 	reliable.
   */
+#else
+  /*
+    With sync tree method, we don't send anything other than a "here we are and this
+    is my root tree hash" by default. Only when we register a peer do we start trying
+    to talk further. We limit transmissions to syncing trees, and acknowledging frames,
+    unless there are bundles which we have identified need to be sent to them.
+  */
+#endif
 
   // Build output message
 
@@ -467,11 +488,14 @@ int update_my_message(int serialfd,
   }
   if (debug_announce) fprintf(stderr,"bar_count=%d\n",bar_count);
 #else
-  // XXX - Sync by tree.
-  // Ask for retransmissions as required, and otherwise participate in
-  // synchronisation process.  Also send relevant content based on what we
-  // know from the sync process
-  
+  /* XXX - Sync by tree.
+     Ask for retransmissions as required, and otherwise participate in
+     synchronisation process.  Also send relevant content based on what we
+     know from the sync process.
+     Basically we need to iterate through the peers and pick who to respond to.
+     We also need the sequence numbers to be recipient specific.
+  */
+  sync_by_tree_stuff_packet(&offset,mtu,msg_out);
 #endif
 
   // Increment message counter

@@ -90,7 +90,7 @@ static unsigned max_retries = 1;
 int bundle_calculate_tree_key(uint8_t bundle_tree_key[SYNC_KEY_LEN],
 			      uint8_t sync_tree_salt[SYNC_SALT_LEN],
 			      char *bid,
-			      char *version,
+			      long long version,
 			      long long length,
 			      char *filehash);
 
@@ -133,12 +133,12 @@ void sha1_initHmac(sha1nfo *s, const uint8_t* key, int keyLength);
 uint8_t* sha1_resultHmac(sha1nfo *s);
 
 // Add a new key into the state tree, XOR'ing the key into each parent node
-static void sync_add_key(struct sync_state *state, const sync_key_t *key);
+void sync_add_key(struct sync_state *state, const sync_key_t *key);
 // clear all memory used by this state
-static void sync_clear_keys(struct sync_state *state);
+void sync_clear_keys(struct sync_state *state);
 // prepare a network packet buffer, with as many queued outgoing messages that we can fit
-static size_t sync_build_message(struct sync_state *state, uint8_t *buff, size_t len);
+size_t sync_build_message(struct sync_state *state, uint8_t *buff, size_t len);
 // Process all incoming messages from this packet buffer
-static void sync_recv_message(struct sync_state *state, uint8_t *buff, size_t len);
+void sync_recv_message(struct sync_state *state, uint8_t *buff, size_t len);
 
-
+int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out);

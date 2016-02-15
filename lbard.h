@@ -70,8 +70,28 @@ struct peer_state {
   long long *versions;
   unsigned char *size_bytes;
   unsigned char *insert_failures;
-#endif
+#else
+  // Sequence number tracking for remote side
+  int last_remote_sequence_acknowledged;
+  uint16_t remote_sequence_bitmap;
 
+  // Our sequence numbers for this peer
+  int last_local_sequence_number;
+  int last_local_sequence_number_acknowledged;
+
+  // Used to indicate which packet we have been requested to retransmit to this peer.
+  int retransmit_requested;
+  int retransmition_sequence;
+
+  // Buffer for holding packets for retransmission.
+  // This is a direct mapped cache, where the slot corresponds to the bottom 4
+  // bits of the sequence number.
+  uint8_t retransmit_buffer[16][256];
+  int retransmit_lengths[16];
+  int retransmit_buffer_sequence_numbers[16];
+  // Sync state
+  struct sync_state sync_state;
+#endif
   // Bundles this peer is transferring.
   // The bundle prioritisation algorithm means that the peer may announce pieces
   // of several bundles interspersed, e.g., a large bundle may be temporarily
@@ -301,3 +321,6 @@ int bytes_to_prefix(unsigned char *bytes_in,char *prefix_out);
 int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv);
 int http_process(int socket);
 int chartohex(int c);
+int random_active_peer();
+int append_bytes(int *offset,int mtu,unsigned char *msg_out,
+		 unsigned char *data,int count);

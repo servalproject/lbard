@@ -39,6 +39,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <assert.h>
 #include <sys/time.h>
 
+#include "sync.h"
 #include "lbard.h"
 
 extern char *my_sid_hex;

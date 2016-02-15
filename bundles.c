@@ -38,8 +38,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <dirent.h>
 #include <assert.h>
 
-#include "lbard.h"
 #include "sync.h"
+#include "lbard.h"
 
 struct bundle_record bundles[MAX_BUNDLES];
 int bundle_count=0;
@@ -64,7 +64,7 @@ int register_bundle(char *service,
   uint8_t bundle_tree_salt[SYNC_SALT_LEN]={0x00};
   
   bundle_calculate_tree_key(bundle_tree_key,bundle_tree_salt,
-			    bid,version,length,filehash);
+			    bid,strtoll(version,NULL,10),length,filehash);
   
   // Ignore non-meshms bundles when in meshms-only mode.
   if (meshms_only) {

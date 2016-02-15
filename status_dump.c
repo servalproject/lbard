@@ -39,6 +39,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <fcntl.h>
 #include <time.h>
 
+#include "sync.h"
 #include "lbard.h"
 #include "serial.h"
 #include "version.h"

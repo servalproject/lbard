@@ -38,6 +38,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <dirent.h>
 #include <assert.h>
 
+#include "sync.h"
 #include "lbard.h"
 
 
@@ -54,6 +55,8 @@ int free_peer(struct peer_state *p)
   free(p->size_bytes); p->size_bytes=NULL;
   free(p->insert_failures); p->insert_failures=NULL;
 #endif
+  sync_clear_keys(&p->sync_state);
+  bzero(&p->sync_state,sizeof(struct sync_state));
   free(p);
   return 0;
 }
@@ -254,6 +257,35 @@ int request_segment(int peer, char *bid_prefix, int bundle_length,
 }
 
 int last_peer_requested=0;
+
+int random_active_peer()
+{
+  int peer;
+
+  // Work out who to ask next?
+  // (consider all peers in round-robin)
+  if (last_peer_requested>=peer_count) last_peer_requested=0;
+  peer=last_peer_requested;
+  last_peer_requested++;
+  
+  for(;peer<peer_count;peer++)
+    {
+      if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
+	continue;
+      last_peer_requested=peer;
+      return peer;
+    }
+  for(peer=0;peer<=last_peer_requested;peer++)
+    {
+      if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
+	continue;
+      last_peer_requested=peer;
+      return peer;
+    }
+
+  return -1;
+}
+
 
 #ifdef SYNC_BY_BAR
 int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_out)

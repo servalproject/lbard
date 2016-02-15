@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <string.h>
 #include <assert.h>
 
+#include "sync.h"
 #include "lbard.h"
 
 int monitor_log_message(char *log,
