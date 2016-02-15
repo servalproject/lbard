@@ -1,3 +1,32 @@
+/*
+Serval Low-bandwidth asychronous Rhizome Demonstrator.
+Copyright (C) 2016 Flinders University
+
+This program monitors a local Rhizome database and attempts
+to synchronise it over low-bandwidth declarative transports, 
+such as bluetooth name or wifi-direct service information
+messages.  It is intended to give a high priority to MeshMS
+converations among nearby nodes.
+
+The design is fully asynchronous, so a call to the update_my_message()
+function from time to time should be all that is required.
+
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
 #include <stdint.h>
 #include <stddef.h>
 #include <assert.h>
@@ -39,59 +68,6 @@ static void *allocate(size_t length){
   bzero(ret, length);
   return ret;
 }
-
-
-
-// Definitions of what a key is
-
-#define KEY_LEN 8
-#define KEY_LEN_BITS (KEY_LEN<<3)
-
-// Note PREFIX_STEP_BITS >1 hasn't been tested yet
-#define PREFIX_STEP_BITS 1
-#define NODE_CHILDREN (1<<PREFIX_STEP_BITS)
-#define INTERESTING_COUNT 16
-
-typedef struct {
-  uint8_t min_prefix_len;
-  uint8_t prefix_len;
-  uint8_t key[KEY_LEN];
-}sync_key_t;
-
-#define alloca_tohex(SRC, LEN) tohex(alloca(LEN*2+1), LEN*2+1, SRC) 
-#define alloca_sync_key(K) alloca_tohex((K)->key, KEY_LEN)
-
-
-
-// definitions for how we track the state of a set of keys
-
-#define NOT_SENT 0
-#define SENT 1
-#define QUEUED 2
-#define DONT_SEND 3
-
-struct node{
-  struct node *transmit_next;
-  sync_key_t key;
-  uint8_t send_state;
-  uint8_t sent_count;
-  struct node *children[NODE_CHILDREN];
-};
-
-struct sync_state{
-  char name[32];
-  unsigned key_count;
-  unsigned sent_root;
-  unsigned sent_messages;
-  unsigned sent_record_count;
-  unsigned received_record_count;
-  unsigned received_uninteresting;
-  unsigned progress;
-  struct node root;
-  struct node *transmit_ptr;
-};
-
-static unsigned max_retries = 1;
 
 // XOR the source key into the destination key
 // the leading prefix_len bits of the source key will be copied, the remaining bits will be XOR'd
@@ -587,6 +563,7 @@ static int cmp_trees(
   return ret;
 }
 
+#ifdef STANDALONE_MODE
 // transmit one message from peer_index to all other peers
 int send_data(struct sync_state *peers, unsigned peer_count, unsigned peer_index)
 {
@@ -704,3 +681,4 @@ int main(int argc, char **argv)
   
   return ret;
 }
+#endif
