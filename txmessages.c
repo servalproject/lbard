@@ -488,14 +488,15 @@ int update_my_message(int serialfd,
   }
   if (debug_announce) fprintf(stderr,"bar_count=%d\n",bar_count);
 #else
-  /* XXX - Sync by tree.
+  /* Sync by tree.
      Ask for retransmissions as required, and otherwise participate in
      synchronisation process.  Also send relevant content based on what we
      know from the sync process.
      Basically we need to iterate through the peers and pick who to respond to.
      We also need the sequence numbers to be recipient specific.
   */
-  sync_by_tree_stuff_packet(&offset,mtu,msg_out);
+  sync_by_tree_stuff_packet(&offset,mtu,msg_out,
+			    prefix,servald_server,credential);
 #endif
 
   // Increment message counter

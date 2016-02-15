@@ -89,8 +89,14 @@ struct peer_state {
   uint8_t retransmit_buffer[16][256];
   int retransmit_lengths[16];
   int retransmit_buffer_sequence_numbers[16];
+
   // Sync state
   struct sync_state sync_state;
+
+  // Bundle we are currently transfering to this peer
+  int tx_bundle;
+  int tx_bundle_manifest_offset;
+  int tx_bundle_body_offset;
 #endif
   // Bundles this peer is transferring.
   // The bundle prioritisation algorithm means that the peer may announce pieces
