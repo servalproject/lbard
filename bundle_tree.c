@@ -185,12 +185,29 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
   if ((remembered_sequence_number_acknowledged>=0xf0)
       &&(p->last_local_sequence_number<=0x10))
     remembered_sequence_number_acknowledged-=0x100;
+
+  // Clear any pending retransmition request, if it has been rendered redundant
+  // by this acknowledgement.
+  int retransmit_sequence=p->retransmit_sequence;
+  if ((retransmit_sequence>=0xf0)&&(p->last_local_sequence_number<=0x10))
+    retransmit_sequence-=0x100;
+  if (retransmit_sequence<=local_sequence_number_acknowledged)
+    retransmit_requested=0;
+  
   if ((local_sequence_number_acknowledged>remembered_sequence_number_acknowledged)
       &&(local_sequence_number_acknowledged<=p->last_local_sequence_number)) {
     // Acknowledgement is for a sequence number that is in the past, so
     // update our record of what has been acknowledged
     p->last_local_sequence_number_acknowledged
       =local_sequence_number_acknowledged&0xff;
+    if (local_sequence_number_acknowledged<(p->last_local_sequence_number-1)) {
+      // The acknowledgement is not, however, for our most recent message.
+      // Therefore queue retransmission of the next message that they have not
+      // received.  However, to avoid double-sending messages, we require that
+      // we have sent at least one different message inbetween.
+      p->retransmit_requested=1;
+      p->retransmition_sequence=(local_sequence_number_acknowledged+1)&0xff;
+    }
   } else {
     // If it doesn't make sense to update our record of acknowledgement, then do
     // nothing, because the other side of this protocol deals with this situation
