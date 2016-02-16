@@ -330,3 +330,4 @@ int chartohex(int c);
 int random_active_peer();
 int append_bytes(int *offset,int mtu,unsigned char *msg_out,
 		 unsigned char *data,int count);
+int sync_tree_receive_message(struct peer_state *p, unsigned char *msg);

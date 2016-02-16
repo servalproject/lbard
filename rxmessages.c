@@ -667,6 +667,15 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 #endif
       }
       break;
+    case 'S':
+      // Sync-tree synchronisation message
+
+      // process the message
+      sync_tree_receive_message(p,&msg[offset]);
+
+      // Skip over the message
+      offset+=msg[offset+1];
+      break;
     case 'T':
       // Time stamp
       {

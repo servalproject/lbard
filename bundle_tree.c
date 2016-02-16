@@ -98,9 +98,10 @@ int bundle_calculate_tree_key(uint8_t bundle_tree_key[SYNC_KEY_LEN],
   return 0;  
 }
 
+#define SYNC_SEQ_NUMBER_OFFSET 2
 int sync_update_peer_sequence_acknowledgement_field(int peer,uint8_t *msg)
 {
-  int len=5;
+  int len=SYNC_SEQ_NUMBER_OFFSET;
   // Acknowledge what we have seen from the remote side
   msg[len++]=peer_records[peer]->last_remote_sequence_acknowledged;
   msg[len++]=peer_records[peer]->remote_sequence_bitmap&0xff;
@@ -116,26 +117,115 @@ int sync_peer_window_has_space(int peer)
   if (space>0) return 1; else return 0;
 }
 
+int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
+{
+  int len=msg[1];
+    
+  // Check for the need to request retransmission of messages that we missed.
+  unsigned int sender_sequence_number=msg[4];
+  /* First, get this sequence number and the last known sequence number into a
+     compatible number space. This just consists of dealing with wrap-around in
+     the sequence number. */
+  if ((p->last_remote_sequence_acknowledged>0xe0)&&
+      (sender_sequence_number<0x20))
+    sender_sequence_number+=0x100;
+  // Is this message the next one we are hoping for?
+  if (sender_sequence_number==(p->last_remote_sequence_acknowledged+1))
+    {
+      // This is the message we were expecting
+      printf("ACKing message #%d from %s*\n",
+	     sender_sequence_number&0xff,p->sid_prefix);
+
+      // Advance acknowledged sequence by one, and shift the bitmap accordingly
+      p->last_remote_sequence_acknowledged=(sender_sequence_number&0xff);
+      p->remote_sequence_bitmap=p->remote_sequence_bitmap>>1;
+      // See if we can now advance our acknowledgement further from previously
+      // received messages.
+      while(p->remote_sequence_bitmap&1)
+	{
+	  p->last_remote_sequence_acknowledged
+	    =(p->last_remote_sequence_acknowledged+1)&0xff;
+	  p->remote_sequence_bitmap=p->remote_sequence_bitmap>>1;
+	}
+    } 
+  // Is this message one that fits in the current window?
+  // If so, update our reception bitmap.
+  else if ((sender_sequence_number>p->last_remote_sequence_acknowledged)
+	   &&((sender_sequence_number-p->last_remote_sequence_acknowledged)<16)) {
+    int bit=sender_sequence_number-p->last_remote_sequence_acknowledged;
+    if (bit>=0&&bit<16) p->remote_sequence_bitmap|=1<<bit;
+  }
+  // Is the message one that we have acknowledged quite recently?
+  // If so, ignore it.
+  else if ((sender_sequence_number<p->last_remote_sequence_acknowledged)
+	   &&((sender_sequence_number-p->last_remote_sequence_acknowledged)>-16)) {
+    ;
+  }
+  // Otherwise, if the message doesn't fit in the window, then we throw away our
+  // current window, and receive it.
+  else {
+    p->last_remote_sequence_acknowledged=(sender_sequence_number&0xff);
+    p->remote_sequence_bitmap=0;
+  }
+    
+  // See if they have missed message(s) from us, in which case we should
+  // mark the first message that they are indicating that they have not seen.
+  unsigned int local_sequence_number_acknowledged=msg[5];
+  // Similarly for the remote sequence number, we have to get the two sequence numbers
+  // into the same number space.  Here the remote sequence number should always be
+  // less than our local one.  Thus we translate the received value to a negative
+  // value if we have recently wrapped around.
+  if ((local_sequence_number_acknowledged>=0xf0)
+      &&(p->last_local_sequence_number<=0x10))
+    local_sequence_number_acknowledged-=0x100;
+  // Similarly we have to translate our memory of the last of our messages that has
+  // been acknowledged
+  int remembered_sequence_number_acknowledged
+    =p->last_local_sequence_number_acknowledged;
+  if ((remembered_sequence_number_acknowledged>=0xf0)
+      &&(p->last_local_sequence_number<=0x10))
+    remembered_sequence_number_acknowledged-=0x100;
+  if ((local_sequence_number_acknowledged>remembered_sequence_number_acknowledged)
+      &&(local_sequence_number_acknowledged<=p->last_local_sequence_number)) {
+    // Acknowledgement is for a sequence number that is in the past, so
+    // update our record of what has been acknowledged
+    p->last_local_sequence_number_acknowledged
+      =local_sequence_number_acknowledged&0xff;
+  } else {
+    // If it doesn't make sense to update our record of acknowledgement, then do
+    // nothing, because the other side of this protocol deals with this situation
+    // by updating their understanding of our window.
+    ;
+  }
+  
+  // Pull out the sync tree message for processing.
+#define SYNC_MSG_HEADER_LEN 6
+  int sync_bytes=len-SYNC_MSG_HEADER_LEN;
+  sync_recv_message(&p->sync_state,&msg[6], sync_bytes);
+  
+  return 0;
+}
+
 int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out,int peer)
 {         
   uint8_t msg[256];
   int len=0;
   msg[len++]='S'; // Sync message
-  // SID prefix of recipient
-  msg[len++]=peer_records[peer]->sid_prefix_bin[0];
-  msg[len++]=peer_records[peer]->sid_prefix_bin[1];
-  msg[len++]=peer_records[peer]->sid_prefix_bin[2];
+  int length_byte_offset=len;
+  msg[len++]=0; // place holder for length
   // Sequence number (our side)
   peer_records[peer]->last_local_sequence_number++;
   peer_records[peer]->last_local_sequence_number&=0xff;
+  assert(len==SYNC_SEQ_NUMBER_OFFSET);
   msg[len++]=peer_records[peer]->last_local_sequence_number;
   // Acknowledge what we have seen from the remote side
   msg[len++]=peer_records[peer]->last_remote_sequence_acknowledged;
-  msg[len++]=peer_records[peer]->remote_sequence_bitmap&0xff;
-  msg[len++]=(peer_records[peer]->remote_sequence_bitmap>>8)&0xff;
+  assert(len==SYNC_MSG_HEADER_LEN);
   int used=sync_build_message(&peer_records[peer]->sync_state,
 			      &msg[len],256-len);
   len+=used;
+  // Record the length of the field
+  msg[length_byte_offset]=len;
   append_bytes(offset,mtu,msg_out,msg,len);
   return 0;
 }
