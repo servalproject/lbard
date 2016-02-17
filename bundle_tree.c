@@ -464,10 +464,6 @@ int sync_tree_prepare_tree(int peer)
   return 0;
 }
 
-XXX - Implement sending of bundle pieces based on sync data discoveries (set tx_bundle based on sync tree discoveries, and when completion of transmition is acknowledged).
-
-XXX - Implement telling sender when they send data that we already have (including announcing when we have received the entirety of a bundle).
-
 void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
 						   uint8_t key[SYNC_KEY_LEN])
 {
@@ -475,7 +471,7 @@ void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
   // XXX - Linear search! Should just put peer number into the sync_state structure!
   int peer;
   for(peer=0;peer<peer_count;peer++)
-    if (state==p->sync_state) break;
+    if (state==&peer_records[peer]->sync_state) break;
   if (peer>=peer_count) return;
 
   // Have peer, now lookup bundle ID and priority, and add it to our transmission
@@ -484,11 +480,11 @@ void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
   if (bundle_number<0) return;
 
   // If nothing in the TX queue, just add it.
-  if (peers[peer].tx_bundle==-1) {
-    peers[peer].tx_bundle=bundle_number;
-    peers[peer].tx_bundle_body_offset=0;
-    peers[peer].tx_bundle_manifest_offset=0;
-    peers[peer].tx_bundle_priority=
+  if (peer_records[peer]->tx_bundle==-1) {
+    peer_records[peer]->tx_bundle=bundle_number;
+    peer_records[peer]->tx_bundle_body_offset=0;
+    peer_records[peer]->tx_bundle_manifest_offset=0;
+    peer_records[peer]->tx_bundle_priority=
       calculate_bundle_intrinsic_priority
       (bundles[bundle_number].bid,
        bundles[bundle_number].length,
@@ -501,3 +497,8 @@ void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
   
   return;
 }
+
+
+XXX - Implement sending of bundle pieces based on sync data discoveries (set tx_bundle based on sync tree discoveries, and when completion of transmition is acknowledged).
+
+XXX - Implement telling sender when they send data that we already have (including announcing when we have received the entirety of a bundle).
