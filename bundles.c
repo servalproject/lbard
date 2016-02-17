@@ -63,9 +63,7 @@ int register_bundle(char *service,
   uint8_t bundle_tree_salt[SYNC_SALT_LEN]={0xa9,0x1b,0x8d,0x11,0xdd,0xee,0x20,0xd0};
   
   bundle_calculate_tree_key(bundle_sync_key,bundle_tree_salt,
-			    bid,strtoll(version,NULL,10),length,filehash);
-  
-  
+			    bid,strtoll(version,NULL,10),length,filehash);   
   
   // Ignore non-meshms bundles when in meshms-only mode.
   if (meshms_only) {
@@ -165,6 +163,17 @@ int register_bundle(char *service,
   bundles[bundle_number].sender=strdup(sender);
   bundles[bundle_number].recipient=strdup(recipient);
   bcopy(bundle_sync_key,bundles[bundle_number].sync_key,SYNC_KEY_LEN);
+
+  // Add sync key to hash table for quickly finding a bundle from its sync key
+  int sync_key_bin=((bundle_sync_key[0]<<8)|bundle_sync_key[1])&SYNC_BIN_MASK;
+  for(i=0;i<SYNC_BIN_SLOTS;i++) {
+    if (sync_key_hash_table[sync_key_bin].bundle_numbers[i]==bundle_number) break;
+    if (!sync_key_hash_table[sync_key_bin].bundle_numbers[i]) {
+      sync_key_hash_table[sync_key_bin].bundle_numbers[i]=bundle_number;
+      break;
+    }
+  }
+  assert(i<SYNC_BIN_SLOTS);
   
   rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
 	      "Bundle registered");

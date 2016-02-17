@@ -211,6 +211,27 @@ extern int peer_count;
 extern struct bundle_record bundles[MAX_BUNDLES];
 extern int bundle_count;
 
+#define SYNC_BINS 4096
+#define SYNC_BIN_MASK 0xfff
+#if (SYNC_BIN_MASK!=SYNC_BINS-1)
+#error "Fix SYNC_BINS and/or SYNC_BIN_MASK"
+#endif
+#if ((SYNC_BINS*2-1)!=(SYNC_BINS|SYNC_BIN_MASK))
+#error "Fix SYNC_BINS, SYNC_BIN_MASK"
+#endif
+#define SYNC_BIN_SLOTS 10
+// Make sure hash table is unlikely to ever overflow
+#if (SYNC_BINS*SYNC_BIN_SLOTS) < (4*MAX_BUNDLES)
+#error "Fix this"
+#endif
+struct sync_key_hash_bin {
+  // XXX - we could include something to avoid having to look up the BID from
+  // each candidate match, so that we can avoid the random-memory lookup that
+  // it entails
+  unsigned int bundle_numbers[SYNC_BIN_SLOTS];  
+};
+extern struct sync_key_hash_bin sync_key_hash_table[SYNC_BINS];
+
 extern char *bid_of_cached_bundle;
 extern long long cached_version;
 // extern int cached_manifest_len;
