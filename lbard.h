@@ -134,6 +134,8 @@ struct bundle_record {
 #define TRANSMIT_NOW_TIMEOUT 2
   time_t transmit_now;
   int announce_bar_now;
+#else
+  uint8_t sync_key[SYNC_KEY_LEN];
 #endif
   long long length;
   char *filehash;

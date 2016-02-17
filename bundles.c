@@ -59,12 +59,13 @@ int register_bundle(char *service,
   // Calculate the key required for the bundle tree used to efficiently determine which
   // bundles a pair of peers have in common, and thus also the bundles each needs to
   // send to the other.
-  uint8_t bundle_tree_key[SYNC_KEY_LEN];
-  // XXX - Fixed salt for now.
-  uint8_t bundle_tree_salt[SYNC_SALT_LEN]={0x00};
+  uint8_t bundle_sync_key[SYNC_KEY_LEN];
+  uint8_t bundle_tree_salt[SYNC_SALT_LEN]={0xa9,0x1b,0x8d,0x11,0xdd,0xee,0x20,0xd0};
   
-  bundle_calculate_tree_key(bundle_tree_key,bundle_tree_salt,
+  bundle_calculate_tree_key(bundle_sync_key,bundle_tree_salt,
 			    bid,strtoll(version,NULL,10),length,filehash);
+  
+  
   
   // Ignore non-meshms bundles when in meshms-only mode.
   if (meshms_only) {
@@ -163,7 +164,8 @@ int register_bundle(char *service,
   bundles[bundle_number].filehash=strdup(filehash);
   bundles[bundle_number].sender=strdup(sender);
   bundles[bundle_number].recipient=strdup(recipient);
-
+  bcopy(bundle_sync_key,bundles[bundle_number].sync_key,SYNC_KEY_LEN);
+  
   rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
 	      "Bundle registered");
   return 0;
