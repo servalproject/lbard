@@ -95,6 +95,7 @@ struct peer_state {
 
   // Bundle we are currently transfering to this peer
   int tx_bundle;
+  int tx_bundle_priority;
   int tx_bundle_manifest_offset;
   int tx_bundle_body_offset;
 #endif
@@ -354,3 +355,4 @@ int random_active_peer();
 int append_bytes(int *offset,int mtu,unsigned char *msg_out,
 		 unsigned char *data,int count);
 int sync_tree_receive_message(struct peer_state *p, unsigned char *msg);
+int lookup_bundle_by_sync_key(uint8_t bundle_sync_key[SYNC_KEY_LEN]);

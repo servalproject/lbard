@@ -471,6 +471,33 @@ XXX - Implement telling sender when they send data that we already have (includi
 void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
 						   uint8_t key[SYNC_KEY_LEN])
 {
-  // XXX - find the peer by looking at sync_state
+  // Find the peer by looking at sync_state
+  // XXX - Linear search! Should just put peer number into the sync_state structure!
+  int peer;
+  for(peer=0;peer<peer_count;peer++)
+    if (state==p->sync_state) break;
+  if (peer>=peer_count) return;
+
+  // Have peer, now lookup bundle ID and priority, and add it to our transmission
+  // queue, if it isn't already there.
+  int bundle_number = lookup_bundle_by_sync_key(key);
+  if (bundle_number<0) return;
+
+  // If nothing in the TX queue, just add it.
+  if (peers[peer].tx_bundle==-1) {
+    peers[peer].tx_bundle=bundle_number;
+    peers[peer].tx_bundle_body_offset=0;
+    peers[peer].tx_bundle_manifest_offset=0;
+    peers[peer].tx_bundle_priority=
+      calculate_bundle_intrinsic_priority
+      (bundles[bundle_number].bid,
+       bundles[bundle_number].length,
+       bundles[bundle_number].version,
+       bundles[bundle_number].service,
+       bundles[bundle_number].recipient,
+       0);
+    return;
+  }
+  
   return;
 }

@@ -119,6 +119,12 @@ int register_bundle(char *service,
   }
 
   if (bundle_number>=MAX_BUNDLES) return -1;
+
+  if (!bundle_count) {
+    // Clear sync key hash table when inserting first bundle
+    for(int i=0;i<SYNC_BINS;i++)
+      bzero(&sync_key_hash_table[i],sizeof(struct sync_key_hash_bin));
+  }
   
   if (bundle_number<bundle_count) {
     // Replace old bundle values, ...
@@ -163,8 +169,10 @@ int register_bundle(char *service,
   bundles[bundle_number].sender=strdup(sender);
   bundles[bundle_number].recipient=strdup(recipient);
   bcopy(bundle_sync_key,bundles[bundle_number].sync_key,SYNC_KEY_LEN);
-
-  // Add sync key to hash table for quickly finding a bundle from its sync key
+  
+  // Add sync key to hash table for quickly finding a bundle from its sync key.
+  // ZERO means empty. We don't store an entry for bundle 0, since it will implicitly
+  // be found (see lookup_bundle_by_sync_key below)
   int sync_key_bin=((bundle_sync_key[0]<<8)|bundle_sync_key[1])&SYNC_BIN_MASK;
   for(i=0;i<SYNC_BIN_SLOTS;i++) {
     if (sync_key_hash_table[sync_key_bin].bundle_numbers[i]==bundle_number) break;
@@ -179,6 +187,19 @@ int register_bundle(char *service,
 	      "Bundle registered");
   return 0;
 }
+
+int lookup_bundle_by_sync_key(uint8_t bundle_sync_key[SYNC_KEY_LEN])
+{
+  int sync_key_bin=((bundle_sync_key[0]<<8)|bundle_sync_key[1])&SYNC_BIN_MASK;
+  for(int i=0;i<SYNC_BIN_SLOTS;i++) {
+    int candidate=sync_key_hash_table[sync_key_bin].bundle_numbers[i];
+    if (!candidate) break;
+    if (!bcmp(bundle_sync_key,bundles[candidate].sync_key,SYNC_KEY_LEN))
+      return candidate;
+  }
+  return -1;  
+}
+
 
 int we_have_this_bundle(char *bid_prefix, long long version)
 {
