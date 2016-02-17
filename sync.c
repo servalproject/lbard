@@ -288,8 +288,10 @@ static void queue_node(struct sync_state *state, struct node *node, uint8_t head
   if (node->transmit_next)
     return;
   
-  if (node->key.prefix_len == KEY_LEN_BITS)
+  if (node->key.prefix_len == KEY_LEN_BITS) {
+    sync_tree_suspect_peer_does_not_have_this_key(state, node->key.key);
     state->progress=0;
+  }
 
   // insert this node into the transmit loop
   if (!state->transmit_ptr){

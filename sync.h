@@ -144,3 +144,5 @@ void sync_recv_message(struct sync_state *state, uint8_t *buff, size_t len);
 int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 			      char *sid_prefix_bin,
 			      char *servald_server,char *credential);
+void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
+						   uint8_t key[SYNC_KEY_LEN]);
