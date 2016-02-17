@@ -98,6 +98,16 @@ struct peer_state {
   int tx_bundle_priority;
   int tx_bundle_manifest_offset;
   int tx_bundle_body_offset;
+
+  /* Bundles we want to send to this peer
+     In theory, we can have a relatively short queue, since we intend to rebuild the
+     tree periodically. Thus any bundles received will cause the new sync process to
+     not insert those in the TX queue, and thus allow the transfer of the next 
+     MAX_TXQUEUE_LEN highest priority bundles. */
+#define MAX_TXQUEUE_LEN 100
+  int tx_queue_len; 
+  int tx_queue_bundles[MAX_TXQUEUE_LEN];
+  int tx_queue_priorities[MAX_TXQUEUE_LEN];
 #endif
   // Bundles this peer is transferring.
   // The bundle prioritisation algorithm means that the peer may announce pieces
@@ -180,7 +190,7 @@ typedef struct bundle_data {
   char sender[32*2+1];
   char recipient[32*2+1];
 } bundle_data;
-
+  
 typedef struct bundle_node {
   // Do we have the bundle?
   // If the node exists, we must have the BAR, because we can make the BAR from a
@@ -356,3 +366,4 @@ int append_bytes(int *offset,int mtu,unsigned char *msg_out,
 		 unsigned char *data,int count);
 int sync_tree_receive_message(struct peer_state *p, unsigned char *msg);
 int lookup_bundle_by_sync_key(uint8_t bundle_sync_key[SYNC_KEY_LEN]);
+int peer_queue_bundle_tx(int peer,int bundle, int priority);

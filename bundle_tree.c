@@ -479,26 +479,40 @@ void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
   int bundle_number = lookup_bundle_by_sync_key(key);
   if (bundle_number<0) return;
 
+  int priority=calculate_bundle_intrinsic_priority(bundles[bundle_number].bid,
+						   bundles[bundle_number].length,
+						   bundles[bundle_number].version,
+						   bundles[bundle_number].service,
+						   bundles[bundle_number].recipient,
+						   0);
+  // TX queue has something in it.
+  if (peer_records[peer]->tx_bundle>=0) {
+    if (priority>peer_records[peer]->tx_bundle_priority) {
+      // Bump current tx_bundle to TX queue, and substitute with this one.
+      // (substitution happens below)
+      peer_queue_bundle_tx(peer,peer_records[peer]->tx_bundle,
+			   peer_records[peer]->tx_bundle_priority);
+      peer_records[peer]->tx_bundle=-1;
+    } else {
+      // Bump new bundle to TX queue
+      peer_queue_bundle_tx(peer,bundle_number,priority);
+    }
+  }
+
   // If nothing in the TX queue, just add it.
+  // (also used to putting new bundle in the current TX slot if there was something
+  // lower priority in there previously.)
   if (peer_records[peer]->tx_bundle==-1) {
     peer_records[peer]->tx_bundle=bundle_number;
     peer_records[peer]->tx_bundle_body_offset=0;
     peer_records[peer]->tx_bundle_manifest_offset=0;
-    peer_records[peer]->tx_bundle_priority=
-      calculate_bundle_intrinsic_priority
-      (bundles[bundle_number].bid,
-       bundles[bundle_number].length,
-       bundles[bundle_number].version,
-       bundles[bundle_number].service,
-       bundles[bundle_number].recipient,
-       0);
+    peer_records[peer]->tx_bundle_priority=priority;
     return;
   }
   
   return;
 }
 
+XXX - Implement telling sender when they send data that we already have (including announcing when we have received the entirety of a bundle), so that they can update their positions in the bundle they are sending, or remove that bundle from their TX queue.
 
-XXX - Implement sending of bundle pieces based on sync data discoveries (set tx_bundle based on sync tree discoveries, and when completion of transmition is acknowledged).
-
-XXX - Implement telling sender when they send data that we already have (including announcing when we have received the entirety of a bundle).
+XXX - Implement culling items from TX queue when we know that the peer has them

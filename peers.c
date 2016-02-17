@@ -425,3 +425,27 @@ int bid_to_peer_bundle_index(int peer,char *bid_hex)
   return -1;
 }
 #endif
+
+int peer_queue_bundle_tx(int peer,int bundle, int priority)
+{
+  // Find point of insertion
+  int i;
+  for(i=0;i<peer_records[peer]->tx_queue_len;i++) 
+    if (peer_records[peer]->tx_queue_priorities[i]<priority) break;
+  // Fail on insertion if the queue is already full of higher priority stuff.
+  if (i>=MAX_TXQUEUE_LEN) return -1;
+  // Shift rest of list down
+  bcopy(&peer_records[peer]->tx_queue_priorities[i],
+	&peer_records[peer]->tx_queue_priorities[i+1],
+	sizeof(int)*(peer_records[peer]->tx_queue_len-i));
+  bcopy(&peer_records[peer]->tx_queue_bundles[i],
+	&peer_records[peer]->tx_queue_bundles[i+1],
+	sizeof(int)*(peer_records[peer]->tx_queue_len-i));
+  // Write new entry
+  peer_records[peer]->tx_queue_bundles[i]=bundle;
+  peer_records[peer]->tx_queue_priorities[i]=priority;
+  if (i>=peer_records[peer]->tx_queue_len)
+    peer_records[peer]->tx_queue_len=i+1;
+  return 0;
+}
+
