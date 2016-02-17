@@ -188,11 +188,11 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
 
   // Clear any pending retransmition request, if it has been rendered redundant
   // by this acknowledgement.
-  int retransmit_sequence=p->retransmit_sequence;
+  int retransmit_sequence=p->retransmition_sequence;
   if ((retransmit_sequence>=0xf0)&&(p->last_local_sequence_number<=0x10))
     retransmit_sequence-=0x100;
   if (retransmit_sequence<=local_sequence_number_acknowledged)
-    retransmit_requested=0;
+    p->retransmit_requested=0;
   
   if ((local_sequence_number_acknowledged>remembered_sequence_number_acknowledged)
       &&(local_sequence_number_acknowledged<=p->last_local_sequence_number)) {
@@ -453,27 +453,24 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 
 int sync_tree_prepare_tree(int peer)
 {
-  // Default fixed salt.
-  uint8_t sync_tree_salt[SYNC_SALT_LEN]={0xa9,0x1b,0x8d,0x11,0xdd,0xee,0x20,0xd0};
-
   // Clear tree
   bzero(&peer_records[peer]->sync_state,sizeof(peer_records[peer]->sync_state));
   
   for(int i=0;i<bundle_count;i++) {
     sync_key_t key;
-    bundle_calculate_tree_key(key.key,
-			      sync_tree_salt,
-			      bundles[i].bid,
-			      bundles[i].version,
-			      bundles[i].length,
-			      bundles[i].filehash);
+    bcopy(bundles[i].sync_key,key.key,SYNC_KEY_LEN);
     sync_add_key(&peer_records[peer]->sync_state,&key);
   }
   return 0;
 }
 
-XXX - Implement quasi-reliable receipt of packets from peers (out of order delivery is fine, provided that we get the omitted frames eventually. lost frames affect efficiency, not completeness of procedure)
+XXX - Implement sending of bundle pieces based on sync data discoveries (set tx_bundle based on sync tree discoveries, and when completion of transmition is acknowledged).
 
-XXX - Implement sending of bundle pieces based on sync data discoveries.
+XXX - Implement telling sender when they send data that we already have (including announcing when we have received the entirety of a bundle).
 
-XXX - Implement telling sender when they send data that we already have.
+void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
+						   uint8_t key[SYNC_KEY_LEN])
+{
+  // XXX - find the peer by looking at sync_state
+  return;
+}
