@@ -391,6 +391,17 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 	peer_records[peer]->tx_bundle_body_offset+=bytes;      
     }
   }
+
+  // If we have sent to the end of the bundle, then start again from the beginning,
+  // until the peer acknowledges that they have received it all (or tells us to
+  // start sending again from a different part of the bundle).
+  if ((peer_records[peer]->tx_bundle_body_offset>=bundles[bundle_number].length)
+      &&(peer_records[peer]->tx_bundle_manifest_offset>=1024))
+    {
+      peer_records[peer]->tx_bundle_body_offset=0;
+      peer_records[peer]->tx_bundle_manifest_offset=0;
+    }
+  
   return 0;
 }
 
