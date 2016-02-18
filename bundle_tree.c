@@ -41,6 +41,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+struct sync_key_hash_bin sync_key_hash_table[SYNC_BINS];
+
 int bundle_calculate_tree_key(uint8_t bundle_tree_key[SYNC_KEY_LEN],
 			      uint8_t sync_tree_salt[SYNC_SALT_LEN],
 			      char *bid,
