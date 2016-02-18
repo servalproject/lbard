@@ -259,7 +259,8 @@ extern int meshms_only;
 extern long long min_version;
 extern int time_slave;
 
-int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
+int saw_piece(char *peer_prefix,int for_me,
+	      char *bid_prefix,long long version,
 	      long long piece_offset,int piece_bytes,int is_end_piece,
 	      int is_manifest_piece,unsigned char *piece,
 
@@ -289,7 +290,8 @@ int peer_note_bar(struct peer_state *p,
 		  char *bid_prefix,long long version, char *recipient_prefix,
 		  int size_byte);
 int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *msg,
-			  char *prefix,char *servald_server, char *credential);
+			  char *prefix,char *servald_server, char *credential,
+			  int target_peer);
 int update_my_message(int serialfd,
 		      unsigned char *my_sid, int mtu,unsigned char *msg_out,
 		      char *servald_server,char *credential);
@@ -367,3 +369,4 @@ int append_bytes(int *offset,int mtu,unsigned char *msg_out,
 int sync_tree_receive_message(struct peer_state *p, unsigned char *msg);
 int lookup_bundle_by_sync_key(uint8_t bundle_sync_key[SYNC_KEY_LEN]);
 int peer_queue_bundle_tx(int peer,int bundle, int priority);
+int sync_parse_ack(struct peer_state *p,unsigned char *msg);

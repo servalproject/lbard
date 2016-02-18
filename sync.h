@@ -146,3 +146,5 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 			      char *servald_server,char *credential);
 void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
 						   uint8_t key[SYNC_KEY_LEN]);
+int sync_tell_peer_we_have_this_bundle(int peer, int bundle);
+int sync_schedule_progress_report(int peer, int partial);

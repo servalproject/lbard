@@ -227,6 +227,17 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out,int peer)
 {         
   uint8_t msg[256];
   int len=0;
+
+  /* incidate to sender if the last piece of a bundle they sent was not useful,
+     e.g., if we already have the complete bundle.  We want, however, to restrict
+     this to only those transmissions directed at us. Transmissions directed at others
+     are fine for us to listen in on opportunistically, but since they are directed at
+     others, we shouldn't waste bytes telling the sender information that they will
+     ignore in any case. This means that we need to understand who a transmission is
+     directed to.  */
+  XXX - do this
+
+  /* Send sync status message */
   msg[len++]='S'; // Sync message
   int length_byte_offset=len;
   msg[len++]=0; // place holder for length
@@ -235,21 +246,27 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out,int peer)
   peer_records[peer]->last_local_sequence_number&=0xff;
   assert(len==SYNC_SEQ_NUMBER_OFFSET);
   msg[len++]=peer_records[peer]->last_local_sequence_number;
-  // Acknowledge what we have seen from the remote side
+  // Acknowledge what we have seen from the remote side, i.e., sequence number of
+  // message, as compared to partial bundle transfer status, which we send separately
+  // and outside of the packet-loss resistent scheme, since stale progress reports
+  // are counterproductive.
   msg[len++]=peer_records[peer]->last_remote_sequence_acknowledged;
   assert(len==SYNC_MSG_HEADER_LEN);
+
   int used=sync_build_message(&peer_records[peer]->sync_state,
 			      &msg[len],256-len);
   len+=used;
   // Record the length of the field
   msg[length_byte_offset]=len;
   append_bytes(offset,mtu,msg_out,msg,len);
+  
   return 0;
 }
 
 int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 				  unsigned char *p, int is_manifest,
-				  int *offset,int mtu,unsigned char *msg)
+				  int *offset,int mtu,unsigned char *msg,
+				  int target_peer)
 {
   int max_bytes=mtu-(*offset)-21;
   int bytes_available=len-start_offset;
@@ -282,13 +299,16 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   if (is_manifest) offset_compound|=0x80000000;
   offset_compound|=((start_offset>>20LL)&0xffffLL)<<32LL;
 
-  // Now write the 21/23 byte header and actual bytes into output message
+  // Now write the 23/25 byte header and actual bytes into output message
   // BID prefix (8 bytes)
   if (start_offset>0xfffff)
     msg[(*offset)++]='P'+end_of_item;
   else 
     msg[(*offset)++]='p'+end_of_item;
-  
+
+  // Intended recipient
+  msg[(*offset)++]=peer_records[target_peer]->sid_prefix[0];
+  msg[(*offset)++]=peer_records[target_peer]->sid_prefix[1];
   
   for(int i=0;i<8;i++)
     msg[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);
@@ -348,7 +368,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
       sync_append_some_bundle_bytes(bundle_number,start_offset,
 				    cached_manifest_encoded_len,
 				    &cached_manifest_encoded[start_offset],1,
-				    offset,mtu,msg);
+				    offset,mtu,msg,peer);
     if (bytes>0)
       peer_records[peer]->tx_bundle_manifest_offset+=bytes;
     // Mark manifest all sent once we get to the end
@@ -385,7 +405,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
       int bytes =
 	sync_append_some_bundle_bytes(bundle_number,start_offset,cached_body_len,
 				      &cached_body[start_offset],0,
-				      offset,mtu,msg);
+				      offset,mtu,msg,peer);
 
       if (bytes>0)
 	peer_records[peer]->tx_bundle_body_offset+=bytes;      
@@ -426,6 +446,12 @@ int sync_tree_send_data(int *offset,int mtu, unsigned char *msg_out,int peer,
   return 0;
 }
 
+#define REPORT_QUEUE_LEN 32
+#define MAX_REPORT_LEN 16
+int report_queue_length=0;
+uint8_t report_queue[REPORT_QUEUE_LEN][MAX_REPORT_LEN];
+uint8_t report_lengths[REPORT_QUEUE_LEN];
+
 int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 			      char *sid_prefix_bin,
 			      char *servald_server,char *credential)
@@ -433,6 +459,14 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
   // Stuff packet as full as we can with data for as many peers as we can.
   // In practice, we will likely fill it on the first peer, but let's not
   // waste a packet if we have something we can stuff in.
+
+  // First of all, tell any peers any acknowledgement messages that are required.
+  while (report_queue_length&&((*offset)<(mtu-MAX_REPORT_LEN))) {
+    append_bytes(offset,mtu,msg_out,report_queue[report_queue_length-1],
+		 report_lengths[report_queue_length-1]);
+    report_queue_length--;
+  } 
+  
   int count=10;
   while((*offset)<(mtu-16)) {
     if ((count--)<0) break;
@@ -524,6 +558,145 @@ void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
   return;
 }
 
-XXX - Implement telling sender when they send data that we already have (including announcing when we have received the entirety of a bundle), so that they can update their positions in the bundle they are sending, or remove that bundle from their TX queue.
+int sync_tell_peer_we_have_this_bundle(int peer, int bundle)
+{
+  int slot=report_queue_length;
+  if (slot>=REPORT_QUEUE_LEN) slot=random()%REPORT_QUEUE_LEN;
+  int ofs=0;
+  report_queue[slot][ofs++]='A';
+  // BID prefix
+  for(int i=0;i<8;i++) report_queue[slot][ofs++]=bundles[bundle].bid[i];
+  // manifest and body offset
+  report_queue[slot][ofs++]=0xff;
+  report_queue[slot][ofs++]=0xff;
 
-XXX - Implement culling items from TX queue when we know that the peer has them
+  report_queue[slot][ofs++]=0xff;
+  report_queue[slot][ofs++]=0xff;
+  report_queue[slot][ofs++]=0xff;
+  report_queue[slot][ofs++]=0xff;
+
+  report_lengths[slot]=ofs;
+  assert(ofs<MAX_REPORT_LEN);
+  if (slot>=report_queue_length) report_queue_length=slot;
+
+  return 0;
+}
+
+/* Find the first byte missing in the following segment list */
+int partial_first_missing_byte(struct segment_list *s)
+{
+  int offset=0x7fffffff;
+  while(s) {
+    if ((s->start_offset+s->length+1)<offset)
+      offset=s->start_offset+s->length+1;
+    offset=s->start_offset;
+    s=s->next;
+  }
+  return offset;
+}
+
+int sync_schedule_progress_report(int peer, int partial)
+{
+  int slot=report_queue_length;
+  if (slot>=REPORT_QUEUE_LEN) slot=random()%REPORT_QUEUE_LEN;
+  int ofs=0;
+  report_queue[slot][ofs++]='A';
+
+  // BID prefix
+  for(int i=0;i<8;i++) {
+    int hex_value=0;
+    char hex_string[3]={peer_records[peer]->partials[partial].bid_prefix[i*2+0],
+			peer_records[peer]->partials[partial].bid_prefix[i*2+1],
+			0};
+    hex_value=strtoll(hex_string,NULL,16);
+    report_queue[slot][ofs++]=hex_value;
+  }
+  
+  // manifest and body offset
+  int first_required_manifest_offset
+    =partial_first_missing_byte(peer_records[peer]
+				->partials[partial].manifest_segments);
+  int first_required_body_offset
+    =partial_first_missing_byte(peer_records[peer]
+				->partials[partial].body_segments);
+  report_queue[slot][ofs++]=first_required_manifest_offset&0xff;
+  report_queue[slot][ofs++]=(first_required_manifest_offset>>8)&0xff;
+  report_queue[slot][ofs++]=first_required_body_offset&0xff;
+  report_queue[slot][ofs++]=(first_required_body_offset>>8)&0xff;
+  report_queue[slot][ofs++]=(first_required_body_offset>>16)&0xff;
+  report_queue[slot][ofs++]=(first_required_body_offset>>24)&0xff;
+
+  report_lengths[slot]=ofs;
+  assert(ofs<MAX_REPORT_LEN);
+  if (slot>=report_queue_length) report_queue_length=slot;
+
+}
+
+int lookup_bundle_by_prefix(unsigned char *prefix)
+{
+  int bundle;
+  int i;
+  for(bundle=0;bundle<bundle_count;bundle++) {
+    for(i=0;i<8;i++) {
+      if (prefix[i]!=bundles[bundle].bid[i]) break;
+    }
+    return bundle;
+  }
+  return -1;
+}
+
+int sync_parse_ack(struct peer_state *p,unsigned char *msg)
+{
+  // Get fields
+  unsigned char bid_prefix[8]=
+    {msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8]};
+  int manifest_offset=msg[9]|(msg[10]<<8);
+  int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[42]<<24);
+
+  int bundle=lookup_bundle_by_prefix(bid_prefix);  
+  if (bundle<0) return -1;  
+  int finished=0;
+  if ((manifest_offset>=1024)
+      &&(body_offset>=bundles[bundle].length)) finished=1;
+  if (bundle==p->tx_bundle) {
+    // Affects the bundle we are currently sending
+    if (finished) {
+      // Delete this entry in queue
+      p->tx_bundle=-1;
+      // Advance next in queue, if there is anything
+      if (p->tx_queue_len) {
+	p->tx_bundle=p->tx_queue_bundles[0];
+	p->tx_bundle_priority=p->tx_queue_priorities[0];
+	p->tx_bundle_manifest_offset=0;
+	p->tx_bundle_body_offset=0;      
+	bcopy(&p->tx_queue_bundles[1],
+	      &p->tx_queue_bundles[0],
+	      sizeof(int)*p->tx_queue_len-1);
+	bcopy(&p->tx_queue_priorities[1],
+	      &p->tx_queue_priorities[0],
+	      sizeof(int)*p->tx_queue_len-1);
+	p->tx_queue_len--;
+      }
+      return 0;
+    } else {
+      p->tx_bundle_manifest_offset=manifest_offset;
+      p->tx_bundle_body_offset=body_offset;
+    }
+  } else {
+    for(int i=0;i<p->tx_queue_len;i++) {
+      if (bundle==p->tx_queue_bundles[i]) {
+	// Delete this entry in queue
+	bcopy(&p->tx_queue_bundles[i+1],
+	      &p->tx_queue_bundles[i],
+	      sizeof(int)*p->tx_queue_len-i-1);
+	bcopy(&p->tx_queue_priorities[i+1],
+	      &p->tx_queue_priorities[i],
+	      sizeof(int)*p->tx_queue_len-i-1);
+	p->tx_queue_len--;
+	return 0;
+      }
+    }
+  }
+  
+  return 0;
+}

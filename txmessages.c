@@ -108,7 +108,8 @@ int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
 #endif
 
 int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *msg,
-			  char *prefix,char *servald_server, char *credential)
+			  char *prefix,char *servald_server, char *credential,
+			  int target_peer)
 {
   if (prime_bundle_cache(bundle_number,
 			 prefix,servald_server,credential)) return -1;
@@ -118,12 +119,13 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
     of the content, which will also include a flag to indicate if it is content
     from the manifest or body.  This entails the following:
     Piece header - 1 byte
+    intended recipient prefix - 2 bytes
     BID prefix - 8 bytes
     bundle version - 8 bytes
     offset & manifest/body flag & length - 4 bytes
     (20 bits length, 1 bit manifest/body flag, 11 bits length)
 
-    Total = 21 bytes.
+    Total = 23 bytes.
 
     If start_offset>0xfffff, then 2 extra bytes are used for the upper bytes of the
     starting offset.    
@@ -276,7 +278,10 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
     msg[(*offset)++]='P'+end_of_item;
   else 
     msg[(*offset)++]='p'+end_of_item;
-  
+
+  // Intended recipient
+  msg[(*offset)++]=peer_records[target_peer]->sid_prefix[0];
+  msg[(*offset)++]=peer_records[target_peer]->sid_prefix[1];  
   
   for(int i=0;i<8;i++)
     msg[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);

@@ -68,12 +68,15 @@ int saw_length(char *peer_prefix,char *bid_prefix,long long version,
   return -1;
 }
 
-int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
+int saw_piece(char *peer_prefix,int for_me,
+	      char *bid_prefix,long long version,
 	      long long piece_offset,int piece_bytes,int is_end_piece,
 	      int is_manifest_piece,unsigned char *piece,
 
 	      char *prefix, char *servald_server, char *credential)
 {
+  int next_byte_would_be_useful=0;
+  
   int peer=find_peer_by_prefix(peer_prefix);
   if (peer<0) return -1;
 
@@ -94,11 +97,12 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       if (debug_pieces) fprintf(stderr,"We have version %lld of BID=%s*.  %s is offering us version %lld\n",
 	      bundles[i].version,bid_prefix,peer_prefix,version);
       if (version<=bundles[i].version) {
-#ifdef SYNC_BY_BAR
 	// We have this version already: mark it for announcement to sender,
 	// and then return immediately.
+#ifdef SYNC_BY_BAR
 	bundles[i].announce_bar_now=1;
-
+#else
+	sync_tell_peer_we_have_this_bundle(peer,i);
 #endif
 	if (debug_pieces) fprintf(stderr,"We already have %s* version %lld - ignoring piece.\n",
 		bid_prefix,version);
@@ -249,6 +253,10 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       ns->data=malloc(piece_bytes);
       bcopy(piece,ns->data,piece_bytes);
 
+      // This is data that is new, and the next byte would also be new, so
+      // no need to tell the peer to change where they are sending from in the bundle.
+      next_byte_would_be_useful=1;
+      
       break;
     } else if ((segment_start<=piece_offset)&&(segment_end>=piece_end)) {
       // Piece fits entirely within a current segment, i.e., is not new data
@@ -307,6 +315,12 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
 	bcopy(&piece[piece_bytes-extra_bytes],&(*s)->data[(*s)->length],
 	      extra_bytes);
 	(*s)->length=new_length;
+
+	// We have extended beyond the end, so the next byte is most likely
+	// useful, unless it happens to extend to the start of the next segment.
+	// XXX - We are ignoring that case for now, as worst it will cause only
+	// one wasted packet.  But it would be nice to detect this situation.
+	next_byte_would_be_useful=1;
       }
       
       break;
@@ -337,6 +351,12 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       int manifest_len;
 
       int insert_result=-999;
+
+      // Tell peer we have the whole thing now.
+      // (next_byte_would_be_useful is asserted so that we don't send two
+      // reports).
+      next_byte_would_be_useful=1;
+      sync_tell_peer_we_have_this_bundle(peer,i);
       
       if (!manifest_binary_to_text
 	  (peer_records[peer]->partials[i].manifest_segments->data,
@@ -375,6 +395,9 @@ int saw_piece(char *peer_prefix,char *bid_prefix,long long version,
       // Now release this partial.
       clear_partial(&peer_records[peer]->partials[i]);
     }
+  else 
+    if (!next_byte_would_be_useful)
+      sync_schedule_progress_report(peer,i);
   
   return 0;
 }
@@ -416,6 +439,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   int piece_is_manifest;
   int above_1mb;
   int is_end_piece;
+  int for_me;
 
   // Find or create peer structure for this.
   struct peer_state *p=NULL;
@@ -451,6 +475,11 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	      msg[offset],msg[offset],offset,msg[offset-1],msg[offset+1],len);
     }
     switch(msg[offset]) {
+    case 'A':
+      /* Acknowledgement of progress of bundle transfer */
+      sync_parse_ack(p,&msg[offset]);
+      offset+=15;
+      break;
     case 'B':
       offset++;
       if (len-offset<BAR_LENGTH) return -2;
@@ -541,6 +570,12 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       if (!(msg[offset]&0x20)) above_1mb=1;
       if (!(msg[offset]&0x01)) is_end_piece=1;
       offset++;
+      
+      // Work out from target SID, if this is intended for us
+      if ((my_sid[0]!=msg[offset])||(my_sid[1]!=msg[offset+1])) for_me=0;
+      else for_me=1;
+      offset+=2;
+      
       if (len-offset<(1+8+8+4+1)) return -3;
       snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
 	       msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
@@ -573,7 +608,8 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	  monitor_log(sender_prefix,NULL,monitor_log_buf);
 	}
             
-      saw_piece(peer_prefix,bid_prefix,version,piece_offset,piece_bytes,is_end_piece,
+      saw_piece(peer_prefix,for_me,
+		bid_prefix,version,piece_offset,piece_bytes,is_end_piece,
 		piece_is_manifest,&msg[offset],
 		prefix, servald_server,credential);
 
