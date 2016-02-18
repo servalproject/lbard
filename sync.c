@@ -37,6 +37,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <fcntl.h>
 #include <unistd.h>
 
+#include "sync.h"
+
 /*
 Synchronize two sets of keys, which are likely to contain many common values
 */
@@ -46,17 +48,6 @@ Synchronize two sets of keys, which are likely to contain many common values
 
 #define LOG(X) puts(X)
 #define LOGF(X, ...) printf(X "\n", ##__VA_ARGS__)
-
-static const char *hexdigit_upper = "0123456789ABCDEF";
-static char *tohex(char *dstHex, size_t dstStrLen, const uint8_t *srcBinary)
-{
-  char *p;
-  size_t i;
-  for (p = dstHex, i = 0; i < dstStrLen; ++i)
-    *p++ = (i & 1) ? hexdigit_upper[*srcBinary++ & 0xf] : hexdigit_upper[*srcBinary >> 4];
-  *p = '\0';
-  return dstHex;
-}
 
 // allocate memory and crash on failure.
 static void *allocate(size_t length){
@@ -143,7 +134,7 @@ static void xor_children(struct node *node, sync_key_t *dest)
 
 
 // Add a new key into the state tree, XOR'ing the key into each parent node
-static void sync_add_key(struct sync_state *state, const sync_key_t *key)
+void sync_add_key(struct sync_state *state, const sync_key_t *key)
 {
   uint8_t prefix_len = 0;
   struct node *root = &state->root;
@@ -217,7 +208,7 @@ static void free_node(struct node *node)
 }
 
 // clear all memory used by this state
-static void sync_clear_keys(struct sync_state *state)
+void sync_clear_keys(struct sync_state *state)
 {
   for (unsigned i=0;i<NODE_CHILDREN;i++)
     free_node(state->root.children[i]);
@@ -225,7 +216,7 @@ static void sync_clear_keys(struct sync_state *state)
 }
 
 // prepare a network packet buffer, with as many queued outgoing messages that we can fit
-static size_t sync_build_message(struct sync_state *state, uint8_t *buff, size_t len)
+size_t sync_build_message(struct sync_state *state, uint8_t *buff, size_t len)
 {
   size_t offset=0;
   state->sent_messages++;
@@ -501,7 +492,7 @@ static void recv_key(struct sync_state *state, const sync_key_t *key)
 }
 
 // Process all incoming messages from this packet buffer
-static void sync_recv_message(struct sync_state *state, uint8_t *buff, size_t len)
+void sync_recv_message(struct sync_state *state, uint8_t *buff, size_t len)
 {
   size_t offset=0;
   while(offset + sizeof(sync_key_t)<=len){
@@ -511,6 +502,18 @@ static void sync_recv_message(struct sync_state *state, uint8_t *buff, size_t le
   }
 }
 
+#ifdef STANDALONE_MODE
+
+static const char *hexdigit_upper = "0123456789ABCDEF";
+static char *tohex(char *dstHex, size_t dstStrLen, const uint8_t *srcBinary)
+{
+  char *p;
+  size_t i;
+  for (p = dstHex, i = 0; i < dstStrLen; ++i)
+    *p++ = (i & 1) ? hexdigit_upper[*srcBinary++ & 0xf] : hexdigit_upper[*srcBinary >> 4];
+  *p = '\0';
+  return dstHex;
+}
 
 // compare two tree's, logging any differences.
 // returns 0 if the tree's are the same
@@ -565,7 +568,6 @@ static int cmp_trees(
   return ret;
 }
 
-#ifdef STANDALONE_MODE
 // transmit one message from peer_index to all other peers
 int send_data(struct sync_state *peers, unsigned peer_count, unsigned peer_index)
 {

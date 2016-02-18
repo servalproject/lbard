@@ -228,15 +228,6 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out,int peer)
   uint8_t msg[256];
   int len=0;
 
-  /* incidate to sender if the last piece of a bundle they sent was not useful,
-     e.g., if we already have the complete bundle.  We want, however, to restrict
-     this to only those transmissions directed at us. Transmissions directed at others
-     are fine for us to listen in on opportunistically, but since they are directed at
-     others, we shouldn't waste bytes telling the sender information that they will
-     ignore in any case. This means that we need to understand who a transmission is
-     directed to.  */
-  XXX - do this
-
   /* Send sync status message */
   msg[len++]='S'; // Sync message
   int length_byte_offset=len;
@@ -630,6 +621,7 @@ int sync_schedule_progress_report(int peer, int partial)
   assert(ofs<MAX_REPORT_LEN);
   if (slot>=report_queue_length) report_queue_length=slot;
 
+  return 0;
 }
 
 int lookup_bundle_by_prefix(unsigned char *prefix)
