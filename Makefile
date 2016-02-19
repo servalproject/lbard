@@ -10,7 +10,7 @@ SRCS=	main.c rhizome.c txmessages.c rxmessages.c bundle_cache.c json.c peers.c \
 	fec-3.0.1/decode_rs_8.c \
 	bundle_tree.c sha1.c sync.c
 
-HDRS=	lbard.h serial.h Makefile version.h
+HDRS=	lbard.h serial.h Makefile version.h sync.h
 #CC=/usr/local/Cellar/llvm/3.6.2/bin/clang
 #LDFLAGS= -lgmalloc
 #CFLAGS= -fno-omit-frame-pointer -fsanitize=address
