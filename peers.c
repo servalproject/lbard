@@ -275,7 +275,7 @@ int random_active_peer()
       last_peer_requested=peer;
       return peer;
     }
-  for(peer=0;peer<=last_peer_requested;peer++)
+  for(peer=0;(peer<=last_peer_requested)&&(peer<peer_count);peer++)
     {
       if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
 	continue;

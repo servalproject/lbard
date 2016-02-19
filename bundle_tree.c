@@ -464,6 +464,7 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
   while((*offset)<(mtu-16)) {
     if ((count--)<0) break;
     int peer=random_active_peer();
+    if (peer<0) break;
     if (peer_records[peer]->retransmit_requested) {
       // Retransmit last transmission.
       int slot=peer_records[peer]->retransmition_sequence&15;
