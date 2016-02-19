@@ -113,8 +113,9 @@ int sync_update_peer_sequence_acknowledgement_field(int peer,uint8_t *msg)
 
 int sync_peer_window_has_space(int peer)
 {
-  int space=16+peer_records[peer]->last_local_sequence_number
-    -peer_records[peer]->last_local_sequence_number_acknowledged;
+  int space=16-
+    (peer_records[peer]->last_local_sequence_number
+     -peer_records[peer]->last_local_sequence_number_acknowledged);
 
   printf("Window space for talking to peer #%d (%s*): our_last_seq=%d, last_seq_acknowledged=%d, space=%d\n",
 	 peer,
@@ -227,7 +228,7 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
   }
   
   // Pull out the sync tree message for processing.
-#define SYNC_MSG_HEADER_LEN 6
+#define SYNC_MSG_HEADER_LEN 4
   int sync_bytes=len-SYNC_MSG_HEADER_LEN;
   sync_recv_message(&p->sync_state,&msg[6], sync_bytes);
   
