@@ -40,6 +40,8 @@ int decode_rs_8(data_t *data, int *eras_pos, int no_eras, int pad);
 #define FEC_LENGTH 32
 #define FEC_MAX_BYTES 223
 
+int debug_gpio=0;
+
 extern unsigned char my_sid[32];
 extern char *my_sid_hex;
 extern char *servald_server;
@@ -242,17 +244,19 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
     if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0xdd)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0xec)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xce))
-      {	
-	fprintf(stderr,"GPIO ADC values = ");
-	for(int j=0;j<6;j++) {
-	  fprintf(stderr,"%s0x%02x",
-		  j?",":"",
-		  radio_rx_buffer[RADIO_RXBUFFER_SIZE-7+j]);
+      {
+	if (debug_gpio) {
+	  fprintf(stderr,"GPIO ADC values = ");
+	  for(int j=0;j<6;j++) {
+	    fprintf(stderr,"%s0x%02x",
+		    j?",":"",
+		    radio_rx_buffer[RADIO_RXBUFFER_SIZE-7+j]);
+	  }
+	  fprintf(stderr,".  Radio TX interval = %dms, TX seen = %d, TX us = %d\n",
+		  message_update_interval,
+		  radio_transmissions_seen,
+		  radio_transmissions_byus);
 	}
-	fprintf(stderr,".  Radio TX interval = %dms, TX seen = %d, TX us = %d\n",
-		message_update_interval,
-		radio_transmissions_seen,
-		radio_transmissions_byus);
       } else if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0x55)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0x55)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xaa))

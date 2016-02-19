@@ -84,7 +84,7 @@ int load_rhizome_db(int timeout,
 {
   char path[8192];
 
-  fprintf(stderr,"%s(): ENTERED\n",__FUNCTION__);
+  // fprintf(stderr,"%s(): ENTERED\n",__FUNCTION__);
   
   // A timeout of zero means forever. Never do this.
   if (!timeout) timeout=1;
@@ -123,7 +123,7 @@ int load_rhizome_db(int timeout,
     fprintf(stderr,"rhizome HTTP API request failed. URLPATH:%s\n",path);
     return -1;
   } else {
-    fprintf(stderr,"rhizome HTTP API request succeeded. URLPATH:%s\n",path);
+    // fprintf(stderr,"rhizome HTTP API request succeeded. URLPATH:%s\n",path);
   }
 
   // fprintf(stderr,"Read bundle list.\n");
@@ -171,12 +171,13 @@ int load_rhizome_db(int timeout,
     line[0]=0; fgets(line,8192,f);
   }
 
-  message_buffer_length+=
-    snprintf(&message_buffer[message_buffer_length],
-	     message_buffer_size-message_buffer_length,
-	     "Querying rhizome DB for new content (timeout %d ms)\n"
-	     "Rhizome contains %d new bundles (token = %s). We now know about %d bundles.\n",
-	     timeout,count,*token,bundle_count);
+  if (0)
+    message_buffer_length+=
+      snprintf(&message_buffer[message_buffer_length],
+	       message_buffer_size-message_buffer_length,
+	       "Querying rhizome DB for new content (timeout %d ms)\n"
+	       "Rhizome contains %d new bundles (token = %s). We now know about %d bundles.\n",
+	       timeout,count,*token,bundle_count);
   fclose(f);
   unlink(filename);
   

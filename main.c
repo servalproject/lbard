@@ -341,7 +341,7 @@ int main(int argc, char **argv)
        */
       double ratio = (radio_transmissions_seen+radio_transmissions_byus)
 	*1.0/TARGET_TRANSMISSIONS_PER_4SECONDS;
-      printf("--- Congestion ratio = %.3f\n",ratio);
+      // printf("--- Congestion ratio = %.3f\n",ratio);
       if (ratio<0.95) {
 	// Speed up: If we are way too slow, then double our rate
 	// If not too slow, then just trim 10ms from our interval

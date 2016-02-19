@@ -73,8 +73,8 @@ ssize_t write_all(int fd, const void *buf, size_t len)
   if ((size_t)written != len)
     { perror("write_all(): written != len"); return -1; }
 
-  fprintf(stderr,"write_all(%d) sent %d bytes.\n",
-	  (int)len,(int)written);
+  // fprintf(stderr,"write_all(%d) sent %d bytes.\n",
+  // (int)len,(int)written);
 
   FILE *f=fopen("/tmp/serial.dat","w");
   if (f) {
