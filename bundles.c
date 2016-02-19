@@ -66,8 +66,10 @@ int register_bundle(char *service,
 			    bid,strtoll(version,NULL,10),length,filehash);   
   
   // Add bundle to the tree for each peer
-  for(int peer=0;peer<peer_count;peer++) {
-    sync_add_key(&peer_records[peer]->sync_state,&bundle_sync_key);
+  sync_key_t key;
+  bcopy(bundle_sync_key,key.key,SYNC_KEY_LEN);
+  for(int peer=0;peer<peer_count;peer++) {    
+    sync_add_key(&peer_records[peer]->sync_state,&key);
   }
   
   // Ignore non-meshms bundles when in meshms-only mode.
