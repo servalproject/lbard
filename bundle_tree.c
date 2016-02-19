@@ -101,6 +101,7 @@ int bundle_calculate_tree_key(uint8_t bundle_tree_key[SYNC_KEY_LEN],
 }
 
 #define SYNC_SEQ_NUMBER_OFFSET 2
+#define SYNC_RSEQ_NUMBER_OFFSET 3
 int sync_update_peer_sequence_acknowledgement_field(int peer,uint8_t *msg)
 {
   int len=SYNC_SEQ_NUMBER_OFFSET;
@@ -117,12 +118,13 @@ int sync_peer_window_has_space(int peer)
     (peer_records[peer]->last_local_sequence_number
      -peer_records[peer]->last_local_sequence_number_acknowledged);
 
-  printf("Window space for talking to peer #%d (%s*): our_last_seq=%d, last_seq_acknowledged=%d, space=%d\n",
-	 peer,
-	 peer_records[peer]->sid_prefix,
-	 peer_records[peer]->last_local_sequence_number,
-	 -peer_records[peer]->last_local_sequence_number_acknowledged,
-	 space);
+  if (0)
+    printf("Window space for talking to peer #%d (%s*): our_last_seq=%d, last_seq_acknowledged=%d, space=%d\n",
+	   peer,
+	   peer_records[peer]->sid_prefix,
+	   peer_records[peer]->last_local_sequence_number,
+	   -peer_records[peer]->last_local_sequence_number_acknowledged,
+	   space);
 
   
   if (space<0) space+=256;
@@ -137,7 +139,7 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
 	 
     
   // Check for the need to request retransmission of messages that we missed.
-  int sender_sequence_number=msg[4];
+  int sender_sequence_number=msg[SYNC_SEQ_NUMBER_OFFSET];
 
   printf("  sender seq# is $%02x, we are hoping for $%02x\n",
 	 sender_sequence_number,
@@ -153,7 +155,7 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
   if (sender_sequence_number==(p->last_remote_sequence_acknowledged+1))
     {
       // This is the message we were expecting
-      printf("ACKing message #%d from %s*\n",
+      printf("ACKing message $%02x from %s*\n",
 	     sender_sequence_number&0xff,p->sid_prefix);
 
       // Advance acknowledged sequence by one, and shift the bitmap accordingly
@@ -197,7 +199,7 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
     
   // See if they have missed message(s) from us, in which case we should
   // mark the first message that they are indicating that they have not seen.
-  unsigned int local_sequence_number_acknowledged=msg[5];
+  unsigned int local_sequence_number_acknowledged=msg[SYNC_RSEQ_NUMBER_OFFSET];
   // Similarly for the remote sequence number, we have to get the two sequence numbers
   // into the same number space.  Here the remote sequence number should always be
   // less than our local one.  Thus we translate the received value to a negative
@@ -266,6 +268,7 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out,int peer)
   peer_records[peer]->last_local_sequence_number&=0xff;
   assert(len==SYNC_SEQ_NUMBER_OFFSET);
   msg[len++]=peer_records[peer]->last_local_sequence_number;
+  assert(len==SYNC_RSEQ_NUMBER_OFFSET);
   // Acknowledge what we have seen from the remote side, i.e., sequence number of
   // message, as compared to partial bundle transfer status, which we send separately
   // and outside of the packet-loss resistent scheme, since stale progress reports
