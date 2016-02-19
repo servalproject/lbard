@@ -113,8 +113,17 @@ int sync_update_peer_sequence_acknowledgement_field(int peer,uint8_t *msg)
 
 int sync_peer_window_has_space(int peer)
 {
-  int space=peer_records[peer]->last_local_sequence_number
+  int space=16+peer_records[peer]->last_local_sequence_number
     -peer_records[peer]->last_local_sequence_number_acknowledged;
+
+  printf("Window space for talking to peer #%d (%s*): our_last_seq=%d, last_seq_acknowledged=%d, space=%d\n",
+	 peer,
+	 peer_records[peer]->sid_prefix,
+	 peer_records[peer]->last_local_sequence_number,
+	 -peer_records[peer]->last_local_sequence_number_acknowledged,
+	 space);
+
+  
   if (space<0) space+=256;
   if (space>0) return 1; else return 0;
 }
@@ -497,6 +506,8 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
       sync_tree_send_message(offset,mtu,msg_out,peer);
       sync_tree_send_data(offset,mtu,msg_out,peer,
 			  sid_prefix_bin,servald_server,credential);
+    } else {
+      // Window is full -- can't do anything
     }
   }  
   
