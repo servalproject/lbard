@@ -137,8 +137,18 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
     version
   */
 
-  if ((cached_version>0x100000000LL)&&(!bundles[bundle_number].last_offset_announced))
+#ifdef SYNC_BY_BAR
+  if ((cached_version>0x100000000LL)
+      &&(bundles[bundle_number].last_manifest_offset_announced
+	 >=cached_manifest_encoded_len)
+      &&(!bundles[bundle_number].last_offset_announced))
     {
+      printf("Announcing length of bundle #%d (tx offsets=%d,%d of %d,%d)\n",
+	     bundle_number,
+	     bundles[bundle_number].last_manifest_offset_announced,
+	     bundles[bundle_number].last_offset_announced,
+	     cached_manifest_encoded_len,
+	     cached_body_len);
       if ((mtu-*offset)>(1+8+8+4)) {
 	// Announce length of bundle
 	msg[(*offset)++]='L';
@@ -155,6 +165,7 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 	msg[(*offset)++]=(bundles[bundle_number].length>>24)&0xff;
       }
     }
+#endif
 
   // Check that we still have space after
   int max_bytes=mtu-(*offset)-21;
