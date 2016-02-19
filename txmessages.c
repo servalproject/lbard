@@ -64,6 +64,7 @@ int append_bytes(int *offset,int mtu,unsigned char *msg_out,
 {
   if (((*offset)+count)<=mtu) {
     bcopy(data,&msg_out[*offset],count);
+    (*offset)+=count;
     return 0;
   }
   return -1;
