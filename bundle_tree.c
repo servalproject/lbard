@@ -235,7 +235,7 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out,int peer)
   int length_byte_offset=len;
   msg[len++]=0; // place holder for length
   // Sequence number (our side)  
-  peer_records[peer]->last_local_sequence_number;
+  peer_records[peer]->last_local_sequence_number++;
   peer_records[peer]->last_local_sequence_number&=0xff;
   assert(len==SYNC_SEQ_NUMBER_OFFSET);
   msg[len++]=peer_records[peer]->last_local_sequence_number;
@@ -259,6 +259,8 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out,int peer)
   peer_records[peer]->retransmit_lengths[slot]=len;
   peer_records[peer]->retransmit_buffer_sequence_numbers[slot]=seq;
   bcopy(msg,peer_records[peer]->retransmit_buffer[slot],len);
+  printf("Sending sync message #%02x to peer %s*\n",seq,
+	 peer_records[peer]->sid_prefix);
   
   return 0;
 }
@@ -479,9 +481,9 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
       sync_update_peer_sequence_acknowledgement_field
 	(peer,peer_records[peer]->retransmit_buffer[slot]);
       printf("retransmitting message #%02x (asked for #%02x) for peer %s*\n",
-	     peer_records[peer]->retransmit_sequence_numbers[slot],
+	     peer_records[peer]->retransmit_buffer_sequence_numbers[slot],
 	     peer_records[peer]->retransmition_sequence,
-	     peer_records[peer]->sid_prefix_hex);
+	     peer_records[peer]->sid_prefix);
       if (!append_bytes(offset,mtu,msg_out,
 			peer_records[peer]->retransmit_buffer[slot],
 			peer_records[peer]->retransmit_lengths[slot]))
