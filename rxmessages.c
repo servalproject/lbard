@@ -458,11 +458,13 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
     fprintf(stderr,"Registering peer %s*\n",p->sid_prefix);
     if (peer_count<MAX_PEERS) {
       peer_records[peer_count++]=p;
+      sync_tree_prepare_tree(peer_count-1);
     } else {
       // Peer table full.  Do random replacement.
       int n=random()%MAX_PEERS;
       free_peer(peer_records[n]);
       peer_records[n]=p;
+      sync_tree_prepare_tree(n);
     }
   }
   
