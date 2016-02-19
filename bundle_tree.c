@@ -289,8 +289,9 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out,int peer)
   peer_records[peer]->retransmit_lengths[slot]=len;
   peer_records[peer]->retransmit_buffer_sequence_numbers[slot]=seq;
   bcopy(msg,peer_records[peer]->retransmit_buffer[slot],len);
-  printf("Sending sync message #%02x to peer %s*\n",seq,
-	 peer_records[peer]->sid_prefix);
+  printf("Sending sync message #%02x to peer %s* (length now = $%02x)\n",seq,
+	 peer_records[peer]->sid_prefix,*offset);
+
   
   return 0;
 }
@@ -389,7 +390,8 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 			       char *servald_server, char *credential)
 {
   int bundle_number=peer_records[peer]->tx_bundle;
-
+  if (bundle_number<0) return -1;
+  
   if (prime_bundle_cache(bundle_number,
 			 sid_prefix_hex,servald_server,credential)) return -1;
   
@@ -499,7 +501,8 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
     report_queue_length--;
   } 
   
-  int count=10;
+  int count=10; if (count>peer_count) count=peer_count;
+  
   while((*offset)<(mtu-16)) {
     if ((count--)<0) break;
     int peer=random_active_peer();

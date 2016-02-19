@@ -454,6 +454,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
     for(int i=0;i<4;i++) p->sid_prefix_bin[i]=msg[i];
     p->sid_prefix=strdup(peer_prefix);
     p->last_message_number=-1;
+    p->tx_bundle=-1;
     fprintf(stderr,"Registering peer %s*\n",p->sid_prefix);
     if (peer_count<MAX_PEERS) {
       peer_records[peer_count++]=p;
@@ -471,7 +472,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   
   while(offset<len) {
     if (debug_pieces) {
-      fprintf(stderr,"Saw message section with type '%c' (0x%02x) @ offset %d (between '%c' and '%c') len=%d\n",
+      fprintf(stderr,"Saw message section with type '%c' (0x%02x) @ offset $%02x (between '%c' and '%c') len=%d\n",
 	      msg[offset],msg[offset],offset,msg[offset-1],msg[offset+1],len);
     }
     switch(msg[offset]) {
