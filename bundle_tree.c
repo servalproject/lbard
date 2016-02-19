@@ -132,9 +132,17 @@ int sync_peer_window_has_space(int peer)
 int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
 {
   int len=msg[1];
+
+  printf("Receiving sync tree message of %d bytes\n",len);
+	 
     
   // Check for the need to request retransmission of messages that we missed.
-  unsigned int sender_sequence_number=msg[4];
+  int sender_sequence_number=msg[4];
+
+  printf("  sender seq# is $%02x, we are hoping for $%02x\n",
+	 sender_sequence_number,
+	 (p->last_remote_sequence_acknowledged+1)&0xff);
+
   /* First, get this sequence number and the last known sequence number into a
      compatible number space. This just consists of dealing with wrap-around in
      the sequence number. */
@@ -166,18 +174,25 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
 	   &&((sender_sequence_number-p->last_remote_sequence_acknowledged)<16)) {
     int bit=sender_sequence_number-p->last_remote_sequence_acknowledged;
     if (bit>=0&&bit<16) p->remote_sequence_bitmap|=1<<bit;
+    printf("  setting bit #%d in our RX bitmap\n",bit);
   }
   // Is the message one that we have acknowledged quite recently?
-  // If so, ignore it.
-  else if ((sender_sequence_number<p->last_remote_sequence_acknowledged)
+  // If so, ignore it.  
+  else if ((sender_sequence_number<=p->last_remote_sequence_acknowledged)
 	   &&((sender_sequence_number-p->last_remote_sequence_acknowledged)>-16)) {
-    ;
+    printf("  we think we have received this one recently\n");
   }
   // Otherwise, if the message doesn't fit in the window, then we throw away our
   // current window, and receive it.
   else {
     p->last_remote_sequence_acknowledged=(sender_sequence_number&0xff);
     p->remote_sequence_bitmap=0;
+    printf("  resetting window position to $%02x\n",
+	   p->last_remote_sequence_acknowledged);
+    printf("  sender_sequence_number=%d, p->last_remote_sequence_acknowledged=%d\n",
+	   sender_sequence_number,p->last_remote_sequence_acknowledged);
+    printf("  (sender_sequence_number-p->last_remote_sequence_acknowledged)>-16)=%d\n",
+	   (sender_sequence_number-p->last_remote_sequence_acknowledged)>-16);
   }
     
   // See if they have missed message(s) from us, in which case we should
@@ -219,6 +234,8 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
       // we have sent at least one different message inbetween.
       p->retransmit_requested=1;
       p->retransmition_sequence=(local_sequence_number_acknowledged+1)&0xff;
+      printf("  requesting re-transmit of $%02x\n",
+	     p->retransmition_sequence);
     }
   } else {
     // If it doesn't make sense to update our record of acknowledgement, then do
