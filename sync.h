@@ -139,7 +139,7 @@ void sync_clear_keys(struct sync_state *state);
 // prepare a network packet buffer, with as many queued outgoing messages that we can fit
 size_t sync_build_message(struct sync_state *state, uint8_t *buff, size_t len);
 // Process all incoming messages from this packet buffer
-void sync_recv_message(struct sync_state *state, uint8_t *buff, size_t len);
+int sync_recv_message(struct sync_state *state, uint8_t *buff, size_t len);
 
 int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 			      char *sid_prefix_bin,

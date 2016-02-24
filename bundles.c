@@ -68,7 +68,8 @@ int register_bundle(char *service,
   // Add bundle to the tree for each peer
   sync_key_t key;
   bcopy(bundle_sync_key,key.key,SYNC_KEY_LEN);
-  for(int peer=0;peer<peer_count;peer++) {    
+  for(int peer=0;peer<peer_count;peer++) {
+    // XXX - check if key is already in the tree.
     sync_add_key(&peer_records[peer]->sync_state,&key);
   }
   

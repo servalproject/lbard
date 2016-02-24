@@ -132,6 +132,60 @@ static void xor_children(struct node *node, sync_key_t *dest)
   }
 }
 
+#define MIN_VAL(X,Y) ((X)<(Y)?(X):(Y))
+#define MAX_VAL(X,Y) ((X)<(Y)?(Y):(X))
+
+// Compare two keys, returning zero if they represent the same set of leaf nodes.
+static int cmp_key(const sync_key_t *first, const sync_key_t *second)
+{
+  uint8_t common_prefix_len = MIN_VAL(first->prefix_len, second->prefix_len);
+  uint8_t first_xor_begin = (first->prefix_len == KEY_LEN_BITS)?first->min_prefix_len:first->prefix_len;
+  uint8_t second_xor_begin = (second->prefix_len == KEY_LEN_BITS)?second->min_prefix_len:second->prefix_len;
+  uint8_t xor_begin_offset = MAX_VAL(first_xor_begin, second_xor_begin);
+  int ret=0;
+  
+  // TODO at least we can compare before common_prefix_len and after xor_begin_offset
+  // But we aren't comparing the bits in the middle
+      
+  if (common_prefix_len < xor_begin_offset){
+    if (common_prefix_len>=8 && memcmp(&first->key, &second->key, common_prefix_len>>3)!=0)
+      ret = -1;
+    else{
+      uint8_t xor_begin_byte = (xor_begin_offset+7)>>3;
+      if (xor_begin_byte < KEY_LEN && memcmp(&first->key[xor_begin_byte], &second->key[xor_begin_byte], KEY_LEN - xor_begin_byte)!=0)
+	ret = -1;
+    }
+  }else{
+    ret = memcmp(&first->key, &second->key, KEY_LEN);
+  }
+  return ret;
+}
+
+int key_exists(const struct sync_state *state, const sync_key_t *key)
+{
+  const struct node *node = &state->root;
+  unsigned prefix_len = 0;
+  while(1){
+    if (cmp_key(&node->key, key)==0)
+      return 1;
+    if (node->key.prefix_len == KEY_LEN_BITS)
+      return 0;
+    
+    uint8_t child_index = sync_get_bits(prefix_len, PREFIX_STEP_BITS, key);
+    
+    if (prefix_len < node->key.prefix_len){
+      // TODO optimise this case by comparing all possible prefix bits in one hit
+      uint8_t node_index = sync_get_bits(prefix_len, PREFIX_STEP_BITS, &node->key);
+      if (node_index != child_index)
+        return 0;
+    }else{
+      node = node->children[child_index];
+      if (!node)
+        return 0;
+    }
+    prefix_len+=PREFIX_STEP_BITS;
+  }
+}
 
 // Add a new key into the state tree, XOR'ing the key into each parent node
 void sync_add_key(struct sync_state *state, const sync_key_t *key)
@@ -311,35 +365,6 @@ static void queue_leaf_nodes(struct sync_state *state, struct node *node, unsign
   }
 }
 
-#define MIN_VAL(X,Y) ((X)<(Y)?(X):(Y))
-#define MAX_VAL(X,Y) ((X)<(Y)?(Y):(X))
-
-// Compare two keys, returning zero if they represent the same set of leaf nodes.
-static int cmp_key(const sync_key_t *first, const sync_key_t *second)
-{
-  uint8_t common_prefix_len = MIN_VAL(first->prefix_len, second->prefix_len);
-  uint8_t first_xor_begin = (first->prefix_len == KEY_LEN_BITS)?first->min_prefix_len:first->prefix_len;
-  uint8_t second_xor_begin = (second->prefix_len == KEY_LEN_BITS)?second->min_prefix_len:second->prefix_len;
-  uint8_t xor_begin_offset = MAX_VAL(first_xor_begin, second_xor_begin);
-  int ret=0;
-  
-  // TODO at least we can compare before common_prefix_len and after xor_begin_offset
-  // But we aren't comparing the bits in the middle
-      
-  if (common_prefix_len < xor_begin_offset){
-    if (common_prefix_len>=8 && memcmp(&first->key, &second->key, common_prefix_len>>3)!=0)
-      ret = -1;
-    else{
-      uint8_t xor_begin_byte = (xor_begin_offset+7)>>3;
-      if (xor_begin_byte < KEY_LEN && memcmp(&first->key[xor_begin_byte], &second->key[xor_begin_byte], KEY_LEN - xor_begin_byte)!=0)
-	ret = -1;
-    }
-  }else{
-    ret = memcmp(&first->key, &second->key, KEY_LEN);
-  }
-  return ret;
-}
-
 static void de_queue(struct node *node){
   if (node->send_state == QUEUED)
     node->send_state = DONT_SEND;
@@ -349,8 +374,12 @@ static void de_queue(struct node *node){
 }
 
 // Proccess one incoming tree record.
-static void recv_key(struct sync_state *state, const sync_key_t *key)
+static int recv_key(struct sync_state *state, const sync_key_t *key)
 {
+  // sanity check on two header bytes.
+  if (key->min_prefix_len > key->prefix_len || key->prefix_len > KEY_LEN_BITS)
+    return -1;
+  
   state->received_record_count++;
   
   /* Possible outcomes;
@@ -382,7 +411,7 @@ static void recv_key(struct sync_state *state, const sync_key_t *key)
       state->received_uninteresting++;
       // if we queued this node, there's no point sending it now.
       de_queue(node);
-      return;
+      return 0;
     }
     
     // once we've looked at all of the prefix_len bits of the incoming key
@@ -405,7 +434,7 @@ static void recv_key(struct sync_state *state, const sync_key_t *key)
 	  if (cmp_key(&test_key, &test_node->key)==0){
 	    // This peer doesn't know any of the children of this node
 	    queue_leaf_nodes(state, test_node, NODE_CHILDREN);
-	    return;
+	    return 0;
 	  }
 	  if (test_node->key.prefix_len == KEY_LEN_BITS)
 	    break;
@@ -427,7 +456,7 @@ static void recv_key(struct sync_state *state, const sync_key_t *key)
 	    queue_node(state, node->children[i], 0);
 	}
       }
-      return;
+      return 0;
     }
     
     // which branch of the tree should we look at next
@@ -453,7 +482,7 @@ static void recv_key(struct sync_state *state, const sync_key_t *key)
 	  // They told us about a single key we didn't know.
 	  sync_add_key(state, key);
 	}
-	return;
+	return 0;
       }
       prefix_len += PREFIX_STEP_BITS;
       key_index = sync_get_bits(prefix_len, PREFIX_STEP_BITS, key);
@@ -483,7 +512,7 @@ static void recv_key(struct sync_state *state, const sync_key_t *key)
 	// and we won't get stuck in a loop talking about the same node.
 	queue_node(state, node, 0);
       }
-      return;
+      return 0;
     }
     
     node = node->children[key_index];
@@ -492,14 +521,18 @@ static void recv_key(struct sync_state *state, const sync_key_t *key)
 }
 
 // Process all incoming messages from this packet buffer
-void sync_recv_message(struct sync_state *state, uint8_t *buff, size_t len)
+int sync_recv_message(struct sync_state *state, uint8_t *buff, size_t len)
 {
   size_t offset=0;
+  if (len%sizeof(sync_key_t))
+    return -1;
   while(offset + sizeof(sync_key_t)<=len){
     sync_key_t *key = (sync_key_t *)&buff[offset];
-    recv_key(state, key);
+    if (recv_key(state, key)==-1)
+      return -1;
     offset+=sizeof(sync_key_t);
   }
+  return 0;
 }
 
 #ifdef STANDALONE_MODE
@@ -615,8 +648,10 @@ int main(int argc, char **argv)
     for (i=0; i<common; i++){
       sync_key_t key;
       assert(read(fdRand, key.key, KEY_LEN)==KEY_LEN);
-      for (j=0;j<peer_count;j++)
+      for (j=0;j<peer_count;j++){
+	assert(key_exists(&peers[j], &key)==0);
 	sync_add_key(&peers[j], &key);
+      }
     }
     
     for (i=0; i<peer_count; i++){
@@ -627,6 +662,7 @@ int main(int argc, char **argv)
       sync_key_t key;
       for (j=0;j<unique;j++){
 	assert(read(fdRand, key.key, KEY_LEN)==KEY_LEN);
+	assert(key_exists(&peers[i], &key)==0);
 	sync_add_key(&peers[i], &key);
       }
     }

@@ -41,7 +41,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
-int debug_sync=0;
+int debug_sync=1;
 
 struct sync_key_hash_bin sync_key_hash_table[SYNC_BINS];
 
@@ -258,7 +258,15 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
   // Pull out the sync tree message for processing.
 #define SYNC_MSG_HEADER_LEN 4
   int sync_bytes=len-SYNC_MSG_HEADER_LEN;
-  sync_recv_message(&p->sync_state,&msg[SYNC_MSG_HEADER_LEN], sync_bytes);  
+
+  // Sanity check message before processing
+  if ((msg[SYNC_MSG_HEADER_LEN+0]<=msg[SYNC_MSG_HEADER_LEN+1])
+      &&(msg[SYNC_MSG_HEADER_LEN+0]<=SYNC_KEY_LEN)
+      &&(msg[SYNC_MSG_HEADER_LEN+1]<=SYNC_KEY_LEN)) {
+    dump_bytes("received sync message",&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
+    sync_recv_message(&p->sync_state,&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
+    printf("returned from sync_recv_message\n");
+  }
   
   return 0;
 }
