@@ -603,8 +603,14 @@ void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
     peer_records[peer]->tx_bundle_body_offset=0;
     peer_records[peer]->tx_bundle_manifest_offset=0;
     peer_records[peer]->tx_bundle_priority=priority;
-    return;
   }
+
+  printf("& TX QUEUE TO %s*\n",
+	 peer_records[peer]->sid_prefix);
+  printf("& tx_bundle=%d, tx_bundle_bid=%s*\n",
+	 peer_records[peer]->tx_bundle,
+	 (peer_records[peer]->tx_bundle>-1)?
+	 bundles[peer_records[peer]->tx_bundle].bid:"");
   
   return;
 }

@@ -255,6 +255,7 @@ extern unsigned char *cached_body;
 extern int debug_pieces;
 extern int debug_announce;
 extern int debug_pull;
+extern int debug_radio;
 extern int meshms_only;
 extern long long min_version;
 extern int time_slave;

@@ -46,8 +46,9 @@ long long next_time_update_allowed_after=0;
 
 int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
 {
-  printf("Saw timestamp from %s: stratum=0x%02x, our stratum=0x%02x.0x%02x\n",
-	 sender_prefix,stratum,my_time_stratum>>8,my_time_stratum&0xff);
+  if (debug_radio)
+    printf("Saw timestamp from %s: stratum=0x%02x, our stratum=0x%02x.0x%02x\n",
+	   sender_prefix,stratum,my_time_stratum>>8,my_time_stratum&0xff);
   
   if (tv->tv_usec>999999) { tv->tv_sec++; tv->tv_usec-=1000000; }
 
