@@ -136,7 +136,6 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
   int len=msg[1];
 
   printf("Receiving sync tree message of %d bytes\n",len);
-	 
     
   // Check for the need to request retransmission of messages that we missed.
   int sender_sequence_number=msg[SYNC_SEQ_NUMBER_OFFSET];
@@ -249,7 +248,9 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
   // Pull out the sync tree message for processing.
 #define SYNC_MSG_HEADER_LEN 4
   int sync_bytes=len-SYNC_MSG_HEADER_LEN;
-  sync_recv_message(&p->sync_state,&msg[6], sync_bytes);
+  sync_recv_message(&p->sync_state,&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
+  dump_bytes("rx sync message",&msg[SYNC_MSG_HEADER_LEN],sync_bytes);
+  
   
   return 0;
 }
@@ -278,6 +279,7 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out,int peer)
 
   int used=sync_build_message(&peer_records[peer]->sync_state,
 			      &msg[len],256-len);
+  dump_bytes("sync message",&msg[len],used);
   len+=used;
   // Record the length of the field
   msg[length_byte_offset]=len;
@@ -559,8 +561,15 @@ void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
   int peer;
   for(peer=0;peer<peer_count;peer++)
     if (state==&peer_records[peer]->sync_state) break;
-  if (peer>=peer_count) return;
+  if (peer>=peer_count) {
+    printf(">>> Can't find peer from sync_state\n");
+    return;
+  }
 
+  printf(">>> Suspect peer #%d is missing bundle with key %02x%02x%02x%02x%02x%02x%02x%02x\n",
+	 peer,key[0],key[1],key[2],key[3],key[4],key[5],key[6],key[7]);
+
+  
   // Have peer, now lookup bundle ID and priority, and add it to our transmission
   // queue, if it isn't already there.
   int bundle_number = lookup_bundle_by_sync_key(key);
