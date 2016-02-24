@@ -306,41 +306,43 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 		      my_sid_hex,prefix,servald_server,credential);
 	  
 	  // attach presumed SID prefix
-	  if (message_buffer_length) message_buffer_length--; // chop NL
-	  message_buffer_length+=
-	    snprintf(&message_buffer[message_buffer_length],
-		     message_buffer_size-message_buffer_length,
-		     ", FEC OK : sender SID=%02x%02x%02x%02x%02x%02x*\n",
-		     packet_data[0],packet_data[1],packet_data[2],
-		     packet_data[3],packet_data[4],packet_data[5]);
-
-	  if (monitor_mode)
-	  {
-	    char sender_prefix[128];
-	    char monitor_log_buf[1024];
-	    bytes_to_prefix(&packet_data[0],sender_prefix);
-	    snprintf(monitor_log_buf,sizeof(monitor_log_buf),
-		     "CSMA Data frame: temp=%dC, last rx RSSI=%d,"
-		     " frame len=%d, FEC OK",
-		     radio_temperature, last_rx_rssi,
-		     packet_bytes);
-	    
-	    monitor_log(sender_prefix,NULL,monitor_log_buf);
+	  if (debug_radio) {
+	    if (message_buffer_length) message_buffer_length--; // chop NL
+	    message_buffer_length+=
+	      snprintf(&message_buffer[message_buffer_length],
+		       message_buffer_size-message_buffer_length,
+		       ", FEC OK : sender SID=%02x%02x%02x%02x%02x%02x*\n",
+		       packet_data[0],packet_data[1],packet_data[2],
+		       packet_data[3],packet_data[4],packet_data[5]);
 	  }
-	} else {
-	  if (message_buffer_length) message_buffer_length--; // chop NL
-	  message_buffer_length+=
-	    snprintf(&message_buffer[message_buffer_length],
-		     message_buffer_size-message_buffer_length,
-		     ", FEC FAIL (rs_error_count=%d)\n",
-		     rs_error_count);
-	}
-
-
+	  
+	  if (monitor_mode)
+	    {
+	      char sender_prefix[128];
+	      char monitor_log_buf[1024];
+	      bytes_to_prefix(&packet_data[0],sender_prefix);
+	      snprintf(monitor_log_buf,sizeof(monitor_log_buf),
+		       "CSMA Data frame: temp=%dC, last rx RSSI=%d,"
+		       " frame len=%d, FEC OK",
+		       radio_temperature, last_rx_rssi,
+		       packet_bytes);
+	      
+	      monitor_log(sender_prefix,NULL,monitor_log_buf);
+	    }
+	  } else {
+	    if (debug_radio) {
+	      if (message_buffer_length) message_buffer_length--; // chop NL
+	      message_buffer_length+=
+		snprintf(&message_buffer[message_buffer_length],
+			 message_buffer_size-message_buffer_length,
+			 ", FEC FAIL (rs_error_count=%d)\n",
+			 rs_error_count);
+	    }
+	  }
 	  
 	  packet_bytes=0;
 	}
-      }
+    }
   }
   return 0;
 }
