@@ -149,3 +149,4 @@ void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
 int sync_tell_peer_we_have_this_bundle(int peer, int bundle);
 int sync_schedule_progress_report(int peer, int partial);
 int sync_tree_prepare_tree(int peer);
+int key_exists(const struct sync_state *state, const sync_key_t *key);

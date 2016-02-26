@@ -70,7 +70,8 @@ int register_bundle(char *service,
   bcopy(bundle_sync_key,key.key,SYNC_KEY_LEN);
   for(int peer=0;peer<peer_count;peer++) {
     // XXX - check if key is already in the tree.
-    sync_add_key(&peer_records[peer]->sync_state,&key);
+    if (!key_exists(&peer_records[peer]->sync_state,&key))
+	sync_add_key(&peer_records[peer]->sync_state,&key);
   }
   
   // Ignore non-meshms bundles when in meshms-only mode.
