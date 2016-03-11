@@ -334,6 +334,11 @@ static void queue_node(struct sync_state *state, struct node *node, uint8_t head
     return;
   
   if (node->key.prefix_len == KEY_LEN_BITS) {
+    unsigned char *key=node->key.key;
+  printf(">>> queue_node(): key=%02x%02x%02x%02x%02x%02x%02x%02x, prefix_len=%d, min_prefix_len=%d\n",
+	 key[0],key[1],key[2],key[3],key[4],key[5],key[6],key[7],
+	 node->key.prefix_len,node->key.min_prefix_len);
+
     sync_tree_suspect_peer_does_not_have_this_key(state, node->key.key);
     state->progress=0;
   }

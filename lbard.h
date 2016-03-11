@@ -362,7 +362,9 @@ int manifest_binary_to_text(unsigned char *bin_in, int len_in,
 int monitor_log(char *sender_prefix, char *recipient_prefix,char *msg);
 int bytes_to_prefix(unsigned char *bytes_in,char *prefix_out);
 int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv);
-int http_process(int socket);
+int http_process(char *servald_server,char *credential,
+		 char *my_sid_hex,
+		 int socket);
 int chartohex(int c);
 int random_active_peer();
 int append_bytes(int *offset,int mtu,unsigned char *msg_out,
@@ -371,3 +373,6 @@ int sync_tree_receive_message(struct peer_state *p, unsigned char *msg);
 int lookup_bundle_by_sync_key(uint8_t bundle_sync_key[SYNC_KEY_LEN]);
 int peer_queue_bundle_tx(int peer,int bundle, int priority);
 int sync_parse_ack(struct peer_state *p,unsigned char *msg);
+int http_post_meshms(char *server_and_port, char *auth_token,
+		     char *message,char *sender,char *recipient,
+		     int timeout_ms);

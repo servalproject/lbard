@@ -46,7 +46,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "serial.h"
 
 int debug_radio=0;
-int debug_pieces=1;
+int debug_pieces=0;
 int debug_announce=0;
 int debug_pull=0;
 int debug_insert=0;
@@ -488,7 +488,7 @@ int main(int argc, char **argv)
 	      // for one new connection.  We also don't allow the request
 	      // to linger: if it doesn't contain the request almost immediately,
 	      // we reject it with a timeout error.
-	      http_process(s);
+	      http_process(servald_server,credential,my_sid_hex,s);
 	    }
 	  }	
 	

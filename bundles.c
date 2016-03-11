@@ -160,6 +160,7 @@ int register_bundle(char *service,
     bundles[bundle_number].last_version_of_manifest_announced=0;
     bundles[bundle_number].last_announced_time=0;
     bundle_count++;
+    printf("There are now %d bundles.\n",bundle_count);
   }
 
   // Clear latest announcement time for bundles that get updated with a new version

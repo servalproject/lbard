@@ -73,7 +73,9 @@ int urldecode(char *s)
   
 }
 
-int http_process(int socket)
+int http_process(char *servald_server,char *credential,
+		 char *my_sid_hex,
+		 int socket)
 {
   char buffer[8192];
   char uri[8192];
@@ -112,23 +114,33 @@ int http_process(int socket)
 		 " Message as follows: %s",
 		 location,message);
 
-	// Create shell-escaped command, using single quotes to protect the combined
-	// message.
-	unsigned char escaped[sizeof(combined)*2+1024];
-	int i,o;
-	// XXX - Values hard-coded for Mesh Extenders!
-	sprintf((char *)escaped,SEND_HELP_MESSAGE);
-	o=strlen((char *)escaped);
-	for(i=0;combined[i];i++) {
-	  if (combined[i]=='\'') escaped[o++]='\\';
-	  escaped[o++]=combined[i];
-	}
-	escaped[o++]='\'';
-	printf("Command is: [%s]\n",escaped);
-	int res=system((char *)escaped);
-	if (res) {
-	  m="HTTP/1.0 500 ERROR\nServer: Serval LBARD\n\nYour message could not be submitted.";
-	}
+	// XXX - Read recipient
+	{
+	  int successful=0;
+	  int failed=0;
+	  char recipient[1024];
+	  
+	  FILE *f=fopen("/dos/helpdesk.sid","r");
+	  recipient[0]=0; fgets(recipient,1024,f);
+	  while(recipient) {
+	    // Trim new lines / carriage returns from end of lines.
+	    while(recipient[0]&&(recipient[strlen(recipient)-1]<' '))
+	      recipient[strlen(recipient)-1]=0;
+
+	    int res = http_post_meshms(servald_server,credential,
+				       (char *)combined,
+				       my_sid_hex,recipient,5000);
+	
+	    if (res!=200) {
+	      m="HTTP/1.0 500 ERROR\nServer: Serval LBARD\n\nYour message could not be submitted.";
+	      failed++;
+	    } else successful++;
+
+	    recipient[0]=0; fgets(recipient,1024,f);
+	  }
+	  fclose(f);
+	  }
+	  
       }
       
       write_all(socket,m,strlen(m));
