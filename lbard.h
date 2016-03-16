@@ -1,4 +1,7 @@
 
+extern struct sync_state *sync_state;
+#define SYNC_SALT_LEN 8
+
 #define SERVALD_STOP "/serval/servald stop"
 #define DEFAULT_BROADCAST_ADDRESSES "10.255.255.255","192.168.2.255","192.168.2.1"
 #define SEND_HELP_MESSAGE "/serval/servald meshms send message `/serval/servald id self | tail -1` `cat /dos/helpdesk.sid` '"
@@ -71,27 +74,6 @@ struct peer_state {
   unsigned char *size_bytes;
   unsigned char *insert_failures;
 #else
-  // Sequence number tracking for remote side
-  int last_remote_sequence_acknowledged;
-  uint16_t remote_sequence_bitmap;
-
-  // Our sequence numbers for this peer
-  int last_local_sequence_number;
-  int last_local_sequence_number_acknowledged;
-
-  // Used to indicate which packet we have been requested to retransmit to this peer.
-  int retransmit_requested;
-  int retransmition_sequence;
-
-  // Buffer for holding packets for retransmission.
-  // This is a direct mapped cache, where the slot corresponds to the bottom 4
-  // bits of the sequence number.
-  uint8_t retransmit_buffer[16][256];
-  int retransmit_lengths[16];
-  int retransmit_buffer_sequence_numbers[16];
-
-  // Sync state
-  struct sync_state sync_state;
 
   // Bundle we are currently transfering to this peer
   int tx_bundle;
@@ -136,6 +118,8 @@ extern int message_buffer_size;
 extern int message_buffer_length;
 
 struct bundle_record {
+  int index; // position in array of bundles
+  
   char *service;
   char *bid;
   long long version;
@@ -146,7 +130,7 @@ struct bundle_record {
   time_t transmit_now;
   int announce_bar_now;
 #else
-  uint8_t sync_key[SYNC_KEY_LEN];
+  sync_key_t sync_key;
 #endif
   long long length;
   char *filehash;
@@ -221,27 +205,6 @@ extern int peer_count;
 #define MAX_BUNDLES 10000
 extern struct bundle_record bundles[MAX_BUNDLES];
 extern int bundle_count;
-
-#define SYNC_BINS 4096
-#define SYNC_BIN_MASK 0xfff
-#if (SYNC_BIN_MASK!=SYNC_BINS-1)
-#error "Fix SYNC_BINS and/or SYNC_BIN_MASK"
-#endif
-#if ((SYNC_BINS*2-1)!=(SYNC_BINS|SYNC_BIN_MASK))
-#error "Fix SYNC_BINS, SYNC_BIN_MASK"
-#endif
-#define SYNC_BIN_SLOTS 10
-// Make sure hash table is unlikely to ever overflow
-#if (SYNC_BINS*SYNC_BIN_SLOTS) < (4*MAX_BUNDLES)
-#error "Fix this"
-#endif
-struct sync_key_hash_bin {
-  // XXX - we could include something to avoid having to look up the BID from
-  // each candidate match, so that we can avoid the random-memory lookup that
-  // it entails
-  unsigned int bundle_numbers[SYNC_BIN_SLOTS];  
-};
-extern struct sync_key_hash_bin sync_key_hash_table[SYNC_BINS];
 
 extern char *bid_of_cached_bundle;
 extern long long cached_version;
@@ -370,9 +333,22 @@ int random_active_peer();
 int append_bytes(int *offset,int mtu,unsigned char *msg_out,
 		 unsigned char *data,int count);
 int sync_tree_receive_message(struct peer_state *p, unsigned char *msg);
-int lookup_bundle_by_sync_key(uint8_t bundle_sync_key[SYNC_KEY_LEN]);
-int peer_queue_bundle_tx(int peer,int bundle, int priority);
+int lookup_bundle_by_sync_key(uint8_t bundle_sync_key[KEY_LEN]);
+int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int priority);
 int sync_parse_ack(struct peer_state *p,unsigned char *msg);
 int http_post_meshms(char *server_and_port, char *auth_token,
 		     char *message,char *sender,char *recipient,
 		     int timeout_ms);
+int sync_setup();
+int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
+			      char *sid_prefix_bin,
+			      char *servald_server,char *credential);
+int sync_tell_peer_we_have_this_bundle(int peer, int bundle);
+int sync_schedule_progress_report(int peer, int partial);
+int bundle_calculate_tree_key(sync_key_t sync_key,
+			      uint8_t sync_tree_salt[SYNC_SALT_LEN],
+			      char *bid,
+			      long long version,
+			      long long length,
+			      char *filehash);
+int dump_bytes(char *msg,unsigned char *bytes,int length);

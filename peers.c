@@ -55,8 +55,7 @@ int free_peer(struct peer_state *p)
   free(p->size_bytes); p->size_bytes=NULL;
   free(p->insert_failures); p->insert_failures=NULL;
 #endif
-  sync_clear_keys(&p->sync_state);
-  bzero(&p->sync_state,sizeof(struct sync_state));
+  sync_free_peer_state(sync_state, p);
   free(p);
   return 0;
 }
@@ -426,26 +425,26 @@ int bid_to_peer_bundle_index(int peer,char *bid_hex)
 }
 #endif
 
-int peer_queue_bundle_tx(int peer,int bundle, int priority)
+int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int priority)
 {
   // Find point of insertion
   int i;
-  for(i=0;i<peer_records[peer]->tx_queue_len;i++) 
-    if (peer_records[peer]->tx_queue_priorities[i]<priority) break;
+  for(i=0;i<p->tx_queue_len;i++) 
+    if (p->tx_queue_priorities[i]<priority) break;
   // Fail on insertion if the queue is already full of higher priority stuff.
   if (i>=MAX_TXQUEUE_LEN) return -1;
   // Shift rest of list down
-  bcopy(&peer_records[peer]->tx_queue_priorities[i],
-	&peer_records[peer]->tx_queue_priorities[i+1],
-	sizeof(int)*(peer_records[peer]->tx_queue_len-i));
-  bcopy(&peer_records[peer]->tx_queue_bundles[i],
-	&peer_records[peer]->tx_queue_bundles[i+1],
-	sizeof(int)*(peer_records[peer]->tx_queue_len-i));
+  bcopy(&p->tx_queue_priorities[i],
+	&p->tx_queue_priorities[i+1],
+	sizeof(int)*(p->tx_queue_len-i));
+  bcopy(&p->tx_queue_bundles[i],
+	&p->tx_queue_bundles[i+1],
+	sizeof(int)*(p->tx_queue_len-i));
   // Write new entry
-  peer_records[peer]->tx_queue_bundles[i]=bundle;
-  peer_records[peer]->tx_queue_priorities[i]=priority;
-  if (i>=peer_records[peer]->tx_queue_len)
-    peer_records[peer]->tx_queue_len=i+1;
+  p->tx_queue_bundles[i]=b->index;
+  p->tx_queue_priorities[i]=priority;
+  if (i>=p->tx_queue_len)
+    p->tx_queue_len=i+1;
   return 0;
 }
 

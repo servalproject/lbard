@@ -101,8 +101,6 @@ int saw_piece(char *peer_prefix,int for_me,
 	// and then return immediately.
 #ifdef SYNC_BY_BAR
 	bundles[i].announce_bar_now=1;
-#else
-	sync_tell_peer_we_have_this_bundle(peer,i);
 #endif
 	if (debug_pieces) fprintf(stderr,"We already have %s* version %lld - ignoring piece.\n",
 		bid_prefix,version);
@@ -457,14 +455,12 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
     p->tx_bundle=-1;
     fprintf(stderr,"Registering peer %s*\n",p->sid_prefix);
     if (peer_count<MAX_PEERS) {
-      peer_records[peer_count++]=p;
-      sync_tree_prepare_tree(peer_count-1);
+      peer_records[peer_count++]=p;      
     } else {
       // Peer table full.  Do random replacement.
       int n=random()%MAX_PEERS;
       free_peer(peer_records[n]);
       peer_records[n]=p;
-      sync_tree_prepare_tree(n);
     }
   }
   

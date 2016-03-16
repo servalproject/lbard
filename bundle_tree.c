@@ -40,12 +40,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "sync.h"
 #include "lbard.h"
+#include "sha1.h"
 
 int debug_sync=1;
 
-struct sync_key_hash_bin sync_key_hash_table[SYNC_BINS];
-
-int bundle_calculate_tree_key(uint8_t bundle_tree_key[SYNC_KEY_LEN],
+int bundle_calculate_tree_key(sync_key_t bundle_tree_key,
 			      uint8_t sync_tree_salt[SYNC_SALT_LEN],
 			      char *bid,
 			      long long version,
@@ -98,39 +97,8 @@ int bundle_calculate_tree_key(uint8_t bundle_tree_key[SYNC_KEY_LEN],
   sha1_write(&sha1,bid,strlen(bid));
   sha1_write(&sha1,filehash,strlen(filehash));
   sha1_write(&sha1,lengthstring,strlen(lengthstring));
-  bcopy(sha1_result(&sha1),bundle_tree_key,SYNC_KEY_LEN);
+  bcopy(sha1_result(&sha1),bundle_tree_key.key,KEY_LEN);
   return 0;  
-}
-
-#define SYNC_SEQ_NUMBER_OFFSET 2
-#define SYNC_RSEQ_NUMBER_OFFSET 3
-int sync_update_peer_sequence_acknowledgement_field(int peer,uint8_t *msg)
-{
-  int len=SYNC_SEQ_NUMBER_OFFSET;
-  // Acknowledge what we have seen from the remote side
-  msg[len++]=peer_records[peer]->last_remote_sequence_acknowledged;
-  msg[len++]=peer_records[peer]->remote_sequence_bitmap&0xff;
-  msg[len++]=(peer_records[peer]->remote_sequence_bitmap>>8)&0xff;
-  return 0;
-}
-
-int sync_peer_window_has_space(int peer)
-{
-  int space=16-
-    (peer_records[peer]->last_local_sequence_number
-     -peer_records[peer]->last_local_sequence_number_acknowledged);
-
-  if (0)
-    printf("Window space for talking to peer #%d (%s*): our_last_seq=%d, last_seq_acknowledged=%d, space=%d\n",
-	   peer,
-	   peer_records[peer]->sid_prefix,
-	   peer_records[peer]->last_local_sequence_number,
-	   -peer_records[peer]->last_local_sequence_number_acknowledged,
-	   space);
-
-  
-  if (space<0) space+=256;
-  if (space>0) return 1; else return 0;
 }
 
 int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
@@ -139,139 +107,24 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
 
   if (debug_sync)
     printf("Receiving sync tree message of %d bytes\n",len);
-    
-  // Check for the need to request retransmission of messages that we missed.
-  int sender_sequence_number=msg[SYNC_SEQ_NUMBER_OFFSET];
-
-  if (debug_sync)
-    printf("  sender seq# is $%02x, we are hoping for $%02x\n",
-	   sender_sequence_number,
-	   (p->last_remote_sequence_acknowledged+1)&0xff);
-
-  /* First, get this sequence number and the last known sequence number into a
-     compatible number space. This just consists of dealing with wrap-around in
-     the sequence number. */
-  if ((p->last_remote_sequence_acknowledged>0xe0)&&
-      (sender_sequence_number<0x20))
-    sender_sequence_number+=0x100;
-  // Is this message the next one we are hoping for?
-  if (sender_sequence_number==(p->last_remote_sequence_acknowledged+1))
-    {
-      // This is the message we were expecting
-      if (debug_sync)
-	printf("ACKing message $%02x from %s*\n",
-	       sender_sequence_number&0xff,p->sid_prefix);
-
-      // Advance acknowledged sequence by one, and shift the bitmap accordingly
-      p->last_remote_sequence_acknowledged=(sender_sequence_number&0xff);
-      p->remote_sequence_bitmap=p->remote_sequence_bitmap>>1;
-      // See if we can now advance our acknowledgement further from previously
-      // received messages.
-      while(p->remote_sequence_bitmap&1)
-	{
-	  p->last_remote_sequence_acknowledged
-	    =(p->last_remote_sequence_acknowledged+1)&0xff;
-	  p->remote_sequence_bitmap=p->remote_sequence_bitmap>>1;
-	}
-    } 
-  // Is this message one that fits in the current window?
-  // If so, update our reception bitmap.
-  else if ((sender_sequence_number>p->last_remote_sequence_acknowledged)
-	   &&((sender_sequence_number-p->last_remote_sequence_acknowledged)<16)) {
-    int bit=sender_sequence_number-p->last_remote_sequence_acknowledged;
-    if (bit>=0&&bit<16) p->remote_sequence_bitmap|=1<<bit;
-    if (debug_sync)
-      printf("  setting bit #%d in our RX bitmap\n",bit);
-  }
-  // Is the message one that we have acknowledged quite recently?
-  // If so, ignore it.  
-  else if ((sender_sequence_number<=p->last_remote_sequence_acknowledged)
-	   &&((sender_sequence_number-p->last_remote_sequence_acknowledged)>-16)) {
-    if (debug_sync)
-      printf("  we think we have received this one recently\n");
-  }
-  // Otherwise, if the message doesn't fit in the window, then we throw away our
-  // current window, and receive it.
-  else {
-    p->last_remote_sequence_acknowledged=(sender_sequence_number&0xff);
-    p->remote_sequence_bitmap=0;
-    if (debug_sync) {
-      printf("  resetting window position to $%02x\n",
-	     p->last_remote_sequence_acknowledged);
-      printf("  sender_sequence_number=%d, p->last_remote_sequence_acknowledged=%d\n",
-	     sender_sequence_number,p->last_remote_sequence_acknowledged);
-      printf("  (sender_sequence_number-p->last_remote_sequence_acknowledged)>-16)=%d\n",
-	     (sender_sequence_number-p->last_remote_sequence_acknowledged)>-16);
-    }
-  }
-    
-  // See if they have missed message(s) from us, in which case we should
-  // mark the first message that they are indicating that they have not seen.
-  unsigned int local_sequence_number_acknowledged=msg[SYNC_RSEQ_NUMBER_OFFSET];
-  // Similarly for the remote sequence number, we have to get the two sequence numbers
-  // into the same number space.  Here the remote sequence number should always be
-  // less than our local one.  Thus we translate the received value to a negative
-  // value if we have recently wrapped around.
-  if ((local_sequence_number_acknowledged>=0xf0)
-      &&(p->last_local_sequence_number<=0x10))
-    local_sequence_number_acknowledged-=0x100;
-  // Similarly we have to translate our memory of the last of our messages that has
-  // been acknowledged
-  int remembered_sequence_number_acknowledged
-    =p->last_local_sequence_number_acknowledged;
-  if ((remembered_sequence_number_acknowledged>=0xf0)
-      &&(p->last_local_sequence_number<=0x10))
-    remembered_sequence_number_acknowledged-=0x100;
-
-  // Clear any pending retransmition request, if it has been rendered redundant
-  // by this acknowledgement.
-  int retransmit_sequence=p->retransmition_sequence;
-  if ((retransmit_sequence>=0xf0)&&(p->last_local_sequence_number<=0x10))
-    retransmit_sequence-=0x100;
-  if (retransmit_sequence<=local_sequence_number_acknowledged)
-    p->retransmit_requested=0;
-  
-  if ((local_sequence_number_acknowledged>remembered_sequence_number_acknowledged)
-      &&(local_sequence_number_acknowledged<=p->last_local_sequence_number)) {
-    // Acknowledgement is for a sequence number that is in the past, so
-    // update our record of what has been acknowledged
-    p->last_local_sequence_number_acknowledged
-      =local_sequence_number_acknowledged&0xff;
-    if (local_sequence_number_acknowledged<(p->last_local_sequence_number-1)) {
-      // The acknowledgement is not, however, for our most recent message.
-      // Therefore queue retransmission of the next message that they have not
-      // received.  However, to avoid double-sending messages, we require that
-      // we have sent at least one different message inbetween.
-      p->retransmit_requested=1;
-      p->retransmition_sequence=(local_sequence_number_acknowledged+1)&0xff;
-      if (debug_sync)
-	printf("  requesting re-transmit of $%02x\n",
-	       p->retransmition_sequence);
-    }
-  } else {
-    // If it doesn't make sense to update our record of acknowledgement, then do
-    // nothing, because the other side of this protocol deals with this situation
-    // by updating their understanding of our window.
-    ;
-  }
-  
+      
   // Pull out the sync tree message for processing.
-#define SYNC_MSG_HEADER_LEN 4
+#define SYNC_MSG_HEADER_LEN 2
   int sync_bytes=len-SYNC_MSG_HEADER_LEN;
 
   // Sanity check message before processing
   if ((msg[SYNC_MSG_HEADER_LEN+0]<=msg[SYNC_MSG_HEADER_LEN+1])
-      &&(msg[SYNC_MSG_HEADER_LEN+0]<=SYNC_KEY_LEN)
-      &&(msg[SYNC_MSG_HEADER_LEN+1]<=SYNC_KEY_LEN)) {
+      &&(msg[SYNC_MSG_HEADER_LEN+0]<=KEY_LEN)
+      &&(msg[SYNC_MSG_HEADER_LEN+1]<=KEY_LEN)) {
     dump_bytes("received sync message",&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
-    sync_recv_message(&p->sync_state,&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
+    sync_recv_message(sync_state,(void *)p,&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
     printf("returned from sync_recv_message\n");
   }
   
   return 0;
 }
 
-int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out,int peer)
+int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out)
 {         
   uint8_t msg[256];
   int len=0;
@@ -280,35 +133,16 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out,int peer)
   msg[len++]='S'; // Sync message
   int length_byte_offset=len;
   msg[len++]=0; // place holder for length
-  // Sequence number (our side)  
-  peer_records[peer]->last_local_sequence_number++;
-  peer_records[peer]->last_local_sequence_number&=0xff;
-  assert(len==SYNC_SEQ_NUMBER_OFFSET);
-  msg[len++]=peer_records[peer]->last_local_sequence_number;
-  assert(len==SYNC_RSEQ_NUMBER_OFFSET);
-  // Acknowledge what we have seen from the remote side, i.e., sequence number of
-  // message, as compared to partial bundle transfer status, which we send separately
-  // and outside of the packet-loss resistent scheme, since stale progress reports
-  // are counterproductive.
-  msg[len++]=peer_records[peer]->last_remote_sequence_acknowledged;
   assert(len==SYNC_MSG_HEADER_LEN);
 
-  int used=sync_build_message(&peer_records[peer]->sync_state,
-			      &msg[len],256-len);
+  int used=sync_build_message(sync_state,&msg[len],256-len);
   len+=used;
   // Record the length of the field
   msg[length_byte_offset]=len;
   append_bytes(offset,mtu,msg_out,msg,len);
 
   // Record in retransmit buffer
-  int seq=peer_records[peer]->last_local_sequence_number;
-  int slot=seq&0x0f;
-  peer_records[peer]->retransmit_lengths[slot]=len;
-  peer_records[peer]->retransmit_buffer_sequence_numbers[slot]=seq;
-  bcopy(msg,peer_records[peer]->retransmit_buffer[slot],len);
-  printf("Sending sync message #%02x to peer %s* (length now = $%02x)\n",seq,
-	 peer_records[peer]->sid_prefix,*offset);
-
+  printf("Sending sync message (length now = $%02x)\n",*offset);
   
   return 0;
 }
@@ -519,57 +353,46 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
   } 
   
   int count=10; if (count>peer_count) count=peer_count;
+
+  /* Try sending something new.
+     Sync trees, and if space remains (because we have synchronised trees),
+     then try sending a piece of a bundle, if any */
+  int sync_not_sent=1;
+  if (random()&1) {
+    sync_not_sent=0;
+    sync_tree_send_message(offset,mtu,msg_out);
+  }
   
   while((*offset)<(mtu-16)) {
     if ((count--)<0) break;
     int peer=random_active_peer();
     if (peer<0) break;
-    if (peer_records[peer]->retransmit_requested) {
-      // Retransmit last transmission.
-      int slot=peer_records[peer]->retransmition_sequence&15;
-      // Update acknowledgement bytes to reflect current situation.
-      sync_update_peer_sequence_acknowledgement_field
-	(peer,peer_records[peer]->retransmit_buffer[slot]);
-      printf("retransmitting message #%02x (asked for #%02x) for peer %s*\n",
-	     peer_records[peer]->retransmit_buffer_sequence_numbers[slot],
-	     peer_records[peer]->retransmition_sequence,
-	     peer_records[peer]->sid_prefix);
-      if (!append_bytes(offset,mtu,msg_out,
-			peer_records[peer]->retransmit_buffer[slot],
-			peer_records[peer]->retransmit_lengths[slot]))
-	peer_records[peer]->retransmit_requested=0;
-    }
     int space=mtu-(*offset);
-    if (sync_peer_window_has_space(peer)&&(space>10)) {
-      /* Try sending something new.
-	 Sync trees, and if space remains (because we have synchronised trees),
-	 then try sending a piece of a bundle, if any */
-      sync_tree_send_message(offset,mtu,msg_out,peer);
+    if (space>10) {
       sync_tree_send_data(offset,mtu,msg_out,peer,
 			  sid_prefix_bin,servald_server,credential);
     } else {
-      // Window is full -- can't do anything
+      // No space -- can't do anything
     }
   }  
+
+  if (sync_not_sent)
+    // Don't waste any space: sync what we can
+    sync_tree_send_message(offset,mtu,msg_out);
   
   return 0;
 }
 
-int sync_tree_prepare_tree(int peer)
+int sync_tree_populate_with_our_bundles()
 {
-  // Clear tree
-  bzero(&peer_records[peer]->sync_state,sizeof(peer_records[peer]->sync_state));
-  
-  for(int i=0;i<bundle_count;i++) {
-    sync_key_t key;
-    bcopy(bundles[i].sync_key,key.key,SYNC_KEY_LEN);
-    sync_add_key(&peer_records[peer]->sync_state,&key);
-  }
+  for(int i=0;i<bundle_count;i++)
+    sync_add_key(sync_state,&bundles[i].sync_key,&bundles[i]);
   return 0;
 }
 
+#if 0
 void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
-						   uint8_t key[SYNC_KEY_LEN])
+						   uint8_t key[KEY_LEN])
 {
   // Find the peer by looking at sync_state
   // XXX - Linear search! Should just put peer number into the sync_state structure!
@@ -638,6 +461,7 @@ void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
   
   return;
 }
+#endif
 
 int sync_tell_peer_we_have_this_bundle(int peer, int bundle)
 {
@@ -780,5 +604,92 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
     }
   }
   
+  return 0;
+}
+
+void peer_has_this_key(void *context, void *peer_context, const sync_key_t *key)
+{
+  // Peer has something that we want.
+}
+
+void peer_now_has_this_key(void *context, void *peer_context,void *key_context,
+				 const sync_key_t *key)
+{
+  // Peer has something, that we also have. 
+  // We should stop sending it to them, if we were trying.
+}
+
+
+void peer_does_not_have_this_key(void *context, void *peer_context,void *key_context,
+				 const sync_key_t *key)
+{
+  // We need to send something to a peer
+  
+  struct peer_state *p=(struct peer_state *)peer_context;
+  struct bundle_record *b=(struct bundle_record*)key_context;
+
+  printf(">>> Peer %s* is missing bundle %s*\n"
+	 "    service=%s, version=%lld\n"
+	 "    sender=%s,\n"
+	 "    recipient=%s\n",
+	 p->sid_prefix,
+	 b->bid,b->service,b->version,b->sender,b->recipient);
+
+    int priority=calculate_bundle_intrinsic_priority(b->bid,
+						   b->length,
+						   b->version,
+						   b->service,
+						   b->recipient,
+						   0);
+  // TX queue has something in it.
+  if (p->tx_bundle>=0) {
+    if (priority>p->tx_bundle_priority) {
+      // Bump current tx_bundle to TX queue, and substitute with this one.
+      // (substitution happens below)
+      peer_queue_bundle_tx(p,&bundles[p->tx_bundle],
+			   p->tx_bundle_priority);
+      p->tx_bundle=-1;
+    } else {
+      // Bump new bundle to TX queue
+      peer_queue_bundle_tx(p,b,priority);
+    }
+  }
+
+  // If nothing in the TX queue, just add it.
+  // (also used to putting new bundle in the current TX slot if there was something
+  // lower priority in there previously.)
+  if (p->tx_bundle==-1) {
+    p->tx_bundle=b->index;
+    p->tx_bundle_body_offset=0;
+    p->tx_bundle_manifest_offset=0;
+    p->tx_bundle_priority=priority;
+  }
+
+  printf("& TX QUEUE TO %s*\n",
+	 p->sid_prefix);
+  printf("& tx_bundle=%d, tx_bundle_bid=%s*, priority=%d\n",
+	 p->tx_bundle,
+	 (p->tx_bundle>-1)?
+	 bundles[p->tx_bundle].bid:"",
+	 p->tx_bundle_priority);
+  printf("& %d more queued\n",p->tx_queue_len);
+  for(int i=0;i<p->tx_queue_len;i++) {
+    int bundle=p->tx_queue_bundles[i];
+    int priority=p->tx_queue_priorities[i];
+    printf("  & bundle=%d, bid=%s*, priority=%d\n",	   
+	   bundle,bundles[bundle].bid,priority);
+
+  }
+
+  
+}
+
+
+int sync_setup()
+{
+  sync_state = sync_alloc_state(NULL,
+				peer_has_this_key,
+				peer_does_not_have_this_key,
+				peer_now_has_this_key);
   return 0;
 }

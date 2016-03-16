@@ -59,21 +59,12 @@ int register_bundle(char *service,
   // Calculate the key required for the bundle tree used to efficiently determine which
   // bundles a pair of peers have in common, and thus also the bundles each needs to
   // send to the other.
-  uint8_t bundle_sync_key[SYNC_KEY_LEN];
+  sync_key_t bundle_sync_key;
   uint8_t bundle_tree_salt[SYNC_SALT_LEN]={0xa9,0x1b,0x8d,0x11,0xdd,0xee,0x20,0xd0};
   
   bundle_calculate_tree_key(bundle_sync_key,bundle_tree_salt,
 			    bid,strtoll(version,NULL,10),length,filehash);   
-  
-  // Add bundle to the tree for each peer
-  sync_key_t key;
-  bcopy(bundle_sync_key,key.key,SYNC_KEY_LEN);
-  for(int peer=0;peer<peer_count;peer++) {
-    // XXX - check if key is already in the tree.
-    if (!key_exists(&peer_records[peer]->sync_state,&key))
-	sync_add_key(&peer_records[peer]->sync_state,&key);
-  }
-  
+    
   // Ignore non-meshms bundles when in meshms-only mode.
   if (meshms_only) {
     if (strncasecmp("meshms",service,6)) {
@@ -114,7 +105,6 @@ int register_bundle(char *service,
       }
     }
   }
-
   
   // XXX - Linear search through bundles!
   // Use a hash table or something so that it doesn't cost O(n^2) with number
@@ -128,12 +118,6 @@ int register_bundle(char *service,
   }
 
   if (bundle_number>=MAX_BUNDLES) return -1;
-
-  if (!bundle_count) {
-    // Clear sync key hash table when inserting first bundle
-    for(int i=0;i<SYNC_BINS;i++)
-      bzero(&sync_key_hash_table[i],sizeof(struct sync_key_hash_bin));
-  }
   
   if (bundle_number<bundle_count) {
     // Replace old bundle values, ...
@@ -178,38 +162,16 @@ int register_bundle(char *service,
   bundles[bundle_number].filehash=strdup(filehash);
   bundles[bundle_number].sender=strdup(sender);
   bundles[bundle_number].recipient=strdup(recipient);
-  bcopy(bundle_sync_key,bundles[bundle_number].sync_key,SYNC_KEY_LEN);
+
+  bundles[bundle_number].index=bundle_number;
   
-  // Add sync key to hash table for quickly finding a bundle from its sync key.
-  // ZERO means empty. We don't store an entry for bundle 0, since it will implicitly
-  // be found (see lookup_bundle_by_sync_key below)
-  int sync_key_bin=((bundle_sync_key[0]<<8)|bundle_sync_key[1])&SYNC_BIN_MASK;
-  for(i=0;i<SYNC_BIN_SLOTS;i++) {
-    if (sync_key_hash_table[sync_key_bin].bundle_numbers[i]==bundle_number) break;
-    if (!sync_key_hash_table[sync_key_bin].bundle_numbers[i]) {
-      sync_key_hash_table[sync_key_bin].bundle_numbers[i]=bundle_number;
-      break;
-    }
-  }
-  assert(i<SYNC_BIN_SLOTS);
+  // Add bundle to the sync tree 
+  sync_add_key(sync_state,&bundle_sync_key,&bundles[bundle_number]);
   
   rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
 	      "Bundle registered");
   return 0;
 }
-
-int lookup_bundle_by_sync_key(uint8_t bundle_sync_key[SYNC_KEY_LEN])
-{
-  int sync_key_bin=((bundle_sync_key[0]<<8)|bundle_sync_key[1])&SYNC_BIN_MASK;
-  for(int i=0;i<SYNC_BIN_SLOTS;i++) {
-    int candidate=sync_key_hash_table[sync_key_bin].bundle_numbers[i];
-    if (!candidate) break;
-    if (!bcmp(bundle_sync_key,bundles[candidate].sync_key,SYNC_KEY_LEN))
-      return candidate;
-  }
-  return -1;  
-}
-
 
 int we_have_this_bundle(char *bid_prefix, long long version)
 {

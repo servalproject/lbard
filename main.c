@@ -125,9 +125,13 @@ time_t last_status_time=0;
 
 int monitor_mode=0;
 
+struct sync_state *sync_state=NULL;
+
 int main(int argc, char **argv)
 {
 
+  sync_setup();
+  
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==7)&&(!strcasecmp(argv[1],"energysample"))) {
     char *port=argv[2];
