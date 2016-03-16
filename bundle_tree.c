@@ -456,6 +456,12 @@ int sync_schedule_progress_report(int peer, int partial)
   assert(ofs<MAX_REPORT_LEN);
   if (slot>=report_queue_length) report_queue_length=slot;
 
+  printf("Reporting progress on transfer of %s* from %s. m_first=%d, b_first=%d\n",
+	 peer_records[peer]->partials[partial].bid_prefix,
+	 peer_records[peer]->sid_prefix,
+	 first_required_manifest_offset,
+	 first_required_body_offset);    
+  
   return 0;
 }
 
