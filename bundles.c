@@ -62,7 +62,7 @@ int register_bundle(char *service,
   sync_key_t bundle_sync_key;
   uint8_t bundle_tree_salt[SYNC_SALT_LEN]={0xa9,0x1b,0x8d,0x11,0xdd,0xee,0x20,0xd0};
   
-  bundle_calculate_tree_key(bundle_sync_key,bundle_tree_salt,
+  bundle_calculate_tree_key(&bundle_sync_key,bundle_tree_salt,
 			    bid,strtoll(version,NULL,10),length,filehash);   
     
   // Ignore non-meshms bundles when in meshms-only mode.
@@ -167,6 +167,11 @@ int register_bundle(char *service,
   
   // Add bundle to the sync tree 
   sync_add_key(sync_state,&bundle_sync_key,&bundles[bundle_number]);
+  printf("  >> Inserted a bundle into the tree: key=%02X%02X%02X...\n",
+	 bundle_sync_key.key[0],
+	 bundle_sync_key.key[1],
+	 bundle_sync_key.key[2]
+	 );
   
   rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
 	      "Bundle registered");

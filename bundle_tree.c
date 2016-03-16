@@ -44,7 +44,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 int debug_sync=1;
 
-int bundle_calculate_tree_key(sync_key_t bundle_tree_key,
+int bundle_calculate_tree_key(sync_key_t *bundle_tree_key,
 			      uint8_t sync_tree_salt[SYNC_SALT_LEN],
 			      char *bid,
 			      long long version,
@@ -97,7 +97,8 @@ int bundle_calculate_tree_key(sync_key_t bundle_tree_key,
   sha1_write(&sha1,bid,strlen(bid));
   sha1_write(&sha1,filehash,strlen(filehash));
   sha1_write(&sha1,lengthstring,strlen(lengthstring));
-  bcopy(sha1_result(&sha1),bundle_tree_key.key,KEY_LEN);
+  unsigned char *res=sha1_result(&sha1);
+  bcopy(res,bundle_tree_key->key,KEY_LEN);
   return 0;  
 }
 
@@ -112,9 +113,7 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
 #define SYNC_MSG_HEADER_LEN 2
   int sync_bytes=len-SYNC_MSG_HEADER_LEN;
 
-  dump_bytes("received sync message",&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
-  int r=sync_recv_message(sync_state,(void *)p,&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
-  printf("returned from sync_recv_message (result %d)\n",r);
+  sync_recv_message(sync_state,(void *)p,&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
   
   return 0;
 }
