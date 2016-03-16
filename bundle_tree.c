@@ -390,79 +390,6 @@ int sync_tree_populate_with_our_bundles()
   return 0;
 }
 
-#if 0
-void sync_tree_suspect_peer_does_not_have_this_key(struct sync_state *state,
-						   uint8_t key[KEY_LEN])
-{
-  // Find the peer by looking at sync_state
-  // XXX - Linear search! Should just put peer number into the sync_state structure!
-  int peer;
-  for(peer=0;peer<peer_count;peer++)
-    if (state==&peer_records[peer]->sync_state) break;
-  if (peer>=peer_count) {
-    printf(">>> Can't find peer from sync_state\n");
-    return;
-  }
-
-  printf(">>> Suspect peer #%d is missing bundle with key %02x%02x%02x%02x%02x%02x%02x%02x\n",
-	 peer,key[0],key[1],key[2],key[3],key[4],key[5],key[6],key[7]);
-
-  
-  // Have peer, now lookup bundle ID and priority, and add it to our transmission
-  // queue, if it isn't already there.
-  int bundle_number = lookup_bundle_by_sync_key(key);
-  if (bundle_number<0) return;
-
-  int priority=calculate_bundle_intrinsic_priority(bundles[bundle_number].bid,
-						   bundles[bundle_number].length,
-						   bundles[bundle_number].version,
-						   bundles[bundle_number].service,
-						   bundles[bundle_number].recipient,
-						   0);
-  // TX queue has something in it.
-  if (peer_records[peer]->tx_bundle>=0) {
-    if (priority>peer_records[peer]->tx_bundle_priority) {
-      // Bump current tx_bundle to TX queue, and substitute with this one.
-      // (substitution happens below)
-      peer_queue_bundle_tx(peer,peer_records[peer]->tx_bundle,
-			   peer_records[peer]->tx_bundle_priority);
-      peer_records[peer]->tx_bundle=-1;
-    } else {
-      // Bump new bundle to TX queue
-      peer_queue_bundle_tx(peer,bundle_number,priority);
-    }
-  }
-
-  // If nothing in the TX queue, just add it.
-  // (also used to putting new bundle in the current TX slot if there was something
-  // lower priority in there previously.)
-  if (peer_records[peer]->tx_bundle==-1) {
-    peer_records[peer]->tx_bundle=bundle_number;
-    peer_records[peer]->tx_bundle_body_offset=0;
-    peer_records[peer]->tx_bundle_manifest_offset=0;
-    peer_records[peer]->tx_bundle_priority=priority;
-  }
-
-  printf("& TX QUEUE TO %s*\n",
-	 peer_records[peer]->sid_prefix);
-  printf("& tx_bundle=%d, tx_bundle_bid=%s*, priority=%d\n",
-	 peer_records[peer]->tx_bundle,
-	 (peer_records[peer]->tx_bundle>-1)?
-	 bundles[peer_records[peer]->tx_bundle].bid:"",
-	 peer_records[peer]->tx_bundle_priority);
-  printf("& %d more queued\n",peer_records[peer]->tx_queue_len);
-  for(int i=0;i<peer_records[peer]->tx_queue_len;i++) {
-    int bundle=peer_records[peer]->tx_queue_bundles[i];
-    int priority=peer_records[peer]->tx_queue_priorities[i];
-    printf("  & bundle=%d, bid=%s*, priority=%d\n",	   
-	   bundle,bundles[bundle].bid,priority);
-
-  }
-  
-  return;
-}
-#endif
-
 int sync_tell_peer_we_have_this_bundle(int peer, int bundle)
 {
   int slot=report_queue_length;
@@ -551,96 +478,17 @@ int lookup_bundle_by_prefix(unsigned char *prefix)
   return -1;
 }
 
-int sync_parse_ack(struct peer_state *p,unsigned char *msg)
+int sync_queue_bundle(struct peer_state *p,int bundle)
 {
-  // Get fields
-  unsigned char bid_prefix[8]=
-    {msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8]};
-  int manifest_offset=msg[9]|(msg[10]<<8);
-  int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[42]<<24);
+  struct bundle_record *b=&bundles[bundle];
 
-  int bundle=lookup_bundle_by_prefix(bid_prefix);  
-  if (bundle<0) return -1;  
-  int finished=0;
-  if ((manifest_offset>=1024)
-      &&(body_offset>=bundles[bundle].length)) finished=1;
-  if (bundle==p->tx_bundle) {
-    // Affects the bundle we are currently sending
-    if (finished) {
-      // Delete this entry in queue
-      p->tx_bundle=-1;
-      // Advance next in queue, if there is anything
-      if (p->tx_queue_len) {
-	p->tx_bundle=p->tx_queue_bundles[0];
-	p->tx_bundle_priority=p->tx_queue_priorities[0];
-	p->tx_bundle_manifest_offset=0;
-	p->tx_bundle_body_offset=0;      
-	bcopy(&p->tx_queue_bundles[1],
-	      &p->tx_queue_bundles[0],
-	      sizeof(int)*p->tx_queue_len-1);
-	bcopy(&p->tx_queue_priorities[1],
-	      &p->tx_queue_priorities[0],
-	      sizeof(int)*p->tx_queue_len-1);
-	p->tx_queue_len--;
-      }
-      return 0;
-    } else {
-      p->tx_bundle_manifest_offset=manifest_offset;
-      p->tx_bundle_body_offset=body_offset;
-    }
-  } else {
-    for(int i=0;i<p->tx_queue_len;i++) {
-      if (bundle==p->tx_queue_bundles[i]) {
-	// Delete this entry in queue
-	bcopy(&p->tx_queue_bundles[i+1],
-	      &p->tx_queue_bundles[i],
-	      sizeof(int)*p->tx_queue_len-i-1);
-	bcopy(&p->tx_queue_priorities[i+1],
-	      &p->tx_queue_priorities[i],
-	      sizeof(int)*p->tx_queue_len-i-1);
-	p->tx_queue_len--;
-	return 0;
-      }
-    }
-  }
-  
-  return 0;
-}
-
-void peer_has_this_key(void *context, void *peer_context, const sync_key_t *key)
-{
-  // Peer has something that we want.
-}
-
-void peer_now_has_this_key(void *context, void *peer_context,void *key_context,
-				 const sync_key_t *key)
-{
-  // Peer has something, that we also have. 
-  // We should stop sending it to them, if we were trying.
-}
-
-
-void peer_does_not_have_this_key(void *context, void *peer_context,void *key_context,
-				 const sync_key_t *key)
-{
-  // We need to send something to a peer
-  
-  struct peer_state *p=(struct peer_state *)peer_context;
-  struct bundle_record *b=(struct bundle_record*)key_context;
-
-  printf(">>> Peer %s* is missing bundle %s*\n"
-	 "    service=%s, version=%lld\n"
-	 "    sender=%s,\n"
-	 "    recipient=%s\n",
-	 p->sid_prefix,
-	 b->bid,b->service,b->version,b->sender,b->recipient);
-
-    int priority=calculate_bundle_intrinsic_priority(b->bid,
+  int priority=calculate_bundle_intrinsic_priority(b->bid,
 						   b->length,
 						   b->version,
 						   b->service,
 						   b->recipient,
 						   0);
+
   // TX queue has something in it.
   if (p->tx_bundle>=0) {
     if (priority>p->tx_bundle_priority) {
@@ -659,7 +507,7 @@ void peer_does_not_have_this_key(void *context, void *peer_context,void *key_con
   // (also used to putting new bundle in the current TX slot if there was something
   // lower priority in there previously.)
   if (p->tx_bundle==-1) {
-    p->tx_bundle=b->index;
+    p->tx_bundle=bundle;
     p->tx_bundle_body_offset=0;
     p->tx_bundle_manifest_offset=0;
     p->tx_bundle_priority=priority;
@@ -680,8 +528,119 @@ void peer_does_not_have_this_key(void *context, void *peer_context,void *key_con
 	   bundle,bundles[bundle].bid,priority);
 
   }
+  return 0;
+}
 
+
+int sync_dequeue_bundle(struct peer_state *p,int bundle)
+{
+  if (bundle==p->tx_bundle) {
+    // Delete this entry in queue
+    p->tx_bundle=-1;
+    // Advance next in queue, if there is anything
+    if (p->tx_queue_len) {
+      p->tx_bundle=p->tx_queue_bundles[0];
+      p->tx_bundle_priority=p->tx_queue_priorities[0];
+      p->tx_bundle_manifest_offset=0;
+      p->tx_bundle_body_offset=0;      
+      bcopy(&p->tx_queue_bundles[1],
+	    &p->tx_queue_bundles[0],
+	    sizeof(int)*p->tx_queue_len-1);
+      bcopy(&p->tx_queue_priorities[1],
+	    &p->tx_queue_priorities[0],
+	    sizeof(int)*p->tx_queue_len-1);
+      p->tx_queue_len--;
+    }
+  } else {
+    // Wasn't the bundle on the list right now, so delete from in list.
+    for(int i=0;i<p->tx_queue_len;i++) {
+      if (bundle==p->tx_queue_bundles[i]) {
+	// Delete this entry in queue
+	bcopy(&p->tx_queue_bundles[i+1],
+	      &p->tx_queue_bundles[i],
+	      sizeof(int)*p->tx_queue_len-i-1);
+	bcopy(&p->tx_queue_priorities[i+1],
+	      &p->tx_queue_priorities[i],
+	      sizeof(int)*p->tx_queue_len-i-1);
+	p->tx_queue_len--;
+	return 0;
+      }
+    }
+    
+  }
+
+  return 0;
+}
+
+
+int sync_parse_ack(struct peer_state *p,unsigned char *msg)
+{
+  // Get fields
+  unsigned char bid_prefix[8]=
+    {msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8]};
+  int manifest_offset=msg[9]|(msg[10]<<8);
+  int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[42]<<24);
+
+  int bundle=lookup_bundle_by_prefix(bid_prefix);  
+  if (bundle<0) return -1;  
+  int finished=0;
+  if ((manifest_offset>=1024)
+      &&(body_offset>=bundles[bundle].length)) finished=1;
+  if (finished) sync_dequeue_bundle(p,bundle);
+  else {
+    if (bundle==p->tx_bundle) {
+      p->tx_bundle_manifest_offset=manifest_offset;
+      p->tx_bundle_body_offset=body_offset;      
+    }
+  }
+
+  return 0;
+}
+
+void peer_has_this_key(void *context, void *peer_context, const sync_key_t *key)
+{
+  // Peer has something that we want.
+}
+
+void peer_now_has_this_key(void *context, void *peer_context,void *key_context,
+				 const sync_key_t *key)
+{
+  // Peer has something, that we also have. 
+  // We should stop sending it to them, if we were trying.
+
+  struct peer_state *p=(struct peer_state *)peer_context;
+  struct bundle_record *b=(struct bundle_record*)key_context;
+
+  printf(">>> Peer %s* is now has bundle %s*\n"
+	 "    service=%s, version=%lld\n"
+	 "    sender=%s,\n"
+	 "    recipient=%s\n",
+	 p->sid_prefix,
+	 b->bid,b->service,b->version,b->sender,b->recipient);
+
+  sync_dequeue_bundle(p,b->index);
+
+}
+
+
+void peer_does_not_have_this_key(void *context, void *peer_context,void *key_context,
+				 const sync_key_t *key)
+{
+  // We need to send something to a peer
   
+  struct peer_state *p=(struct peer_state *)peer_context;
+  struct bundle_record *b=(struct bundle_record*)key_context;
+
+  printf(">>> Peer %s* is missing bundle %s*\n"
+	 "    service=%s, version=%lld\n"
+	 "    sender=%s,\n"
+	 "    recipient=%s\n",
+	 p->sid_prefix,
+	 b->bid,b->service,b->version,b->sender,b->recipient);
+    
+  sync_queue_bundle(p,b->index);
+  
+  return;  
 }
 
 
