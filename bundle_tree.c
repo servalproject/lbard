@@ -112,14 +112,9 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
 #define SYNC_MSG_HEADER_LEN 2
   int sync_bytes=len-SYNC_MSG_HEADER_LEN;
 
-  // Sanity check message before processing
-  if ((msg[SYNC_MSG_HEADER_LEN+0]<=msg[SYNC_MSG_HEADER_LEN+1])
-      &&(msg[SYNC_MSG_HEADER_LEN+0]<=KEY_LEN)
-      &&(msg[SYNC_MSG_HEADER_LEN+1]<=KEY_LEN)) {
-    dump_bytes("received sync message",&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
-    sync_recv_message(sync_state,(void *)p,&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
-    printf("returned from sync_recv_message\n");
-  }
+  dump_bytes("received sync message",&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
+  int r=sync_recv_message(sync_state,(void *)p,&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
+  printf("returned from sync_recv_message (result %d)\n",r);
   
   return 0;
 }
@@ -142,7 +137,7 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out)
   append_bytes(offset,mtu,msg_out,msg,len);
 
   // Record in retransmit buffer
-  printf("Sending sync message (length now = $%02x)\n",*offset);
+  printf("Sending sync message (length now = $%02x, used %d)\n",*offset,used);
   
   return 0;
 }
@@ -599,7 +594,12 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
 
 void peer_has_this_key(void *context, void *peer_context, const sync_key_t *key)
 {
+  struct peer_state *p=(struct peer_state *)peer_context;
+
   // Peer has something that we want.
+  printf(">>> Peer %s* is HAS some bundle that we don't have.\n",
+	 p->sid_prefix);
+
 }
 
 void peer_now_has_this_key(void *context, void *peer_context,void *key_context,
