@@ -278,7 +278,8 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 	msg[(*offset)++]=(bundles[bundle_number].length>>16)&0xff;
 	msg[(*offset)++]=(bundles[bundle_number].length>>24)&0xff;
       }
-    } else {
+    }
+    {
       // Send some of the body
       int start_offset=peer_records[peer]->tx_bundle_body_offset;
       int bytes =
