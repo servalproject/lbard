@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
+#include <string.h>
 #include "sync.h"
 #include "lbard.h"
 #ifdef linux
@@ -29,7 +30,7 @@ long long gettime_us()
 char *wifi_interface_name=NULL;
 int wifi_fd=-1;
 
-int wifi_disable()
+static int wifi_disable()
 {
 #ifdef linux
   fprintf(stderr,"Disabling wifi interface %s @ %lldms\n",
@@ -52,9 +53,10 @@ int wifi_disable()
   fprintf(stderr,"wifi_disable() not implemented for this platform.\n");
   return -1;
 #endif
+  return 0;
 }
 
-int wifi_enable()
+static int wifi_enable()
 {
 #ifdef linux
   fprintf(stderr,"Enabling wifi interface %s @ %lldms\n",
@@ -77,6 +79,7 @@ int wifi_enable()
   fprintf(stderr,"wifi_disable() not implemented for this platform.\n");
   return -1;
 #endif 
+  return 0;
 }
 
 

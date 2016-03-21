@@ -1,3 +1,4 @@
+#include <sys/time.h>
 
 extern struct sync_state *sync_state;
 #define SYNC_SALT_LEN 8

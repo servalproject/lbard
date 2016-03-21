@@ -1,4 +1,9 @@
-all:	lbard manifesttest fakecsmaradio
+EXECS = lbard manifesttest fakecsmaradio
+
+all:	$(EXECS)
+
+clean:
+	rm -rf version.h $(EXECS) echotest
 
 SRCS=	main.c rhizome.c txmessages.c rxmessages.c bundle_cache.c json.c peers.c \
 	serial.c radio.c golay.c httpclient.c progress.c rank.c bundles.c partials.c \
@@ -17,19 +22,19 @@ HDRS=	lbard.h serial.h Makefile version.h sync.h
 CC=clang
 #LDFLAGS= -lefence
 LDFLAGS=
-CFLAGS= -fno-omit-frame-pointer
+CFLAGS= -g -std=gnu99 -Wall -fno-omit-frame-pointer -D_GNU_SOURCE=1
 
 version.h:	$(SRCS)
-	echo "#define VERSION_STRING \""`cat $(SRCS) | md5`"\"" >version.h
+	echo "#define VERSION_STRING \""`./md5 $(SRCS)`"\"" >version.h
 
 lbard:	$(SRCS) $(HDRS)
-	$(CC) $(CFLAGS) -g -std=gnu99 -Wall -o lbard $(SRCS) $(LDFLAGS)
+	$(CC) $(CFLAGS) -o lbard $(SRCS) $(LDFLAGS)
 
 echotest:	Makefile echotest.c
-	$(CC) -g -std=gnu99 -Wall -o echotest echotest.c
+	$(CC) $(CFLAGS) -o echotest echotest.c
 
 fakecsmaradio:	Makefile fakecsmaradio.c
-	$(CC) -g -std=gnu99 -Wall -o fakecsmaradio fakecsmaradio.c
+	$(CC) $(CFLAGS) -o fakecsmaradio fakecsmaradio.c
 
 manifesttest:	Makefile manifests.c
-	$(CC) -g -std=gnu99 -DTEST -Wall -o manifesttest manifests.c
+	$(CC) $(CFLAGS) -DTEST -o manifesttest manifests.c

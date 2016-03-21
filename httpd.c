@@ -122,7 +122,7 @@ int http_process(char *servald_server,char *credential,
 	  
 	  FILE *f=fopen("/dos/helpdesk.sid","r");
 	  recipient[0]=0; fgets(recipient,1024,f);
-	  while(recipient) {
+	  while(recipient[0]) {
 	    // Trim new lines / carriage returns from end of lines.
 	    while(recipient[0]&&(recipient[strlen(recipient)-1]<' '))
 	      recipient[strlen(recipient)-1]=0;
