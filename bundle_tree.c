@@ -137,13 +137,16 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out)
   uint8_t msg[256];
   int len=0;
 
+  int bytes_available=mtu-SYNC_MSG_HEADER_LEN-(*offset);
+  if (bytes_available<1) return -1;
+  
   /* Send sync status message */
   msg[len++]='S'; // Sync message
   int length_byte_offset=len;
   msg[len++]=0; // place holder for length
   assert(len==SYNC_MSG_HEADER_LEN);
 
-  int used=sync_build_message(sync_state,&msg[len],mtu-len-(*offset));
+  int used=sync_build_message(sync_state,&msg[len],bytes_available);
 
   if (debug_sync_keys) {
     char filename[1024];
