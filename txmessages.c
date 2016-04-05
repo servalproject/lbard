@@ -66,8 +66,12 @@ int append_bytes(int *offset,int mtu,unsigned char *msg_out,
     bcopy(data,&msg_out[*offset],count);
     (*offset)+=count;
     return 0;
+  } else {
+    fprintf(stderr,"append_bytes(%d,%d,msg,data,%d) failed -- message too long by %d bytes.\n",
+	    *offset,mtu,count,
+	    (((*offset)+count)-mtu));
+    return -1;
   }
-  return -1;
 }
 
 #ifdef SYNC_BY_BAR

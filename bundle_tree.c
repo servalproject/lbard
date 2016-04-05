@@ -27,6 +27,8 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
+extern char *my_sid_hex;
+
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
@@ -43,6 +45,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sha1.h"
 
 int debug_sync=1;
+int debug_sync_keys=1;
 
 int bundle_calculate_tree_key(sync_key_t *bundle_tree_key,
 			      uint8_t sync_tree_salt[SYNC_SALT_LEN],
@@ -113,6 +116,17 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
 #define SYNC_MSG_HEADER_LEN 2
   int sync_bytes=len-SYNC_MSG_HEADER_LEN;
 
+  if (debug_sync_keys) {
+    char filename[1024];
+    snprintf(filename,1024,"lbardkeys.%s.received_sync_message",my_sid_hex);
+    FILE *f=fopen(filename,"a");
+    fprintf(f,"%d:",len-2);
+    for(int i=0;i<(len-2);i++) fprintf(f,"%02X ",msg[i+2]);
+    fprintf(f,"\n");
+    fclose(f);
+  }
+
+  
   sync_recv_message(sync_state,(void *)p,&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
   
   return 0;
@@ -129,7 +143,18 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out)
   msg[len++]=0; // place holder for length
   assert(len==SYNC_MSG_HEADER_LEN);
 
-  int used=sync_build_message(sync_state,&msg[len],256-len);
+  int used=sync_build_message(sync_state,&msg[len],mtu-len-(*offset));
+
+  if (debug_sync_keys) {
+    char filename[1024];
+    snprintf(filename,1024,"lbardkeys.%s.sent_sync_message",my_sid_hex);
+    FILE *f=fopen(filename,"a");
+    fprintf(f,"%d:",used);
+    for(int i=0;i<used;i++) fprintf(f,"%02X ",msg[len+i]);
+    fprintf(f,"\n");
+    fclose(f);
+  }
+  
   len+=used;
   // Record the length of the field
   msg[length_byte_offset]=len;
@@ -137,6 +162,7 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out)
 
   // Record in retransmit buffer
   printf("Sending sync message (length now = $%02x, used %d)\n",*offset,used);
+
   
   return 0;
 }
@@ -643,6 +669,17 @@ void peer_does_not_have_this_key(void *context, void *peer_context,void *key_con
 	 "    recipient=%s\n",
 	 p->sid_prefix,
 	 b->bid,b->service,b->version,b->sender,b->recipient);
+
+  if (debug_sync_keys) {
+    char filename[1024];
+    snprintf(filename,1024,"lbardkeys.%s.needs.to.send.to.%s",my_sid_hex,p->sid_prefix);
+    FILE *f=fopen(filename,"a");
+    fprintf(f,"%02X%02X%02X%02X%02X%02X%02X%02X:%s:%016llX\n",
+	    key->key[0],key->key[1],key->key[2],key->key[3],
+	    key->key[4],key->key[5],key->key[6],key->key[7],
+	    b->bid,b->version);
+    fclose(f);
+  }
     
   sync_queue_bundle(p,b->index);
   

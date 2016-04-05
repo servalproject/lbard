@@ -38,6 +38,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <dirent.h>
 #include <assert.h>
 
+extern int debug_sync_keys;
+extern char *my_sid_hex;
+
 #include "sync.h"
 #include "lbard.h"
 
@@ -167,6 +170,21 @@ int register_bundle(char *service,
   
   // Add bundle to the sync tree 
   sync_add_key(sync_state,&bundle_sync_key,&bundles[bundle_number]);
+  if (debug_sync_keys) {
+    char filename[1024];
+    snprintf(filename,1024,"lbardkeys.%s.has",my_sid_hex);
+    FILE *f=fopen(filename,"a");
+    fprintf(f,"%02X%02X%02X%02X%02X%02X%02X%02X:%s:%016llX\n",
+	    bundle_sync_key.key[0],bundle_sync_key.key[1],
+	    bundle_sync_key.key[2],bundle_sync_key.key[3],
+	    bundle_sync_key.key[4],bundle_sync_key.key[5],
+	    bundle_sync_key.key[6],bundle_sync_key.key[7],
+	    bundles[bundle_number].bid,bundles[bundle_number].version);
+    fclose(f);
+    
+  }
+
+  
   printf("  >> Inserted a bundle into the tree: key=%02X%02X%02X...\n",
 	 bundle_sync_key.key[0],
 	 bundle_sync_key.key[1],

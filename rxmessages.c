@@ -42,6 +42,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+int debug_message_pieces=1;
+
 extern char *my_sid_hex;
 
 int saw_length(char *peer_prefix,char *bid_prefix,long long version,
@@ -469,7 +471,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   if (!is_retransmission) p->last_message_number=msg_number;
   
   while(offset<len) {
-    if (debug_pieces) {
+    if (debug_pieces||debug_message_pieces) {
       fprintf(stderr,
 	      "Saw message section with type '%c' (0x%02x) @ offset $%02x, len=%d\n",
 	      msg[offset],msg[offset],offset,len);
