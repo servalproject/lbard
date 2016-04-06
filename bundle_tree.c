@@ -447,8 +447,8 @@ int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial)
   // BID prefix
   for(int i=0;i<8;i++) {
     char hex[3];
-    hex[0]=peer_records[peer]->partials[i].bid_prefix[i*2+0];
-    hex[1]=peer_records[peer]->partials[i].bid_prefix[i*2+1];
+    hex[0]=peer_records[peer]->partials[partial].bid_prefix[i*2+0];
+    hex[1]=peer_records[peer]->partials[partial].bid_prefix[i*2+1];
     hex[2]=0;
     report_queue[slot][ofs++]=strtoll(hex,NULL,16);
   }
