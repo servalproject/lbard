@@ -331,6 +331,7 @@ int saw_piece(char *peer_prefix,int for_me,
   merge_segments(&peer_records[peer]->partials[i].body_segments);
 
   // Check if we have the whole bundle now
+  // XXX - this breaks when we have nothing about the bundle, because then we think the length is zero, so we think we have it all, when really we have none.
   if (peer_records[peer]->partials[i].manifest_segments
       &&peer_records[peer]->partials[i].body_segments
       &&(!peer_records[peer]->partials[i].manifest_segments->next)
@@ -356,7 +357,7 @@ int saw_piece(char *peer_prefix,int for_me,
       // (next_byte_would_be_useful is asserted so that we don't send two
       // reports).
       next_byte_would_be_useful=1;
-      sync_tell_peer_we_have_this_bundle(peer,i);
+      sync_tell_peer_we_have_the_bundle_of_this_partial(peer,i);
       
       if (!manifest_binary_to_text
 	  (peer_records[peer]->partials[i].manifest_segments->data,

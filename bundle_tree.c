@@ -438,6 +438,37 @@ int sync_tell_peer_we_have_this_bundle(int peer, int bundle)
   return 0;
 }
 
+int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial)
+{
+  int slot=report_queue_length;
+  if (slot>=REPORT_QUEUE_LEN) slot=random()%REPORT_QUEUE_LEN;
+  int ofs=0;
+  report_queue[slot][ofs++]='A';
+  // BID prefix
+  for(int i=0;i<8;i++) {
+    char hex[3];
+    hex[0]=peer_records[peer]->partials[i].bid_prefix[i*2+0];
+    hex[1]=peer_records[peer]->partials[i].bid_prefix[i*2+1];
+    hex[2]=0;
+    report_queue[slot][ofs++]=strtoll(hex,NULL,16);
+  }
+  // manifest and body offset
+  report_queue[slot][ofs++]=0xff;
+  report_queue[slot][ofs++]=0xff;
+
+  report_queue[slot][ofs++]=0xff;
+  report_queue[slot][ofs++]=0xff;
+  report_queue[slot][ofs++]=0xff;
+  report_queue[slot][ofs++]=0xff;
+
+  report_lengths[slot]=ofs;
+  assert(ofs<MAX_REPORT_LEN);
+  if (slot>=report_queue_length) report_queue_length=slot;
+
+  return 0;
+}
+
+
 /* Find the first byte missing in the following segment list */
 int partial_first_missing_byte(struct segment_list *s)
 {
