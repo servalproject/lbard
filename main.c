@@ -394,11 +394,19 @@ int main(int argc, char **argv)
 	// Speed up: If we are way too slow, then double our rate
 	// If not too slow, then just trim 10ms from our interval
 	if (ratio<0.25) message_update_interval/=2;
-	else message_update_interval-=10;
+	else {
+	  int adjust=10;
+	  if ((ratio<0.80)&&(message_update_interval>300)) adjust=20;
+	  if ((ratio<0.50)&&(message_update_interval>300)) adjust=50;
+	  if (ratio>0.90) adjust=3;
+	  // Only increase our packet rate, if we are not already hogging the channel
+	  if (radio_transmissions_byus<=radio_transmissions_seen)
+	    message_update_interval-=adjust;
+	}
       } else if (ratio>1.0) {
 	// Slow down!  We slow down quickly, so as to try to avoid causing
 	// too many colissions.
-	message_update_interval*=(ratio+1);
+	message_update_interval*=(ratio+0.4);
 	if (!message_update_interval) message_update_interval=50;
       }
 
@@ -422,6 +430,10 @@ int main(int argc, char **argv)
       // (256 byte packet @ 128kbit/sec takes ~20ms)
       if (message_update_interval<150)
 	message_update_interval=150;
+
+      printf("*** TXing every %d+1d%dms, ratio=%.3f (%d+%d)\n",
+	     message_update_interval,message_update_interval_randomness,ratio,
+	     radio_transmissions_seen,radio_transmissions_byus);
       
       congestion_update_time=gettime_ms()+4000;
 
