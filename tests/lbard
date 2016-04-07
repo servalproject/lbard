@@ -60,19 +60,65 @@ teardown() {
    report_all_servald_servers
 }
 
-doc_Example="Example test case"
-setup_Example() {
+doc_One="A single bundle transfers to peers"
+setup_One() {
    setup
    # Insert a file to server A
    set_instance +A
    rhizome_add_file file1 50
 }
-test_Example() {
+test_One() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
       bundle_received_by $BID:$VERSION +B &&
          bundle_received_by $BID:$VERSION +C &&
          bundle_received_by $BID:$VERSION +D
+   }
+   wait_until all_bundles_received
+}
+
+doc_All="All peers receive bundles from all other peers"
+setup_All() {
+   setup
+   # Insert a file to server A
+   set_instance +A
+   rhizome_add_file file1 50
+   BIDA=$BID
+   VERSIONA=$VERSION
+   # Insert a file to server B
+   set_instance +B
+   rhizome_add_file file2 51
+   BIDB=$BID
+   VERSIONB=$VERSION
+   # Insert a file to server C
+   set_instance +C
+   rhizome_add_file file3 52
+   BIDC=$BID
+   VERSIONC=$VERSION
+   # Insert a file to server D
+   set_instance +D
+   rhizome_add_file file4 53
+   BIDD=$BID
+   VERSIOND=$VERSION
+}
+test_All() {
+   # Test that the bundle arrives at servers B, C and D
+   all_bundles_received() {
+      bundle_received_by $BIDA:$VERSIONA +B &&
+      bundle_received_by $BIDA:$VERSIONA +C &&
+      bundle_received_by $BIDA:$VERSIONA +D
+
+      bundle_received_by $BIDB:$VERSIONB +A &&
+      bundle_received_by $BIDB:$VERSIONB +C &&
+      bundle_received_by $BIDB:$VERSIONB +D
+
+      bundle_received_by $BIDC:$VERSIONC +A &&
+      bundle_received_by $BIDC:$VERSIONC +B &&
+      bundle_received_by $BIDC:$VERSIONC +D
+
+      bundle_received_by $BIDD:$VERSIOND +A &&
+      bundle_received_by $BIDD:$VERSIOND +B &&
+      bundle_received_by $BIDD:$VERSIOND +C
    }
    wait_until all_bundles_received
 }
