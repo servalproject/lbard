@@ -559,6 +559,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 #endif
 	}
       }
+      break;
     case 'L':
       // Length of bundle announcement for receivers
       offset++;
