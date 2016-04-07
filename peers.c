@@ -432,7 +432,18 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
   for(i=0;i<p->tx_queue_len;i++) 
     if (p->tx_queue_priorities[i]<priority) break;
   // Fail on insertion if the queue is already full of higher priority stuff.
-  if (i>=MAX_TXQUEUE_LEN) return -1;
+  if (i>=MAX_TXQUEUE_LEN) {
+    /* Remember that TX queue has overflowed, so that when the TX queue is 
+       empitied, we know that we need to re-sync our tree with them to
+       rediscover the bundles that should be sent.
+       XXX - Eventually this will be replaced with Jeremy's new sync tree
+       enumeration code, that will allow us to rediscover the missing bundles,
+       without throwing away all sync state.
+    */
+    
+    p->tx_queue_overflow=1;
+    return -1;
+  }
   // Shift rest of list down
   bcopy(&p->tx_queue_priorities[i],
 	&p->tx_queue_priorities[i+1],

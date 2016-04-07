@@ -91,10 +91,11 @@ struct peer_state {
      tree periodically. Thus any bundles received will cause the new sync process to
      not insert those in the TX queue, and thus allow the transfer of the next 
      MAX_TXQUEUE_LEN highest priority bundles. */
-#define MAX_TXQUEUE_LEN 100
+#define MAX_TXQUEUE_LEN 10
   int tx_queue_len; 
   int tx_queue_bundles[MAX_TXQUEUE_LEN];
   int tx_queue_priorities[MAX_TXQUEUE_LEN];
+  int tx_queue_overflow;
 #endif
   // Bundles this peer is transferring.
   // The bundle prioritisation algorithm means that the peer may announce pieces
@@ -359,3 +360,4 @@ int bundle_calculate_tree_key(sync_key_t *sync_key,
 			      long long length,
 			      char *filehash);
 int dump_bytes(char *msg,unsigned char *bytes,int length);
+int urandombytes(unsigned char *buf, size_t len);

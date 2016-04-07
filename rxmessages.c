@@ -42,7 +42,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
-int debug_message_pieces=1;
+int debug_message_pieces=0;
 
 extern char *my_sid_hex;
 

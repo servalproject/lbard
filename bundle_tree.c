@@ -44,8 +44,8 @@ extern char *my_sid_hex;
 #include "lbard.h"
 #include "sha1.h"
 
-int debug_sync=1;
-int debug_sync_keys=1;
+int debug_sync=0;
+int debug_sync_keys=0;
 
 int bundle_calculate_tree_key(sync_key_t *bundle_tree_key,
 			      uint8_t sync_tree_salt[SYNC_SALT_LEN],
@@ -164,7 +164,7 @@ int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out)
   append_bytes(offset,mtu,msg_out,msg,len);
 
   // Record in retransmit buffer
-  printf("Sending sync message (length now = $%02x, used %d)\n",*offset,used);
+  // printf("Sending sync message (length now = $%02x, used %d)\n",*offset,used);
 
   
   return 0;
@@ -611,6 +611,22 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
 	    &p->tx_queue_priorities[0],
 	    sizeof(int)*p->tx_queue_len-1);
       p->tx_queue_len--;
+    } else {
+      if (p->tx_queue_overflow) {
+	/* TX queue overflowed at some point, and now we have
+	   emptied the queue. This means that we need to restart
+	   the tree synchronisation with this peer.  
+	   XXX - In time, Jeremy will implement sync tree enumeration,
+	   which will be a more efficient solution to this problem.
+	   In the meantime, we will just change our instance ID, and also
+	   the instance ID we have recorded for this peer, so that we
+	   force a re-sync.
+	*/
+	p->instance_id=0xffffffff;
+	my_instance_id=0;
+	while(my_instance_id==0)
+	  urandombytes((unsigned char *)&my_instance_id,sizeof(unsigned int));
+      }
     }
   } else {
     // Wasn't the bundle on the list right now, so delete from in list.
@@ -663,8 +679,8 @@ void peer_has_this_key(void *context, void *peer_context, const sync_key_t *key)
   struct peer_state *p=(struct peer_state *)peer_context;
 
   // Peer has something that we want.
-  printf(">>> Peer %s* is HAS some bundle that we don't have.\n",
-	 p->sid_prefix);
+  if (0) printf(">>> Peer %s* is HAS some bundle that we don't have.\n",
+		p->sid_prefix);
 
 }
 
@@ -677,12 +693,13 @@ void peer_now_has_this_key(void *context, void *peer_context,void *key_context,
   struct peer_state *p=(struct peer_state *)peer_context;
   struct bundle_record *b=(struct bundle_record*)key_context;
 
-  printf(">>> Peer %s* is now has bundle %s*\n"
-	 "    service=%s, version=%lld\n"
-	 "    sender=%s,\n"
-	 "    recipient=%s\n",
-	 p->sid_prefix,
-	 b->bid,b->service,b->version,b->sender,b->recipient);
+  if (0)
+    printf(">>> Peer %s* is now has bundle %s*\n"
+	   "    service=%s, version=%lld\n"
+	   "    sender=%s,\n"
+	   "    recipient=%s\n",
+	   p->sid_prefix,
+	   b->bid,b->service,b->version,b->sender,b->recipient);
 
   sync_dequeue_bundle(p,b->index);
 
@@ -697,12 +714,13 @@ void peer_does_not_have_this_key(void *context, void *peer_context,void *key_con
   struct peer_state *p=(struct peer_state *)peer_context;
   struct bundle_record *b=(struct bundle_record*)key_context;
 
-  printf(">>> Peer %s* is missing bundle %s*\n"
-	 "    service=%s, version=%lld\n"
-	 "    sender=%s,\n"
-	 "    recipient=%s\n",
-	 p->sid_prefix,
-	 b->bid,b->service,b->version,b->sender,b->recipient);
+  if (0)
+    printf(">>> Peer %s* is missing bundle %s*\n"
+	   "    service=%s, version=%lld\n"
+	   "    sender=%s,\n"
+	   "    recipient=%s\n",
+	   p->sid_prefix,
+	   b->bid,b->service,b->version,b->sender,b->recipient);
 
   if (debug_sync_keys) {
     char filename[1024];
