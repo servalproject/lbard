@@ -442,11 +442,13 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   int is_end_piece;
   int for_me;
 
+  int peer_index=-1;
+  
   // Find or create peer structure for this.
   struct peer_state *p=NULL;
   for(int i=0;i<peer_count;i++) {
     if (!strcasecmp(peer_records[i]->sid_prefix,peer_prefix)) {
-      p=peer_records[i]; break;
+      p=peer_records[i]; peer_index=i; break;
     }
   }
 
@@ -461,9 +463,9 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       peer_records[peer_count++]=p;      
     } else {
       // Peer table full.  Do random replacement.
-      int n=random()%MAX_PEERS;
-      free_peer(peer_records[n]);
-      peer_records[n]=p;
+      peer_index=random()%MAX_PEERS;
+      free_peer(peer_records[peer_index]);
+      peer_records[peer_index]=p;
     }
   }
   
@@ -534,6 +536,29 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       peer_note_bar(p,bid_prefix,version,recipient_prefix,size_byte);
 #endif
       break;
+    case 'G':
+      // Get instance ID of peer. We use this to note if a peer's lbard has restarted
+      offset++;
+      {
+	unsigned int peer_instance_id=0;
+	for(int i=0;i<4;i++) peer_instance_id|=(msg[offset++]<<(i*8));
+	if (!p->instance_id) p->instance_id=peer_instance_id;
+	if (p->instance_id!=peer_instance_id) {
+	  // Peer's instance ID has changed: Forget all knowledge of the peer and
+	  // return (ignoring the rest of the packet).
+#ifndef SYNC_BY_BAR
+	  free_peer(peer_records[peer_index]);
+	  p=calloc(1,sizeof(struct peer_state));
+	  for(int i=0;i<4;i++) p->sid_prefix_bin[i]=msg[i];
+	  p->sid_prefix=strdup(peer_prefix);
+	  p->last_message_number=-1;
+	  p->tx_bundle=-1;
+	  p->instance_id=peer_instance_id;
+	  fprintf(stderr,"Peer %s* has restarted -- discarding stale knowledge of its state.\n",p->sid_prefix);
+	  peer_records[peer_index]=p;
+#endif
+	}
+      }
     case 'L':
       // Length of bundle announcement for receivers
       offset++;

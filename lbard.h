@@ -56,6 +56,10 @@ struct partial_bundle {
 struct peer_state {
   char *sid_prefix;
   unsigned char sid_prefix_bin[4];
+
+  // random 32 bit instance ID, used to work out when LBARD has died and restarted
+  // on a peer, so that we can restart the sync process.
+  unsigned int instance_id;
   
   unsigned char *last_message;
   time_t last_message_time;
@@ -198,6 +202,7 @@ typedef struct bundle_node {
   struct bundle_node *parent,*left, *right;
 } bundle_node;
   
+extern unsigned int my_instance_id;
 
 #define MAX_PEERS 1024
 extern struct peer_state *peer_records[MAX_PEERS];

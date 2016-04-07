@@ -452,7 +452,7 @@ int update_my_message(int serialfd,
 
   int offset=8;
 
-  if (random()%10) {
+  if (!(random()%10)) {
     // Occassionally announce our time
     // T + (our stratum) + (64 bit seconds since 1970) +
     // + (24 bit microseconds)
@@ -466,6 +466,15 @@ int update_my_message(int serialfd,
       msg_out[offset++]=(tv.tv_sec>>(i*8))&0xff;
     for(int i=0;i<3;i++)
       msg_out[offset++]=(tv.tv_usec>>(i*8))&0xff;    
+  }
+  if (!(random()%10)) {
+    // Occassionally announce our instance (generation) ID
+    // G + 4 random bytes = 5 bytes
+    struct timeval tv;
+    gettimeofday(&tv,NULL);    
+    
+    msg_out[offset++]='G';
+    for(int i=0;i<4;i++) msg_out[offset++]=(my_instance_id>>(i*8))&0xff;
   }
 
 #ifdef SYNC_BY_BAR

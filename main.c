@@ -65,6 +65,9 @@ extern int serial_errors;
 
 unsigned char my_sid[32];
 char *my_sid_hex=NULL;
+unsigned int my_instance_id;
+
+
 char *servald_server="";
 char *credential="";
 char *prefix="";
@@ -127,10 +130,50 @@ int monitor_mode=0;
 
 struct sync_state *sync_state=NULL;
 
+int urandombytes(unsigned char *buf, size_t len)
+{
+  static int urandomfd = -1;
+  int tries = 0;
+  if (urandomfd == -1) {
+    for (tries = 0; tries < 4; ++tries) {
+      urandomfd = open("/dev/urandom",O_RDONLY);
+      if (urandomfd != -1) break;
+      sleep(1);
+    }
+    if (urandomfd == -1) {
+      perror("open(/dev/urandom)");
+      return -1;
+    }
+  }
+  tries = 0;
+  while (len > 0) {
+    ssize_t i = read(urandomfd, buf, (len < 1048576) ? len : 1048576);
+    if (i == -1) {
+      if (++tries > 4) {
+        perror("read(/dev/urandom)");
+        if (errno==EBADF) urandomfd=-1;
+        return -1;
+      }
+    } else {
+      tries = 0;
+      buf += i;
+      len -= i;
+    }
+  }
+  return 0;
+}
+
 int main(int argc, char **argv)
 {
 
   sync_setup();
+
+  // Generate a unique transient instance ID for ourselves.
+  // Must be non-zero, as we use zero as a marker for not having yet heard the
+  // instance ID of a peer.
+  my_instance_id=0;
+  while(my_instance_id==0)
+    urandombytes((unsigned char *)&my_instance_id,sizeof(unsigned int));
   
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==7)&&(!strcasecmp(argv[1],"energysample"))) {
