@@ -15,9 +15,9 @@ setup_modulo${i}() {
 test_modulo${i}() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by $BID:$VERSION +B &&
-         bundle_received_by $BID:$VERSION +C &&
-         bundle_received_by $BID:$VERSION +D
+      bundle_received_by \$BID:\$VERSION +B &&
+         bundle_received_by \$BID:\$VERSION +C &&
+         bundle_received_by \$BID:\$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }

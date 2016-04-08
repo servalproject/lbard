@@ -71,9 +71,9 @@ setup_modulo6000() {
 test_modulo6000() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -88,9 +88,9 @@ setup_modulo6010() {
 test_modulo6010() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -105,9 +105,9 @@ setup_modulo6020() {
 test_modulo6020() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -122,9 +122,9 @@ setup_modulo6030() {
 test_modulo6030() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -139,9 +139,9 @@ setup_modulo6040() {
 test_modulo6040() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -156,9 +156,9 @@ setup_modulo6050() {
 test_modulo6050() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -173,9 +173,9 @@ setup_modulo6060() {
 test_modulo6060() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -190,9 +190,9 @@ setup_modulo6070() {
 test_modulo6070() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -207,9 +207,9 @@ setup_modulo6080() {
 test_modulo6080() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -224,9 +224,9 @@ setup_modulo6090() {
 test_modulo6090() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -241,9 +241,9 @@ setup_modulo6100() {
 test_modulo6100() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -258,9 +258,9 @@ setup_modulo6110() {
 test_modulo6110() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -275,9 +275,9 @@ setup_modulo6120() {
 test_modulo6120() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -292,9 +292,9 @@ setup_modulo6130() {
 test_modulo6130() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -309,9 +309,9 @@ setup_modulo6140() {
 test_modulo6140() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -326,9 +326,9 @@ setup_modulo6150() {
 test_modulo6150() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -343,9 +343,9 @@ setup_modulo6160() {
 test_modulo6160() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -360,9 +360,9 @@ setup_modulo6170() {
 test_modulo6170() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -377,9 +377,9 @@ setup_modulo6180() {
 test_modulo6180() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -394,9 +394,9 @@ setup_modulo6190() {
 test_modulo6190() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -411,9 +411,9 @@ setup_modulo6200() {
 test_modulo6200() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -428,9 +428,9 @@ setup_modulo6210() {
 test_modulo6210() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -445,9 +445,9 @@ setup_modulo6220() {
 test_modulo6220() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -462,9 +462,9 @@ setup_modulo6230() {
 test_modulo6230() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -479,9 +479,9 @@ setup_modulo6240() {
 test_modulo6240() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -496,9 +496,9 @@ setup_modulo6250() {
 test_modulo6250() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -513,9 +513,9 @@ setup_modulo6260() {
 test_modulo6260() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -530,9 +530,9 @@ setup_modulo6270() {
 test_modulo6270() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -547,9 +547,9 @@ setup_modulo6280() {
 test_modulo6280() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -564,9 +564,9 @@ setup_modulo6290() {
 test_modulo6290() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -581,9 +581,9 @@ setup_modulo6300() {
 test_modulo6300() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -598,9 +598,9 @@ setup_modulo6310() {
 test_modulo6310() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -615,9 +615,9 @@ setup_modulo6320() {
 test_modulo6320() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -632,9 +632,9 @@ setup_modulo6330() {
 test_modulo6330() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -649,9 +649,9 @@ setup_modulo6340() {
 test_modulo6340() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -666,9 +666,9 @@ setup_modulo6350() {
 test_modulo6350() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -683,9 +683,9 @@ setup_modulo6360() {
 test_modulo6360() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -700,9 +700,9 @@ setup_modulo6370() {
 test_modulo6370() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -717,9 +717,9 @@ setup_modulo6380() {
 test_modulo6380() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -734,9 +734,9 @@ setup_modulo6390() {
 test_modulo6390() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -751,9 +751,9 @@ setup_modulo6400() {
 test_modulo6400() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -768,9 +768,9 @@ setup_modulo6410() {
 test_modulo6410() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -785,9 +785,9 @@ setup_modulo6420() {
 test_modulo6420() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -802,9 +802,9 @@ setup_modulo6430() {
 test_modulo6430() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -819,9 +819,9 @@ setup_modulo6440() {
 test_modulo6440() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -836,9 +836,9 @@ setup_modulo6450() {
 test_modulo6450() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -853,9 +853,9 @@ setup_modulo6460() {
 test_modulo6460() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -870,9 +870,9 @@ setup_modulo6470() {
 test_modulo6470() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -887,9 +887,9 @@ setup_modulo6480() {
 test_modulo6480() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -904,9 +904,9 @@ setup_modulo6490() {
 test_modulo6490() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -921,9 +921,9 @@ setup_modulo6500() {
 test_modulo6500() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -938,9 +938,9 @@ setup_modulo6510() {
 test_modulo6510() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -955,9 +955,9 @@ setup_modulo6520() {
 test_modulo6520() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -972,9 +972,9 @@ setup_modulo6530() {
 test_modulo6530() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -989,9 +989,9 @@ setup_modulo6540() {
 test_modulo6540() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1006,9 +1006,9 @@ setup_modulo6550() {
 test_modulo6550() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1023,9 +1023,9 @@ setup_modulo6560() {
 test_modulo6560() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1040,9 +1040,9 @@ setup_modulo6570() {
 test_modulo6570() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1057,9 +1057,9 @@ setup_modulo6580() {
 test_modulo6580() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1074,9 +1074,9 @@ setup_modulo6590() {
 test_modulo6590() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1091,9 +1091,9 @@ setup_modulo6600() {
 test_modulo6600() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1108,9 +1108,9 @@ setup_modulo6610() {
 test_modulo6610() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1125,9 +1125,9 @@ setup_modulo6620() {
 test_modulo6620() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1142,9 +1142,9 @@ setup_modulo6630() {
 test_modulo6630() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1159,9 +1159,9 @@ setup_modulo6640() {
 test_modulo6640() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1176,9 +1176,9 @@ setup_modulo6650() {
 test_modulo6650() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1193,9 +1193,9 @@ setup_modulo6660() {
 test_modulo6660() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1210,9 +1210,9 @@ setup_modulo6670() {
 test_modulo6670() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1227,9 +1227,9 @@ setup_modulo6680() {
 test_modulo6680() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1244,9 +1244,9 @@ setup_modulo6690() {
 test_modulo6690() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1261,9 +1261,9 @@ setup_modulo6700() {
 test_modulo6700() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1278,9 +1278,9 @@ setup_modulo6710() {
 test_modulo6710() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1295,9 +1295,9 @@ setup_modulo6720() {
 test_modulo6720() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1312,9 +1312,9 @@ setup_modulo6730() {
 test_modulo6730() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1329,9 +1329,9 @@ setup_modulo6740() {
 test_modulo6740() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1346,9 +1346,9 @@ setup_modulo6750() {
 test_modulo6750() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1363,9 +1363,9 @@ setup_modulo6760() {
 test_modulo6760() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1380,9 +1380,9 @@ setup_modulo6770() {
 test_modulo6770() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1397,9 +1397,9 @@ setup_modulo6780() {
 test_modulo6780() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1414,9 +1414,9 @@ setup_modulo6790() {
 test_modulo6790() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1431,9 +1431,9 @@ setup_modulo6800() {
 test_modulo6800() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1448,9 +1448,9 @@ setup_modulo6810() {
 test_modulo6810() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1465,9 +1465,9 @@ setup_modulo6820() {
 test_modulo6820() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1482,9 +1482,9 @@ setup_modulo6830() {
 test_modulo6830() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1499,9 +1499,9 @@ setup_modulo6840() {
 test_modulo6840() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1516,9 +1516,9 @@ setup_modulo6850() {
 test_modulo6850() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1533,9 +1533,9 @@ setup_modulo6860() {
 test_modulo6860() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1550,9 +1550,9 @@ setup_modulo6870() {
 test_modulo6870() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1567,9 +1567,9 @@ setup_modulo6880() {
 test_modulo6880() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1584,9 +1584,9 @@ setup_modulo6890() {
 test_modulo6890() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1601,9 +1601,9 @@ setup_modulo6900() {
 test_modulo6900() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1618,9 +1618,9 @@ setup_modulo6910() {
 test_modulo6910() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1635,9 +1635,9 @@ setup_modulo6920() {
 test_modulo6920() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1652,9 +1652,9 @@ setup_modulo6930() {
 test_modulo6930() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1669,9 +1669,9 @@ setup_modulo6940() {
 test_modulo6940() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1686,9 +1686,9 @@ setup_modulo6950() {
 test_modulo6950() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1703,9 +1703,9 @@ setup_modulo6960() {
 test_modulo6960() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1720,9 +1720,9 @@ setup_modulo6970() {
 test_modulo6970() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1737,9 +1737,9 @@ setup_modulo6980() {
 test_modulo6980() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1754,9 +1754,9 @@ setup_modulo6990() {
 test_modulo6990() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1771,9 +1771,9 @@ setup_modulo7000() {
 test_modulo7000() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1788,9 +1788,9 @@ setup_modulo7010() {
 test_modulo7010() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1805,9 +1805,9 @@ setup_modulo7020() {
 test_modulo7020() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1822,9 +1822,9 @@ setup_modulo7030() {
 test_modulo7030() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1839,9 +1839,9 @@ setup_modulo7040() {
 test_modulo7040() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1856,9 +1856,9 @@ setup_modulo7050() {
 test_modulo7050() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1873,9 +1873,9 @@ setup_modulo7060() {
 test_modulo7060() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1890,9 +1890,9 @@ setup_modulo7070() {
 test_modulo7070() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1907,9 +1907,9 @@ setup_modulo7080() {
 test_modulo7080() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1924,9 +1924,9 @@ setup_modulo7090() {
 test_modulo7090() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1941,9 +1941,9 @@ setup_modulo7100() {
 test_modulo7100() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1958,9 +1958,9 @@ setup_modulo7110() {
 test_modulo7110() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1975,9 +1975,9 @@ setup_modulo7120() {
 test_modulo7120() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -1992,9 +1992,9 @@ setup_modulo7130() {
 test_modulo7130() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2009,9 +2009,9 @@ setup_modulo7140() {
 test_modulo7140() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2026,9 +2026,9 @@ setup_modulo7150() {
 test_modulo7150() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2043,9 +2043,9 @@ setup_modulo7160() {
 test_modulo7160() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2060,9 +2060,9 @@ setup_modulo7170() {
 test_modulo7170() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2077,9 +2077,9 @@ setup_modulo7180() {
 test_modulo7180() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2094,9 +2094,9 @@ setup_modulo7190() {
 test_modulo7190() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2111,9 +2111,9 @@ setup_modulo7200() {
 test_modulo7200() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2128,9 +2128,9 @@ setup_modulo7210() {
 test_modulo7210() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2145,9 +2145,9 @@ setup_modulo7220() {
 test_modulo7220() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2162,9 +2162,9 @@ setup_modulo7230() {
 test_modulo7230() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2179,9 +2179,9 @@ setup_modulo7240() {
 test_modulo7240() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2196,9 +2196,9 @@ setup_modulo7250() {
 test_modulo7250() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2213,9 +2213,9 @@ setup_modulo7260() {
 test_modulo7260() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2230,9 +2230,9 @@ setup_modulo7270() {
 test_modulo7270() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2247,9 +2247,9 @@ setup_modulo7280() {
 test_modulo7280() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2264,9 +2264,9 @@ setup_modulo7290() {
 test_modulo7290() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2281,9 +2281,9 @@ setup_modulo7300() {
 test_modulo7300() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2298,9 +2298,9 @@ setup_modulo7310() {
 test_modulo7310() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2315,9 +2315,9 @@ setup_modulo7320() {
 test_modulo7320() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2332,9 +2332,9 @@ setup_modulo7330() {
 test_modulo7330() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2349,9 +2349,9 @@ setup_modulo7340() {
 test_modulo7340() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2366,9 +2366,9 @@ setup_modulo7350() {
 test_modulo7350() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2383,9 +2383,9 @@ setup_modulo7360() {
 test_modulo7360() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2400,9 +2400,9 @@ setup_modulo7370() {
 test_modulo7370() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2417,9 +2417,9 @@ setup_modulo7380() {
 test_modulo7380() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2434,9 +2434,9 @@ setup_modulo7390() {
 test_modulo7390() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2451,9 +2451,9 @@ setup_modulo7400() {
 test_modulo7400() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2468,9 +2468,9 @@ setup_modulo7410() {
 test_modulo7410() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2485,9 +2485,9 @@ setup_modulo7420() {
 test_modulo7420() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2502,9 +2502,9 @@ setup_modulo7430() {
 test_modulo7430() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2519,9 +2519,9 @@ setup_modulo7440() {
 test_modulo7440() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2536,9 +2536,9 @@ setup_modulo7450() {
 test_modulo7450() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2553,9 +2553,9 @@ setup_modulo7460() {
 test_modulo7460() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2570,9 +2570,9 @@ setup_modulo7470() {
 test_modulo7470() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2587,9 +2587,9 @@ setup_modulo7480() {
 test_modulo7480() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2604,9 +2604,9 @@ setup_modulo7490() {
 test_modulo7490() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2621,9 +2621,9 @@ setup_modulo7500() {
 test_modulo7500() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2638,9 +2638,9 @@ setup_modulo7510() {
 test_modulo7510() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2655,9 +2655,9 @@ setup_modulo7520() {
 test_modulo7520() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2672,9 +2672,9 @@ setup_modulo7530() {
 test_modulo7530() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2689,9 +2689,9 @@ setup_modulo7540() {
 test_modulo7540() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2706,9 +2706,9 @@ setup_modulo7550() {
 test_modulo7550() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2723,9 +2723,9 @@ setup_modulo7560() {
 test_modulo7560() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2740,9 +2740,9 @@ setup_modulo7570() {
 test_modulo7570() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2757,9 +2757,9 @@ setup_modulo7580() {
 test_modulo7580() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2774,9 +2774,9 @@ setup_modulo7590() {
 test_modulo7590() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2791,9 +2791,9 @@ setup_modulo7600() {
 test_modulo7600() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2808,9 +2808,9 @@ setup_modulo7610() {
 test_modulo7610() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2825,9 +2825,9 @@ setup_modulo7620() {
 test_modulo7620() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2842,9 +2842,9 @@ setup_modulo7630() {
 test_modulo7630() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2859,9 +2859,9 @@ setup_modulo7640() {
 test_modulo7640() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2876,9 +2876,9 @@ setup_modulo7650() {
 test_modulo7650() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2893,9 +2893,9 @@ setup_modulo7660() {
 test_modulo7660() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2910,9 +2910,9 @@ setup_modulo7670() {
 test_modulo7670() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2927,9 +2927,9 @@ setup_modulo7680() {
 test_modulo7680() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2944,9 +2944,9 @@ setup_modulo7690() {
 test_modulo7690() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2961,9 +2961,9 @@ setup_modulo7700() {
 test_modulo7700() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2978,9 +2978,9 @@ setup_modulo7710() {
 test_modulo7710() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -2995,9 +2995,9 @@ setup_modulo7720() {
 test_modulo7720() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3012,9 +3012,9 @@ setup_modulo7730() {
 test_modulo7730() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3029,9 +3029,9 @@ setup_modulo7740() {
 test_modulo7740() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3046,9 +3046,9 @@ setup_modulo7750() {
 test_modulo7750() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3063,9 +3063,9 @@ setup_modulo7760() {
 test_modulo7760() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3080,9 +3080,9 @@ setup_modulo7770() {
 test_modulo7770() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3097,9 +3097,9 @@ setup_modulo7780() {
 test_modulo7780() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3114,9 +3114,9 @@ setup_modulo7790() {
 test_modulo7790() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3131,9 +3131,9 @@ setup_modulo7800() {
 test_modulo7800() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3148,9 +3148,9 @@ setup_modulo7810() {
 test_modulo7810() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3165,9 +3165,9 @@ setup_modulo7820() {
 test_modulo7820() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3182,9 +3182,9 @@ setup_modulo7830() {
 test_modulo7830() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3199,9 +3199,9 @@ setup_modulo7840() {
 test_modulo7840() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3216,9 +3216,9 @@ setup_modulo7850() {
 test_modulo7850() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3233,9 +3233,9 @@ setup_modulo7860() {
 test_modulo7860() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3250,9 +3250,9 @@ setup_modulo7870() {
 test_modulo7870() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3267,9 +3267,9 @@ setup_modulo7880() {
 test_modulo7880() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3284,9 +3284,9 @@ setup_modulo7890() {
 test_modulo7890() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3301,9 +3301,9 @@ setup_modulo7900() {
 test_modulo7900() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3318,9 +3318,9 @@ setup_modulo7910() {
 test_modulo7910() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3335,9 +3335,9 @@ setup_modulo7920() {
 test_modulo7920() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3352,9 +3352,9 @@ setup_modulo7930() {
 test_modulo7930() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3369,9 +3369,9 @@ setup_modulo7940() {
 test_modulo7940() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3386,9 +3386,9 @@ setup_modulo7950() {
 test_modulo7950() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3403,9 +3403,9 @@ setup_modulo7960() {
 test_modulo7960() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3420,9 +3420,9 @@ setup_modulo7970() {
 test_modulo7970() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3437,9 +3437,9 @@ setup_modulo7980() {
 test_modulo7980() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3454,9 +3454,9 @@ setup_modulo7990() {
 test_modulo7990() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3471,9 +3471,9 @@ setup_modulo8000() {
 test_modulo8000() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3488,9 +3488,9 @@ setup_modulo8010() {
 test_modulo8010() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3505,9 +3505,9 @@ setup_modulo8020() {
 test_modulo8020() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3522,9 +3522,9 @@ setup_modulo8030() {
 test_modulo8030() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3539,9 +3539,9 @@ setup_modulo8040() {
 test_modulo8040() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3556,9 +3556,9 @@ setup_modulo8050() {
 test_modulo8050() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3573,9 +3573,9 @@ setup_modulo8060() {
 test_modulo8060() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3590,9 +3590,9 @@ setup_modulo8070() {
 test_modulo8070() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3607,9 +3607,9 @@ setup_modulo8080() {
 test_modulo8080() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3624,9 +3624,9 @@ setup_modulo8090() {
 test_modulo8090() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3641,9 +3641,9 @@ setup_modulo8100() {
 test_modulo8100() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3658,9 +3658,9 @@ setup_modulo8110() {
 test_modulo8110() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3675,9 +3675,9 @@ setup_modulo8120() {
 test_modulo8120() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3692,9 +3692,9 @@ setup_modulo8130() {
 test_modulo8130() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3709,9 +3709,9 @@ setup_modulo8140() {
 test_modulo8140() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3726,9 +3726,9 @@ setup_modulo8150() {
 test_modulo8150() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3743,9 +3743,9 @@ setup_modulo8160() {
 test_modulo8160() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3760,9 +3760,9 @@ setup_modulo8170() {
 test_modulo8170() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3777,9 +3777,9 @@ setup_modulo8180() {
 test_modulo8180() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3794,9 +3794,9 @@ setup_modulo8190() {
 test_modulo8190() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
@@ -3811,9 +3811,9 @@ setup_modulo8200() {
 test_modulo8200() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
-      bundle_received_by : +B &&
-         bundle_received_by : +C &&
-         bundle_received_by : +D
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
    }
    wait_until --timeout=600 all_bundles_received
 }
