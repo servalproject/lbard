@@ -261,6 +261,11 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 
     // Stuff we shouldn't need???
     +2;   // not sure where we have missed this last 2, but it is needed to reconcile
+
+  // XXX - Work around a nasty bug in servald's HTTP request parser
+  char *variable_length_string="";
+  if ((content_length%8192)>=7870)
+    variable_length_string="X-Variable-length-header-to-work-around-serval-dna-http-bug-that-fails-to-recognise-end-boundary-string-if-it-crosses-an-8kb-boundary-in-the-http-stream: The sole purpose of this header line is to grow the HTTP request part sufficiently, that the boundary string following the body will be pushed entirely into the next 8KB block\n";	 
   
   int header_length = snprintf(request,8192,
 			       "POST %s HTTP/1.1\r\n"
@@ -268,12 +273,14 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 			       "Host: %s:%d\r\n"
 			       "Content-Length: %d\r\n"
 			       "Accept: */*\r\n"
+			       "%s"
 			       "Content-Type: multipart/form-data; boundary=%s\r\n"
 			       "\r\n",
 			       path,
 			       authdigest,
 			       server_name,server_port,
 			       content_length,
+			       variable_length_string,
 			       boundary_string);
   
   int extra_length = snprintf(&request[header_length],8192,
