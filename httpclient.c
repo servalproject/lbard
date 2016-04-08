@@ -219,8 +219,9 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   base64_append(authdigest,&zero,(unsigned char *)auth_token,strlen(auth_token));
 
   // Generate random content dividor token
-  unsigned long long unique;
+  unsigned long long unique,unique2;
   unique=random(); unique=unique<<32; unique|=random();
+  unique2=random(); unique2=unique2<<32; unique2|=random();
   
   char manifest_header[1024];
   snprintf(manifest_header,1024,
@@ -237,38 +238,51 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 	   body_length);
 
   char boundary_string[1024];
-  snprintf(boundary_string,1024,"------------------------%016llx",unique);
+  snprintf(boundary_string,1024,"------------------------%016llx%016llx",
+	   unique,unique2);
   int boundary_len=strlen(boundary_string);
 
   // Calculate content length
-  int content_length=0
-    +2+boundary_len+2
+  
+  // Build request
+  int total_len=0;
+
+  int content_length=
+    // manifest part
+    2+boundary_len+2
     +strlen(manifest_header)
     +manifest_length+2
+
+    // payload part
     +2+boundary_len+2
     +strlen(body_header)
     +body_length+2
     +2+boundary_len+2
+
+    // Stuff we shouldn't need???
     +2;   // not sure where we have missed this last 2, but it is needed to reconcile
   
-  // Build request
-  int total_len = snprintf(request,8192,
-			   "POST %s HTTP/1.1\r\n"
-			   "Authorization: Basic %s\r\n"
-			   "Host: %s:%d\r\n"
-			   "Content-Length: %d\r\n"
-			   "Accept: */*\r\n"
-			   "Content-Type: multipart/form-data; boundary=%s\r\n"
-			   "\r\n"
-			   "--%s\r\n"
-			   "%s",
-			   path,
-			   authdigest,
-			   server_name,server_port,
-			   content_length,
-			   boundary_string,
-			   boundary_string,
-			   manifest_header);
+  int header_length = snprintf(request,8192,
+			       "POST %s HTTP/1.1\r\n"
+			       "Authorization: Basic %s\r\n"
+			       "Host: %s:%d\r\n"
+			       "Content-Length: %d\r\n"
+			       "Accept: */*\r\n"
+			       "Content-Type: multipart/form-data; boundary=%s\r\n"
+			       "\r\n",
+			       path,
+			       authdigest,
+			       server_name,server_port,
+			       content_length,
+			       boundary_string);
+  
+  int extra_length = snprintf(&request[header_length],8192,
+			      "--%s\r\n"
+			      "%s",
+			      boundary_string,
+			      manifest_header);
+  
+  total_len=header_length+extra_length;
   bcopy(manifest_data,&request[total_len],manifest_length);
 
   int subtotal_len=total_len;
@@ -292,7 +306,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   fprintf(stderr,
 	  "    subtotal_len=%d, difference+present=%d (should match content_length)\n",
 	  subtotal_len,total_len-subtotal_len+present_len);
-
+  
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
 
@@ -412,6 +426,8 @@ int http_post_meshms(char *server_and_port, char *auth_token,
 	  "    subtotal_len=%d, difference+present=%d (should match content_length)\n",
 	  subtotal_len,total_len-subtotal_len+present_len);
 
+  fprintf(stderr,"Request:\n%s\n",request);
+  
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
 
@@ -431,7 +447,7 @@ int http_post_meshms(char *server_and_port, char *auth_token,
       if ((line[len]=='\n')||(line[len]=='\r')) {
 	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;
-	// if (len) printf("Line of response: %s\n",line);
+	if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
 	  fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
