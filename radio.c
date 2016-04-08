@@ -134,6 +134,14 @@ int dump_bytes(char *msg,unsigned char *bytes,int length)
   for(int i=0;i<length;i+=16) {
     fprintf(stderr,"%04X: ",i);
     for(int j=0;j<16;j++) if (i+j<length) fprintf(stderr," %02X",bytes[i+j]);
+    fprintf(stderr,"  ");
+    for(int j=0;j<16;j++) {
+      int c;
+      if (i+j<length) c=bytes[i+j]; else c=' ';
+      if (c<' ') c='.';
+      if (c>0x7d) c='.';
+      fprintf(stderr,"%c",c);
+    }
     fprintf(stderr,"\n");
   }
   return 0;
