@@ -9,7 +9,7 @@ foreach instance ( serval? )
 
  cd $instance
  setenv SERVALINSTANCE_PATH `pwd`
- ~/g/serval-dna/servald stop
+ ../../serval-dna/servald stop
  cd ..
 
 end 

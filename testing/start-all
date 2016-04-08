@@ -9,18 +9,18 @@ foreach n ( 1 2 3 4 )
  cd serval$n
  setenv SERVALINSTANCE_PATH `pwd`
  rm rhizome.db
- ~/g/serval-dna/servald start
+ ../../serval-dna/servald start
  sleep 1
- ~/g/serval-dna/servald id self | tail -1 > self.sid
+ ../../serval-dna/servald id self | tail -1 > self.sid
 
  # Repopulate rhizome with test bundles.
- ~/g/serval-dna/servald rhizome add file `cat self.sid` file$n
+ ../../serval-dna/servald rhizome add file `cat self.sid` file$n
 
  foreach f ( $n{0,1,2,3,4,5,6,7,8,9}{0,1,2,3,4,5,6,7,8,9}) # {0,1,2,3,4,5,6,7,8,9} )
     set lines=`echo $f | cut -c1-3`
     hexdump /dev/random | head -20 | sed -e 's/[^f]//g'  > random$f
     hexdump /dev/random | head -$lines >> random$f
-    ~/g/serval-dna/servald rhizome add file `cat self.sid` random$f
+    ../../serval-dna/servald rhizome add file `cat self.sid` random$f
     rm random$f
  end 
 

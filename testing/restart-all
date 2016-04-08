@@ -8,9 +8,9 @@ foreach n ( 1 2 3 4 )
  # Start relevant servald instance if required
  cd serval$n
  setenv SERVALINSTANCE_PATH `pwd`
- ~/g/serval-dna/servald start
+ ../../serval-dna/servald start
  sleep 1
- ~/g/serval-dna/servald id self | tail -1 > self.sid
+ ../../serval-dna/servald id self | tail -1 > self.sid
 
  cd ..
 end 
