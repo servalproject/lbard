@@ -408,6 +408,7 @@ int main(int argc, char **argv)
 	// too many colissions.
 	message_update_interval*=(ratio+0.4);
 	if (!message_update_interval) message_update_interval=50;
+	if (message_update_interval>4000) message_update_interval=4000;
       }
 
       if (!radio_transmissions_seen) {
