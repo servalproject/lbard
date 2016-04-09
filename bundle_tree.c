@@ -469,14 +469,21 @@ int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial)
 }
 
 
-/* Find the first byte missing in the following segment list */
+/* Find the first byte missing in the following segment list.
+   Basically this boils down to being either byte 0, or the
+   first byte after the first segment. 
+*/
 int partial_first_missing_byte(struct segment_list *s)
 {
   int offset=0x7fffffff;
+  int start=0x7fffffff;
+  // Find the segment
   while(s) {
-    if ((s->start_offset+s->length+1)<offset)
-      offset=s->start_offset+s->length+1;
-    offset=s->start_offset;
+    if (s->start_offset<start) {
+      if (s->start_offset) offset=0;
+      else offset=s->start_offset+s->length+1;
+      start=s->start_offset;
+    }
     s=s->next;
   }
   return offset;
