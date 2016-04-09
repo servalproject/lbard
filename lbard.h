@@ -361,3 +361,4 @@ int bundle_calculate_tree_key(sync_key_t *sync_key,
 			      char *filehash);
 int dump_bytes(char *msg,unsigned char *bytes,int length);
 int urandombytes(unsigned char *buf, size_t len);
+int active_peer_count();

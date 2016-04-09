@@ -285,6 +285,15 @@ int random_active_peer()
   return -1;
 }
 
+int active_peer_count()
+{
+  int count=0;
+  for(int peer=0;peer<peer_count;peer++)
+    if ((time(0)-peer_records[peer]->last_message_time)<=PEER_KEEPALIVE_INTERVAL)
+      count++;
+  return count;
+}
+
 
 #ifdef SYNC_BY_BAR
 int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_out)
