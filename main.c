@@ -400,8 +400,18 @@ int main(int argc, char **argv)
 	  if ((ratio<0.50)&&(message_update_interval>300)) adjust=50;
 	  if (ratio>0.90) adjust=3;
 	  // Only increase our packet rate, if we are not already hogging the channel
+	  // i.e., we are allowed to send at most 1/n of the packets.
+	  float max_packets_per_second=1;
+	  int active_peers=active_peer_count();
+	  if (active_peers) {
+	    max_packets_per_second=(TARGET_TRANSMISSIONS_PER_4SECONDS/active_peers)
+	      /4.0;
+	  }
+	  int minimum_interval=1000.0/max_packets_per_second;
 	  if (radio_transmissions_byus<=radio_transmissions_seen)
 	    message_update_interval-=adjust;
+	  if (message_update_interval<minimum_interval)
+	    message_update_interval=minimum_interval;
 	}
       } else if (ratio>1.0) {
 	// Slow down!  We slow down quickly, so as to try to avoid causing
