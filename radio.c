@@ -33,6 +33,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+int debug_radio_rx=0;
+
 #include "golay.h"
 #include "fec-3.0.1/fixed.h"
 void encode_rs_8(data_t *data, data_t *parity,int pad);
@@ -225,7 +227,7 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 {
   int i,j;
 
-  if (debug_pieces) {
+  if (debug_radio_rx) {
     fprintf(stderr,"Read %d bytes from radio:\n",count);
     for(i=0;i<count;i+=32) {
       for(j=0;j<32;j++) {
