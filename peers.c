@@ -260,29 +260,55 @@ int last_peer_requested=0;
 int random_active_peer()
 {
   int peer;
+  int the_peer=-1;
 
   // Work out who to ask next?
   // (consider all peers in round-robin)
-  if (last_peer_requested>=peer_count) last_peer_requested=0;
-  peer=last_peer_requested;
-  last_peer_requested++;
+  peer=last_peer_requested+1;
+  if (peer>=peer_count) peer=0;
+  if (peer<0) peer=0;
   
   for(;peer<peer_count;peer++)
     {
-      if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
+      if (!peer_records[peer]) continue;
+      if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL) {
 	continue;
-      last_peer_requested=peer;
-      return peer;
+      }
+      the_peer=peer;
+      break;
     }
-  for(peer=0;(peer<=last_peer_requested)&&(peer<peer_count);peer++)
-    {
-      if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
-	continue;
-      last_peer_requested=peer;
-      return peer;
-    }
+  if (the_peer==-1)
+    for(peer=0;(peer<=last_peer_requested)&&(peer<peer_count);peer++)
+      {
+	if (!peer_records[peer]) continue;
+	if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL) {
+	  continue;
+	}
+	the_peer=peer;
+	break;
+      }
 
-  return -1;
+#if 0  
+  char active_peers[1024];
+  int apl=0;
+  for(peer=0;(peer<peer_count);peer++)
+    {
+      if (!peer_records[peer]) continue;
+      if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
+	continue;
+      snprintf(&active_peers[apl],1024-apl,"%d, ",peer);
+      apl=strlen(active_peers);
+      fprintf(stderr,"     active_peers='%s'\n",active_peers);
+    }
+  if (apl>1) active_peers[apl-2]=0;
+  else strcpy(active_peers,"<none>");
+  fprintf(stderr,"T+%lldms : Random peer is %d (active peer(s) = %s, last requested = %d)\n",gettime_ms()-start_time,peer,active_peers,last_peer_requested);
+#endif
+  
+  peer=the_peer;
+  if (peer>=-1) last_peer_requested=peer;
+  
+  return peer;
 }
 
 int active_peer_count()

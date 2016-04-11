@@ -230,6 +230,7 @@ extern int debug_radio;
 extern int meshms_only;
 extern long long min_version;
 extern int time_slave;
+extern long long start_time;
 
 int saw_piece(char *peer_prefix,int for_me,
 	      char *bid_prefix,long long version,

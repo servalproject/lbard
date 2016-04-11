@@ -234,7 +234,8 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   (*offset)+=actual_bytes;
 
   if (debug_announce) {
-    fprintf(stderr,"Announcing ");
+    fprintf(stderr,"T+%lldms : Announcing for %s* ",gettime_ms()-start_time,
+	    peer_records[target_peer]->sid_prefix);
     for(int i=0;i<8;i++) fprintf(stderr,"%c",bundles[bundle_number].bid[i]);
     fprintf(stderr,"* (priority=0x%llx) version %lld %s segment [%d,%d)\n",
 	    bundles[bundle_number].last_priority,
@@ -269,8 +270,12 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
   if (prime_bundle_cache(bundle_number,
 			 sid_prefix_hex,servald_server,credential)) return -1;
   
-  if (peer_records[peer]->tx_bundle_manifest_offset<1024) {
-    // Send piece of manifest
+  // Mark manifest all sent once we get to the end
+  if (peer_records[peer]->tx_bundle_manifest_offset>=cached_manifest_encoded_len)
+    peer_records[peer]->tx_bundle_manifest_offset=1024;
+
+  // Send piece of manifest, if required
+  if (peer_records[peer]->tx_bundle_manifest_offset<cached_manifest_encoded_len) {
     int start_offset=peer_records[peer]->tx_bundle_manifest_offset;
     int bytes =
       sync_append_some_bundle_bytes(bundle_number,start_offset,
@@ -279,9 +284,6 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 				    offset,mtu,msg,peer);
     if (bytes>0)
       peer_records[peer]->tx_bundle_manifest_offset+=bytes;
-    // Mark manifest all sent once we get to the end
-    if (peer_records[peer]->tx_bundle_manifest_offset>=cached_manifest_encoded_len)
-      peer_records[peer]->tx_bundle_manifest_offset=1024;
 
   }
 
@@ -289,7 +291,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
   // but not yet started on the body.  This is really just to help monitoring
   // the progress of transfers for debugging.  The transfer process will automatically
   // detect the end of the bundle when the last piece is received.
-  if (peer_records[peer]->tx_bundle_manifest_offset>=1024) {
+  if (peer_records[peer]->tx_bundle_manifest_offset>=cached_manifest_encoded_len) {
     // Send length of body?
     if (!peer_records[peer]->tx_bundle_body_offset) {
       if ((mtu-*offset)>(1+8+8+4)) {
@@ -325,7 +327,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
   // until the peer acknowledges that they have received it all (or tells us to
   // start sending again from a different part of the bundle).
   if ((peer_records[peer]->tx_bundle_body_offset>=bundles[bundle_number].length)
-      &&(peer_records[peer]->tx_bundle_manifest_offset>=1024))
+      &&(peer_records[peer]->tx_bundle_manifest_offset>=cached_manifest_encoded_len))
     {
       peer_records[peer]->tx_bundle_body_offset=0;
       peer_records[peer]->tx_bundle_manifest_offset=0;
@@ -360,6 +362,8 @@ int sync_tree_send_data(int *offset,int mtu, unsigned char *msg_out,int peer,
 int report_queue_length=0;
 uint8_t report_queue[REPORT_QUEUE_LEN][MAX_REPORT_LEN];
 uint8_t report_lengths[REPORT_QUEUE_LEN];
+struct peer_state *report_queue_peers[REPORT_QUEUE_LEN];
+int report_queue_partials[REPORT_QUEUE_LEN];
 
 int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 			      char *sid_prefix_bin,
@@ -372,7 +376,8 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
   // First of all, tell any peers any acknowledgement messages that are required.
   while (report_queue_length&&((*offset)<(mtu-MAX_REPORT_LEN))) {
     report_queue_length--;
-    fprintf(stderr,"Flushing report from queue, %d remaining.\n",
+    fprintf(stderr,"T+%lldms : Flushing report from queue, %d remaining.\n",
+	    gettime_ms()-start_time,	    
 	    report_queue_length);
     append_bytes(offset,mtu,msg_out,report_queue[report_queue_length],
 		 report_lengths[report_queue_length]);
@@ -419,7 +424,21 @@ int sync_tree_populate_with_our_bundles()
 int sync_tell_peer_we_have_this_bundle(int peer, int bundle)
 {
   int slot=report_queue_length;
+
+  for(int i=0;i<report_queue_length;i++) {
+    if (report_queue_peers[i]==peer_records[peer]) {
+      // We already want to tell this peer something.
+      // We should only need to tell a peer one thing at a time.
+      slot=i; break;
+    }
+  }
+  
   if (slot>=REPORT_QUEUE_LEN) slot=random()%REPORT_QUEUE_LEN;
+
+  // Mark utilisation of slot, so that we can flush out stale messages
+  report_queue_partials[slot]=-1;
+  report_queue_peers[slot]=peer_records[peer];
+  
   int ofs=0;
   report_queue[slot][ofs++]='A';
   // BID prefix
@@ -443,7 +462,21 @@ int sync_tell_peer_we_have_this_bundle(int peer, int bundle)
 int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial)
 {
   int slot=report_queue_length;
+
+  for(int i=0;i<report_queue_length;i++) {
+    if (report_queue_peers[i]==peer_records[peer]) {
+      // We already want to tell this peer something.
+      // We should only need to tell a peer one thing at a time.
+      slot=i; break;
+    }
+  }
+  
   if (slot>=REPORT_QUEUE_LEN) slot=random()%REPORT_QUEUE_LEN;
+
+  // Mark utilisation of slot, so that we can flush out stale messages
+  report_queue_partials[slot]=partial;
+  report_queue_peers[slot]=peer_records[peer];
+
   int ofs=0;
   report_queue[slot][ofs++]='A';
   // BID prefix
@@ -474,27 +507,60 @@ int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial)
 /* Find the first byte missing in the following segment list.
    Basically this boils down to being either byte 0, or the
    first byte after the first segment. 
+
+   However, we actually want to randomise the byte we ask for,
+   so that if a peer is sending to multiple peers, that we can
+   encourage them to send unique content.  This ideally requires
+   that we know who a piece is addressed to. But in the very
+   least, we should pick a random starting point that is adjacent
+   to one of our partial pieces.  However, we need to take care to
+   not make the sender think that we have it all.
 */
 int partial_first_missing_byte(struct segment_list *s)
 {
-  int offset=0x7fffffff;
-  int start=0x7fffffff;
-  // Find the segment
+  int add_zero=1;
+  
+  int candidates[16];
+  int candidate_count=0;
+  
+  // Walk the segment list. Adjacent segments should be merged,
+  // so the offset following each segment is a valid candidate,
+  // except if a candidate is the end of the file.
   while(s) {
-    if (s->start_offset<start) {
-      if (s->start_offset) offset=0;
-      else offset=s->start_offset+s->length;
-      start=s->start_offset;
-    }
+    if (!s->start_offset) add_zero=0;
+    if (candidate_count<16)
+      candidates[candidate_count++]=s->start_offset+s->length;
     s=s->next;
   }
-  return offset;
+  if ((candidate_count<16)&&(add_zero)) candidates[candidate_count++]=0;
+
+  // The values should be in descending order. Don't ask for highest value,
+  // incase it signals the end of the bundle (we don't necessarily know the
+  // payload length during reception).  Thus only ask for the end point if
+  // there are no other alternatives.
+  if (candidate_count>1)
+    return candidates[random()%(candidate_count-1)];
+  else return candidates[0];
 }
 
 int sync_schedule_progress_report(int peer, int partial)
 {
   int slot=report_queue_length;
+
+  for(int i=0;i<report_queue_length;i++) {
+    if (report_queue_peers[i]==peer_records[peer]) {
+      // We already want to tell this peer something.
+      // We should only need to tell a peer one thing at a time.
+      slot=i; break;
+    }
+  }
+  
   if (slot>=REPORT_QUEUE_LEN) slot=random()%REPORT_QUEUE_LEN;
+
+  // Mark utilisation of slot, so that we can flush out stale messages
+  report_queue_partials[slot]=partial;
+  report_queue_peers[slot]=peer_records[peer];
+
   int ofs=0;
   report_queue[slot][ofs++]='A';
 
@@ -526,12 +592,13 @@ int sync_schedule_progress_report(int peer, int partial)
   assert(ofs<MAX_REPORT_LEN);
   if (slot>=report_queue_length) report_queue_length=slot+1;
 
-  printf("T+%lldms : ACKing progress on transfer of %s* from %s. m_first=%d, b_first=%d\n",
-	 gettime_ms()-start_time,
-	 peer_records[peer]->partials[partial].bid_prefix,
-	 peer_records[peer]->sid_prefix,
-	 first_required_manifest_offset,
-	 first_required_body_offset);    
+  fprintf(stderr,
+	  "T+%lldms : ACKing progress on transfer of %s* from %s. m_first=%d, b_first=%d\n",
+	  gettime_ms()-start_time,
+	  peer_records[peer]->partials[partial].bid_prefix,
+	  peer_records[peer]->sid_prefix,
+	  first_required_manifest_offset,
+	  first_required_body_offset);    
   
   return 0;
 }
@@ -579,7 +646,14 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
   // lower priority in there previously.)
   if (p->tx_bundle==-1) {
     p->tx_bundle=bundle;
-    p->tx_bundle_body_offset=0;
+    // Start body transmission at a random point, so that if we are sending the
+    // bundle to multiple peers, we at least have a chance of not sending the same
+    // piece to each in a redundant manner. It would be even better to have some
+    // awareness of when we are doing this, so that we can optimise it. XXX
+    // XXX - The benefit of this disappears as soon as the peer requests a
+    // re-transmission, since it will start requesting from the earliest byte that it
+    // lacks.
+    p->tx_bundle_body_offset=random()%bundles[bundle].length;
     p->tx_bundle_manifest_offset=0;
     p->tx_bundle_priority=priority;
   }
@@ -670,8 +744,9 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
 
   int bundle=lookup_bundle_by_prefix(bid_prefix);
 
-  fprintf(stderr,"SYNC ACK: %s* is asking for us to send from m=0x%x, p=0x%x of"
+  fprintf(stderr,"T+%lldms : SYNC ACK: %s* is asking for us to send from m=0x%x, p=0x%x of"
 	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d)\n",
+	  gettime_ms()-start_time,
 	  p?p->sid_prefix:"<null>",manifest_offset,body_offset,
 	  msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8],
 	  bundle);
@@ -682,7 +757,7 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
 
   if (bundle<0) return -1;  
   int finished=0;
-  if ((manifest_offset>=1024)
+  if ((manifest_offset>=cached_manifest_encoded_len)
       &&(body_offset>=bundles[bundle].length)) finished=1;
   if (finished) sync_dequeue_bundle(p,bundle);
   else {
