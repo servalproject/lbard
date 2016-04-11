@@ -293,7 +293,9 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
   // detect the end of the bundle when the last piece is received.
   if (peer_records[peer]->tx_bundle_manifest_offset>=cached_manifest_encoded_len) {
     // Send length of body?
-    if (!peer_records[peer]->tx_bundle_body_offset) {
+    if ((!peer_records[peer]->tx_bundle_body_offset)
+	||(peer_records[peer]->tx_bundle_body_offset>=cached_body_len))
+      {
       if ((mtu-*offset)>(1+8+8+4)) {
 	// Announce length of bundle
 	msg[(*offset)++]='L';
