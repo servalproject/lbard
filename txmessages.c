@@ -316,7 +316,7 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
   (*offset)+=actual_bytes;
 
   if (debug_announce) {
-    fprintf(stderr,"Announcing ");
+    fprintf(stderr,"T+%lldms : Announcing ",gettime_ms()-start_time);
     for(int i=0;i<8;i++) fprintf(stderr,"%c",bundles[bundle_number].bid[i]);
     fprintf(stderr,"* (priority=0x%llx) version %lld %s segment [%d,%d)\n",
 	    bundles[bundle_number].last_priority,

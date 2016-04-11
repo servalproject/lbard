@@ -163,9 +163,13 @@ int urandombytes(unsigned char *buf, size_t len)
   return 0;
 }
 
+long long start_time=0;
+
 int main(int argc, char **argv)
 {
 
+  start_time = gettime_ms();
+  
   sync_setup();
 
   // Generate a unique transient instance ID for ourselves.

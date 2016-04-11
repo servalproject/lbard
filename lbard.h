@@ -110,6 +110,7 @@ struct peer_state {
   struct partial_bundle partials[MAX_BUNDLES_IN_FLIGHT];  
 }; 
 
+extern long long start_time;
 extern int my_time_stratum;
 extern int radio_transmissions_byus;
 extern int radio_transmissions_seen;

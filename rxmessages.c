@@ -42,7 +42,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
-int debug_message_pieces=0;
+int debug_message_pieces=1;
 
 extern char *my_sid_hex;
 
@@ -478,6 +478,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       fprintf(stderr,
 	      "Saw message section with type '%c' (0x%02x) @ offset $%02x, len=%d\n",
 	      msg[offset],msg[offset],offset,len);
+      fflush(stderr);
     }
     switch(msg[offset]) {
     case 'A':

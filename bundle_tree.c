@@ -433,7 +433,7 @@ int sync_tell_peer_we_have_this_bundle(int peer, int bundle)
 
   report_lengths[slot]=ofs;
   assert(ofs<MAX_REPORT_LEN);
-  if (slot>=report_queue_length) report_queue_length=slot;
+  if (slot>=report_queue_length) report_queue_length=slot+1;
 
   return 0;
 }
@@ -463,7 +463,7 @@ int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial)
 
   report_lengths[slot]=ofs;
   assert(ofs<MAX_REPORT_LEN);
-  if (slot>=report_queue_length) report_queue_length=slot;
+  if (slot>=report_queue_length) report_queue_length=slot+1;
 
   return 0;
 }
@@ -522,9 +522,10 @@ int sync_schedule_progress_report(int peer, int partial)
 
   report_lengths[slot]=ofs;
   assert(ofs<MAX_REPORT_LEN);
-  if (slot>=report_queue_length) report_queue_length=slot;
+  if (slot>=report_queue_length) report_queue_length=slot+1;
 
-  printf("Reporting progress on transfer of %s* from %s. m_first=%d, b_first=%d\n",
+  printf("T+%lldms : ACKing progress on transfer of %s* from %s. m_first=%d, b_first=%d\n",
+	 gettime_ms()-start_time,
 	 peer_records[peer]->partials[partial].bid_prefix,
 	 peer_records[peer]->sid_prefix,
 	 first_required_manifest_offset,
@@ -663,9 +664,20 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
   unsigned char bid_prefix[8]=
     {msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8]};
   int manifest_offset=msg[9]|(msg[10]<<8);
-  int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[42]<<24);
+  int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[14]<<24);
 
-  int bundle=lookup_bundle_by_prefix(bid_prefix);  
+  int bundle=lookup_bundle_by_prefix(bid_prefix);
+
+  fprintf(stderr,"SYNC ACK: %s* is asking for us to send from m=0x%x, p=0x%x of"
+	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d)\n",
+	  p?p->sid_prefix:"<null>",manifest_offset,body_offset,
+	  msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8],
+	  bundle);
+
+  if (manifest_offset<0) manifest_offset=0;
+  if (body_offset<0) body_offset=0;
+  
+
   if (bundle<0) return -1;  
   int finished=0;
   if ((manifest_offset>=1024)
@@ -673,6 +685,8 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
   if (finished) sync_dequeue_bundle(p,bundle);
   else {
     if (bundle==p->tx_bundle) {
+      fprintf(stderr,"SYNC ACK: %s* is asking for us to send from m=%d, p=%d\n",
+	      p->sid_prefix,manifest_offset,body_offset);
       p->tx_bundle_manifest_offset=manifest_offset;
       p->tx_bundle_body_offset=body_offset;      
     }
