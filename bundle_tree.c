@@ -674,9 +674,9 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
 	  msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8],
 	  bundle);
 
+  // Sanity check inputs, so that we don't mishandle memory.
   if (manifest_offset<0) manifest_offset=0;
-  if (body_offset<0) body_offset=0;
-  
+  if (body_offset<0) body_offset=0;  
 
   if (bundle<0) return -1;  
   int finished=0;
