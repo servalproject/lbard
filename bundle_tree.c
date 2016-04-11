@@ -371,9 +371,11 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 
   // First of all, tell any peers any acknowledgement messages that are required.
   while (report_queue_length&&((*offset)<(mtu-MAX_REPORT_LEN))) {
-    append_bytes(offset,mtu,msg_out,report_queue[report_queue_length-1],
-		 report_lengths[report_queue_length-1]);
     report_queue_length--;
+    fprintf(stderr,"Flushing report from queue, %d remaining.\n",
+	    report_queue_length);
+    append_bytes(offset,mtu,msg_out,report_queue[report_queue_length],
+		 report_lengths[report_queue_length]);
   } 
   
   int count=10; if (count>peer_count) count=peer_count;
@@ -481,7 +483,7 @@ int partial_first_missing_byte(struct segment_list *s)
   while(s) {
     if (s->start_offset<start) {
       if (s->start_offset) offset=0;
-      else offset=s->start_offset+s->length+1;
+      else offset=s->start_offset+s->length;
       start=s->start_offset;
     }
     s=s->next;
