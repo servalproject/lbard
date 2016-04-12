@@ -74,32 +74,6 @@ char *prefix="";
 
 char *token=NULL;
 
-int scan_for_incoming_messages()
-{
-  DIR *d;
-  struct dirent *de;
-
-  d=opendir(".");
-
-  while((de=readdir(d))!=NULL) {
-    int len=strlen(de->d_name);
-    if (len>strlen(".lbard-message")) {
-      if (!strcmp(".lbard-message",&de->d_name[len-strlen(".lbard-message")])) {
-	// Found a message
-	FILE *f=fopen(de->d_name,"r");
-	unsigned char msg_body[8192];
-	int len=fread(msg_body,1,8192,f);
-	saw_message(msg_body,len,
-		    my_sid_hex,prefix, servald_server,credential);
-	fclose(f);
-      }
-    }
-  }
-
-  closedir(d);
-  return 0;
-}
-
 /*
   RFD900 has 255 byte maximum frames, but some bytes get taken in overhead.
   We then Reed-Solomon the body we supply, which consumes a further 32 bytes.
@@ -377,7 +351,6 @@ int main(int argc, char **argv)
 
     unsigned char msg_out[LINK_MTU];
 
-    scan_for_incoming_messages();
     radio_read_bytes(serialfd,monitor_mode);
 
     // Deal with clocks running backwards sometimes
