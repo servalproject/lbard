@@ -345,12 +345,12 @@ int http_post_bundle(char *server_and_port, char *auth_token,
     } else usleep(1000);
     if (gettime_ms()>timeout_time) {
       // If still in header, just quit on timeout
-      close(sock);
+      close(sock); 
       return -1;
     }
   }
-  return http_response;
-  
+  close(sock);
+  return http_response;  
 }
 
 int http_post_meshms(char *server_and_port, char *auth_token,
@@ -470,6 +470,7 @@ int http_post_meshms(char *server_and_port, char *auth_token,
       return -1;
     }
   }
+  close(sock);
   return http_response;
   
 }
