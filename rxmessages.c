@@ -490,6 +490,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       offset++;
       if (len-offset<BAR_LENGTH) return -2;
       // BAR announcement
+      unsigned char *bid_prefix_bin=&msg[offset];
       snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
 	       msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
 	       msg[offset+4],msg[offset+5],msg[offset+6],msg[offset+7]);
@@ -535,6 +536,16 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 
 #ifdef SYNC_BY_BAR
       peer_note_bar(p,bid_prefix,version,recipient_prefix,size_byte);
+#else
+      int bundle=lookup_bundle_by_prefix_and_version(bid_prefix_bin,version);
+      if (bundle>-1) {
+	fprintf(stderr,"T+%lldms : SYNC FIN: %s* is has finished receiving"
+		" %s version %lld (bundle #%d)\n",
+		gettime_ms()-start_time,p?p->sid_prefix:"<null>",bid_prefix,
+		version,bundle);
+
+	sync_dequeue_bundle(p,bundle);
+      }
 #endif
       break;
     case 'G':

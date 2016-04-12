@@ -360,7 +360,7 @@ int sync_tree_send_data(int *offset,int mtu, unsigned char *msg_out,int peer,
 }
 
 #define REPORT_QUEUE_LEN 32
-#define MAX_REPORT_LEN 16
+#define MAX_REPORT_LEN 64
 int report_queue_length=0;
 uint8_t report_queue[REPORT_QUEUE_LEN][MAX_REPORT_LEN];
 uint8_t report_lengths[REPORT_QUEUE_LEN];
@@ -423,6 +423,25 @@ int sync_tree_populate_with_our_bundles()
   return 0;
 }
 
+
+int sync_build_bar_in_slot(int slot,char *bid_prefix,
+			   long long bundle_version)
+{
+  int ofs=0;
+  report_queue[slot][ofs++]='B';
+
+  // BID prefix
+  for(int i=0;i<8;i++) report_queue[slot][ofs++]=hex_byte_value(&bid_prefix[i*2]);
+  // Bundle Version
+  for(int i=0;i<8;i++) report_queue[slot][ofs++]=(bundle_version>>(i*8))&0xff;
+  // Dummy recipient + size byte
+  for(int i=0;i<5;i++) report_queue[slot][ofs++]=(bundle_version>>(i*8))&0xff;
+
+  report_lengths[slot]=ofs;
+  assert(ofs<MAX_REPORT_LEN);
+  return 0;
+}
+
 int sync_tell_peer_we_have_this_bundle(int peer, int bundle)
 {
   int slot=report_queue_length;
@@ -440,22 +459,11 @@ int sync_tell_peer_we_have_this_bundle(int peer, int bundle)
   // Mark utilisation of slot, so that we can flush out stale messages
   report_queue_partials[slot]=-1;
   report_queue_peers[slot]=peer_records[peer];
-  
-  int ofs=0;
-  report_queue[slot][ofs++]='A';
-  // BID prefix
-  for(int i=0;i<8;i++) report_queue[slot][ofs++]=bundles[bundle].bid[i];
-  // manifest and body offset
-  report_queue[slot][ofs++]=0xff;
-  report_queue[slot][ofs++]=0xff;
 
-  report_queue[slot][ofs++]=0xff;
-  report_queue[slot][ofs++]=0xff;
-  report_queue[slot][ofs++]=0xff;
-  report_queue[slot][ofs++]=0xff;
+  sync_build_bar_in_slot(slot,
+			 bundles[bundle].bid,
+			 bundles[bundle].version);
 
-  report_lengths[slot]=ofs;
-  assert(ofs<MAX_REPORT_LEN);
   if (slot>=report_queue_length) report_queue_length=slot+1;
 
   return 0;
@@ -479,27 +487,10 @@ int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial)
   report_queue_partials[slot]=partial;
   report_queue_peers[slot]=peer_records[peer];
 
-  int ofs=0;
-  report_queue[slot][ofs++]='A';
-  // BID prefix
-  for(int i=0;i<8;i++) {
-    char hex[3];
-    hex[0]=peer_records[peer]->partials[partial].bid_prefix[i*2+0];
-    hex[1]=peer_records[peer]->partials[partial].bid_prefix[i*2+1];
-    hex[2]=0;
-    report_queue[slot][ofs++]=strtoll(hex,NULL,16);
-  }
-  // manifest and body offset
-  report_queue[slot][ofs++]=0xff;
-  report_queue[slot][ofs++]=0xff;
-
-  report_queue[slot][ofs++]=0xff;
-  report_queue[slot][ofs++]=0xff;
-  report_queue[slot][ofs++]=0xff;
-  report_queue[slot][ofs++]=0xff;
-
-  report_lengths[slot]=ofs;
-  assert(ofs<MAX_REPORT_LEN);
+  sync_build_bar_in_slot(slot,
+			 peer_records[peer]->partials[partial].bid_prefix,
+			 peer_records[peer]->partials[partial].bundle_version);
+  
   if (slot>=report_queue_length) report_queue_length=slot+1;
 
   return 0;
@@ -617,6 +608,20 @@ int lookup_bundle_by_prefix(unsigned char *prefix)
   }
   return -1;
 }
+
+int lookup_bundle_by_prefix_and_version(unsigned char *prefix, long long version)
+{
+  int bundle;
+  int i;
+  for(bundle=0;bundle<bundle_count;bundle++) {
+    for(i=0;i<8;i++) {
+      if (prefix[i]!=bundles[bundle].bid[i]) break;
+    }
+    return bundle;
+  }
+  return -1;
+}
+
 
 int sync_queue_bundle(struct peer_state *p,int bundle)
 {
@@ -758,17 +763,11 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
   if (body_offset<0) body_offset=0;  
 
   if (bundle<0) return -1;  
-  int finished=0;
-  if ((manifest_offset>=cached_manifest_encoded_len)
-      &&(body_offset>=bundles[bundle].length)) finished=1;
-  if (finished) sync_dequeue_bundle(p,bundle);
-  else {
-    if (bundle==p->tx_bundle) {
+  if (bundle==p->tx_bundle) {
       fprintf(stderr,"SYNC ACK: %s* is asking for us to send from m=%d, p=%d\n",
 	      p->sid_prefix,manifest_offset,body_offset);
       p->tx_bundle_manifest_offset=manifest_offset;
       p->tx_bundle_body_offset=body_offset;      
-    }
   }
 
   return 0;
