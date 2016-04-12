@@ -1,30 +1,30 @@
 /*
-Serval Low-bandwidth asychronous Rhizome Demonstrator.
-Copyright (C) 2016 Serval Project Inc.
+  Serval Low-bandwidth asychronous Rhizome Demonstrator.
+  Copyright (C) 2016 Serval Project Inc.
 
-This program monitors a local Rhizome database and attempts
-to synchronise it over low-bandwidth declarative transports, 
-such as bluetooth name or wifi-direct service information
-messages.  It is intended to give a high priority to MeshMS
-converations among nearby nodes.
+  This program monitors a local Rhizome database and attempts
+  to synchronise it over low-bandwidth declarative transports, 
+  such as bluetooth name or wifi-direct service information
+  messages.  It is intended to give a high priority to MeshMS
+  converations among nearby nodes.
 
-The design is fully asynchronous, so a call to the update_my_message()
-function from time to time should be all that is required.
+  The design is fully asynchronous, so a call to the update_my_message()
+  function from time to time should be all that is required.
 
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+  This program is free software; you can redistribute it and/or
+  modify it under the terms of the GNU General Public License
+  as published by the Free Software Foundation; either version 2
+  of the License, or (at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 extern char *my_sid_hex;
@@ -226,8 +226,8 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   for(int i=0;i<4;i++)
     msg[(*offset)++]=(offset_compound>>(i*8))&0xff;
   if (start_offset>0xfffff) {
-  for(int i=4;i<6;i++)
-    msg[(*offset)++]=(offset_compound>>(i*8))&0xff;
+    for(int i=4;i<6;i++)
+      msg[(*offset)++]=(offset_compound>>(i*8))&0xff;
   }
 
   bcopy(p,&msg[(*offset)],actual_bytes);
@@ -296,22 +296,23 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
     if ((!peer_records[peer]->tx_bundle_body_offset)
 	||(peer_records[peer]->tx_bundle_body_offset>=cached_body_len))
       {
-      if ((mtu-*offset)>(1+8+8+4)) {
-	// Announce length of bundle
-	msg[(*offset)++]='L';
-	// Bundle prefix (8 bytes)
-	for(int i=0;i<8;i++)
-	  msg[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);
-	// Bundle version (8 bytes)
-	for(int i=0;i<8;i++)
-	  msg[(*offset)++]=(cached_version>>(i*8))&0xff;
-	// Length (4 bytes)
-	msg[(*offset)++]=(bundles[bundle_number].length>>0)&0xff;
-	msg[(*offset)++]=(bundles[bundle_number].length>>8)&0xff;
-	msg[(*offset)++]=(bundles[bundle_number].length>>16)&0xff;
-	msg[(*offset)++]=(bundles[bundle_number].length>>24)&0xff;
+	
+	if ((mtu-*offset)>(1+8+8+4)) {
+	  // Announce length of bundle
+	  msg[(*offset)++]='L';
+	  // Bundle prefix (8 bytes)
+	  for(int i=0;i<8;i++)
+	    msg[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);
+	  // Bundle version (8 bytes)
+	  for(int i=0;i<8;i++)
+	    msg[(*offset)++]=(cached_version>>(i*8))&0xff;
+	  // Length (4 bytes)
+	  msg[(*offset)++]=(bundles[bundle_number].length>>0)&0xff;
+	  msg[(*offset)++]=(bundles[bundle_number].length>>8)&0xff;
+	  msg[(*offset)++]=(bundles[bundle_number].length>>16)&0xff;
+	  msg[(*offset)++]=(bundles[bundle_number].length>>24)&0xff;
+	}
       }
-    }
     {
       // Send some of the body
       int start_offset=peer_records[peer]->tx_bundle_body_offset;
@@ -347,7 +348,7 @@ int sync_tree_send_data(int *offset,int mtu, unsigned char *msg_out,int peer,
     (If they have it, then they will acknowledge the entirety of it, allowing us
     to advance to the next bundle.)
 
-   */
+  */
   if (peer_records[peer]->tx_bundle>-1)
     {
       // Try to also send a piece of body, even if we have already stuffed some
@@ -751,7 +752,7 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
 
   int bundle=lookup_bundle_by_prefix(bid_prefix);
 
-  fprintf(stderr,"T+%lldms : SYNC ACK: %s* is asking for us to send from m=0x%x, p=0x%x of"
+  fprintf(stderr,"T+%lldms : SYNC ACK: %s* is asking for us to send from m=%d, p=%d of"
 	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d)\n",
 	  gettime_ms()-start_time,
 	  p?p->sid_prefix:"<null>",manifest_offset,body_offset,
@@ -764,10 +765,10 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
 
   if (bundle<0) return -1;  
   if (bundle==p->tx_bundle) {
-      fprintf(stderr,"SYNC ACK: %s* is asking for us to send from m=%d, p=%d\n",
-	      p->sid_prefix,manifest_offset,body_offset);
-      p->tx_bundle_manifest_offset=manifest_offset;
-      p->tx_bundle_body_offset=body_offset;      
+    fprintf(stderr,"SYNC ACK: %s* is asking for us to send from m=%d, p=%d\n",
+	    p->sid_prefix,manifest_offset,body_offset);
+    p->tx_bundle_manifest_offset=manifest_offset;
+    p->tx_bundle_body_offset=body_offset;      
   }
 
   return 0;
@@ -784,7 +785,7 @@ void peer_has_this_key(void *context, void *peer_context, const sync_key_t *key)
 }
 
 void peer_now_has_this_key(void *context, void *peer_context,void *key_context,
-				 const sync_key_t *key)
+			   const sync_key_t *key)
 {
   // Peer has something, that we also have. 
   // We should stop sending it to them, if we were trying.
