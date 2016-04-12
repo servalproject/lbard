@@ -233,6 +233,24 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   bcopy(p,&msg[(*offset)],actual_bytes);
   (*offset)+=actual_bytes;
 
+  /* Advance the cursor for sending this bundle to all other peers if their cursor
+     sits within the window we have just sent. */
+  for(int pn=0;pn<peer_count;pn++) {
+    if (pn!=target_peer) {
+      if (peer_records[pn]->tx_bundle==bundle_number) {
+	if (is_manifest) {
+	  if ((peer_records[pn]->tx_bundle_manifest_offset>=start_offset)
+	      &&(peer_records[pn]->tx_bundle_manifest_offset<(start_offset+len)))
+	    peer_records[pn]->tx_bundle_manifest_offset=(start_offset+len);
+	} else {
+	  if ((peer_records[pn]->tx_bundle_body_offset>=start_offset)
+	      &&(peer_records[pn]->tx_bundle_body_offset<(start_offset+len)))
+	    peer_records[pn]->tx_bundle_body_offset=(start_offset+len);
+	}
+      }
+    }
+  }
+  
   if (debug_announce) {
     fprintf(stderr,"T+%lldms : Announcing for %s* ",gettime_ms()-start_time,
 	    peer_records[target_peer]->sid_prefix);
@@ -326,6 +344,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
     }
   }
 
+  
   // If we have sent to the end of the bundle, then start again from the beginning,
   // until the peer acknowledges that they have received it all (or tells us to
   // start sending again from a different part of the bundle).
