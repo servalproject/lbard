@@ -78,7 +78,8 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     unlink(filename);
     FILE *f=fopen(filename,"w");
     if (!f) {
-      fprintf(stderr,"could not open output file.\n");
+      fprintf(stderr,"could not open output file '%s'.\n",filename);
+      perror("fopen");
       return -1;
     }
     int result_code=http_get_simple(servald_server,
@@ -127,7 +128,8 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     unlink(filename);
     f=fopen(filename,"w");
     if (!f) {
-      fprintf(stderr,"could not open output file.\n");
+      fprintf(stderr,"could not open output file '%s'.\n",filename);
+      perror("fopen");
       return -1;
     }
     result_code=http_get_simple(servald_server,
