@@ -106,6 +106,7 @@ int saw_piece(char *peer_prefix,int for_me,
 #endif
 	if (debug_pieces) fprintf(stderr,"We already have %s* version %lld - ignoring piece.\n",
 		bid_prefix,version);
+	sync_tell_peer_we_have_this_bundle(peer,i);
 	return 0;
       } else {
 	// We have an older version.
