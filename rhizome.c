@@ -104,7 +104,8 @@ int load_rhizome_db(int timeout,
   unlink(filename);
   FILE *f=fopen(filename,"w");
   if (!f) {
-    fprintf(stderr,"could not open output file.\n");
+    fprintf(stderr,"could not open output file '%s'.\n",filename);
+    perror("fopen");
     return -1;
   }
 
