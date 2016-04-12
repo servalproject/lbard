@@ -51,6 +51,12 @@ int generate_segment_progress_string(int stream_length,
 {
   // Apply some sanity when dealing with manifests where we don't know the length yet.
   if (stream_length<1) stream_length=1024;
+
+  int bin;
+  
+  for(bin=0;bin<10;bin++) progress[bin]=' ';
+  
+
   
   while(s) {
     int bin;
