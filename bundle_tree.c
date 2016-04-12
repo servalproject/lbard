@@ -236,7 +236,7 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   /* Advance the cursor for sending this bundle to all other peers if their cursor
      sits within the window we have just sent. */
   for(int pn=0;pn<peer_count;pn++) {
-    if (pn!=target_peer) {
+    if (pn!=target_peer&&peer_records[pn]) {
       if (peer_records[pn]->tx_bundle==bundle_number) {
 	if (is_manifest) {
 	  if ((peer_records[pn]->tx_bundle_manifest_offset>=start_offset)
@@ -547,12 +547,15 @@ int partial_first_missing_byte(struct segment_list *s)
   }
   if ((candidate_count<16)&&(add_zero)) candidates[candidate_count++]=0;
 
+  for(int i=0;i<candidate_count;i++)
+    fprintf(stderr,"  candidate #%d = %d\n",i,candidates[i]);
+  
   // The values should be in descending order. Don't ask for highest value,
   // incase it signals the end of the bundle (we don't necessarily know the
   // payload length during reception).  Thus only ask for the end point if
   // there are no other alternatives.
   if (candidate_count>1)
-    return candidates[random()%(candidate_count-1)];
+    return candidates[1+random()%(candidate_count-1)];
   else return candidates[0];
 }
 
