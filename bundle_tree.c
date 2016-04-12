@@ -240,12 +240,18 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
       if (peer_records[pn]->tx_bundle==bundle_number) {
 	if (is_manifest) {
 	  if ((peer_records[pn]->tx_bundle_manifest_offset>=start_offset)
-	      &&(peer_records[pn]->tx_bundle_manifest_offset<(start_offset+len)))
-	    peer_records[pn]->tx_bundle_manifest_offset=(start_offset+len);
+	      &&(peer_records[pn]->tx_bundle_manifest_offset<(start_offset+actual_bytes)))
+	    peer_records[pn]->tx_bundle_manifest_offset=(start_offset+actual_bytes);
 	} else {
 	  if ((peer_records[pn]->tx_bundle_body_offset>=start_offset)
-	      &&(peer_records[pn]->tx_bundle_body_offset<(start_offset+len)))
-	    peer_records[pn]->tx_bundle_body_offset=(start_offset+len);
+	      &&(peer_records[pn]->tx_bundle_body_offset<(start_offset+actual_bytes))) {
+	    fprintf(stderr,"T+%lldms : Cursor advance from %d to %d, due to sending [%d..%d].\n",
+		    gettime_ms()-start_time,
+		    peer_records[pn]->tx_bundle_body_offset,(start_offset+actual_bytes),
+		    start_offset,(start_offset+actual_bytes)
+		    );
+	    peer_records[pn]->tx_bundle_body_offset=(start_offset+actual_bytes);
+	  }
 	}
       }
     }
@@ -294,6 +300,9 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 
   // Send piece of manifest, if required
   if (peer_records[peer]->tx_bundle_manifest_offset<cached_manifest_encoded_len) {
+    fprintf(stderr,"  manifest_offset=%d, manifest_len=%d\n",
+	    peer_records[peer]->tx_bundle_manifest_offset,
+	    cached_manifest_encoded_len);
     int start_offset=peer_records[peer]->tx_bundle_manifest_offset;
     int bytes =
       sync_append_some_bundle_bytes(bundle_number,start_offset,
@@ -314,7 +323,8 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
     if ((!peer_records[peer]->tx_bundle_body_offset)
 	||(peer_records[peer]->tx_bundle_body_offset>=cached_body_len))
       {
-	
+	fprintf(stderr,"T+%lldms : Sending length of bundle.\n",
+		gettime_ms()-start_time);
 	if ((mtu-*offset)>(1+8+8+4)) {
 	  // Announce length of bundle
 	  msg[(*offset)++]='L';
@@ -353,6 +363,9 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
     {
       peer_records[peer]->tx_bundle_body_offset=0;
       peer_records[peer]->tx_bundle_manifest_offset=0;
+      fprintf(stderr,"T+%lldms : Resending bundle from the start.\n",
+	      gettime_ms()-start_time);
+
     }
   
   return 0;
