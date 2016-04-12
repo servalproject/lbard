@@ -17,6 +17,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+int packet_drop_threshold=0;
 
 char *socketname="/tmp/fakecsmaradio.socket";
 
@@ -212,12 +213,25 @@ int main(int argc,char **argv)
   
   if (argv&&argv[1]) radio_count=atoi(argv[1]);
   if (argc>2) tty_file=fopen(argv[2],"w");
-  if ((argc!=3)||(!tty_file)||(radio_count<2)||(radio_count>=MAX_CLIENTS)) {
-    fprintf(stderr,"usage: fakecsmaradio <number of radios> <tty file>\n");
+  if ((argc<3)||(argc>4)||(!tty_file)||(radio_count<2)||(radio_count>=MAX_CLIENTS)) {
+    fprintf(stderr,"usage: fakecsmaradio <number of radios> <tty file> [packet drop probability]\n");
     fprintf(stderr,"\nNumber of radios must be between 2 and %d.\n",MAX_CLIENTS-1);
     fprintf(stderr,"The name of each tty will be written to <tty file>\n");
+    fprintf(stderr,"The optional packet drop probability allows the simulation of packet loss.\n"); 
     exit(-1);
   }
+  if (argc>3) 
+    {
+      float p=atof(argv[3]);
+      if (p<0||p>1) {
+	fprintf(stderr,"Packet drop probability must be in range [0..1]\n");
+	exit(-1);
+      }
+      packet_drop_threshold = p*0x7fffffff;
+      fprintf(stderr,"Simulating %3.2f%% packet loss (threshold = 0x%08x)\n",
+	      p*100.0,packet_drop_threshold);
+    }
+  srandom(time(0));
 
   for(int i=0;i<radio_count;i++) {
     int fd=posix_openpt(O_RDWR|O_NOCTTY);
@@ -254,11 +268,16 @@ int main(int argc,char **argv)
       if (clients[i].rx_queue_len&&(clients[i].rx_embargo<now))
 	{
 	  if (!clients[i].rx_colission) {
-	    write(clients[i].socket,
-		  clients[i].rx_queue,
-		  clients[i].rx_queue_len);
-	    printf("Radio #%d receives a packet of %d bytes\n",
-		   i,clients[i].rx_queue_len);
+	    if ((random()&0x7fffffff)>=packet_drop_threshold) {
+	      write(clients[i].socket,
+		    clients[i].rx_queue,
+		    clients[i].rx_queue_len);
+	      printf("Radio #%d receives a packet of %d bytes\n",
+		     i,clients[i].rx_queue_len);
+	    } else
+	      printf("Radio #%d misses a packet of %d bytes due to simulated packet loss\n",
+		     i,clients[i].rx_queue_len);
+	      
 	  }
 	  printf("Radio #%d ready to receive.\n",i);
 	  clients[i].rx_queue_len=0;
