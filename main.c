@@ -237,6 +237,7 @@ int main(int argc, char **argv)
 	time_broadcast_addrs[0]=strdup(&argv[n][14]);
       else if (!strcasecmp("logrejects",argv[n])) debug_insert=1;
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
+      else if (!strcasecmp("radio",argv[n])) debug_radio=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
       else if (!strcasecmp("announce",argv[n])) debug_announce=1;
       else if (!strcasecmp("udptime",argv[n])) udp_time=1;
