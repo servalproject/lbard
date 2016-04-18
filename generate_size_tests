@@ -7,7 +7,8 @@ cat >>tests/lbard_size_tests <<EOF
 
 doc_modulo${i}="Can insert bundle with size = ${i} modulo 8192"
 setup_modulo${i}() {
-   setup
+   # 10% packet loss
+   setup 0.1
    # Insert a file to server A
    set_instance +A
    rhizome_add_file file1 ${i}
@@ -19,7 +20,7 @@ test_modulo${i}() {
          bundle_received_by \$BID:\$VERSION +C &&
          bundle_received_by \$BID:\$VERSION +D
    }
-   wait_until --timeout=600 all_bundles_received
+   wait_until --timeout=150 all_bundles_received
 }
 EOF
 
