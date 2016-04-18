@@ -804,6 +804,8 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
 	    p->sid_prefix,manifest_offset,body_offset);
     p->tx_bundle_manifest_offset=manifest_offset;
     p->tx_bundle_body_offset=body_offset;      
+  } else {
+    fprintf(stderr,"SYNC ACK: Ignoring, because we are sending bundle #%d, and request is for bundle #%d\n",p->tx_bundle,bundle);
   }
 
   return 0;
