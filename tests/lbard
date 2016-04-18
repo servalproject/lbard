@@ -33,7 +33,7 @@ setup() {
    get_servald_restful_http_server_port PORTC +C
    get_servald_restful_http_server_port PORTD +D
    # Start the fake radio daemon.
-   fork %fakeradio fakecsmaradio 4 ttys.txt
+   fork %fakeradio fakecsmaradio 4 ttys.txt $1
    wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
    tty1=$(sed -n 1p ttys.txt)
    tty2=$(sed -n 2p ttys.txt)
