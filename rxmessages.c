@@ -42,8 +42,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
-int debug_message_pieces=1;
-
 extern char *my_sid_hex;
 
 int saw_length(char *peer_prefix,char *bid_prefix,long long version,

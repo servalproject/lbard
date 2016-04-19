@@ -50,7 +50,10 @@ int debug_pieces=1;
 int debug_announce=0;
 int debug_pull=0;
 int debug_insert=0;
-
+int debug_radio_rx=0;
+int debug_gpio=0;
+int debug_insert;
+int debug_message_pieces=1;
 int radio_silence_count=0;
 
 int http_server=1;

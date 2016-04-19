@@ -33,16 +33,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
-int debug_radio_rx=0;
-
 #include "golay.h"
 #include "fec-3.0.1/fixed.h"
 void encode_rs_8(data_t *data, data_t *parity,int pad);
 int decode_rs_8(data_t *data, int *eras_pos, int no_eras, int pad);
 #define FEC_LENGTH 32
 #define FEC_MAX_BYTES 223
-
-int debug_gpio=0;
 
 extern unsigned char my_sid[32];
 extern char *my_sid_hex;

@@ -41,8 +41,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
-extern int debug_insert;
-
 extern struct bundle_record bundles[MAX_BUNDLES];
 extern int bundle_count;
 
