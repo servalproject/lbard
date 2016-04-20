@@ -82,7 +82,7 @@ int load_rhizome_db(int timeout,
 {
   char path[8192];
 
-  // fprintf(stderr,"%s(): ENTERED\n",__FUNCTION__);
+  // fprintf(debug_file,"%s(): ENTERED\n",__FUNCTION__);
   
   // A timeout of zero means forever. Never do this.
   if (!timeout) timeout=1;
@@ -102,7 +102,7 @@ int load_rhizome_db(int timeout,
   unlink(filename);
   FILE *f=fopen(filename,"w");
   if (!f) {
-    fprintf(stderr,"could not open output file '%s'.\n",filename);
+    fprintf(debug_file,"could not open output file '%s'.\n",filename);
     perror("fopen");
     return -1;
   }
@@ -119,13 +119,13 @@ int load_rhizome_db(int timeout,
   
   fclose(f);
   if(result_code!=200) {
-    fprintf(stderr,"rhizome HTTP API request failed. URLPATH:%s\n",path);
+    fprintf(debug_file,"rhizome HTTP API request failed. URLPATH:%s\n",path);
     return -1;
   } else {
-    // fprintf(stderr,"rhizome HTTP API request succeeded. URLPATH:%s\n",path);
+    // fprintf(debug_file,"rhizome HTTP API request succeeded. URLPATH:%s\n",path);
   }
 
-  // fprintf(stderr,"Read bundle list.\n");
+  // fprintf(debug_file,"Read bundle list.\n");
 
   // Now read database into memory.
   f=fopen(filename,"r");
@@ -147,9 +147,9 @@ int load_rhizome_db(int timeout,
 	if (!ignore_token) {
 	  if (*token) free(*token);
 	  *token=strdup(fields[0]);
-	  if (1) fprintf(stderr,"Saw rhizome progressive fetch token '%s'\n",*token);
+	  if (1) fprintf(debug_file,"Saw rhizome progressive fetch token '%s'\n",*token);
 	} else {
-	  if (1) fprintf(stderr,"Ignoring rhizome progressive fetch token '%s' because of timeout\n",*token);
+	  if (1) fprintf(debug_file,"Ignoring rhizome progressive fetch token '%s' because of timeout\n",*token);
 	}
       }
       
@@ -204,12 +204,12 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
      automatically keep trying to send it according to its regular rotation.
    */
 
-  fprintf(stderr,"CHECKPOINT: %s:%d %s()\n",__FILE__,__LINE__,__FUNCTION__);
+  fprintf(debug_file,"CHECKPOINT: %s:%d %s()\n",__FILE__,__LINE__,__FUNCTION__);
 
 #ifdef NOT_DEFINED
   char filename[1024];
   snprintf(filename,1024,"%08lx.manifest",time(0));
-  fprintf(stderr,">>> Writing manifest to %s\n",filename);
+  fprintf(debug_file,">>> Writing manifest to %s\n",filename);
   FILE *f=fopen(filename,"w");
   fwrite(manifest_data,manifest_length,1,f);
   fclose(f);
@@ -219,7 +219,7 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
   fclose(f);
 #endif
   
-  fprintf(stderr,"Submitting rhizome bundle: manifest len=%d, body len=%d\n",
+  fprintf(debug_file,"Submitting rhizome bundle: manifest len=%d, body len=%d\n",
 	  manifest_length,body_length);
 
   int result_code=http_post_bundle(servald_server,credential,
@@ -229,7 +229,7 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 				   15000);  
   
   if(result_code<200|| result_code>202) {
-    fprintf(stderr,"POST bundle to rhizome failed: http result = %d\n",result_code);
+    fprintf(debug_file,"POST bundle to rhizome failed: http result = %d\n",result_code);
 
     if (debug_insert) {
       char filename[1024];
@@ -242,7 +242,7 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
       snprintf(filename,1024,"/tmp/lbard.rejected.result");
       f=fopen(filename,"w");
       if (f) {
-	fprintf(stderr,"http result code = %d\n",result_code);
+	fprintf(debug_file,"http result code = %d\n",result_code);
 	fclose(f);
       }
     }

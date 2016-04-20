@@ -52,8 +52,11 @@ int debug_pull=0;
 int debug_insert=0;
 int debug_radio_rx=0;
 int debug_gpio=0;
-int debug_insert;
 int debug_message_pieces=1;
+int debug_sync=0;
+int debug_sync_keys=0;
+FILE *debug_file=NULL;
+
 int radio_silence_count=0;
 
 int http_server=1;
@@ -107,6 +110,49 @@ int monitor_mode=0;
 
 struct sync_state *sync_state=NULL;
 
+int scan_debug_settings()
+{
+  FILE *f=fopen("/tmp/lbard.debug","r");
+  if (!f) {
+    debug_file=stderr;
+    debug_radio=0;
+    debug_pieces=1;
+    debug_announce=0;
+    debug_pull=0;
+    debug_insert=0;
+    debug_radio_rx=0;
+    debug_gpio=0;
+    debug_message_pieces=1;
+    return 0;
+  }
+  if (debug_file==stderr) {
+    char debug_filename[1024];
+    snprintf(debug_filename,1024,"/tmp/lbard.%d.log",getpid());
+    debug_file=fopen(debug_filename,"a");
+    if (!debug_file) debug_file=stderr;
+  }
+  if (debug_file!=stderr) {
+    char line[1024]; line[0]=0;
+    fgets(line,1024,f);
+    while(line[0]) {
+      sscanf(line,"radio=%d",&debug_radio);
+      sscanf(line,"pieces=%d",&debug_pieces);
+      sscanf(line,"announce=%d",&debug_announce);
+      sscanf(line,"pull=%d",&debug_pull);
+      sscanf(line,"insert=%d",&debug_insert);
+      sscanf(line,"radio_rx=%d",&debug_radio_rx);
+      sscanf(line,"gpio=%d",&debug_gpio);
+      sscanf(line,"message_pieces=%d",&debug_message_pieces);
+      sscanf(line,"sync=%d",&debug_sync);
+      sscanf(line,"sync_keys=%d",&debug_sync_keys);
+      fgets(line,1024,f);
+    }
+  }  
+  fclose(f);
+  return 0;
+}
+
+
 int urandombytes(unsigned char *buf, size_t len)
 {
   static int urandomfd = -1;
@@ -144,7 +190,8 @@ long long start_time=0;
 
 int main(int argc, char **argv)
 {
-
+  debug_file=stderr;
+  
   start_time = gettime_ms();
   
   sync_setup();
@@ -243,6 +290,12 @@ int main(int argc, char **argv)
       else if (!strcasecmp("radio",argv[n])) debug_radio=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
       else if (!strcasecmp("announce",argv[n])) debug_announce=1;
+      else if (!strcasecmp("insert",argv[n])) debug_insert=1;
+      else if (!strcasecmp("radio_rx",argv[n])) debug_radio_rx=1;      
+      else if (!strcasecmp("gpio",argv[n])) debug_gpio=1;
+      else if (!strcasecmp("message_pieces",argv[n])) debug_message_pieces=1;
+      else if (!strcasecmp("sync",argv[n])) debug_sync=1;
+      else if (!strcasecmp("sync_keys",argv[n])) debug_sync_keys=1;
       else if (!strcasecmp("udptime",argv[n])) udp_time=1;
       else if (!strcasecmp("nohttpd",argv[n])) http_server=0;
       else {
@@ -368,6 +421,8 @@ int main(int argc, char **argv)
 	 should be able to send packets very often. But if there are lots of stations
 	 on channel, then we should back-off.
        */
+      scan_debug_settings();
+      
       double ratio = (radio_transmissions_seen+radio_transmissions_byus)
 	*1.0/TARGET_TRANSMISSIONS_PER_4SECONDS;
       // printf("--- Congestion ratio = %.3f\n",ratio);

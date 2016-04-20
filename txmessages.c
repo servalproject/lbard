@@ -67,7 +67,7 @@ int append_bytes(int *offset,int mtu,unsigned char *msg_out,
     (*offset)+=count;
     return 0;
   } else {
-    fprintf(stderr,"append_bytes(%d,%d,msg,data,%d) failed -- message too long by %d bytes.\n",
+    fprintf(debug_file,"append_bytes(%d,%d,msg,data,%d) failed -- message too long by %d bytes.\n",
 	    *offset,mtu,count,
 	    (((*offset)+count)-mtu));
     return -1;
@@ -236,7 +236,7 @@ int update_my_message(int serialfd,
     append_bar(bundle_number,&offset,mtu,msg_out);
     bar_count++;
   }
-  if (debug_announce) fprintf(stderr,"bar_count=%d\n",bar_count);
+  if (debug_announce) fprintf(debug_file,"bar_count=%d\n",bar_count);
 #else
   /* Sync by tree.
      Ask for retransmissions as required, and otherwise participate in
@@ -253,9 +253,9 @@ int update_my_message(int serialfd,
   message_counter++;
 
   if (0) { 
-    fprintf(stderr,"This message (hex): ");
-    for(int i=0;i<offset;i++) fprintf(stderr,"%02x",msg_out[i]);
-    fprintf(stderr,"\n");
+    fprintf(debug_file,"This message (hex): ");
+    for(int i=0;i<offset;i++) fprintf(debug_file,"%02x",msg_out[i]);
+    fprintf(debug_file,"\n");
   }
 
   radio_send_message(serialfd,msg_out,offset);

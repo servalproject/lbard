@@ -44,9 +44,6 @@ extern char *my_sid_hex;
 #include "lbard.h"
 #include "sha1.h"
 
-int debug_sync=0;
-int debug_sync_keys=0;
-
 int bundle_calculate_tree_key(sync_key_t *bundle_tree_key,
 			      uint8_t sync_tree_salt[SYNC_SALT_LEN],
 			      char *bid,
@@ -110,7 +107,7 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
   int len=msg[1];
 
   if (debug_sync)
-    printf("Receiving sync tree message of %d bytes\n",len);
+    fprintf(debug_file,"Receiving sync tree message of %d bytes\n",len);
       
   // Pull out the sync tree message for processing.
 #define SYNC_MSG_HEADER_LEN 2
@@ -258,10 +255,10 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   }
   
   if (debug_announce) {
-    fprintf(stderr,"T+%lldms : Announcing for %s* ",gettime_ms()-start_time,
+    fprintf(debug_file,"T+%lldms : Announcing for %s* ",gettime_ms()-start_time,
 	    peer_records[target_peer]->sid_prefix);
     for(int i=0;i<8;i++) fprintf(stderr,"%c",bundles[bundle_number].bid[i]);
-    fprintf(stderr,"* (priority=0x%llx) version %lld %s segment [%d,%d)\n",
+    fprintf(debug_file,"* (priority=0x%llx) version %lld %s segment [%d,%d)\n",
 	    bundles[bundle_number].last_priority,
 	    bundles[bundle_number].version,
 	    is_manifest?"manifest":"payload",

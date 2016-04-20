@@ -80,7 +80,7 @@ int saw_piece(char *peer_prefix,int for_me,
   int peer=find_peer_by_prefix(peer_prefix);
   if (peer<0) return -1;
 
-  if (debug_pieces) fprintf(stderr,"Saw a piece of BID=%s* from SID=%s*\n",
+  if (debug_pieces) fprintf(debug_file,"Saw a piece of BID=%s* from SID=%s*\n",
 			    bid_prefix,peer_prefix);
 
   int bundle_number=-1;
@@ -94,7 +94,7 @@ int saw_piece(char *peer_prefix,int for_me,
   // scheme gets stuck trying to send these bundles to them forever.
   for(int i=0;i<bundle_count;i++) {
     if (!strncasecmp(bid_prefix,bundles[i].bid,strlen(bid_prefix))) {
-      if (debug_pieces) fprintf(stderr,"We have version %lld of BID=%s*.  %s is offering us version %lld\n",
+      if (debug_pieces) fprintf(debug_file,"We have version %lld of BID=%s*.  %s is offering us version %lld\n",
 	      bundles[i].version,bid_prefix,peer_prefix,version);
       if (version<=bundles[i].version) {
 	// We have this version already: mark it for announcement to sender,
@@ -102,7 +102,7 @@ int saw_piece(char *peer_prefix,int for_me,
 #ifdef SYNC_BY_BAR
 	bundles[i].announce_bar_now=1;
 #endif
-	if (debug_pieces) fprintf(stderr,"We already have %s* version %lld - ignoring piece.\n",
+	if (debug_pieces) fprintf(debug_file,"We already have %s* version %lld - ignoring piece.\n",
 		bid_prefix,version);
 	sync_tell_peer_we_have_this_bundle(peer,i);
 	return 0;
@@ -125,17 +125,17 @@ int saw_piece(char *peer_prefix,int for_me,
     } else {
       if (!strcasecmp(peer_records[peer]->partials[i].bid_prefix,bid_prefix))
 	{
-	  if (debug_pieces) fprintf(stderr,"Saw another piece for BID=%s* from SID=%s: ",
+	  if (debug_pieces) fprintf(debug_file,"Saw another piece for BID=%s* from SID=%s: ",
 			 bid_prefix,peer_prefix);
-	  if (debug_pieces) fprintf(stderr,"[%lld..%lld)\n",
+	  if (debug_pieces) fprintf(debug_file,"[%lld..%lld)\n",
 			 piece_offset,piece_offset+piece_bytes);
 
 	  break;
 	}
       else {
 	if (debug_pieces) {
-	  fprintf(stderr,"  this isn't the partial we are looking for.\n");
-	  fprintf(stderr,"  piece is of %s*, but slot #%d has %s*\n",
+	  fprintf(debug_file,"  this isn't the partial we are looking for.\n");
+	  fprintf(debug_file,"  piece is of %s*, but slot #%d has %s*\n",
 		  bid_prefix,i,
 		  peer_records[peer]->partials[i].bid_prefix);
 	}
@@ -144,13 +144,13 @@ int saw_piece(char *peer_prefix,int for_me,
   }
 
   if (debug_pieces)
-    fprintf(stderr,"Saw a piece of interesting bundle BID=%s*/%lld from SID=%s\n",
+    fprintf(debug_file,"Saw a piece of interesting bundle BID=%s*/%lld from SID=%s\n",
 	    bid_prefix,version, peer_prefix);
   
   if (i==MAX_BUNDLES_IN_FLIGHT) {
     if (spare_record>0) i=spare_record;
     if (debug_pieces)
-      fprintf(stderr,"Didn't find bundle in partials for this peer. first spare slot =%d\n",spare_record);
+      fprintf(debug_file,"Didn't find bundle in partials for this peer. first spare slot =%d\n",spare_record);
     // Didn't find bundle in the progress list.
     // Abort one of the ones in the list at random, and replace, unless there is
     // a spare record slot to use.
@@ -163,7 +163,7 @@ int saw_piece(char *peer_prefix,int for_me,
       clear_partial(&peer_records[peer]->partials[i]);
     }
     if (debug_pieces)
-      fprintf(stderr,"@@@   Using slot %d\n",i);
+      fprintf(debug_file,"@@@   Using slot %d\n",i);
 
     // Now prepare the partial record
     peer_records[peer]->partials[i].bid_prefix=strdup(bid_prefix);
@@ -201,11 +201,11 @@ int saw_piece(char *peer_prefix,int for_me,
       s->length=cached_body_len;
       peer_records[peer]->partials[i].body_segments=s;
       if (debug_pieces)
-	fprintf(stderr,"Preloaded %d bytes from old version of journal bundle.\n",
+	fprintf(debug_file,"Preloaded %d bytes from old version of journal bundle.\n",
 		cached_body_len);
     } else {
       if (debug_pieces)
-	fprintf(stderr,"Failed to preload bytes from old version of journal bundle. XFER will likely fail due to far end thinking it can skip the bytes we already have, so ignoring current piece.\n");
+	fprintf(debug_file,"Failed to preload bytes from old version of journal bundle. XFER will likely fail due to far end thinking it can skip the bytes we already have, so ignoring current piece.\n");
       return -1;
     }
   }
@@ -233,7 +233,7 @@ int saw_piece(char *peer_prefix,int for_me,
     if ((!(*s))||(segment_end<piece_offset)) {
       // Create a new segment before the current one
 
-      if (debug_pieces) fprintf(stderr,"Inserting piece [%lld..%lld) before [%d..%d)\n",
+      if (debug_pieces) fprintf(debug_file,"Inserting piece [%lld..%lld) before [%d..%d)\n",
 		     piece_offset,piece_offset+piece_bytes,
 		     segment_start,segment_end);
 
@@ -263,7 +263,7 @@ int saw_piece(char *peer_prefix,int for_me,
     } else if (piece_end<segment_start) {
       // Piece ends before this segment starts, so proceed down the list further.
       if (debug_pieces)
-	fprintf(stderr,"Piece [%lld..%lld) comes before [%d..%d)\n",
+	fprintf(debug_file,"Piece [%lld..%lld) comes before [%d..%d)\n",
 		piece_offset,piece_offset+piece_bytes,
 		segment_start,segment_end);
       
@@ -344,7 +344,7 @@ int saw_piece(char *peer_prefix,int for_me,
     {
       // We have a single segment for body and manifest that span the complete
       // size.
-      fprintf(stderr,">>> We have the entire bundle now.\n");
+      fprintf(debug_file,">>> We have the entire bundle now.\n");
 
       // First, reconstitute the manifest from the binary encoded format
       unsigned char manifest[1024];
@@ -423,7 +423,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   if (!bcmp(msg,my_sid,6)) return -1;
   
   if (debug_pieces) {
-    fprintf(stderr,"Decoding message #%d from %s*, length = %d:\n",
+    fprintf(debug_file,"Decoding message #%d from %s*, length = %d:\n",
 	    msg_number,peer_prefix,len);
   }
 
@@ -457,7 +457,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
     p->sid_prefix=strdup(peer_prefix);
     p->last_message_number=-1;
     p->tx_bundle=-1;
-    fprintf(stderr,"Registering peer %s*\n",p->sid_prefix);
+    fprintf(debug_file,"Registering peer %s*\n",p->sid_prefix);
     if (peer_count<MAX_PEERS) {
       peer_records[peer_count++]=p;      
     } else {
@@ -474,7 +474,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   
   while(offset<len) {
     if (debug_pieces||debug_message_pieces) {
-      fprintf(stderr,
+      fprintf(debug_file,
 	      "Saw message section with type '%c' (0x%02x) @ offset $%02x, len=%d\n",
 	      msg[offset],msg[offset],offset,len);
       fflush(stderr);
@@ -504,7 +504,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       offset+=1;
 #ifdef SYNC_BY_BAR
       if (debug_pieces)
-	fprintf(stderr,
+	fprintf(debug_file,
 		"Saw a BAR from %s*: %s* version %lld size byte 0x%02x"
 		" (we know of %d bundles held by that peer)\n",
 		p->sid_prefix,bid_prefix,version,size_byte,p->bundle_count);
@@ -538,7 +538,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 #else
       int bundle=lookup_bundle_by_prefix_and_version(bid_prefix_bin,version);
       if (bundle>-1) {
-	fprintf(stderr,"T+%lldms : SYNC FIN: %s* is has finished receiving"
+	fprintf(debug_file,"T+%lldms : SYNC FIN: %s* is has finished receiving"
 		" %s version %lld (bundle #%d)\n",
 		gettime_ms()-start_time,p?p->sid_prefix:"<null>",bid_prefix,
 		version,bundle);
@@ -565,7 +565,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	  p->last_message_number=-1;
 	  p->tx_bundle=-1;
 	  p->instance_id=peer_instance_id;
-	  fprintf(stderr,"Peer %s* has restarted -- discarding stale knowledge of its state.\n",p->sid_prefix);
+	  fprintf(debug_file,"Peer %s* has restarted -- discarding stale knowledge of its state.\n",p->sid_prefix);
 	  peer_records[peer_index]=p;
 #endif
 	}
@@ -679,7 +679,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	bundle_offset&=0x7fffff;
 	
 	if (debug_pull) {
-	  fprintf(stderr,"Saw request from SID=%s* BID=%s @ %c%d addressed to SID=%s*\n",
+	  fprintf(debug_file,"Saw request from SID=%s* BID=%s @ %c%d addressed to SID=%s*\n",
 		  peer_prefix,bid_prefix,is_manifest?'M':'B',bundle_offset,
 		  target_sid);
 	}
@@ -706,17 +706,17 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 #ifdef SYNC_BY_BAR
 	// Are we the target SID?
 	if (!strncasecmp(my_sid,target_sid,4)) {
-	  if (debug_pull) fprintf(stderr,"  -> request is for us.\n");
+	  if (debug_pull) fprintf(debug_file,"  -> request is for us.\n");
 	  // Yes, it is addressed to us.
 	  // See if we have this bundle, and if so, set the appropriate stream offset
 	  // and mark the bundle as requested
 	  // XXX linear search!
 	  for(int i=0;i<bundle_count;i++) {
 	    if (!strncasecmp(bid_prefix,bundles[i].bid,16)) {
-	      if (debug_pull) fprintf(stderr,"  -> found the bundle.\n");
+	      if (debug_pull) fprintf(debug_file,"  -> found the bundle.\n");
 	      bundles[i].transmit_now=time(0)+TRANSMIT_NOW_TIMEOUT;
 	      if (debug_announce) {
-		fprintf(stderr,"*** Setting transmit_now flag on %s*\n",
+		fprintf(debug_file,"*** Setting transmit_now flag on %s*\n",
 			bundles[i].bid);
 	      }
 
@@ -728,13 +728,13 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 		if ((bundle_offset<bundles[i].last_manifest_offset_announced)
 		    ||((bundle_offset-bundles[i].last_manifest_offset_announced)>500)) {
 		  bundles[i].last_manifest_offset_announced=bundle_offset;
-		  if (debug_pull) fprintf(stderr,"  -> setting manifest announcement offset to %d.\n",bundle_offset);
+		  if (debug_pull) fprintf(debug_file,"  -> setting manifest announcement offset to %d.\n",bundle_offset);
 		}
 	      } else {
 		if ((bundle_offset<bundles[i].last_offset_announced)
 		    ||((bundle_offset-bundles[i].last_offset_announced)>500)) {
 		bundles[i].last_offset_announced=bundle_offset;
-		if (debug_pull) fprintf(stderr,"  -> setting body announcement offset to %d.\n",bundle_offset);
+		if (debug_pull) fprintf(debug_file,"  -> setting body announcement offset to %d.\n",bundle_offset);
 		}
 	      }
 	    }
