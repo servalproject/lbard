@@ -37,14 +37,13 @@ long long gettime_ms()
 
 int json_render_meshms_message(struct json_parse_state *p)
 {
-  // Output fields 0,
   char *field[10];
   for(int i=0;i<9;i++)
     field[i]=strtok(i?NULL:p->line,":");
   long long age=(gettime_ms()/1000)-strtoll(field[8],NULL,10);
-
+  
   printf("%d:%s:%lld:%s:%s\n",
-	 p->row_count++,field[3],age,field[0],field[4]);
+	 p->row_count++,field[3],age,field[0],field[5]);
 
   return 0;
 }
