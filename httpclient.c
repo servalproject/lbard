@@ -353,15 +353,12 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   return http_response;  
 }
 
-int http_post_meshms(char *server_and_port, char *auth_token,
-		     char *message,char *sender,char *recipient,
-		    int timeout_ms)
+int http_list_meshms_conversations(char *server_and_port, char *auth_token,
+				   char *participant,int timeout_ms)
 {
 
   char server_name[1024];
   int server_port=-1;
-
-  int message_length=strlen(message);
   
   if (sscanf(server_and_port,"%[^:]:%d",server_name,&server_port)!=2) return -1;
 
@@ -369,7 +366,7 @@ int http_post_meshms(char *server_and_port, char *auth_token,
   
   if (strlen(auth_token)>500) return -1;
   
-  char request[8192+message_length];
+  char request[8192];
   char authdigest[1024];
   int zero=0;
 
@@ -379,59 +376,19 @@ int http_post_meshms(char *server_and_port, char *auth_token,
   // Generate random content dividor token
   unsigned long long unique;
   unique=random(); unique=unique<<32; unique|=random();
-  
-  char message_header[1024];
-  snprintf(message_header,1024,
-	   "Content-Disposition: form-data; name=\"message\"\r\n"
-	   "Content-Length: %d\r\n"
-	   "Content-Type: rhizome/manifest\r\n"
-	   "\r\n", message_length);
-
-  char boundary_string[1024];
-  snprintf(boundary_string,1024,"------------------------%016llx",unique);
-  int boundary_len=strlen(boundary_string);
-
-  // Calculate content length
-  int content_length=0
-    +2+boundary_len+2
-    +strlen(message_header)
-    +message_length+2
-    +2+boundary_len+2
-    +2;   // not sure where we have missed this last 2, but it is needed to reconcile
-  
+    
   // Build request
   int total_len = snprintf(request,8192,
-			   "POST /restful/meshms/%s/%s/sendmessage HTTP/1.1\r\n"
+			   "GET /restful/meshms/%s/conversationlist.json HTTP/1.1\r\n"
 			   "Authorization: Basic %s\r\n"
 			   "Host: %s:%d\r\n"
-			   "Content-Length: %d\r\n"
+			   "Content-Length: 0\r\n"
 			   "Accept: */*\r\n"
-			   "Content-Type: multipart/form-data; boundary=%s\r\n"
-			   "\r\n"
-			   "--%s\r\n"
-			   "%s",
-			   sender,recipient,
+			   "Content-Type: text/plain\r\n"
+			   "\r\n",
+			   participant,
 			   authdigest,
-			   server_name,server_port,
-			   content_length,
-			   boundary_string,
-			   boundary_string,
-			   message_header);
-  bcopy(message,&request[total_len],message_length);
-
-  int subtotal_len=total_len;
-  total_len=total_len+message_length;
-  total_len+=snprintf(&request[total_len],8192-total_len,
-	   "\r\n"
-	   "--%s--\r\n",
-	   boundary_string);
-
-  fprintf(stderr,"  content_length was calculated at %d bytes, total_len=%d\n",
-	  content_length,total_len);
-  int present_len=2+boundary_len+2+strlen(message_header);
-  fprintf(stderr,
-	  "    subtotal_len=%d, difference+present=%d (should match content_length)\n",
-	  subtotal_len,total_len-subtotal_len+present_len);
+			   server_name,server_port);
 
   fprintf(stderr,"Request:\n%s\n",request);
   

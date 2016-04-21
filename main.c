@@ -202,6 +202,12 @@ int main(int argc, char **argv)
   my_instance_id=0;
   while(my_instance_id==0)
     urandombytes((unsigned char *)&my_instance_id,sizeof(unsigned int));
+
+  // MeshMS operations via HTTP, so that we can avoid direct database modification
+  // by scripts on the mesh extender devices, and thus avoid database lock problems.
+  if ((argc>2)&&!strcasecmp(argv[1],"meshms")) {
+    return(meshms_parse_command(argc,argv));
+  }
   
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==7)&&(!strcasecmp(argv[1],"energysample"))) {
