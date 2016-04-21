@@ -10,6 +10,140 @@
 
 #include "serial.h"
 
+struct json_parse_state {
+  int parse_state;
+  int on_new_line;
+  int depth;
+  int pending_colon;
+  int line_len;
+#define MAX_LINE_LEN 1024
+  char line[MAX_LINE_LEN];
+  int columns;
+};
+
+// From os.c in serval-dna
+long long gettime_ms()
+{
+  struct timeval nowtv;
+  // If gettimeofday() fails or returns an invalid value, all else is lost!
+  if (gettimeofday(&nowtv, NULL) == -1)
+    return -1;
+  if (nowtv.tv_sec < 0 || nowtv.tv_usec < 0 || nowtv.tv_usec >= 1000000)
+    return -1;
+  return nowtv.tv_sec * 1000LL + nowtv.tv_usec / 1000;
+}
+
+int json_new_line(struct json_parse_state *p)
+{
+  if (!p->on_new_line) {
+    if (p->line_len&&(p->columns>1)) {
+      p->line[p->line_len]=0;
+      printf("%s\n",p->line);
+    }
+    p->on_new_line=1;
+    p->line_len=0;
+    p->line[0]=0;
+    p->columns=0;
+  }
+  return 0;
+}
+
+int json_flatten(struct json_parse_state *p,char *body, int body_len)
+{
+  for(int i=0;i<body_len;i++) {
+    if (p->line_len>(MAX_LINE_LEN-3)) p->line_len=(MAX_LINE_LEN-3);
+    switch(p->parse_state) {
+    case 0: // normal
+      switch(body[i]) {
+      case ':': // object class
+	json_new_line(p);
+	break;
+      case ',': // field separator
+	p->pending_colon=1;
+	p->columns++;
+	break;
+      case '\"':
+	p->parse_state=1;
+	break;
+      case '\\':
+	p->parse_state=2;
+	break;
+      case '[': case '{':
+	// array element
+	json_new_line(p);
+	p->depth++;
+	break;
+      case ']': case '}':
+	// array element
+	p->depth--;
+	json_new_line(p);
+	break;
+      case '\r': case '\n':
+	json_new_line(p);
+	break;
+      default:
+	// normal character
+	if (!p->on_new_line)
+	  if (p->pending_colon)
+	    p->line[p->line_len++]=':';
+	p->pending_colon=0;
+	p->line[p->line_len++]=body[i];
+	p->on_new_line=0;
+	break;
+      }
+      break;
+    case 1: // inside quotes
+      switch(body[i]) {
+      case '\"': p->parse_state=0;	break;
+      case '\\': p->parse_state=3; break;
+      default:
+	// normal character
+	if (!p->on_new_line)
+	  if (p->pending_colon)
+	    p->line[p->line_len++]=':';
+	p->pending_colon=0;
+	p->line[p->line_len++]=body[i];
+	p->on_new_line=0;
+	break;	
+      }
+      break;
+    case 2: // following a "\"
+      p->line[p->line_len++]=body[i];
+      p->on_new_line=0;
+      p->parse_state=0;
+      break;
+    case 3: // following a \ inside quotes
+      p->line[p->line_len++]=body[i];
+      p->on_new_line=0;
+      p->parse_state=1;
+      break;
+    }
+  }
+  json_new_line(p);
+  return 0;
+}
+
+int json_body(int sock,long long timeout_time)
+{
+  // Now output the JSON lines
+  struct json_parse_state parse_state;
+  bzero(&parse_state, sizeof(parse_state));
+  
+  while(1) {
+    char line[1024];
+    int r=read_nonblock(sock,line,1024);
+    if (r>0) {
+      json_flatten(&parse_state,line,r);
+    } else usleep(1000);
+    if (gettime_ms()>timeout_time) {
+      // Quit on timeout
+      close(sock);
+      return -1;
+    }
+  }  
+  close(sock);
+}
+
 int connect_to_port(char *host,int port)
 {
   struct hostent *hostent;
@@ -76,19 +210,6 @@ int base64_append(char *out,int *out_offset,unsigned char *bytes,int count)
   }
   return 0;
 }
-
-// From os.c in serval-dna
-long long gettime_ms()
-{
-  struct timeval nowtv;
-  // If gettimeofday() fails or returns an invalid value, all else is lost!
-  if (gettimeofday(&nowtv, NULL) == -1)
-    return -1;
-  if (nowtv.tv_sec < 0 || nowtv.tv_usec < 0 || nowtv.tv_usec >= 1000000)
-    return -1;
-  return nowtv.tv_sec * 1000LL + nowtv.tv_usec / 1000;
-}
-
 
 int http_get_simple(char *server_and_port, char *auth_token,
 		    char *path, FILE *outfile, int timeout_ms,
@@ -492,7 +613,7 @@ int http_list_meshms_conversations(char *server_and_port, char *auth_token,
   char request[8192];
   char authdigest[1024];
   int zero=0;
-
+  
   bzero(authdigest,1024);
   base64_append(authdigest,&zero,(unsigned char *)auth_token,strlen(auth_token));
 
@@ -531,6 +652,7 @@ int http_list_meshms_conversations(char *server_and_port, char *auth_token,
   while(len<1024) {
     r=read_nonblock(sock,&line[len],1);
     if (r==1) {
+      
       if ((line[len]=='\n')||(line[len]=='\r')) {
 	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;
@@ -550,11 +672,12 @@ int http_list_meshms_conversations(char *server_and_port, char *auth_token,
       return -1;
     }
   }
-  close(sock);
+
+  json_body(sock,timeout_time);  
+  
   return http_response;
   
 }
-
 
 int http_list_meshms_messages(char *server_and_port, char *auth_token,
 			      char *sender, char *recipient,int timeout_ms)
