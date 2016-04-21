@@ -19,6 +19,8 @@ struct json_parse_state {
 #define MAX_LINE_LEN 1024
   char line[MAX_LINE_LEN];
   int columns;
+  int meshms_message;
+  int row_count;
 };
 
 // From os.c in serval-dna
@@ -33,12 +35,33 @@ long long gettime_ms()
   return nowtv.tv_sec * 1000LL + nowtv.tv_usec / 1000;
 }
 
+int json_render_meshms_message(struct json_parse_state *p)
+{
+  // Output fields 0,
+  char *field[10];
+  for(int i=0;i<9;i++)
+    field[i]=strtok(i?NULL:p->line,":");
+  long long age=(gettime_ms()/1000)-strtoll(field[8],NULL,10);
+
+  printf("%d:%s:%lld:%s:%s\n",
+	 p->row_count++,field[3],age,field[0],field[4]);
+
+  return 0;
+}
+
 int json_new_line(struct json_parse_state *p)
 {
   if (!p->on_new_line) {
     if (p->line_len&&(p->columns>1)) {
       p->line[p->line_len]=0;
-      printf("%s\n",p->line);
+      if (!strcmp(p->line,"type:my_sid:their_sid:offset:token:text:delivered:read:timestamp:ack_offset")) {
+	p->meshms_message=1;
+	printf("_id:offset:age:type:message\n");
+      } else {
+	if (!p->meshms_message)
+	  printf("%s\n",p->line);
+	else json_render_meshms_message(p);
+      }
     }
     p->on_new_line=1;
     p->line_len=0;
@@ -143,6 +166,7 @@ int json_body(int sock,long long timeout_time)
     }
   }  
   close(sock);
+  return 0;
 }
 
 int connect_to_port(char *host,int port)
