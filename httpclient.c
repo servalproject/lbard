@@ -8,6 +8,8 @@
 #include <time.h>
 #include <sys/time.h>
 
+#include "sync.h"
+#include "lbard.h"
 #include "serial.h"
 
 struct json_parse_state {
@@ -40,17 +42,27 @@ int json_render_meshms_message(struct json_parse_state *p)
   char *field[10];
   for(int i=0;i<9;i++)
     field[i]=strtok(i?NULL:p->line,":");
+  if (!field[8]) return -1;
   long long age=(gettime_ms()/1000)-strtoll(field[8],NULL,10);
-  
-  printf("%d:%s:%lld:%s:%s\n",
-	 p->row_count++,field[3],age,field[0],field[5]);
+
+  printf("%d:%s:%lld:%s:",
+	 p->row_count++,field[3],age,field[0]);
+  for(int i=0;field[5][i];i++) {
+    if (field[5][i]=='%') {
+      char hex[3]={field[5][i+1],field[5][i+2],0};
+      printf("%c",(int)strtoll(hex,NULL,16));
+      i+=2;
+    } else printf("%c",field[5][i]);
+  }
+  printf("\n");
 
   return 0;
 }
 
 int json_new_line(struct json_parse_state *p)
 {
-  if (!p->on_new_line) {
+  p->line[p->line_len]=0;
+ if (!p->on_new_line) {
     if (p->line_len&&(p->columns>1)) {
       p->line[p->line_len]=0;
       if (!strcmp(p->line,"type:my_sid:their_sid:offset:token:text:delivered:read:timestamp:ack_offset")) {
@@ -110,7 +122,14 @@ int json_flatten(struct json_parse_state *p,char *body, int body_len)
 	  if (p->pending_colon)
 	    p->line[p->line_len++]=':';
 	p->pending_colon=0;
-	p->line[p->line_len++]=body[i];
+	if ((body[i]!=':')&&(body[i]!='%'))
+	  p->line[p->line_len++]=body[i];
+        else
+	  {
+	    p->line[p->line_len++]='%';
+	    p->line[p->line_len++]=hextochar(body[i]>>4);
+	    p->line[p->line_len++]=hextochar(body[i]&0xf);
+	  }
 	p->on_new_line=0;
 	break;
       }
@@ -125,7 +144,14 @@ int json_flatten(struct json_parse_state *p,char *body, int body_len)
 	  if (p->pending_colon)
 	    p->line[p->line_len++]=':';
 	p->pending_colon=0;
-	p->line[p->line_len++]=body[i];
+	if ((body[i]!=':')&&(body[i]!='%'))
+	  p->line[p->line_len++]=body[i];
+        else
+	  {
+	    p->line[p->line_len++]='%';
+	    p->line[p->line_len++]=hextochar(body[i]>>4);
+	    p->line[p->line_len++]=hextochar(body[i]&0xf);
+	  }
 	p->on_new_line=0;
 	break;	
       }
@@ -142,7 +168,6 @@ int json_flatten(struct json_parse_state *p,char *body, int body_len)
       break;
     }
   }
-  json_new_line(p);
   return 0;
 }
 
@@ -164,6 +189,7 @@ int json_body(int sock,long long timeout_time)
       return -1;
     }
   }  
+  json_new_line(&parse_state);
   close(sock);
   return 0;
 }
@@ -481,7 +507,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 	// if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
-	  fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
+	  // fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
 	}
 	len=0;
 	// Have we found end of headers?
@@ -599,7 +625,7 @@ int http_post_meshms(char *server_and_port, char *auth_token,
       if ((line[len]=='\n')||(line[len]=='\r')) {
 	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;
-	if (len) printf("Line of response: %s\n",line);
+	// if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
 	  fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
@@ -658,7 +684,7 @@ int http_list_meshms_conversations(char *server_and_port, char *auth_token,
 			   authdigest,
 			   server_name,server_port);
 
-  fprintf(stderr,"Request:\n%s\n",request);
+  // fprintf(stderr,"Request:\n%s\n",request);
   
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
@@ -680,10 +706,10 @@ int http_list_meshms_conversations(char *server_and_port, char *auth_token,
       if ((line[len]=='\n')||(line[len]=='\r')) {
 	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;
-	if (len) printf("Line of response: %s\n",line);
+	// if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
-	  fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
+	  // fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
 	}
 	len=0;
 	// Have we found end of headers?
@@ -740,7 +766,7 @@ int http_list_meshms_messages(char *server_and_port, char *auth_token,
 			   authdigest,
 			   server_name,server_port);
 
-  fprintf(stderr,"Request:\n%s\n",request);
+  // fprintf(stderr,"Request:\n%s\n",request);
   
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
@@ -761,10 +787,10 @@ int http_list_meshms_messages(char *server_and_port, char *auth_token,
       if ((line[len]=='\n')||(line[len]=='\r')) {
 	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;
-	if (len) printf("Line of response: %s\n",line);
+	// if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
-	  fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
+	  // fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
 	}
 	len=0;
 	// Have we found end of headers?

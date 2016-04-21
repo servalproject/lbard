@@ -383,4 +383,4 @@ int http_list_meshms_messages(char *server_and_port, char *auth_token,
 int http_send_meshms_message(char *server_and_port, char *auth_token,
 			     char *sender, char *recipient,char *message,
 			     int timeout_ms);
-
+int hextochar(int h);
