@@ -554,3 +554,83 @@ int http_list_meshms_conversations(char *server_and_port, char *auth_token,
   return http_response;
   
 }
+
+
+int http_list_meshms_messages(char *server_and_port, char *auth_token,
+			      char *sender, char *recipient,int timeout_ms)
+{
+
+  char server_name[1024];
+  int server_port=-1;
+  
+  if (sscanf(server_and_port,"%[^:]:%d",server_name,&server_port)!=2) return -1;
+
+  long long timeout_time=gettime_ms()+timeout_ms;
+  
+  if (strlen(auth_token)>500) return -1;
+  
+  char request[8192];
+  char authdigest[1024];
+  int zero=0;
+
+  bzero(authdigest,1024);
+  base64_append(authdigest,&zero,(unsigned char *)auth_token,strlen(auth_token));
+
+  // Generate random content dividor token
+  unsigned long long unique;
+  unique=random(); unique=unique<<32; unique|=random();
+    
+  // Build request
+  int total_len = snprintf(request,8192,
+			   "GET /restful/meshms/%s/%s/messagelist.json HTTP/1.1\r\n"
+			   "Authorization: Basic %s\r\n"
+			   "Host: %s:%d\r\n"
+			   "Content-Length: 0\r\n"
+			   "Accept: */*\r\n"
+			   "Content-Type: text/plain\r\n"
+			   "\r\n",
+			   sender,recipient,
+			   authdigest,
+			   server_name,server_port);
+
+  fprintf(stderr,"Request:\n%s\n",request);
+  
+  int sock=connect_to_port(server_name,server_port);
+  if (sock<0) return -1;
+
+  // Write request
+  write_all(sock,request,total_len);
+
+  // Read reply, streaming output to file after we have skipped the header
+  int http_response=-1;
+  char line[1024];
+  int len=0;
+  int empty_count=0;
+  set_nonblock(sock);
+  int r;
+  while(len<1024) {
+    r=read_nonblock(sock,&line[len],1);
+    if (r==1) {
+      if ((line[len]=='\n')||(line[len]=='\r')) {
+	if (len) empty_count=0; else empty_count++;
+	line[len+1]=0;
+	if (len) printf("Line of response: %s\n",line);
+	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
+	  // got http response
+	  fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
+	}
+	len=0;
+	// Have we found end of headers?
+	if (empty_count==3) break;
+      } else len++;
+    } else usleep(1000);
+    if (gettime_ms()>timeout_time) {
+      // If still in header, just quit on timeout
+      close(sock);
+      return -1;
+    }
+  }
+  close(sock);
+  return http_response;
+  
+}
