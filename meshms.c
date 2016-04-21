@@ -72,30 +72,32 @@ int meshms_usage()
 
 int meshms_parse_command(int argc,char **argv)
 {
-  if (argc<4) {
-    exit(meshms_usage());
+  if (argc<=7) {
     if (!strcasecmp(argv[2],"list")) {
       if (!strcasecmp(argv[3],"conversations")) {
 	if (!argv[4]) exit(meshms_usage());
+	if (argc!=5) exit(meshms_usage());
 	exit(meshms_list_conversations(argv[4]));
       } else if (!strcasecmp(argv[3],"messages")) {
 	if (!argv[4]) exit(meshms_usage());
 	if (!argv[5]) exit(meshms_usage());
+	if (argc!=6) exit(meshms_usage());
 	exit(meshms_list_messages(argv[4],argv[5]));
       } else {
 	fprintf(stderr,"Unsupported lbard meshms operation.\n");
 	exit(meshms_usage());
       }
     } else if (!strcasecmp(argv[2],"send")) {
+      if (!argv[3]) exit(meshms_usage());
       if (!argv[4]) exit(meshms_usage());
       if (!argv[5]) exit(meshms_usage());
-      if (!argv[6]) exit(meshms_usage());
-      exit(meshms_send_message(argv[4],argv[5],argv[6]));
+      if (argc!=6) exit(meshms_usage());
+      exit(meshms_send_message(argv[3],argv[4],argv[5]));
     } else {
       fprintf(stderr,"Unsupported lbard meshms operation.\n");
       exit(meshms_usage());
     }
   }
-  exit(-1);
+  exit(meshms_usage());
 }
 

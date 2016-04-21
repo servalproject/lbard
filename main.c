@@ -205,7 +205,7 @@ int main(int argc, char **argv)
 
   // MeshMS operations via HTTP, so that we can avoid direct database modification
   // by scripts on the mesh extender devices, and thus avoid database lock problems.
-  if ((argc>2)&&!strcasecmp(argv[1],"meshms")) {
+  if ((argc>1)&&!strcasecmp(argv[1],"meshms")) {
     return(meshms_parse_command(argc,argv));
   }
   
