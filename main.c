@@ -236,6 +236,7 @@ int main(int argc, char **argv)
     if (argc<5) {
       fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <serial port> [options ...]\n");
       fprintf(stderr,"usage: lbard monitor <serial port>\n");
+      fprintf(stderr,"usage: lbard meshms <meshms command>\n");
       exit(-1);
     }
     serial_port = argv[4];
