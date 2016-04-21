@@ -72,24 +72,24 @@ int peer_note_bar(struct peer_state *p,
 
   if (0) {
     for(int i=0;i<p->bundle_count;i++)
-      fprintf(stderr,"  bundle #%d/%d: %s* version %lld\n",
+      fprintf(debug_file,"  bundle #%d/%d: %s* version %lld\n",
 	      i,p->bundle_count,
 	      p&&p->bid_prefixes&&p->bid_prefixes[i]?p->bid_prefixes[i]:"<bad>",
 	      p&&p->versions&&p->versions[i]?p->versions[i]:-1);
-    fprintf(stderr,"  bundle list end.\n");
+    fprintf(debug_file,"  bundle list end.\n");
   }
   
   // XXX Argh! Another linear search! Replace with something civilised
   for(int i=0;i<p->bundle_count;i++)
     if (!strcmp(p->bid_prefixes[i],bid_prefix)) {
       b=i;
-      if (0) fprintf(stderr,"Peer %s* has bundle %s* version %lld (we already knew that they have version %lld)\n",
+      if (0) fprintf(debug_file,"Peer %s* has bundle %s* version %lld (we already knew that they have version %lld)\n",
 		     p->sid_prefix,bid_prefix,version,p->versions[b]);
       break;
     }
   if (b==-1) {
     // New bundle.
-    if (0) fprintf(stderr,"Peer %s* has bundle %s* version %lld, which we haven't seen before\n",
+    if (0) fprintf(debug_file,"Peer %s* has bundle %s* version %lld, which we haven't seen before\n",
 	    p->sid_prefix,bid_prefix,version);
     if (p->bundle_count>=MAX_PEER_BUNDLES) {
       // BID list too full -- random replacement.
@@ -109,7 +109,7 @@ int peer_note_bar(struct peer_state *p,
       assert(p->insert_failures);
     }
     b=p->bundle_count;
-    if (debug_pieces) fprintf(stderr,"Peer %s* bundle %s* will go in index %d (current count = %d)\n",
+    if (debug_pieces) fprintf(debug_file,"Peer %s* bundle %s* will go in index %d (current count = %d)\n",
 	    p->sid_prefix,bid_prefix,b,p->bundle_count);
     p->bid_prefixes[b]=strdup(bid_prefix);
     if (b>=p->bundle_count) p->bundle_count++;
@@ -233,15 +233,15 @@ int request_segment(int peer, char *bid_prefix, int bundle_length,
   msg_out[(*offset)++]=((seg_start>>16)&0x7f)|(is_manifest?0x80:0x00);
 
   if (debug_pull) {
-    fprintf(stderr,"Requesting BID=%s @ %c%d (len=%d) from SID=%s*\n",
+    fprintf(debug_file,"Requesting BID=%s @ %c%d (len=%d) from SID=%s*\n",
 	    bid_prefix,
 	    is_manifest?'M':'B',seg_start,
 	    bundle_length,
 	    peer_records[peer]->sid_prefix);
-    fprintf(stderr,"Request block: ");
+    fprintf(debug_file,"Request block: ");
     for(;start_offset<*offset;start_offset++)
-      fprintf(stderr," %02X",msg_out[start_offset]);
-    fprintf(stderr,"\n");
+      fprintf(debug_file," %02X",msg_out[start_offset]);
+    fprintf(debug_file,"\n");
   }
 
   char status_msg[1024];
@@ -298,11 +298,11 @@ int random_active_peer()
 	continue;
       snprintf(&active_peers[apl],1024-apl,"%d, ",peer);
       apl=strlen(active_peers);
-      fprintf(stderr,"     active_peers='%s'\n",active_peers);
+      fprintf(debug_file,"     active_peers='%s'\n",active_peers);
     }
   if (apl>1) active_peers[apl-2]=0;
   else strcpy(active_peers,"<none>");
-  fprintf(stderr,"T+%lldms : Random peer is %d (active peer(s) = %s, last requested = %d)\n",gettime_ms()-start_time,peer,active_peers,last_peer_requested);
+  fprintf(debug_file,"T+%lldms : Random peer is %d (active peer(s) = %s, last requested = %d)\n",gettime_ms()-start_time,peer,active_peers,last_peer_requested);
 #endif
   
   peer=the_peer;
@@ -377,7 +377,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 		if ((!s)||(s->start_offset||(s->length<peer_records[peer]->partials[i].manifest_length)||peer_records[peer]->partials[i].manifest_length<0))
 		  {
 		    if (debug_pull) {
-		      fprintf(stderr,"We need manifest bytes...\n");
+		      fprintf(debug_file,"We need manifest bytes...\n");
 		      dump_segment_list(peer_records[peer]->partials[i].manifest_segments);
 		    }
 		    if ((!s)||s->start_offset) {
@@ -388,7 +388,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 					     0,1 /* manifest */,offset,mtu,msg_out);
 		    } else if (s) {
 		      if (debug_pull) {
-			fprintf(stderr,"We need manifest bytes...\n");
+			fprintf(debug_file,"We need manifest bytes...\n");
 			dump_segment_list(peer_records[peer]->partials[i].manifest_segments);
 		      }
 		      return request_segment(peer,
@@ -405,7 +405,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 		if ((!s)||s->start_offset) {
 		  // We are missing bytes at the beginning
 		  if (debug_pull) {
-		    fprintf(stderr,"We need body bytes at the start (start_offset=%d)...\n",
+		    fprintf(debug_file,"We need body bytes at the start (start_offset=%d)...\n",
 			    s?s->start_offset:-1);
 		    dump_segment_list(peer_records[peer]->partials[i].body_segments);
 		  }
@@ -416,7 +416,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 					 0 /* not manifest */,offset,mtu,msg_out);
 		} else if (s) {
 		  if (debug_pull) {
-		    fprintf(stderr,"We need body bytes @ %d...\n",
+		    fprintf(debug_file,"We need body bytes @ %d...\n",
 			    s->start_offset+s->length);
 		    dump_segment_list(peer_records[peer]->partials[i].body_segments);
 		  }
