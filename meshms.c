@@ -96,5 +96,6 @@ int meshms_parse_command(int argc,char **argv)
       exit(meshms_usage());
     }
   }
+  exit(-1);
 }
 
