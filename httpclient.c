@@ -77,6 +77,7 @@ int json_flatten(struct json_parse_state *p,char *body, int body_len)
 	// array element
 	p->depth--;
 	json_new_line(p);
+	if (p->depth<1) return 1;
 	break;
       case '\r': case '\n':
 	json_new_line(p);
@@ -133,7 +134,7 @@ int json_body(int sock,long long timeout_time)
     char line[1024];
     int r=read_nonblock(sock,line,1024);
     if (r>0) {
-      json_flatten(&parse_state,line,r);
+      if (json_flatten(&parse_state,line,r)) break;
     } else usleep(1000);
     if (gettime_ms()>timeout_time) {
       // Quit on timeout
@@ -753,7 +754,7 @@ int http_list_meshms_messages(char *server_and_port, char *auth_token,
       return -1;
     }
   }
-  close(sock);
+  json_body(sock,timeout_time);  
   return http_response;
   
 }
