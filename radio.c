@@ -59,8 +59,18 @@ int radio_read_bytes(int serialfd,int monitor_mode)
   ssize_t count =
     read_nonblock(serialfd,buf,8192);
 
+  errno=0;
+  
   if (count>0)
     radio_receive_bytes(buf,count,monitor_mode);
+  else
+    {
+      if (debug_radio_rx) {
+	fprintf(debug_file,"Failed to read bytes from radio: count=%d, errno=%d\n",
+		(int)count,errno);
+	perror("no radio bytes");
+      }
+    }
   return count;
 }
 
