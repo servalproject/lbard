@@ -85,7 +85,8 @@ int serial_setup_port_with_speed(int fd,int speed)
 
   tcgetattr(fd, &t);
   fprintf(stderr,"Serial port settings before tcsetaddr: c=%08x, i=%08x, o=%08x, l=%08x\n",
-	  t.c_cflag,t.c_iflag,t.c_oflag,t.c_lflag);
+	  (unsigned int)t.c_cflag,(unsigned int)t.c_iflag,
+	  (unsigned int)t.c_oflag,(unsigned int)t.c_lflag);
 	  
   speed_t baud_rate;
   switch(speed){
@@ -143,13 +144,15 @@ int serial_setup_port_with_speed(int fd,int speed)
   t.c_oflag &= ~OPOST;
 
   fprintf(stderr,"Serial port settings attempting ot be set: c=%08x, i=%08x, o=%08x, l=%08x\n",
-	  t.c_cflag,t.c_iflag,t.c_oflag,t.c_lflag);
+	  (unsigned int)t.c_cflag,(unsigned int)t.c_iflag,
+	  (unsigned int)t.c_oflag,(unsigned int)t.c_lflag);
   
   tcsetattr(fd, TCSANOW, &t);
 
   tcgetattr(fd, &t);
   fprintf(stderr,"Serial port settings after tcsetaddr: c=%08x, i=%08x, o=%08x, l=%08x\n",
-	  t.c_cflag,t.c_iflag,t.c_oflag,t.c_lflag);
+	  (unsigned int)t.c_cflag,(unsigned int)t.c_iflag,
+	  (unsigned int)t.c_oflag,(unsigned int)t.c_lflag);
 
   
   set_nonblock(fd);
