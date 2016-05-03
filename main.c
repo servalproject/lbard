@@ -110,10 +110,15 @@ int monitor_mode=0;
 
 struct sync_state *sync_state=NULL;
 
+int debug_redirected=0;
+
 int scan_debug_settings()
 {
   FILE *f=fopen("/tmp/lbard.debug","r");
-  if (!f) {
+
+  // Reset debugging flags when lbard.debug deleted, but don't
+  // modify command line given parameters if lbard.debug is never used.
+  if (debug_redirected&&(!f)) {
     debug_file=stderr;
     debug_radio=0;
     debug_pieces=1;
@@ -125,12 +130,15 @@ int scan_debug_settings()
     debug_message_pieces=1;
     return 0;
   }
+  if (f) debug_redirected=1;
+  
   if (debug_file==stderr) {
     char debug_filename[1024];
     snprintf(debug_filename,1024,"/tmp/lbard.%d.log",getpid());
     debug_file=fopen(debug_filename,"a");
     if (!debug_file) debug_file=stderr;
-  }
+  } else fflush(debug_file);
+  
   if (debug_file!=stderr) {
     char line[1024]; line[0]=0;
     fgets(line,1024,f);
