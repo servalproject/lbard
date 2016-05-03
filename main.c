@@ -137,7 +137,7 @@ int scan_debug_settings()
     snprintf(debug_filename,1024,"/tmp/lbard.%d.log",getpid());
     debug_file=fopen(debug_filename,"a");
     if (!debug_file) debug_file=stderr;
-  } else fflush(debug_file);
+  } else if (debug_file) fflush(debug_file);
   
   if (debug_file!=stderr) {
     char line[1024]; line[0]=0;
