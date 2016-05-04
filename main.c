@@ -198,6 +198,8 @@ long long start_time=0;
 
 int main(int argc, char **argv)
 {
+  fprintf(stderr,"Version 20160504.1743.1\n");
+  
   debug_file=stderr;
   
   start_time = gettime_ms();
