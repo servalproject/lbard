@@ -139,7 +139,7 @@ int scan_debug_settings()
     if (!debug_file) debug_file=stderr;
   } else if (debug_file) fflush(debug_file);
   
-  if (debug_file!=stderr) {
+  if (f&&(debug_file!=stderr)) {
     char line[1024]; line[0]=0;
     fgets(line,1024,f);
     while(line[0]) {
