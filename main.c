@@ -114,11 +114,25 @@ int debug_redirected=0;
 
 int scan_debug_settings()
 {
+  fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
+
   FILE *f=fopen("/tmp/lbard.debug","r");
 
+  fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
+
+  if (debug_file!=stderr) {
+    fclose(debug_file);
+    debug_file=stderr;
+  }
+  
   // Reset debugging flags when lbard.debug deleted, but don't
   // modify command line given parameters if lbard.debug is never used.
+
+  fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
+
   if (debug_redirected&&(!f)) {
+    fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
+
     debug_file=stderr;
     debug_radio=0;
     debug_pieces=1;
@@ -130,6 +144,9 @@ int scan_debug_settings()
     debug_message_pieces=1;
     return 0;
   }
+
+  fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
+
   if (f) debug_redirected=1;
   
   fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
