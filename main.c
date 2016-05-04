@@ -155,8 +155,8 @@ int scan_debug_settings()
       sscanf(line,"sync_keys=%d",&debug_sync_keys);
       fgets(line,1024,f);
     }
+    fclose(f);
   }  
-  fclose(f);
   return 0;
 }
 
