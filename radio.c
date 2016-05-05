@@ -297,6 +297,8 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 		       radio_temperature, last_rx_rssi,
 		       packet_bytes);
 	  
+	  if (debug_radio) dump_bytes("packet before decode_rs",packet_data,packet_bytes);
+
 	  int rs_error_count = decode_rs_8(packet_data,NULL,0,
 					   FEC_MAX_BYTES-packet_bytes+FEC_LENGTH);
 
