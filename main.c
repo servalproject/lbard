@@ -116,7 +116,7 @@ int scan_debug_settings()
 {
   fprintf(stderr,"%s:%d:%s(): checkpoint: debug_file=%p, stderr=%p\n",
 	  __FILE__,__LINE__,__FUNCTION__,debug_file,stderr);
-
+#if 0
   FILE *f=fopen("/tmp/lbard.debug","r");
 
   if (debug_file!=stderr) {
@@ -167,6 +167,7 @@ int scan_debug_settings()
     }
     fclose(f);
   }
+#endif 
   return 0;  
 }
 
