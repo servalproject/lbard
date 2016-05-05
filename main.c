@@ -142,7 +142,7 @@ int scan_debug_settings()
 
   if (f) debug_redirected=1;
   
-  if (debug_file==stderr) {
+  if (f&&(debug_file==stderr)) {
     char debug_filename[1024];
     snprintf(debug_filename,1024,"/tmp/lbard.%d.log",getpid());
     debug_file=fopen(debug_filename,"a");
