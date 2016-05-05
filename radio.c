@@ -218,13 +218,14 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   }
 }
 
-// This need only be the maximum control header size
-#define RADIO_RXBUFFER_SIZE 16
+#define MAX_PACKET_SIZE 255
+
+// This need only be the maximum control header size + maximum packet size
+#define RADIO_RXBUFFER_SIZE 16+MAX_PACKET_SIZE
 unsigned char radio_rx_buffer[RADIO_RXBUFFER_SIZE];
 
 int radio_temperature=-1;
 int last_rx_rssi=-1;
-#define MAX_PACKET_SIZE 255
 unsigned char *packet_data=NULL;
 
 int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
