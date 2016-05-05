@@ -55,7 +55,6 @@ int debug_gpio=0;
 int debug_message_pieces=1;
 int debug_sync=0;
 int debug_sync_keys=0;
-FILE *debug_file=NULL;
 
 int radio_silence_count=0;
 
@@ -110,68 +109,6 @@ int monitor_mode=0;
 
 struct sync_state *sync_state=NULL;
 
-int debug_redirected=0;
-
-int scan_debug_settings()
-{
-  fprintf(stderr,"%s:%d:%s(): checkpoint: debug_file=%p, stderr=%p\n",
-	  __FILE__,__LINE__,__FUNCTION__,debug_file,stderr);
-#if 0
-  FILE *f=fopen("/tmp/lbard.debug","r");
-
-  if (debug_file!=stderr) {
-    fclose(debug_file);
-    debug_file=stderr;
-  }
-  
-  // Reset debugging flags when lbard.debug deleted, but don't
-  // modify command line given parameters if lbard.debug is never used.
-
-  if (debug_redirected&&(!f)) {
-    debug_file=stderr;
-    debug_radio=0;
-    debug_pieces=1;
-    debug_announce=0;
-    debug_pull=0;
-    debug_insert=0;
-    debug_radio_rx=0;
-    debug_gpio=0;
-    debug_message_pieces=1;
-    return 0;
-  }
-
-  if (f) debug_redirected=1;
-  
-  if (f&&(debug_file==stderr)) {
-    char debug_filename[1024];
-    snprintf(debug_filename,1024,"/tmp/lbard.%d.log",getpid());
-    debug_file=fopen(debug_filename,"a");
-    if (!debug_file) debug_file=stderr;
-  } else if (debug_file) fflush(debug_file);
-  
-  if (f&&(debug_file!=stderr)) {
-    char line[1024]; line[0]=0;
-    fgets(line,1024,f);
-    while(line[0]) {
-      sscanf(line,"radio=%d",&debug_radio);
-      sscanf(line,"pieces=%d",&debug_pieces);
-      sscanf(line,"announce=%d",&debug_announce);
-      sscanf(line,"pull=%d",&debug_pull);
-      sscanf(line,"insert=%d",&debug_insert);
-      sscanf(line,"radio_rx=%d",&debug_radio_rx);
-      sscanf(line,"gpio=%d",&debug_gpio);
-      sscanf(line,"message_pieces=%d",&debug_message_pieces);
-      sscanf(line,"sync=%d",&debug_sync);
-      sscanf(line,"sync_keys=%d",&debug_sync_keys);
-      fgets(line,1024,f);
-    }
-    fclose(f);
-  }
-#endif 
-  return 0;  
-}
-
-
 int urandombytes(unsigned char *buf, size_t len)
 {
   static int urandomfd = -1;
@@ -210,8 +147,6 @@ long long start_time=0;
 int main(int argc, char **argv)
 {
   fprintf(stderr,"Version 20160504.1743.1\n");
-  
-  debug_file=stderr;
   
   start_time = gettime_ms();
   
@@ -367,8 +302,6 @@ int main(int argc, char **argv)
   if (argc>2) credential=argv[2];
   if (argc>1) servald_server=argv[1];
 
-  scan_debug_settings();
-  
   // Open UDP socket to listen for time updates from other LBARD instances
   // (poor man's NTP for LBARD nodes that lack internal clocks)
   int timesocket=-1;
@@ -451,7 +384,6 @@ int main(int argc, char **argv)
 	 should be able to send packets very often. But if there are lots of stations
 	 on channel, then we should back-off.
        */
-      scan_debug_settings();
       
       double ratio = (radio_transmissions_seen+radio_transmissions_byus)
 	*1.0/TARGET_TRANSMISSIONS_PER_4SECONDS;

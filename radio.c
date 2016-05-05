@@ -66,7 +66,7 @@ int radio_read_bytes(int serialfd,int monitor_mode)
   else
     {
       if (debug_radio_rx) {
-	fprintf(debug_file,"Failed to read bytes from radio: count=%d, errno=%d\n",
+	printf("Failed to read bytes from radio: count=%d, errno=%d\n",
 		(int)count,errno);
 	perror("no radio bytes");
       }
@@ -125,10 +125,10 @@ int radio_set_tx_power(int serialfd)
   }
 
   if (hipower_switch_set&&hipower_en) {
-    fprintf(debug_file,"Setting radio to hipower -- you need a special spectrum license to do this!\n");
+    printf("Setting radio to hipower -- you need a special spectrum license to do this!\n");
     if (write_all(serialfd,"!H",2)==-1) serial_errors++; else serial_errors=0;
   } else {
-    if (0) fprintf(debug_file,"Setting radio to lowpower mode (flags %d:%d) -- probably ok under Australian LIPD class license, but you should check.\n",
+    if (0) printf("Setting radio to lowpower mode (flags %d:%d) -- probably ok under Australian LIPD class license, but you should check.\n",
 		   hipower_switch_set,hipower_en);
     if (write_all(serialfd,"!L",2)==-1) serial_errors++; else serial_errors=0;
   }
@@ -138,19 +138,19 @@ int radio_set_tx_power(int serialfd)
 
 int dump_bytes(char *msg,unsigned char *bytes,int length)
 {
-  fprintf(debug_file,"%s:\n",msg);
+  printf("%s:\n",msg);
   for(int i=0;i<length;i+=16) {
-    fprintf(debug_file,"%04X: ",i);
-    for(int j=0;j<16;j++) if (i+j<length) fprintf(debug_file," %02X",bytes[i+j]);
-    fprintf(debug_file,"  ");
+    printf("%04X: ",i);
+    for(int j=0;j<16;j++) if (i+j<length) printf(" %02X",bytes[i+j]);
+    printf("  ");
     for(int j=0;j<16;j++) {
       int c;
       if (i+j<length) c=bytes[i+j]; else c=' ';
       if (c<' ') c='.';
       if (c>0x7d) c='.';
-      fprintf(debug_file,"%c",c);
+      printf("%c",c);
     }
-    fprintf(debug_file,"\n");
+    printf("\n");
   }
   return 0;
 }
@@ -165,7 +165,7 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
 
   // Calculate RS parity
   if (length>FEC_MAX_BYTES||length<0) {
-    fprintf(debug_file,"%s(): Asked to send packet of illegal length"
+    printf("%s(): Asked to send packet of illegal length"
 	    " (asked for %d, valid range is 0 -- %d)\n",
 	    __FUNCTION__,length,FEC_MAX_BYTES);
     return -1;
@@ -234,21 +234,21 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
   int i,j;
 
   if (debug_radio_rx) {
-    fprintf(debug_file,"Read %d bytes from radio:\n",count);
+    printf("Read %d bytes from radio:\n",count);
     for(i=0;i<count;i+=32) {
       for(j=0;j<32;j++) {
-	if (i+j<count) fprintf(debug_file," %02x",bytes[i+j]); else break;
+	if (i+j<count) printf(" %02x",bytes[i+j]); else break;
       }
-      for(;j<32;j++) fprintf(debug_file,"   ");
-      fprintf(debug_file,"  ");
+      for(;j<32;j++) printf("   ");
+      printf("  ");
       for(j=0;j<32;j++) {
 	if (i+j<count) {
 	  if (bytes[i+j]>=' '&&bytes[i+j]<0x7e)
-	    fprintf(debug_file,"%c",bytes[i+j]);
-	  else fprintf(debug_file,".");
+	    printf("%c",bytes[i+j]);
+	  else printf(".");
 	}
       }
-      fprintf(debug_file,"\n");
+      printf("\n");
     }
   }
 
@@ -262,13 +262,13 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xce))
       {
 	if (debug_gpio) {
-	  fprintf(debug_file,"GPIO ADC values = ");
+	  printf("GPIO ADC values = ");
 	  for(int j=0;j<6;j++) {
-	    fprintf(debug_file,"%s0x%02x",
+	    printf("%s0x%02x",
 		    j?",":"",
 		    radio_rx_buffer[RADIO_RXBUFFER_SIZE-7+j]);
 	  }
-	  fprintf(debug_file,".  Radio TX interval = %dms, TX seen = %d, TX us = %d\n",
+	  printf(".  Radio TX interval = %dms, TX seen = %d, TX us = %d\n",
 		  message_update_interval,
 		  radio_transmissions_seen,
 		  radio_transmissions_byus);
@@ -314,7 +314,7 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 	  // dump_bytes("received packet",packet_data,packet_bytes);
 	  
 	  if (rs_error_count>=0&&rs_error_count<8) {
-	  if (0) fprintf(debug_file,"CHECKPOINT: %s:%d %s() error counts = %d for packet of %d bytes.\n",
+	  if (0) printf("CHECKPOINT: %s:%d %s() error counts = %d for packet of %d bytes.\n",
 			 __FILE__,__LINE__,__FUNCTION__,
 			 rs_error_count,packet_bytes);
 
