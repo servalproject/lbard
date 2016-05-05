@@ -65,7 +65,7 @@ int radio_read_bytes(int serialfd,int monitor_mode)
     radio_receive_bytes(buf,count,monitor_mode);
   else
     {
-      if (debug_radio_rx) {
+      if (0&&debug_radio_rx) {
 	printf("Failed to read bytes from radio: count=%d, errno=%d\n",
 		(int)count,errno);
 	perror("no radio bytes");
@@ -224,10 +224,8 @@ unsigned char radio_rx_buffer[RADIO_RXBUFFER_SIZE];
 
 int radio_temperature=-1;
 int last_rx_rssi=-1;
-int packet_bytes=0;
-int packet_bytes_received=0;
 #define MAX_PACKET_SIZE 255
-unsigned char packet_data[MAX_PACKET_SIZE]={0xbb};
+unsigned char *packet_data=NULL;
 
 int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 {
@@ -278,27 +276,18 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xaa))
       {
 	// Found RFD900 CSMA envelope: packet follows after this
-	int packet_len=radio_rx_buffer[RADIO_RXBUFFER_SIZE-4];
+	int packet_bytes=radio_rx_buffer[RADIO_RXBUFFER_SIZE-4];
 	radio_temperature=radio_rx_buffer[RADIO_RXBUFFER_SIZE-5];
 	last_rx_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-7];
 
 	int buffer_space=radio_rx_buffer[RADIO_RXBUFFER_SIZE-3];
 	buffer_space+=radio_rx_buffer[RADIO_RXBUFFER_SIZE-2]*256;	
 
-	packet_bytes=packet_len;
 	if (packet_bytes>MAX_PACKET_SIZE) packet_bytes=0;
-	bzero(packet_data,MAX_PACKET_SIZE);
-	packet_bytes_received=-1;
+	packet_data = &radio_rx_buffer[RADIO_RXBUFFER_SIZE-9-packet_bytes];
 	radio_transmissions_seen++;
-      }
-
-    if (packet_bytes>MAX_PACKET_SIZE) packet_bytes=0;
-    if (packet_bytes) {
-      // Don't use last byte of header as first byte of packet body
-      if (packet_bytes_received<0) packet_bytes_received=0;
-      else packet_data[packet_bytes_received++]=bytes[i];
-      if (packet_bytes_received==packet_bytes)
-	{
+	
+	if (packet_bytes) {
 	  // Have whole packet
 	  if (debug_radio)
 	    message_buffer_length+=
@@ -307,7 +296,7 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 		       "Saw RFD900 CSMA Data frame: temp=%dC, last rx RSSI=%d, frame len=%d\n",
 		       radio_temperature, last_rx_rssi,
 		       packet_bytes);
-
+	  
 	  int rs_error_count = decode_rs_8(packet_data,NULL,0,
 					   FEC_MAX_BYTES-packet_bytes+FEC_LENGTH);
 
