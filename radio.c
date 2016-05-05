@@ -311,10 +311,10 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 	  int rs_error_count = decode_rs_8(packet_data,NULL,0,
 					   FEC_MAX_BYTES-packet_bytes+FEC_LENGTH);
 
-	  // dump_bytes("received packet",packet_data,packet_bytes);
+	  if (debug_radio) dump_bytes("received packet",packet_data,packet_bytes);
 	  
 	  if (rs_error_count>=0&&rs_error_count<8) {
-	  if (0) printf("CHECKPOINT: %s:%d %s() error counts = %d for packet of %d bytes.\n",
+	  if (1) printf("CHECKPOINT: %s:%d %s() error counts = %d for packet of %d bytes.\n",
 			 __FILE__,__LINE__,__FUNCTION__,
 			 rs_error_count,packet_bytes);
 
