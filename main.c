@@ -114,11 +114,10 @@ int debug_redirected=0;
 
 int scan_debug_settings()
 {
-  fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
+  fprintf(stderr,"%s:%d:%s(): checkpoint: debug_file=%p, stderr=%p\n",
+	  __FILE__,__LINE__,__FUNCTION__,debug_file,stderr);
 
   FILE *f=fopen("/tmp/lbard.debug","r");
-
-  fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
 
   if (debug_file!=stderr) {
     fclose(debug_file);
@@ -128,11 +127,7 @@ int scan_debug_settings()
   // Reset debugging flags when lbard.debug deleted, but don't
   // modify command line given parameters if lbard.debug is never used.
 
-  fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
-
   if (debug_redirected&&(!f)) {
-    fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
-
     debug_file=stderr;
     debug_radio=0;
     debug_pieces=1;
@@ -145,12 +140,8 @@ int scan_debug_settings()
     return 0;
   }
 
-  fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
-
   if (f) debug_redirected=1;
   
-  fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
-
   if (debug_file==stderr) {
     char debug_filename[1024];
     snprintf(debug_filename,1024,"/tmp/lbard.%d.log",getpid());
@@ -158,11 +149,9 @@ int scan_debug_settings()
     if (!debug_file) debug_file=stderr;
   } else if (debug_file) fflush(debug_file);
   
-  fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
   if (f&&(debug_file!=stderr)) {
     char line[1024]; line[0]=0;
     fgets(line,1024,f);
-    fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
     while(line[0]) {
       sscanf(line,"radio=%d",&debug_radio);
       sscanf(line,"pieces=%d",&debug_pieces);
@@ -175,12 +164,9 @@ int scan_debug_settings()
       sscanf(line,"sync=%d",&debug_sync);
       sscanf(line,"sync_keys=%d",&debug_sync_keys);
       fgets(line,1024,f);
-      fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
     }
-    fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
     fclose(f);
   }
-  fprintf(stderr,"%s:%d:%s(): checkpoint\n",__FILE__,__LINE__,__FUNCTION__);
   return 0;  
 }
 
@@ -380,6 +366,8 @@ int main(int argc, char **argv)
   if (argc>2) credential=argv[2];
   if (argc>1) servald_server=argv[1];
 
+  scan_debug_settings();
+  
   // Open UDP socket to listen for time updates from other LBARD instances
   // (poor man's NTP for LBARD nodes that lack internal clocks)
   int timesocket=-1;
