@@ -146,7 +146,7 @@ long long start_time=0;
 
 int main(int argc, char **argv)
 {
-  fprintf(stderr,"Version 20160505.2019.1\n");
+  fprintf(stderr,"Version 20160506.2119.1\n");
   
   start_time = gettime_ms();
   
@@ -456,7 +456,7 @@ int main(int argc, char **argv)
 	  // receiving packets from other radios. Or it could just be that there is
 	  // no one to talk to. Anyway, resetting the radio is cheap, and fast, so
 	  // it is best to play it safe and just reset the radio.
-	  write_all(serialfd,"!R",2);
+	  write_all(serialfd,"!Z",2);
 	  radio_silence_count=0;
 	}
       }
@@ -464,7 +464,7 @@ int main(int argc, char **argv)
       radio_transmissions_seen=0;
       radio_transmissions_byus=0;
     }
-
+    
     // Deal gracefully with clocks that run backwards from time to time.
     if (last_message_update_time>gettime_ms())
       last_message_update_time=gettime_ms();
