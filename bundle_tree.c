@@ -803,6 +803,10 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
     p->tx_bundle_body_offset=body_offset;      
   } else {
     fprintf(stderr,"SYNC ACK: Ignoring, because we are sending bundle #%d, and request is for bundle #%d\n",p->tx_bundle,bundle);
+    fprintf(stderr,"          Requested BID/version = %s/%lld\n",
+	    bundles[bundle].bid, bundles[bundle].version);
+    fprintf(stderr,"                 TX BID/version = %s/%lld\n",
+	    bundles[p->tx_bundle].bid, bundles[p->tx_bundle].version);
   }
 
   return 0;
