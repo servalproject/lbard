@@ -637,7 +637,7 @@ int lookup_bundle_by_prefix(unsigned char *prefix)
     for(i=0;i<8;i++) {
       if (prefix[i]!=bundles[bundle].bid[i]) break;
     }
-    return bundle;
+    if (i==8) return bundle;
   }
   return -1;
 }
