@@ -85,6 +85,10 @@ struct peer_state {
   int tx_bundle_priority;
   int tx_bundle_manifest_offset;
   int tx_bundle_body_offset;
+  // number of http fetch errors for a manifest/payload we tolerate, before
+  // discarding this bundle and trying to send the next.
+#define MAX_CACHE_ERRORS 5
+  int tx_cache_errors;
 
   /* Bundles we want to send to this peer
      In theory, we can have a relatively short queue, since we intend to rebuild the

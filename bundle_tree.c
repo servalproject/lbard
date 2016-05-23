@@ -289,7 +289,18 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
   if (bundle_number<0) return -1;
   
   if (prime_bundle_cache(bundle_number,
-			 sid_prefix_hex,servald_server,credential)) return -1;
+			 sid_prefix_hex,servald_server,credential)) {
+    peer_records[peer]->tx_cache_errors++;
+    if (peer_records[peer]->tx_cache_errors>MAX_CACHE_ERRORS)
+      {
+	sync_dequeue_bundle(peer_records[peer],peer_records[peer]->tx_bundle);
+      }
+    return -1;
+  }
+  else
+    peer_records[peer]->tx_cache_errors=0;
+
+
   
   // Mark manifest all sent once we get to the end
   if (peer_records[peer]->tx_bundle_manifest_offset>=cached_manifest_encoded_len)
@@ -724,6 +735,8 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
     p->tx_bundle=-1;
     // Advance next in queue, if there is anything
     if (p->tx_queue_len) {
+      printf("     %d more bundles in the queue. Next is bundle #%d\n",
+	     p->tx_queue_len,p->tx_queue_bundles[0]);
       p->tx_bundle=p->tx_queue_bundles[0];
       p->tx_bundle_priority=p->tx_queue_priorities[0];
       p->tx_bundle_manifest_offset=0;

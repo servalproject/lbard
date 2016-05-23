@@ -85,8 +85,8 @@ int saw_piece(char *peer_prefix,int for_me,
 
   int bundle_number=-1;
 
-  // Schedule BAR for announcement immediately if we already have this version of this
-  // bundle, so that the sender knows that they can start sending something else.
+  // Send an ack immediately if we already have this bundle (or newer), so that the
+  // sender knows that they can start sending something else.
   // This in effect provides a positive ACK for reception of a new bundle.
   // XXX - If the sender depends on the ACK to start sending the next bundle, then
   // an adversary could purposely refuse to acknowledge bundles (that it might have
