@@ -496,12 +496,14 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
     peer_queue_list_dump(p);
     
     // Shift rest of list down
-    bcopy(&p->tx_queue_priorities[i],
-	  &p->tx_queue_priorities[i+1],
-	  sizeof(int)*(p->tx_queue_len-i-1));
-    bcopy(&p->tx_queue_bundles[i],
-	  &p->tx_queue_bundles[i+1],
-	  sizeof(int)*(p->tx_queue_len-i-1));
+    if (i<(p->tx_queue_len-1)) {
+      bcopy(&p->tx_queue_priorities[i],
+	    &p->tx_queue_priorities[i+1],
+	    sizeof(int)*(p->tx_queue_len-i-1));
+      bcopy(&p->tx_queue_bundles[i],
+	    &p->tx_queue_bundles[i+1],
+	    sizeof(int)*(p->tx_queue_len-i-1));
+    }
 
     printf("After shuffling to make room for new bundle (priority=%d):\n",
 	   priority);
