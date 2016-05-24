@@ -485,6 +485,12 @@ int sync_build_bar_in_slot(int slot,char *bid_prefix,
 
 int sync_tell_peer_we_have_this_bundle(int peer, int bundle)
 {
+  return sync_tell_peer_we_have_bundle_by_id(peer,bundles[bundle].bid,
+					     bundles[bundle].version);
+}
+  
+int sync_tell_peer_we_have_bundle_by_id(int peer,char *bid,long long version)
+{
   int slot=report_queue_length;
 
   for(int i=0;i<report_queue_length;i++) {
@@ -501,9 +507,7 @@ int sync_tell_peer_we_have_this_bundle(int peer, int bundle)
   report_queue_partials[slot]=-1;
   report_queue_peers[slot]=peer_records[peer];
 
-  sync_build_bar_in_slot(slot,
-			 bundles[bundle].bid,
-			 bundles[bundle].version);
+  sync_build_bar_in_slot(slot,bid,version);
 
   if (slot>=report_queue_length) report_queue_length=slot+1;
 
@@ -512,29 +516,10 @@ int sync_tell_peer_we_have_this_bundle(int peer, int bundle)
 
 int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial)
 {
-  int slot=report_queue_length;
 
-  for(int i=0;i<report_queue_length;i++) {
-    if (report_queue_peers[i]==peer_records[peer]) {
-      // We already want to tell this peer something.
-      // We should only need to tell a peer one thing at a time.
-      slot=i; break;
-    }
-  }
-  
-  if (slot>=REPORT_QUEUE_LEN) slot=random()%REPORT_QUEUE_LEN;
-
-  // Mark utilisation of slot, so that we can flush out stale messages
-  report_queue_partials[slot]=partial;
-  report_queue_peers[slot]=peer_records[peer];
-
-  sync_build_bar_in_slot(slot,
-			 peer_records[peer]->partials[partial].bid_prefix,
-			 peer_records[peer]->partials[partial].bundle_version);
-  
-  if (slot>=report_queue_length) report_queue_length=slot+1;
-
-  return 0;
+  return sync_tell_peer_we_have_bundle_by_id
+    (peer,peer_records[peer]->partials[partial].bid_prefix,
+     peer_records[peer]->partials[partial].bundle_version);  
 }
 
 
@@ -887,4 +872,41 @@ int sync_setup()
 				peer_does_not_have_this_key,
 				peer_now_has_this_key);
   return 0;
+}
+
+#define MAX_RECENT_BUNDLES 128
+struct recent_bundle recent_bundles[MAX_RECENT_BUNDLES];
+int recent_bundle_count=0;
+
+int sync_remember_recently_received_bundle(char *bid_prefix, long long version)
+{
+  int i;
+  for(i=0;i<recent_bundle_count;i++)
+    if (!strcasecmp(bid_prefix,recent_bundles[i].bid_prefix)) {
+      if (version>=recent_bundles[i].bundle_version)
+	recent_bundles[i].bundle_version=version;
+      return 0;
+    }
+  if (recent_bundle_count>=MAX_RECENT_BUNDLES) {
+    i=random()%MAX_RECENT_BUNDLES;
+    free(recent_bundles[i].bid_prefix); recent_bundles[i].bid_prefix=NULL;
+  } else {
+    i=recent_bundle_count;
+    recent_bundle_count++;
+  }
+
+  recent_bundles[i].bid_prefix=strdup(bid_prefix);
+  recent_bundles[i].bundle_version=version;
+  return 0;
+}
+
+int sync_is_bundle_recently_received(char *bid_prefix, long long version)
+{  
+  for(int i=0;i<recent_bundle_count;i++)
+    if (!strcasecmp(bid_prefix,recent_bundles[i].bid_prefix)) {
+      if (version<=recent_bundles[i].bundle_version)
+	return 1;
+      else return 0;
+    }
+  return 0;  
 }

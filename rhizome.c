@@ -242,10 +242,11 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
       snprintf(filename,1024,"/tmp/lbard.rejected.result");
       f=fopen(filename,"w");
       if (f) {
-	printf("http result code = %d\n",result_code);
+	fprintf(f,"http result code = %d\n",result_code);
 	fclose(f);
       }
-    }
+    } else
+      printf("http result code = %d\n",result_code);
     
     return -1;
   }

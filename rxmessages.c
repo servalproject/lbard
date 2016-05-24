@@ -92,6 +92,15 @@ int saw_piece(char *peer_prefix,int for_me,
   // an adversary could purposely refuse to acknowledge bundles (that it might have
   // introduced for this special purpose) addressed to itself, so that the priority
   // scheme gets stuck trying to send these bundles to them forever.
+  if (sync_is_bundle_recently_received(bid_prefix,version)) {
+    // We have this version already: mark it for announcement to sender,
+    // and then return immediately.
+    if (debug_pieces) printf("We recently received %s* version %lld - ignoring piece.\n",
+		bid_prefix,version);
+    sync_tell_peer_we_have_bundle_by_id(peer,bid_prefix,version);
+    return 0;
+    
+  }
   for(int i=0;i<bundle_count;i++) {
     if (!strncasecmp(bid_prefix,bundles[i].bid,strlen(bid_prefix))) {
       if (debug_pieces) printf("We have version %lld of BID=%s*.  %s is offering us version %lld\n",
@@ -368,6 +377,20 @@ int saw_piece(char *peer_prefix,int for_me,
 				peer_records[peer]->partials[i].body_segments->data,
 				peer_records[peer]->partials[i].body_length,
 				servald_server,credential);
+
+	// Take note of the bundle, so that we can tell any peer who is trying to
+	// send it to us, that we have recently received it.  This is irrespective
+	// of whether it inserted correctly. The reasoning behind this, is that we
+	// don't want a peer to get stuck sending the same bundle over and over
+	// again.  It is better to send something else, and work through all the
+	// bundles that need sending first. Then after that, if we restart our sync
+	// process periodically, we will catch any straglers. It still isn't perfect,
+	// but it's a start.
+	sync_remember_recently_received_bundle
+	  (peer_records[peer]->partials[i].bid_prefix,
+	   peer_records[peer]->partials[i].bundle_version);
+					       
+	
       }
       if (insert_result) {
 	// Failed to insert, so mark this bundle for deprioritisation, so that we

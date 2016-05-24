@@ -112,7 +112,12 @@ struct peer_state {
   // pieces that will result in the crypto checksums failing at the end.
 #define MAX_BUNDLES_IN_FLIGHT 16
   struct partial_bundle partials[MAX_BUNDLES_IN_FLIGHT];  
-}; 
+};
+
+struct recent_bundle {
+  char *bid_prefix;
+  long long bundle_version;
+};
 
 extern long long start_time;
 extern int my_time_stratum;
@@ -389,3 +394,6 @@ int http_send_meshms_message(char *server_and_port, char *auth_token,
 			     int timeout_ms);
 int hextochar(int h);
 int peer_queue_list_dump(struct peer_state *p);
+int sync_remember_recently_received_bundle(char *bid_prefix, long long version);
+int sync_is_bundle_recently_received(char *bid_prefix, long long version);
+int sync_tell_peer_we_have_bundle_by_id(int peer,char *bid,long long version);
