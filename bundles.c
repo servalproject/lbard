@@ -147,7 +147,7 @@ int register_bundle(char *service,
     bundles[bundle_number].last_version_of_manifest_announced=0;
     bundles[bundle_number].last_announced_time=0;
     bundle_count++;
-    printf("There are now %d bundles.\n",bundle_count);
+    // printf("There are now %d bundles.\n",bundle_count);
   }
 
   // Clear latest announcement time for bundles that get updated with a new version
@@ -185,7 +185,9 @@ int register_bundle(char *service,
   }
 
   
-  printf("  >> Inserted a bundle into the tree: key=%02X%02X%02X...\n",
+  printf("  >> Inserted %s*/%lld into the tree: key=%02X%02X%02X...\n",
+	 bundles[bundle_number].bid,
+	 bundles[bundle_number].version,
 	 bundle_sync_key.key[0],
 	 bundle_sync_key.key[1],
 	 bundle_sync_key.key[2]
