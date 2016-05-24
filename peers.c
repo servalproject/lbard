@@ -487,14 +487,7 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
   for(i=0;i<p->tx_queue_len;i++) 
     if (p->tx_queue_priorities[i]<priority) { break; }
 
-  if (i<MAX_TXQUEUE_LEN) {
-    printf("Before queueing new bundle (i=%d, p->tx_queue_len=%d, %d vs %d = %d):\n",
-	   i,p->tx_queue_len,
-	   p->tx_queue_priorities[i],priority,
-	   p->tx_queue_priorities[i]<priority);
-    fflush(stdout);
-    peer_queue_list_dump(p);
-    
+  if (i<MAX_TXQUEUE_LEN) {    
     // Shift rest of list down
     if (i<(p->tx_queue_len-1)) {
       bcopy(&p->tx_queue_priorities[i],
@@ -504,21 +497,13 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
 	    &p->tx_queue_bundles[i+1],
 	    sizeof(int)*(p->tx_queue_len-i-1));
     }
-
-    printf("After shuffling to make room for new bundle (priority=%d):\n",
-	   priority);
-    fflush(stdout);
-    peer_queue_list_dump(p);
-
+    
     // Write new entry
     p->tx_queue_bundles[i]=b->index;
     p->tx_queue_priorities[i]=priority;
     if (i>=p->tx_queue_len)
       p->tx_queue_len=i+1;
-    
-    printf("After queueing new bundle:\n"); fflush(stdout);
-    peer_queue_list_dump(p);
-    
+        
     return 0;
   } else {
     // Fail on insertion if the queue is already full of higher priority stuff.
