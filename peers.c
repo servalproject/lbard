@@ -502,6 +502,12 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
     bcopy(&p->tx_queue_bundles[i],
 	  &p->tx_queue_bundles[i+1],
 	  sizeof(int)*(p->tx_queue_len-i));
+
+    printf("After shuffling to make room for new bundle (priority=%d):\n",
+	   priority);
+    fflush(stdout);
+    peer_queue_list_dump(p);
+
     // Write new entry
     p->tx_queue_bundles[i]=b->index;
     p->tx_queue_priorities[i]=priority;
