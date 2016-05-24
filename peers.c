@@ -503,7 +503,10 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
     p->tx_queue_priorities[i]=priority;
     if (i>=p->tx_queue_len)
       p->tx_queue_len=i+1;
-        
+
+    printf("After queueing new bundle:\n"); fflush(stdout);
+    peer_queue_list_dump(p);
+    
     return 0;
   } else {
     // Fail on insertion if the queue is already full of higher priority stuff.
