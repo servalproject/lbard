@@ -460,6 +460,26 @@ int bid_to_peer_bundle_index(int peer,char *bid_hex)
 }
 #endif
 
+int peer_queue_list_dump(struct peer_state *p)
+{
+  printf("& TX QUEUE TO %s*\n",
+	 p->sid_prefix);
+  printf("& tx_bundle=%d, tx_bundle_bid=%s*, priority=%d\n",
+	 p->tx_bundle,
+	 (p->tx_bundle>-1)?
+	 bundles[p->tx_bundle].bid:"",
+	 p->tx_bundle_priority);
+  printf("& %d more queued\n",p->tx_queue_len);
+  for(int i=0;i<p->tx_queue_len;i++) {
+    int bundle=p->tx_queue_bundles[i];
+    int priority=p->tx_queue_priorities[i];
+    printf("  & bundle=%d, bid=%s*, priority=%d\n",	   
+	   bundle,bundles[bundle].bid,priority);
+
+  }
+  return 0;
+}
+
 int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int priority)
 {
   // Find point of insertion
@@ -479,6 +499,10 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
     p->tx_queue_overflow=1;
     return -1;
   }
+
+  printf("Before queueing new bundle:\n"); fflush(stdout);
+  peer_queue_list_dump(p);
+  
   // Shift rest of list down
   bcopy(&p->tx_queue_priorities[i],
 	&p->tx_queue_priorities[i+1],
@@ -491,6 +515,10 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
   p->tx_queue_priorities[i]=priority;
   if (i>=p->tx_queue_len)
     p->tx_queue_len=i+1;
+
+  printf("After queueing new bundle:\n"); fflush(stdout);
+  peer_queue_list_dump(p);
+  
   return 0;
 }
 

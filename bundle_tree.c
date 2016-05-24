@@ -709,21 +709,7 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     p->tx_bundle_priority=priority;
   }
 
-  printf("& TX QUEUE TO %s*\n",
-	 p->sid_prefix);
-  printf("& tx_bundle=%d, tx_bundle_bid=%s*, priority=%d\n",
-	 p->tx_bundle,
-	 (p->tx_bundle>-1)?
-	 bundles[p->tx_bundle].bid:"",
-	 p->tx_bundle_priority);
-  printf("& %d more queued\n",p->tx_queue_len);
-  for(int i=0;i<p->tx_queue_len;i++) {
-    int bundle=p->tx_queue_bundles[i];
-    int priority=p->tx_queue_priorities[i];
-    printf("  & bundle=%d, bid=%s*, priority=%d\n",	   
-	   bundle,bundles[bundle].bid,priority);
-
-  }
+  peer_queue_list_dump(p);
   return 0;
 }
 
