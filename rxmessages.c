@@ -344,7 +344,8 @@ int saw_piece(char *peer_prefix,int for_me,
     {
       // We have a single segment for body and manifest that span the complete
       // size.
-      printf(">>> We have the entire bundle now.\n");
+      printf(">>> We have the entire bundle %s*/%lld now.\n",
+	     bid_prefix,version);
 
       // First, reconstitute the manifest from the binary encoded format
       unsigned char manifest[1024];
