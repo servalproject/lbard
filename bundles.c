@@ -185,13 +185,12 @@ int register_bundle(char *service,
   }
 
   
-  printf("  >> Inserted %s*/%lld into the tree: key=%02X%02X%02X...\n",
+  printf("  >> Inserted %s*/%lld into the tree: key=%02X%02X%02X (now %d bundles)\n",
 	 bundles[bundle_number].bid,
 	 bundles[bundle_number].version,
 	 bundle_sync_key.key[0],
 	 bundle_sync_key.key[1],
-	 bundle_sync_key.key[2]
-	 );
+	 bundle_sync_key.key[2],bundle_number);
   
   rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
 	      "Bundle registered");
