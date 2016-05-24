@@ -721,8 +721,10 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
     p->tx_bundle=-1;
     // Advance next in queue, if there is anything
     if (p->tx_queue_len) {
-      printf("     %d more bundles in the queue. Next is bundle #%d\n",
+      printf("DEQUEUING:\n     %d more bundles in the queue. Next is bundle #%d\n",
 	     p->tx_queue_len,p->tx_queue_bundles[0]);
+      printf("Before dequeuing:\n");
+      peer_queue_list_dump(p);
       p->tx_bundle=p->tx_queue_bundles[0];
       p->tx_bundle_priority=p->tx_queue_priorities[0];
       p->tx_bundle_manifest_offset=0;
@@ -734,6 +736,8 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
 	    &p->tx_queue_priorities[0],
 	    sizeof(int)*p->tx_queue_len-1);
       p->tx_queue_len--;
+      printf("After dequeuing:\n");
+      peer_queue_list_dump(p);
     } else {
       if (p->tx_queue_overflow) {
 	/* TX queue overflowed at some point, and now we have
@@ -755,6 +759,8 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
     // Wasn't the bundle on the list right now, so delete from in list.
     for(int i=0;i<p->tx_queue_len;i++) {
       if (bundle==p->tx_queue_bundles[i]) {
+	printf("Before deletion from in queue:\n");
+	peer_queue_list_dump(p);
 	// Delete this entry in queue
 	bcopy(&p->tx_queue_bundles[i+1],
 	      &p->tx_queue_bundles[i],
@@ -763,6 +769,8 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
 	      &p->tx_queue_priorities[i],
 	      sizeof(int)*p->tx_queue_len-i-1);
 	p->tx_queue_len--;
+	printf("After deletion from in queue:\n");
+	peer_queue_list_dump(p);
 	return 0;
       }
     }
