@@ -709,7 +709,7 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     p->tx_bundle_priority=priority;
   }
 
-  peer_queue_list_dump(p);
+  // peer_queue_list_dump(p);
   return 0;
 }
 
@@ -755,8 +755,8 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
     // Wasn't the bundle on the list right now, so delete from in list.
     for(int i=0;i<p->tx_queue_len;i++) {
       if (bundle==p->tx_queue_bundles[i]) {
-	printf("Before deletion from in queue:\n");
-	peer_queue_list_dump(p);
+	// printf("Before deletion from in queue:\n");
+	// peer_queue_list_dump(p);
 	// Delete this entry in queue
 	bcopy(&p->tx_queue_bundles[i+1],
 	      &p->tx_queue_bundles[i],
@@ -765,8 +765,8 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
 	      &p->tx_queue_priorities[i],
 	      sizeof(int)*p->tx_queue_len-i-1);
 	p->tx_queue_len--;
-	printf("After deletion from in queue:\n");
-	peer_queue_list_dump(p);
+	// printf("After deletion from in queue:\n");
+	// peer_queue_list_dump(p);
 	return 0;
       }
     }
