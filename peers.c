@@ -485,7 +485,32 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
   // Find point of insertion
   int i;
   for(i=0;i<p->tx_queue_len;i++) 
-    if (p->tx_queue_priorities[i]<priority) break;
+    if (p->tx_queue_priorities[i]<priority) {
+      printf("Before queueing new bundle (i=%d, p->tx_queue_len=%d, %d vs %d = %d):\n",
+	     i,p->tx_queue_len,
+	     p->tx_queue_priorities[i],priority,
+	     p->tx_queue_priorities[i]<priority);
+      fflush(stdout);
+      peer_queue_list_dump(p);
+      
+      // Shift rest of list down
+      bcopy(&p->tx_queue_priorities[i],
+	    &p->tx_queue_priorities[i+1],
+	    sizeof(int)*(p->tx_queue_len-i));
+      bcopy(&p->tx_queue_bundles[i],
+	    &p->tx_queue_bundles[i+1],
+	    sizeof(int)*(p->tx_queue_len-i));
+      // Write new entry
+      p->tx_queue_bundles[i]=b->index;
+      p->tx_queue_priorities[i]=priority;
+      if (i>=p->tx_queue_len)
+	p->tx_queue_len=i+1;
+      
+      printf("After queueing new bundle:\n"); fflush(stdout);
+      peer_queue_list_dump(p);
+            
+      break;
+    }
   // Fail on insertion if the queue is already full of higher priority stuff.
   if (i>=MAX_TXQUEUE_LEN) {
     /* Remember that TX queue has overflowed, so that when the TX queue is 
@@ -499,27 +524,6 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
     p->tx_queue_overflow=1;
     return -1;
   }
-
-  printf("Before queueing new bundle (i=%d, p->tx_queue_len=%d):\n",
-	 i,p->tx_queue_len);
-  fflush(stdout);
-  peer_queue_list_dump(p);
-  
-  // Shift rest of list down
-  bcopy(&p->tx_queue_priorities[i],
-	&p->tx_queue_priorities[i+1],
-	sizeof(int)*(p->tx_queue_len-i));
-  bcopy(&p->tx_queue_bundles[i],
-	&p->tx_queue_bundles[i+1],
-	sizeof(int)*(p->tx_queue_len-i));
-  // Write new entry
-  p->tx_queue_bundles[i]=b->index;
-  p->tx_queue_priorities[i]=priority;
-  if (i>=p->tx_queue_len)
-    p->tx_queue_len=i+1;
-
-  printf("After queueing new bundle:\n"); fflush(stdout);
-  peer_queue_list_dump(p);
   
   return 0;
 }
