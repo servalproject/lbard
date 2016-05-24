@@ -500,7 +500,9 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
     return -1;
   }
 
-  printf("Before queueing new bundle:\n"); fflush(stdout);
+  printf("Before queueing new bundle (i=%d, p->tx_queue_len=%d):\n",
+	 i,p->tx_queue_len);
+  fflush(stdout);
   peer_queue_list_dump(p);
   
   // Shift rest of list down
