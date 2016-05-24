@@ -98,7 +98,7 @@ struct peer_state {
 #define MAX_TXQUEUE_LEN 10
   int tx_queue_len; 
   int tx_queue_bundles[MAX_TXQUEUE_LEN];
-  int tx_queue_priorities[MAX_TXQUEUE_LEN];
+  unsigned int tx_queue_priorities[MAX_TXQUEUE_LEN];
   int tx_queue_overflow;
 #endif
   // Bundles this peer is transferring.
@@ -388,3 +388,4 @@ int http_send_meshms_message(char *server_and_port, char *auth_token,
 			     char *sender, char *recipient,char *message,
 			     int timeout_ms);
 int hextochar(int h);
+int peer_queue_list_dump(struct peer_state *p);
