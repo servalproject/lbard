@@ -141,7 +141,6 @@ int show_progress()
   int progress_has_occurred=0;
 
   for(peer=0;peer<peer_count;peer++) {
-    char *peer_prefix=peer_records[peer]->sid_prefix;
     for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
       if (progress_has_occurred) break;
       if (peer_records[peer]->partials[i].bid_prefix)
