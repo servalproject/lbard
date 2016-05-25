@@ -409,6 +409,7 @@ uint8_t report_queue[REPORT_QUEUE_LEN][MAX_REPORT_LEN];
 uint8_t report_lengths[REPORT_QUEUE_LEN];
 struct peer_state *report_queue_peers[REPORT_QUEUE_LEN];
 int report_queue_partials[REPORT_QUEUE_LEN];
+char *report_queue_message[REPORT_QUEUE_LEN];
 
 int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 			      char *sid_prefix_bin,
@@ -421,12 +422,23 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
   // First of all, tell any peers any acknowledgement messages that are required.
   while (report_queue_length&&((*offset)<(mtu-MAX_REPORT_LEN))) {
     report_queue_length--;
+    if (append_bytes(offset,mtu,msg_out,report_queue[report_queue_length],
+		     report_lengths[report_queue_length])) {
+      fprintf(stderr,"Tried to send report_queue message '%s' to %s*, but append_bytes reported no more space.\n",
+	      report_queue_message[report_queue_length],
+	      report_queue_peers[report_queue_length]->sid_prefix);
+      report_queue_length++;
+    } else {
     fprintf(stderr,"T+%lldms : Flushing report from queue, %d remaining.\n",
 	    gettime_ms()-start_time,	    
 	    report_queue_length);
-    append_bytes(offset,mtu,msg_out,report_queue[report_queue_length],
-		 report_lengths[report_queue_length]);
-  } 
+    fprintf(stderr,"Sent report_queue message '%s' to %s*\n",
+	    report_queue_message[report_queue_length],
+	    report_queue_peers[report_queue_length]->sid_prefix);
+    free(report_queue_message[report_queue_length]);
+    report_queue_message[report_queue_length]=NULL;
+    }
+  }
   
   int count=10; if (count>peer_count) count=peer_count;
 
@@ -511,6 +523,15 @@ int sync_tell_peer_we_have_bundle_by_id(int peer,char *bid,long long version)
 
   sync_build_bar_in_slot(slot,bid,version);
 
+  if (report_queue_message[slot]) {
+    fprintf(stderr,"Replacing report_queue message '%s' with 'BAR'\n",
+	    report_queue_message[slot]);
+    free(report_queue_message[slot]);
+    report_queue_message[slot]=NULL;
+  } else
+    fprintf(stderr,"Setting report_queue message to 'BAR'\n");
+  report_queue_message[slot]=strdup("BAR");
+  
   if (slot>=report_queue_length) report_queue_length=slot+1;
 
   return 0;
@@ -587,6 +608,16 @@ int sync_schedule_progress_report(int peer, int partial)
 
   int ofs=0;
   report_queue[slot][ofs++]='A';
+
+  if (report_queue_message[slot]) {
+    fprintf(stderr,"Replacing report_queue message '%s' with 'progress report'\n",
+	    report_queue_message[slot]);
+    free(report_queue_message[slot]);
+    report_queue_message[slot]=NULL;
+  } else {
+    fprintf(stderr,"Setting report_queue message to 'progress report'\n");
+  }
+  report_queue_message[slot]=strdup("progress report");
 
   // BID prefix
   for(int i=0;i<8;i++) {
@@ -917,6 +948,7 @@ int sync_is_bundle_recently_received(char *bid_prefix, long long version)
     if (!strcasecmp(bid_prefix,recent_bundles[i].bid_prefix)) {
       if (version<=recent_bundles[i].bundle_version)
 	if (recent_bundles[i].timeout<time(0)) {
+	  fprintf(stderr,"Hang on, we've received %s recently!\n",bid_prefix);
 	  return 1;
 	} else
 	  return 0;
