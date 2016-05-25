@@ -633,6 +633,15 @@ int lookup_bundle_by_prefix(unsigned char *prefix)
     for(i=0;i<8;i++) {
       if (prefix[i]!=bundles[bundle].bid[i]) break;
     }
+    fprintf(stderr,"bundle #%d = %02X%02X%02X%02X%02X%02X%02X%02X, looking for %02X%02X%02X%02X%02X%02X%02X%02X, matched %d bytes\n",
+	    bundle,
+	    bundles[bundle].bid[0],bundles[bundle].bid[1],
+	    bundles[bundle].bid[2],bundles[bundle].bid[3],
+	    bundles[bundle].bid[4],bundles[bundle].bid[5],
+	    bundles[bundle].bid[6],bundles[bundle].bid[7],
+	    prefix[0],prefix[1],prefix[2],prefix[3],
+	    prefix[4],prefix[5],prefix[6],prefix[7],
+	    i);
     if (i==8) return bundle;
   }
   return -1;
