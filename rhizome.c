@@ -246,12 +246,11 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 	fclose(f);
       }
     }
+    return -1;
   }
   else
     printf("http result code = %d\n",result_code);
     
-    return -1;
-  }
   
   return 0;
 }
