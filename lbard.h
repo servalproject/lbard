@@ -386,7 +386,7 @@ int dump_bytes(char *msg,unsigned char *bytes,int length);
 int urandombytes(unsigned char *buf, size_t len);
 int active_peer_count();
 int sync_dequeue_bundle(struct peer_state *p,int bundle);
-int lookup_bundle_by_prefix_and_version(unsigned char *prefix, long long version);
+int lookup_bundle_by_prefix_bin_and_version(unsigned char *prefix, long long version);
 int meshms_parse_command(int argc,char **argv);
 int http_list_meshms_conversations(char *server_and_port, char *auth_token,
 				   char *participant,int timeout_ms);

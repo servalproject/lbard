@@ -671,7 +671,8 @@ int lookup_bundle_by_prefix_hex(char *prefix)
   return -1;
 }
 
-int lookup_bundle_by_prefix_and_version(unsigned char *prefix, long long version)
+// XXX - Ignores version!
+int lookup_bundle_by_prefix_bin_and_version(unsigned char *prefix, long long version)
 {
   int bundle;
   int i;

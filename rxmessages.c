@@ -523,7 +523,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       C;
       // BAR announcement
       unsigned char *bid_prefix_bin=&msg[offset];
-      snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
+      snprintf(bid_prefix,8*2+1,"%02X%02X%02X%02X%02X%02X%02X%02X",
 	       msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
 	       msg[offset+4],msg[offset+5],msg[offset+6],msg[offset+7]);
       offset+=8;
@@ -571,7 +571,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 #ifdef SYNC_BY_BAR
       peer_note_bar(p,bid_prefix,version,recipient_prefix,size_byte);
 #else
-      int bundle=lookup_bundle_by_prefix_and_version(bid_prefix_bin,version);
+      int bundle=lookup_bundle_by_prefix_bin_and_version(bid_prefix_bin,version);
       if (bundle>-1) {
 	printf("T+%lldms : SYNC FIN: %s* has finished receiving"
 		" %s version %lld (bundle #%d)\n",
@@ -579,11 +579,12 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 		version,bundle);
 
 	sync_dequeue_bundle(p,bundle);
-    } else {
-      printf("T+%lldms : SYNC FIN: %s* has finished receiving"
-	" %s version %lld (NO SUCH BUNDLE!)\n",
-	gettime_ms()-start_time,p?p->sid_prefix:"<null>",bid_prefix,version);
-    }
+      } else {
+        printf("T+%lldms : SYNC FIN: %s* has finished receiving"
+	  " %s (%02X...) version %lld (NO SUCH BUNDLE!)\n",
+	  gettime_ms()-start_time,p?p->sid_prefix:"<null>",
+	  bid_prefix,bid_prefix_bin[0],version);
+      }
       C;
 
 #endif
