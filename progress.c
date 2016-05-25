@@ -113,11 +113,19 @@ int generate_progress_string(struct partial_bundle *partial,
     s=s->next;
   }
 
-  snprintf(&progress[24],54," %d/%d, %d/%d",
-	   manifest_bytes,partial->manifest_length,
-	   body_bytes,partial->body_length
-	   );
-
+  if (partial->recent_bytes)
+    snprintf(&progress[24],54," %d/%d, %d/%d  [%d since last report]",
+	     manifest_bytes,partial->manifest_length,
+	     body_bytes,partial->body_length,
+	     partial->recent_bytes
+	     );
+  else
+    snprintf(&progress[24],54," %d/%d, %d/%d",
+	     manifest_bytes,partial->manifest_length,
+	     body_bytes,partial->body_length
+	     );
+  
+  partial->recent_bytes=0;
   
   return 0;
 }

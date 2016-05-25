@@ -45,6 +45,8 @@ struct partial_bundle {
   // Data from the piece headers for keeping track
   char *bid_prefix;
   long long bundle_version;
+
+  int recent_bytes;
   
   struct segment_list *manifest_segments;
   int manifest_length;

@@ -338,6 +338,8 @@ int saw_piece(char *peer_prefix,int for_me,
   merge_segments(&peer_records[peer]->partials[i].manifest_segments);
   merge_segments(&peer_records[peer]->partials[i].body_segments);
 
+  peer_records[peer]->partials[i].recent_bytes += piece_bytes;
+  
   // Check if we have the whole bundle now
   // XXX - this breaks when we have nothing about the bundle, because then we think the length is zero, so we think we have it all, when really we have none.
   if (peer_records[peer]->partials[i].manifest_segments
