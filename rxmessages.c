@@ -565,7 +565,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 #else
       int bundle=lookup_bundle_by_prefix_and_version(bid_prefix_bin,version);
       if (bundle>-1) {
-	printf("T+%lldms : SYNC FIN: %s* is has finished receiving"
+	printf("T+%lldms : SYNC FIN: %s* has finished receiving"
 		" %s version %lld (bundle #%d)\n",
 		gettime_ms()-start_time,p?p->sid_prefix:"<null>",bid_prefix,
 		version,bundle);
