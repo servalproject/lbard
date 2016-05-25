@@ -875,6 +875,7 @@ int sync_setup()
 }
 
 #define MAX_RECENT_BUNDLES 128
+#define RECENT_BUNDLE_TIMEOUT (4*60)
 struct recent_bundle recent_bundles[MAX_RECENT_BUNDLES];
 int recent_bundle_count=0;
 
@@ -885,6 +886,7 @@ int sync_remember_recently_received_bundle(char *bid_prefix, long long version)
     if (!strcasecmp(bid_prefix,recent_bundles[i].bid_prefix)) {
       if (version>=recent_bundles[i].bundle_version)
 	recent_bundles[i].bundle_version=version;
+      recent_bundles[i].timeout=time(0)+RECENT_BUNDLE_TIMEOUT;
       return 0;
     }
   if (recent_bundle_count>=MAX_RECENT_BUNDLES) {
@@ -897,6 +899,7 @@ int sync_remember_recently_received_bundle(char *bid_prefix, long long version)
 
   recent_bundles[i].bid_prefix=strdup(bid_prefix);
   recent_bundles[i].bundle_version=version;
+  recent_bundles[i].timeout=time(0)+RECENT_BUNDLE_TIMEOUT;
   return 0;
 }
 
@@ -905,7 +908,10 @@ int sync_is_bundle_recently_received(char *bid_prefix, long long version)
   for(int i=0;i<recent_bundle_count;i++)
     if (!strcasecmp(bid_prefix,recent_bundles[i].bid_prefix)) {
       if (version<=recent_bundles[i].bundle_version)
-	return 1;
+	if (recent_bundles[i].timeout<time(0))
+	  return 1;
+	else
+	  return 0;
       else return 0;
     }
   return 0;  

@@ -117,6 +117,7 @@ struct peer_state {
 struct recent_bundle {
   char *bid_prefix;
   long long bundle_version;
+  time_t timeout;
 };
 
 extern long long start_time;
