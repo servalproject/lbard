@@ -145,7 +145,7 @@ int register_bundle(char *service,
     {
       for(int i=0;i<32;i++) {
 	char hex[3]={bid[i*2+0],bid[i*2+1],0};
-	bundles[bundle_number].bid_hex[i]=strtoll(hex,NULL,16);
+	bundles[bundle_number].bid_bin[i]=strtoll(hex,NULL,16);
       }
     }
     // Never announced
