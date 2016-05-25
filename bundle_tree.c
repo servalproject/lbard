@@ -625,7 +625,7 @@ int sync_schedule_progress_report(int peer, int partial)
   return 0;
 }
 
-int lookup_bundle_by_prefix(unsigned char *prefix)
+int lookup_bundle_by_prefix_hex(char *prefix)
 {
   int bundle;
   int i;
@@ -633,15 +633,10 @@ int lookup_bundle_by_prefix(unsigned char *prefix)
     for(i=0;i<8;i++) {
       if (prefix[i]!=bundles[bundle].bid[i]) break;
     }
-    fprintf(stderr,"bundle #%d = %02X%02X%02X%02X%02X%02X%02X%02X, looking for %02X%02X%02X%02X%02X%02X%02X%02X, matched %d bytes\n",
+    fprintf(stderr,"bundle #%d = %s, looking for %s, matched %d bytes\n",
 	    bundle,
-	    bundles[bundle].bid[0],bundles[bundle].bid[1],
-	    bundles[bundle].bid[2],bundles[bundle].bid[3],
-	    bundles[bundle].bid[4],bundles[bundle].bid[5],
-	    bundles[bundle].bid[6],bundles[bundle].bid[7],
-	    prefix[0],prefix[1],prefix[2],prefix[3],
-	    prefix[4],prefix[5],prefix[6],prefix[7],
-	    i);
+	    bundles[bundle].bid,
+	    prefix,i);
     if (i==8) return bundle;
   }
   return -1;
@@ -774,12 +769,14 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
 int sync_parse_ack(struct peer_state *p,unsigned char *msg)
 {
   // Get fields
-  unsigned char bid_prefix[8]=
-    {msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8]};
   int manifest_offset=msg[9]|(msg[10]<<8);
   int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[14]<<24);
 
-  int bundle=lookup_bundle_by_prefix(bid_prefix);
+  char bid_prefix_hex[8*2+1];
+  snprintf(bid_prefix_hex,17,"%02X%02X%02X%02X%02X%02X%02X%02X",
+	   msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8]);
+  
+  int bundle=lookup_bundle_by_prefix_hex(bid_prefix_hex);
 
   fprintf(stderr,"T+%lldms : SYNC ACK: %s* is asking for us to send from m=%d, p=%d of"
 	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d)\n",
