@@ -519,7 +519,7 @@ int main(int argc, char **argv)
 	      perror("errno");
 	    }
 	  }
-	  printf("--- Sent %d time announcement packets.\n",i);
+	  // printf("--- Sent %d time announcement packets.\n",i);
 	}
 	  
 	// Check for time packet

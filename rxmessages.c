@@ -95,8 +95,9 @@ int saw_piece(char *peer_prefix,int for_me,
   if (sync_is_bundle_recently_received(bid_prefix,version)) {
     // We have this version already: mark it for announcement to sender,
     // and then return immediately.
-    if (debug_pieces) printf("We recently received %s* version %lld - ignoring piece.\n",
-		bid_prefix,version);
+    fprintf(stderr,
+	    "We recently received %s* version %lld - ignoring piece.\n",
+	    bid_prefix,version);
     sync_tell_peer_we_have_bundle_by_id(peer,bid_prefix,version);
     return 0;
     
@@ -111,7 +112,7 @@ int saw_piece(char *peer_prefix,int for_me,
 #ifdef SYNC_BY_BAR
 	bundles[i].announce_bar_now=1;
 #endif
-	if (debug_pieces) printf("We already have %s* version %lld - ignoring piece.\n",
+	fprintf(stderr,"We already have %s* version %lld - ignoring piece.\n",
 		bid_prefix,version);
 	sync_tell_peer_we_have_this_bundle(peer,i);
 	return 0;

@@ -44,7 +44,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 int clear_partial(struct partial_bundle *p)
 {
-  fprintf(stderr,"+++++ clearing partial\n");
   while(p->manifest_segments) {
     struct segment_list *s=p->manifest_segments;
     p->manifest_segments=s->next;
