@@ -515,13 +515,11 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       break;
     case 'B':
       offset++;
-      C;
       if (len-offset<BAR_LENGTH) {
 	fprintf(stderr,"Ignoring runt BAR (len=%d instead of %d)\n",
 		len-offset,BAR_LENGTH);
 	return -2;
       }
-      C;
       // BAR announcement
       unsigned char *bid_prefix_bin=&msg[offset];
       snprintf(bid_prefix,8*2+1,"%02X%02X%02X%02X%02X%02X%02X%02X",
@@ -536,7 +534,6 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       offset+=4;
       size_byte=msg[offset];
       offset+=1;
-      C;
 #ifdef SYNC_BY_BAR
       if (debug_pieces)
 	printf(
@@ -567,7 +564,6 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	
 	monitor_log(sender_prefix,NULL,monitor_log_buf);
       }
-      C;
 
 #ifdef SYNC_BY_BAR
       peer_note_bar(p,bid_prefix,version,recipient_prefix,size_byte);
@@ -586,7 +582,6 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	  gettime_ms()-start_time,p?p->sid_prefix:"<null>",
 	  bid_prefix,bid_prefix_bin[0],version);
       }
-      C;
 
 #endif
       break;
