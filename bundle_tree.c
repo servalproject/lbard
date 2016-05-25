@@ -646,7 +646,7 @@ int lookup_bundle_by_prefix_and_version(unsigned char *prefix, long long version
     for(i=0;i<8;i++) {
       if (prefix[i]!=bundles[bundle].bid[i]) break;
     }
-    return bundle;
+    if (i==8) return bundle;
   }
   return -1;
 }
@@ -912,9 +912,9 @@ int sync_is_bundle_recently_received(char *bid_prefix, long long version)
   for(int i=0;i<recent_bundle_count;i++)
     if (!strcasecmp(bid_prefix,recent_bundles[i].bid_prefix)) {
       if (version<=recent_bundles[i].bundle_version)
-	if (recent_bundles[i].timeout<time(0))
+	if (recent_bundles[i].timeout<time(0)) {
 	  return 1;
-	else
+	} else
 	  return 0;
       else return 0;
     }
