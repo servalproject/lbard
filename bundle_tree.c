@@ -542,6 +542,8 @@ unsigned char *bid_prefix_hex_to_bin(char *hex)
     char hex[3]={hex[i*2+0],hex[i*2+1],0};
     bin_prefix[i]=strtoll(hex,NULL,16);
   }
+  fprintf(stderr,"bid_prefix_hex(%s) -> %02X%02X...\n",
+	  hex,bin_prefix[0],bin_prefix[1]);
   return bin_prefix;
 }
 
