@@ -186,7 +186,7 @@ int calculate_stored_bundle_priority(int i,int versus)
   // who it is addressed to, and whether we have had problems inserting it
   // into rhizome.
   long long this_bundle_priority=
-    calculate_bundle_intrinsic_priority(bundles[i].bid,
+    calculate_bundle_intrinsic_priority(bundles[i].bid_hex,
 					bundles[i].length,
 					bundles[i].version,
 					bundles[i].service,
@@ -241,7 +241,7 @@ int calculate_stored_bundle_priority(int i,int versus)
   if (0)
     fprintf(stderr,"  bundle %s was last announced %ld seconds ago.  "
 	    "Priority = 0x%llx, %d peers don't have it.\n",
-	    bundles[i].bid,time(0)-bundles[i].last_announced_time,
+	    bundles[i].bid_hex,time(0)-bundles[i].last_announced_time,
 	    this_bundle_priority,num_peers_that_dont_have_it);
   
   // Add to priority according to the number of peers that don't have the bundle

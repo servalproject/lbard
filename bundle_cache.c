@@ -56,7 +56,7 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
   if (bundle_number<0) return -1;
   
   if ((!bid_of_cached_bundle)
-      ||strcasecmp(bundles[bundle_number].bid,bid_of_cached_bundle)) {
+      ||strcasecmp(bundles[bundle_number].bid_hex,bid_of_cached_bundle)) {
     // Cache is invalid - release
     if (bid_of_cached_bundle) {
       free(bid_of_cached_bundle); bid_of_cached_bundle=NULL;
@@ -70,7 +70,7 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     char filename[1024];
     
     snprintf(path,8192,"/restful/rhizome/%s.rhm",
-	     bundles[bundle_number].bid);
+	     bundles[bundle_number].bid_hex);
 
     long long t1=gettime_ms();
     
@@ -123,7 +123,7 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
 	    cached_manifest_encoded_len);
     
     snprintf(path,8192,"/restful/rhizome/%s/raw.bin",
-	     bundles[bundle_number].bid);
+	     bundles[bundle_number].bid_hex);
     snprintf(filename,1024,"%sraw",sid_prefix_hex);
     unlink(filename);
     f=fopen(filename,"w");
@@ -161,13 +161,13 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     if (0)
       fprintf(stderr,"  body is %d bytes long.\n",cached_body_len);
 
-    bid_of_cached_bundle=strdup(bundles[bundle_number].bid);
+    bid_of_cached_bundle=strdup(bundles[bundle_number].bid_hex);
 
     cached_version=bundles[bundle_number].version;
 
     if (0)
       fprintf(stderr,"Cached manifest and body for %s\n",
-	      bundles[bundle_number].bid);
+	      bundles[bundle_number].bid_hex);
   }
   
   return 0;

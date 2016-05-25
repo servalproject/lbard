@@ -140,7 +140,8 @@ struct bundle_record {
   int index; // position in array of bundles
   
   char *service;
-  char *bid;
+  char *bid_hex;
+  unsigned char bid_bin[32];
   long long version;
   char *author;
   int originated_here_p;
@@ -254,7 +255,8 @@ extern int time_slave;
 extern long long start_time;
 
 int saw_piece(char *peer_prefix,int for_me,
-	      char *bid_prefix,long long version,
+	      char *bid_prefix, unsigned char *bid_prefix_bin,
+	      long long version,
 	      long long piece_offset,int piece_bytes,int is_end_piece,
 	      int is_manifest_piece,unsigned char *piece,
 
@@ -399,4 +401,5 @@ int hextochar(int h);
 int peer_queue_list_dump(struct peer_state *p);
 int sync_remember_recently_received_bundle(char *bid_prefix, long long version);
 int sync_is_bundle_recently_received(char *bid_prefix, long long version);
-int sync_tell_peer_we_have_bundle_by_id(int peer,char *bid,long long version);
+int sync_tell_peer_we_have_bundle_by_id(int peer,unsigned char *bid_bin,
+					long long version);

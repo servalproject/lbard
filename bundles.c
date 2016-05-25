@@ -114,7 +114,7 @@ int register_bundle(char *service,
   // of bundles.
   int bundle_number=bundle_count;
   for(i=0;i<bundle_count;i++) {
-    if (!strcmp(bundles[i].bid,bid)) {
+    if (!strcmp(bundles[i].bid_hex,bid)) {
       // Updating an existing bundle
       bundle_number=i; break;
     }
@@ -141,7 +141,13 @@ int register_bundle(char *service,
     bundles[bundle_number].recipient=NULL;
   } else {    
     // New bundle
-    bundles[bundle_number].bid=strdup(bid);
+    bundles[bundle_number].bid_hex=strdup(bid);
+    {
+      for(int i=0;i<32;i++) {
+	char hex[3]={bid[i*2+0],bid[i*2+1],0};
+	bundles[bundle_number].bid_hex[i]=strtoll(hex,NULL,16);
+      }
+    }
     // Never announced
     bundles[bundle_number].last_offset_announced=0;
     bundles[bundle_number].last_version_of_manifest_announced=0;
@@ -179,14 +185,14 @@ int register_bundle(char *service,
 	    bundle_sync_key.key[2],bundle_sync_key.key[3],
 	    bundle_sync_key.key[4],bundle_sync_key.key[5],
 	    bundle_sync_key.key[6],bundle_sync_key.key[7],
-	    bundles[bundle_number].bid,bundles[bundle_number].version);
+	    bundles[bundle_number].bid_hex,bundles[bundle_number].version);
     fclose(f);
     
   }
 
   
   printf("  >> Inserted %s*/%lld into the tree: key=%02X%02X%02X (now %d bundles)\n",
-	 bundles[bundle_number].bid,
+	 bundles[bundle_number].bid_hex,
 	 bundles[bundle_number].version,
 	 bundle_sync_key.key[0],
 	 bundle_sync_key.key[1],
@@ -201,7 +207,7 @@ int we_have_this_bundle(char *bid_prefix, long long version)
 {
   int i;
   for(i=0;i<bundle_count;i++) {
-    if (!strncasecmp(bundles[i].bid,bid_prefix,strlen(bid_prefix))) {
+    if (!strncasecmp(bundles[i].bid_hex,bid_prefix,strlen(bid_prefix))) {
       // We have this bundle, but do we have this version?
       if (bundles[i].version>=version) {
 	// Ok, we have this already
@@ -222,7 +228,7 @@ char *bundle_recipient_if_known(char *bid_prefix)
 {
   int i;
   for(i=0;i<bundle_count;i++) {
-    if (!strncasecmp(bundles[i].bid,bid_prefix,strlen(bid_prefix))) {
+    if (!strncasecmp(bundles[i].bid_hex,bid_prefix,strlen(bid_prefix))) {
       return bundles[i].recipient;
     }
   }

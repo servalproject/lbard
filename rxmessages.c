@@ -69,7 +69,8 @@ int saw_length(char *peer_prefix,char *bid_prefix,long long version,
 }
 
 int saw_piece(char *peer_prefix,int for_me,
-	      char *bid_prefix,long long version,
+	      char *bid_prefix, unsigned char *bid_prefix_bin,
+	      long long version,
 	      long long piece_offset,int piece_bytes,int is_end_piece,
 	      int is_manifest_piece,unsigned char *piece,
 
@@ -98,12 +99,12 @@ int saw_piece(char *peer_prefix,int for_me,
     fprintf(stderr,
 	    "We recently received %s* version %lld - ignoring piece.\n",
 	    bid_prefix,version);
-    sync_tell_peer_we_have_bundle_by_id(peer,bid_prefix,version);
+    sync_tell_peer_we_have_bundle_by_id(peer,bid_prefix_bin,version);
     return 0;
     
   }
   for(int i=0;i<bundle_count;i++) {
-    if (!strncasecmp(bid_prefix,bundles[i].bid,strlen(bid_prefix))) {
+    if (!strncasecmp(bid_prefix,bundles[i].bid_hex,strlen(bid_prefix))) {
       if (debug_pieces) printf("We have version %lld of BID=%s*.  %s is offering us version %lld\n",
 	      bundles[i].version,bid_prefix,peer_prefix,version);
       if (version<=bundles[i].version) {
@@ -659,6 +660,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       offset+=2;
       
       if (len-offset<(1+8+8+4+1)) return -3;
+      bid_prefix_bin=&msg[offset];
       snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
 	       msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
 	       msg[offset+4],msg[offset+5],msg[offset+6],msg[offset+7]);
@@ -691,7 +693,8 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	}
             
       saw_piece(peer_prefix,for_me,
-		bid_prefix,version,piece_offset,piece_bytes,is_end_piece,
+		bid_prefix,bid_prefix_bin,
+		version,piece_offset,piece_bytes,is_end_piece,
 		piece_is_manifest,&msg[offset],
 		prefix, servald_server,credential);
 

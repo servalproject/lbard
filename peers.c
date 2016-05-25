@@ -467,14 +467,14 @@ int peer_queue_list_dump(struct peer_state *p)
   printf("& tx_bundle=%d, tx_bundle_bid=%s*, priority=%d\n",
 	 p->tx_bundle,
 	 (p->tx_bundle>-1)?
-	 bundles[p->tx_bundle].bid:"",
+	 bundles[p->tx_bundle].bid_hex:"",
 	 p->tx_bundle_priority);
   printf("& %d more queued\n",p->tx_queue_len);
   for(int i=0;i<p->tx_queue_len;i++) {
     int bundle=p->tx_queue_bundles[i];
     int priority=p->tx_queue_priorities[i];
     printf("  & bundle=%d, bid=%s*, priority=%d\n",	   
-	   bundle,bundles[bundle].bid,priority);
+	   bundle,bundles[bundle].bid_hex,priority);
 
   }
   return 0;

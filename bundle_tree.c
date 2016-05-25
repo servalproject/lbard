@@ -214,8 +214,7 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   msg[(*offset)++]=peer_records[target_peer]->sid_prefix[0];
   msg[(*offset)++]=peer_records[target_peer]->sid_prefix[1];
   
-  for(int i=0;i<8;i++)
-    msg[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);
+  for(int i=0;i<8;i++) msg[(*offset)++]=bundles[bundle_number].bid_bin[i];
   // Bundle version (8 bytes)
   for(int i=0;i<8;i++)
     msg[(*offset)++]=(cached_version>>(i*8))&0xff;
@@ -257,7 +256,7 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   if (debug_announce) {
     printf("T+%lldms : Announcing for %s* ",gettime_ms()-start_time,
 	    peer_records[target_peer]->sid_prefix);
-    for(int i=0;i<8;i++) fprintf(stderr,"%c",bundles[bundle_number].bid[i]);
+    for(int i=0;i<8;i++) fprintf(stderr,"%c",bundles[bundle_number].bid_hex[i]);
     printf("* (priority=0x%llx) version %lld %s segment [%d,%d)\n",
 	    bundles[bundle_number].last_priority,
 	    bundles[bundle_number].version,
@@ -267,10 +266,10 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 
   char status_msg[1024];
   snprintf(status_msg,1024,"Announcing %c%c%c%c%c%c%c%c* version %lld %s segment [%d,%d)",
-	   bundles[bundle_number].bid[0],bundles[bundle_number].bid[1],
-	   bundles[bundle_number].bid[2],bundles[bundle_number].bid[3],
-	   bundles[bundle_number].bid[4],bundles[bundle_number].bid[5],
-	   bundles[bundle_number].bid[6],bundles[bundle_number].bid[7],
+	   bundles[bundle_number].bid_hex[0],bundles[bundle_number].bid_hex[1],
+	   bundles[bundle_number].bid_hex[2],bundles[bundle_number].bid_hex[3],
+	   bundles[bundle_number].bid_hex[4],bundles[bundle_number].bid_hex[5],
+	   bundles[bundle_number].bid_hex[6],bundles[bundle_number].bid_hex[7],
 	   bundles[bundle_number].version,
 	   is_manifest?"manifest":"payload",
 	   start_offset,start_offset+actual_bytes);
@@ -333,13 +332,12 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
       {
 	fprintf(stderr,"T+%lldms : Sending length of bundle %s\n",
 		gettime_ms()-start_time,
-		bundles[bundle_number].bid);
+		bundles[bundle_number].bid_hex);
 	if ((mtu-*offset)>(1+8+8+4)) {
 	  // Announce length of bundle
 	  msg[(*offset)++]='L';
 	  // Bundle prefix (8 bytes)
-	  for(int i=0;i<8;i++)
-	    msg[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);
+	  for(int i=0;i<8;i++) msg[(*offset)++]=bundles[bundle_number].bid_bin[i];
 	  // Bundle version (8 bytes)
 	  for(int i=0;i<8;i++)
 	    msg[(*offset)++]=(cached_version>>(i*8))&0xff;
@@ -374,7 +372,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
       peer_records[peer]->tx_bundle_manifest_offset=0;
       fprintf(stderr,"T+%lldms : Resending bundle %s from the start.\n",
 	      gettime_ms()-start_time,
-	      bundles[bundle_number].bid);
+	      bundles[bundle_number].bid_hex);
 
     }
   
@@ -479,14 +477,14 @@ int sync_tree_populate_with_our_bundles()
 }
 
 
-int sync_build_bar_in_slot(int slot,char *bid_prefix,
+int sync_build_bar_in_slot(int slot,unsigned char *bid_bin,
 			   long long bundle_version)
 {
   int ofs=0;
   report_queue[slot][ofs++]='B';
 
   // BID prefix
-  for(int i=0;i<8;i++) report_queue[slot][ofs++]=hex_byte_value(&bid_prefix[i*2]);
+  for(int i=0;i<8;i++) report_queue[slot][ofs++]=bid_bin[i];
   // Bundle Version
   for(int i=0;i<8;i++) report_queue[slot][ofs++]=(bundle_version>>(i*8))&0xff;
   // Dummy recipient + size byte
@@ -499,11 +497,11 @@ int sync_build_bar_in_slot(int slot,char *bid_prefix,
 
 int sync_tell_peer_we_have_this_bundle(int peer, int bundle)
 {
-  return sync_tell_peer_we_have_bundle_by_id(peer,bundles[bundle].bid,
+  return sync_tell_peer_we_have_bundle_by_id(peer,bundles[bundle].bid_bin,
 					     bundles[bundle].version);
 }
   
-int sync_tell_peer_we_have_bundle_by_id(int peer,char *bid,long long version)
+int sync_tell_peer_we_have_bundle_by_id(int peer,unsigned char *bid,long long version)
 {
   int slot=report_queue_length;
 
@@ -537,11 +535,21 @@ int sync_tell_peer_we_have_bundle_by_id(int peer,char *bid,long long version)
   return 0;
 }
 
+unsigned char bin_prefix[8];
+unsigned char *bid_prefix_hex_to_bin(char *hex)
+{
+  for(int i=0;i<8;i++) {
+    char hex[3]={hex[i*2+0],hex[i*2+1],0};
+    bin_prefix[i]=strtoll(hex,NULL,16);
+  }
+  return bin_prefix;
+}
+
 int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial)
 {
 
   return sync_tell_peer_we_have_bundle_by_id
-    (peer,peer_records[peer]->partials[partial].bid_prefix,
+    (peer,bid_prefix_hex_to_bin(peer_records[peer]->partials[partial].bid_prefix),
      peer_records[peer]->partials[partial].bundle_version);  
 }
 
@@ -664,7 +672,7 @@ int lookup_bundle_by_prefix_hex(char *prefix)
   int i;
   for(bundle=0;bundle<bundle_count;bundle++) {
     for(i=0;i<8;i++) {
-      if (prefix[i]!=bundles[bundle].bid[i]) break;
+      if (prefix[i]!=bundles[bundle].bid_hex[i]) break;
     }
     if (i==8) return bundle;
   }
@@ -678,7 +686,7 @@ int lookup_bundle_by_prefix_bin_and_version(unsigned char *prefix, long long ver
   int i;
   for(bundle=0;bundle<bundle_count;bundle++) {
     for(i=0;i<8;i++) {
-      if (prefix[i]!=bundles[bundle].bid[i]) break;
+      if (prefix[i]!=bundles[bundle].bid_bin[i]) break;
     }
     if (i==8) return bundle;
   }
@@ -690,7 +698,7 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
 {
   struct bundle_record *b=&bundles[bundle];
 
-  int priority=calculate_bundle_intrinsic_priority(b->bid,
+  int priority=calculate_bundle_intrinsic_priority(b->bid_hex,
 						   b->length,
 						   b->version,
 						   b->service,
@@ -828,9 +836,9 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
   } else {
     fprintf(stderr,"SYNC ACK: Ignoring, because we are sending bundle #%d, and request is for bundle #%d\n",p->tx_bundle,bundle);
     fprintf(stderr,"          Requested BID/version = %s/%lld\n",
-	    bundles[bundle].bid, bundles[bundle].version);
+	    bundles[bundle].bid_hex, bundles[bundle].version);
     fprintf(stderr,"                 TX BID/version = %s/%lld\n",
-	    bundles[p->tx_bundle].bid, bundles[p->tx_bundle].version);
+	    bundles[p->tx_bundle].bid_hex, bundles[p->tx_bundle].version);
   }
 
   return 0;
@@ -861,7 +869,7 @@ void peer_now_has_this_key(void *context, void *peer_context,void *key_context,
 	   "    sender=%s,\n"
 	   "    recipient=%s\n",
 	   p->sid_prefix,
-	   b->bid,b->service,b->version,b->sender,b->recipient);
+	   b->bid_hex,b->service,b->version,b->sender,b->recipient);
 
   sync_dequeue_bundle(p,b->index);
 
@@ -882,7 +890,7 @@ void peer_does_not_have_this_key(void *context, void *peer_context,void *key_con
 	   "    sender=%s,\n"
 	   "    recipient=%s\n",
 	   p->sid_prefix,
-	   b->bid,b->service,b->version,b->sender,b->recipient);
+	   b->bid_hex,b->service,b->version,b->sender,b->recipient);
 
   if (debug_sync_keys) {
     char filename[1024];
@@ -891,7 +899,7 @@ void peer_does_not_have_this_key(void *context, void *peer_context,void *key_con
     fprintf(f,"%02X%02X%02X%02X%02X%02X%02X%02X:%s:%016llX\n",
 	    key->key[0],key->key[1],key->key[2],key->key[3],
 	    key->key[4],key->key[5],key->key[6],key->key[7],
-	    b->bid,b->version);
+	    b->bid_hex,b->version);
     fclose(f);
   }
     
