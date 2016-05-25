@@ -46,13 +46,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "serial.h"
 
 int debug_radio=0;
-int debug_pieces=1;
+int debug_pieces=0;
 int debug_announce=0;
 int debug_pull=0;
 int debug_insert=0;
 int debug_radio_rx=0;
 int debug_gpio=0;
-int debug_message_pieces=1;
+int debug_message_pieces=0;
 int debug_sync=0;
 int debug_sync_keys=0;
 
