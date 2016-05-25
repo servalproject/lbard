@@ -245,8 +245,10 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 	fprintf(f,"http result code = %d\n",result_code);
 	fclose(f);
       }
-    } else
-      printf("http result code = %d\n",result_code);
+    }
+  }
+  else
+    printf("http result code = %d\n",result_code);
     
     return -1;
   }
