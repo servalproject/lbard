@@ -881,6 +881,7 @@ int recent_bundle_count=0;
 
 int sync_remember_recently_received_bundle(char *bid_prefix, long long version)
 {
+  int first_timed_out=-1;
   int i;
   for(i=0;i<recent_bundle_count;i++)
     if (!strcasecmp(bid_prefix,recent_bundles[i].bid_prefix)) {
@@ -888,9 +889,12 @@ int sync_remember_recently_received_bundle(char *bid_prefix, long long version)
 	recent_bundles[i].bundle_version=version;
       recent_bundles[i].timeout=time(0)+RECENT_BUNDLE_TIMEOUT;
       return 0;
+    } else {
+      if (recent_bundles[i].timeout<time(0)) first_timed_out=i;
     }
   if (recent_bundle_count>=MAX_RECENT_BUNDLES) {
-    i=random()%MAX_RECENT_BUNDLES;
+    if (first_timed_out==-1) i=random()%MAX_RECENT_BUNDLES;
+    else i=first_timed_out;
     free(recent_bundles[i].bid_prefix); recent_bundles[i].bid_prefix=NULL;
   } else {
     i=recent_bundle_count;
