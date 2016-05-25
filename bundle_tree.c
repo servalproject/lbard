@@ -633,10 +633,6 @@ int lookup_bundle_by_prefix_hex(char *prefix)
     for(i=0;i<8;i++) {
       if (prefix[i]!=bundles[bundle].bid[i]) break;
     }
-    fprintf(stderr,"bundle #%d = %s, looking for %s, matched %d bytes\n",
-	    bundle,
-	    bundles[bundle].bid,
-	    prefix,i);
     if (i==8) return bundle;
   }
   return -1;
