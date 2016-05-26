@@ -223,10 +223,10 @@ int progress_report_bundle_receipts()
     for(int i=0;i<received_bundle_count;i++)
     {
       fprintf(stderr,"Received %s*/%-16lld @ T%lldms %s\n",
-	      received_bundles[0].bid_prefix_hex,
-	      received_bundles[0].version,
-	      gettime_ms()-received_bundles[0].rx_time,
-	      received_bundles[0].reportedP?"":"<fresh>");
+	      received_bundles[i].bid_prefix_hex,
+	      received_bundles[i].version,
+	      gettime_ms()-received_bundles[i].rx_time,
+	      received_bundles[i].reportedP?"":"<fresh>");
     }
   }
   return 0;
