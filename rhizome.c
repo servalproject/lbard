@@ -114,8 +114,11 @@ int load_rhizome_db(int timeout,
   // Did we keep reading upto the last fraction of a second?
   if ((gettime_ms()-last_read_time)<100) {
     // Yes, rhizome list fetch consumed all available time, so ignore tokens
+    fprintf(stderr,"rhizome DB load ran out of time, so assume we need to re-request.\n");
     ignore_token=1;
-  }
+  } else
+    fprintf(stderr,"rhizome DB finished in time; advancing token.\n");
+    
   
   fclose(f);
   if(result_code!=200) {

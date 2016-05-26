@@ -46,6 +46,7 @@ extern char *my_sid_hex;
 
 struct bundle_record bundles[MAX_BUNDLES];
 int bundle_count=0;
+int ignored_bundles=0;
 
 int register_bundle(char *service,
 		    char *bid,
@@ -73,6 +74,7 @@ int register_bundle(char *service,
     if (strncasecmp("meshms",service,6)) {
       rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
 		  "Rejected non-meshms bundle seen while meshms_only=1");
+      ignored_bundles++;
       return 0;
     }
   }
@@ -85,6 +87,7 @@ int register_bundle(char *service,
   if ((versionll<min_version)&&strncasecmp("meshms2",service,7)) {
     rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
 		"Rejected bundle because it was too old (version<min_version), and service!=meshms2");
+    ignored_bundles++;
     return 0;
   }
   
@@ -126,8 +129,10 @@ int register_bundle(char *service,
     // Replace old bundle values, ...
 
     // ... unless we already hold a newer version
-    if (bundles[bundle_number].version>=versionll)
+    if (bundles[bundle_number].version>=versionll) {
+      ignored_bundles++;
       return 0;
+    }
     
     free(bundles[bundle_number].service);
     bundles[bundle_number].service=NULL;
@@ -191,12 +196,12 @@ int register_bundle(char *service,
   }
 
   
-  printf("  >> Inserted %s*/%lld into the tree: key=%02X%02X%02X (now %d bundles)\n",
+  printf("  >> Inserted %s*/%lld into the tree: key=%02X%02X%02X (now %d bundles, %d ignored)\n",
 	 bundles[bundle_number].bid_hex,
 	 bundles[bundle_number].version,
 	 bundle_sync_key.key[0],
 	 bundle_sync_key.key[1],
-	 bundle_sync_key.key[2],bundle_number);
+	 bundle_sync_key.key[2],bundle_number,ignored_bundles);
   
   rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
 	      "Bundle registered");
