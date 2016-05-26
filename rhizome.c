@@ -111,14 +111,11 @@ int load_rhizome_db(int timeout,
   long long last_read_time=0LL;  
   int result_code=http_get_simple(servald_server,
 				  credential,path,f,timeout,&last_read_time);
-  // Did we keep reading upto the last fraction of a second?
-  if ((gettime_ms()-last_read_time)<100) {
-    // Yes, rhizome list fetch consumed all available time, so ignore tokens
-    fprintf(stderr,"rhizome DB load ran out of time, so assume we need to re-request.\n");
-    ignore_token=1;
-  } else
-    fprintf(stderr,"rhizome DB finished in time; advancing token.\n");
-    
+
+  // By default ignore the advance token, unless we actually read the end of the
+  // rhizome bundle json file.  This is the most reliable way to know when we have
+  // hit the end of the list, and can thus safely accept the new token.
+  ignore_token=1;
   
   fclose(f);
   if(result_code!=200) {
@@ -137,23 +134,18 @@ int load_rhizome_db(int timeout,
   int count=0;
 
   char fields[14][8192];
+  char candidate_token[128]="";
   
   line[0]=0; fgets(line,8192,f);
   while(line[0]) {
+    if (line[0]=='}') ignore_token=0;
     int n=parse_json_line(line,fields,14);
     if (n==14) {
       if (strcmp(fields[0],"null")) {
 	// We have a token that will allow us to ask for only newer bundles in a
 	// future call. Remember it and use it.
-	// XXX - This token is only reliable if we read the complete list in this call.
 
-	if (!ignore_token) {
-	  if (*token) free(*token);
-	  *token=strdup(fields[0]);
-	  if (1) printf("Saw rhizome progressive fetch token '%s'\n",*token);
-	} else {
-	  if (1) printf("Ignoring rhizome progressive fetch token '%s' because of timeout\n",*token);
-	}
+	strcpy(candidate_token,fields[0]);
       }
       
       // Now we have the fields, so register the bundles into our internal list.
@@ -173,6 +165,17 @@ int load_rhizome_db(int timeout,
     line[0]=0; fgets(line,8192,f);
   }
 
+  if (!ignore_token) {
+    if (candidate_token[0]) {
+      if (*token) free(*token);
+      *token=strdup(candidate_token);
+      if (1) printf("Saw rhizome progressive fetch token '%s'\n",*token);
+    }
+  } else {
+    if (1) printf("Ignoring rhizome progressive fetch token '%s' because of timeout\n",candidate_token);
+  }
+
+  
   if (0)
     message_buffer_length+=
       snprintf(&message_buffer[message_buffer_length],
