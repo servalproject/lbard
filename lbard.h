@@ -404,3 +404,6 @@ int sync_is_bundle_recently_received(char *bid_prefix, long long version);
 int sync_tell_peer_we_have_bundle_by_id(int peer,unsigned char *bid_bin,
 					long long version);
 unsigned char *bid_prefix_hex_to_bin(char *hex);
+int progress_report_bundle_receipts();
+int progress_log_bundle_receipt(char *bid_prefix, long long version);
+

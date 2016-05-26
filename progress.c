@@ -175,5 +175,59 @@ int show_progress()
     }
     if (count) fprintf(stderr,"<< end of bundle transfer list.\n");
   }
+  progress_report_bundle_receipts();
+  
+  return 0;
+}
+
+#define MAX_RECEIVED_BUNDLES 10
+
+struct received_bundle {
+  long long version;
+  char *bid_prefix_hex;
+  long long rx_time;
+  int reportedP;
+};
+
+struct received_bundle received_bundles[MAX_RECEIVED_BUNDLES];
+int received_bundle_count=0;
+
+int progress_log_bundle_receipt(char *bid_prefix, long long version)
+{
+  // Shuffle list down and make space
+  
+  if (received_bundle_count<MAX_RECEIVED_BUNDLES)
+    received_bundle_count++;
+  else free(received_bundles[MAX_RECEIVED_BUNDLES-1].bid_prefix_hex);
+  
+  for(int i=MAX_RECEIVED_BUNDLES-1;i>0;i--)
+    received_bundles[i]=received_bundles[i-1];
+
+  // Record newly received bundle
+  received_bundles[0].rx_time=gettime_ms();
+  received_bundles[0].version=version;
+  received_bundles[0].bid_prefix_hex=strdup(bid_prefix);
+  received_bundles[0].reportedP=0;
+
+  return 0;
+}
+
+int progress_report_bundle_receipts()
+{
+  int newstuff=0;
+  
+  for(int i=0;i<received_bundle_count;i++)
+    if (!received_bundles[0].reportedP) newstuff=1;
+
+  if (newstuff) {
+    for(int i=0;i<received_bundle_count;i++)
+    {
+      fprintf(stderr,"Received %s*/%-16lld @ T%lldms %s\n",
+	      received_bundles[0].bid_prefix_hex,
+	      received_bundles[0].version,
+	      gettime_ms()-received_bundles[0].rx_time,
+	      received_bundles[0].reportedP?"":"<fresh>");
+    }
+  }
   return 0;
 }

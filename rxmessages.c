@@ -419,6 +419,8 @@ int saw_piece(char *peer_prefix,int for_me,
 	  peer_records[peer]->insert_failures[bundle]=0;
 #endif
 	}
+	progress_log_bundle_receipt(peer_records[peer]->partials[i].bid_prefix,
+				    peer_records[peer]->partials[i].bundle_version);
       }
       // Now release this partial.
       clear_partial(&peer_records[peer]->partials[i]);
