@@ -583,9 +583,6 @@ int partial_first_missing_byte(struct segment_list *s)
     s=s->next;
   }
   if ((candidate_count<16)&&(add_zero)) candidates[candidate_count++]=0;
-
-  for(int i=0;i<candidate_count;i++)
-    fprintf(stderr,"  candidate #%d = %d\n",i,candidates[i]);
   
   // The values should be in descending order. Don't ask for highest value,
   // incase it signals the end of the bundle (we don't necessarily know the
