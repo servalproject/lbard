@@ -181,7 +181,7 @@ int load_rhizome_db(int timeout,
 	       "Rhizome contains %d new bundles (token = %s). We now know about %d bundles.\n",
 	       timeout,count,*token,bundle_count);
   fclose(f);
-  unlink(filename);
+  // unlink(filename);
   
   return 0;
 }
