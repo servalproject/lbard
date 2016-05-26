@@ -225,8 +225,9 @@ int progress_report_bundle_receipts()
       fprintf(stderr,"Received %s*/%-16lld @ T%lldms %s\n",
 	      received_bundles[i].bid_prefix_hex,
 	      received_bundles[i].version,
-	      gettime_ms()-received_bundles[i].rx_time,
+	      received_bundles[i].rx_time-gettime_ms(),
 	      received_bundles[i].reportedP?"":"<fresh>");
+      received_bundles[i].reportedP=1;
     }
   }
   return 0;
