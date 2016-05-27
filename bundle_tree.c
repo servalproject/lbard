@@ -945,12 +945,21 @@ int sync_remember_recently_received_bundle(char *bid_prefix, long long version)
   recent_bundles[i].bid_prefix=strdup(bid_prefix);
   recent_bundles[i].bundle_version=version;
   recent_bundles[i].timeout=time(0)+RECENT_BUNDLE_TIMEOUT;
+
+  fprintf(stderr,"recent_bundle_count now %d\n",recent_bundle_count);
   return 0;
 }
 
 int sync_is_bundle_recently_received(char *bid_prefix, long long version)
-{  
-  for(int i=0;i<recent_bundle_count;i++)
+{
+  fprintf(stderr,"Comparing %s/%lld to %d recent bundles.\n",
+	  bid_prefix,version,recent_bundle_count);
+  for(int i=0;i<recent_bundle_count;i++) {
+    fprintf(stderr,"Is %s/%lld = recent bundle %s/%lld?\n",
+	    bid_prefix,version,
+	    recent_bundles[i].bid_prefix,
+	    recent_bundles[i].bundle_version);
+    
     if (!strcasecmp(bid_prefix,recent_bundles[i].bid_prefix)) {
       if (version<=recent_bundles[i].bundle_version)
 	if (recent_bundles[i].timeout<time(0)) {
@@ -960,5 +969,6 @@ int sync_is_bundle_recently_received(char *bid_prefix, long long version)
 	  return 0;
       else return 0;
     }
+  }
   return 0;  
 }
