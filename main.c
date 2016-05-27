@@ -443,7 +443,6 @@ int main(int argc, char **argv)
       printf("*** TXing every %d+1d%dms, ratio=%.3f (%d+%d)\n",
 	     message_update_interval,message_update_interval_randomness,ratio,
 	     radio_transmissions_seen,radio_transmissions_byus);
-C;      
       congestion_update_time=gettime_ms()+4000;
 
       if (radio_transmissions_seen) {
@@ -464,7 +463,6 @@ C;
       radio_transmissions_seen=0;
       radio_transmissions_byus=0;
     }
-C;      
     
     // Deal gracefully with clocks that run backwards from time to time.
     if (last_message_update_time>gettime_ms())
@@ -559,10 +557,7 @@ C;
 	      // we reject it with a timeout error.
 	      http_process(servald_server,credential,my_sid_hex,s);
 	    }
-	  }	
-C;      
-	
-	
+	  }		
       if (!monitor_mode)
 	update_my_message(serialfd,
 			  my_sid,
@@ -580,7 +575,6 @@ C;
 	status_dump();
       }
     }
-C;      
     if ((serial_errors>20)&&reboot_when_stuck) {
       // If we are unable to write to the serial port repeatedly for a while,
       // we could be facing funny serial port behaviour bugs that we see on the MR3020.
@@ -593,9 +587,6 @@ C;
     if (time(0)>last_summary_time) {
       last_summary_time=time(0);
       show_progress();
-    }
-
-C;      
-    
+    }    
   }
 }
