@@ -955,11 +955,17 @@ int sync_is_bundle_recently_received(char *bid_prefix, long long version)
   fprintf(stderr,"Comparing %s/%lld to %d recent bundles.\n",
 	  bid_prefix,version,recent_bundle_count);
   for(int i=0;i<recent_bundle_count;i++) {
-    fprintf(stderr,"Is %s/%lld = recent bundle %s/%lld (%lld seconds to stale)?\n",
+    fprintf(stderr,"Is %s/%lld = recent bundle %s/%lld (%lld seconds to stale, %d,%d,%d)?\n",
 	    bid_prefix,version,
 	    recent_bundles[i].bid_prefix,
 	    recent_bundles[i].bundle_version,
-	    (long long)(recent_bundles[i].timeout-time(0))
+	    (long long)(recent_bundles[i].timeout-time(0)),
+
+	    (!strcasecmp(bid_prefix,recent_bundles[i].bid_prefix)),
+	    (version<=recent_bundles[i].bundle_version),
+	    (recent_bundles[i].timeout<time(0))
+
+	    
 	    );
     
     if (!strcasecmp(bid_prefix,recent_bundles[i].bid_prefix)) {
