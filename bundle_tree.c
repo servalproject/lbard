@@ -963,14 +963,14 @@ int sync_is_bundle_recently_received(char *bid_prefix, long long version)
 
 	    (!strcasecmp(bid_prefix,recent_bundles[i].bid_prefix)),
 	    (version<=recent_bundles[i].bundle_version),
-	    (recent_bundles[i].timeout<time(0))
+	    (recent_bundles[i].timeout>=time(0))
 
 	    
 	    );
     
     if (!strcasecmp(bid_prefix,recent_bundles[i].bid_prefix)) {
       if (version<=recent_bundles[i].bundle_version)
-	if (recent_bundles[i].timeout<time(0)) {
+	if (recent_bundles[i].timeout>=time(0)) {
 	  fprintf(stderr,"Hang on, we've received %s recently!\n",bid_prefix);
 	  return 1;
 	} else
