@@ -315,7 +315,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
       if ((line[len]=='\n')||(line[len]=='\r')) {
 	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;
-	// if (len) printf("Line of response: %s\n",line);
+	if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"Content-Length: %d",&content_length)==1) {
 	  // got content length
 	  printf("Expected content-length = %d\n",content_length);
