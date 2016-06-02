@@ -341,6 +341,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
   int rxlen=0;
   r=0;
   while(r>-1) {
+    errno=0;
     r=read_nonblock(sock,line,LINE_BYTES);
     if (r>0) {
       printf("read %d body bytes @ T%lld\n",r,timeout_time-gettime_ms());
@@ -350,7 +351,10 @@ int http_get_simple(char *server_and_port, char *auth_token,
       if (content_length>-1) {
 	if (rxlen>=content_length) break;
       }
-    } else usleep(1000);
+    } else {
+      perror("waiting for data");
+      usleep(1000);
+    }
 
     if (gettime_ms()>timeout_time) {
       close(sock);
