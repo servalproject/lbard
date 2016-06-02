@@ -341,7 +341,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
   while(r>-1) {
     r=read_nonblock(sock,line,1024);
     if (r>0) {
-      printf("read %d body bytes @ T%d\n",r,timeout_time-gettime_ms());
+      printf("read %d body bytes @ T%lld\n",r,timeout_time-gettime_ms());
       if (last_read_time) *last_read_time=gettime_ms();
       fwrite(line,r,1,outfile);
       rxlen+=r;
