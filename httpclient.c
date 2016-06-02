@@ -302,7 +302,8 @@ int http_get_simple(char *server_and_port, char *auth_token,
 
   // Read reply, streaming output to file after we have skipped the header
   int http_response=-1;
-  char line[1024];
+  #define LINE_BYTES 65536
+  char line[LINE_BYTES];
   int len=0;
   int empty_count=0;
   int content_length=-1;
@@ -339,7 +340,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
   int rxlen=0;
   r=0;
   while(r>-1) {
-    r=read_nonblock(sock,line,1024);
+    r=read_nonblock(sock,line,LINE_BYTES);
     if (r>0) {
       printf("read %d body bytes @ T%lld\n",r,timeout_time-gettime_ms());
       if (last_read_time) *last_read_time=gettime_ms();
