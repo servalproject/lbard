@@ -316,10 +316,8 @@ int http_get_simple(char *server_and_port, char *auth_token,
       if ((line[len]=='\n')||(line[len]=='\r')) {
 	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;
-	if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"Content-Length: %d",&content_length)==1) {
 	  // got content length
-	  printf("Expected content-length = %d\n",content_length);
 	}
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
@@ -353,8 +351,10 @@ int http_get_simple(char *server_and_port, char *auth_token,
 	if (rxlen>=content_length) break;
       }
     } else {
-      perror("waiting for data");
-      usleep(1000);
+      // If no error and no data, then it really is EOF
+      if (!errno) break;
+      // ... else, wait a little while, and try again.
+      usleep(10000);
     }
 
     if (gettime_ms()>timeout_time) {
