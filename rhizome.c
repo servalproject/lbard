@@ -89,10 +89,10 @@ int load_rhizome_db(int timeout,
   
   // We use the new-since-time version once we have a token
   // to make this much faster.
-  if ((!*token)||(!(random()&0xf))) {
+  if ((!*token)||(!(random()&0x1f))) {
       snprintf(path,8192,"/restful/rhizome/bundlelist.json");
       // Allow a bit more time to read all the bundles this time around
-      timeout=2000;
+      timeout=15000;
   } else
     snprintf(path,8192,"/restful/rhizome/newsince/%s/bundlelist.json",
 	     *token);

@@ -364,10 +364,7 @@ int main(int argc, char **argv)
 	
 	if (load_timeout<500) load_timeout=500;
 	
-	// XXX - A problem is that the rhizome list can take a relatively long time,
-	// and doesn't have a nice solution for partial transfers: so we just have to
-	// allow it to take as long as it wants.
-	if (load_timeout<15000) load_timeout=15000;
+	printf("Rhizome db load timeout = %lldms\n",load_timeout);
 	
 	if (!monitor_mode)
 	  load_rhizome_db(load_timeout,
