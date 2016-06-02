@@ -318,6 +318,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
 	// if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"Content-Length: %d",&content_length)==1) {
 	  // got content length
+	  printf("Expected content-length = %d\n",content_length);
 	}
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
