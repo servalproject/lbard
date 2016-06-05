@@ -865,9 +865,11 @@ int http_get_async(char *server_and_port, char *auth_token,
   int len=0;
   int empty_count=0;
   int content_length=-1;
+  int header_bytes=0;
   set_nonblock(sock);
   int r;
   while(len<1024) {
+    header_bytes++;
     r=read_nonblock(sock,&line[len],1);
     if (r==1) {
       if ((line[len]=='\n')||(line[len]=='\r')) {
@@ -892,6 +894,7 @@ int http_get_async(char *server_and_port, char *auth_token,
   }
 
   // Got headers
+  printf("Read %d header bytes. Ready for async fetch.\n",header_bytes);
   return sock;
 }
 

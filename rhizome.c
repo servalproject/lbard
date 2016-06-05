@@ -121,6 +121,7 @@ int load_rhizome_db_async(char *servald_server,
     case 0: // Got a line
       {
 	char fields[14][8192];
+	printf("Parsing '%s'\n",load_rhizome_db_line);
 	int n=parse_json_line(load_rhizome_db_line,fields,14);
 	if (n==14) {
 	  if (strcmp(fields[0],"null")) {
@@ -143,7 +144,6 @@ int load_rhizome_db_async(char *servald_server,
 			  );
 	}
       }
-      load_rhizome_db_line_bytes=0;
       // Reset timeout
       load_rhizome_db_socket_timeout=gettime_ms()+60000;
       break;
