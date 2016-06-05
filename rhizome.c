@@ -189,6 +189,69 @@ int load_rhizome_db(int timeout,
   return 0;
 }
 
+int load_rhizome_db_socket=-1;
+int load_rhizome_db_async_start(char *servald_server,
+				char *credential, char **token)
+{
+  char path[8192];
+  
+  // We use the new-since-time version once we have a token
+  // to make this much faster.
+  if ((!*token)||(!(random()&0x1f))) {
+      snprintf(path,8192,"/restful/rhizome/bundlelist.json");
+  } else
+    snprintf(path,8192,"/restful/rhizome/newsince/%s/bundlelist.json",
+	     *token);
+    
+  load_rhizome_db_socket=http_get_async(servald_server,credential,path,5000);
+
+  return load_rhizome_db_socket;
+}
+
+char load_rhizome_db_line[1024];
+int load_rhizome_db_line_bytes=0;
+long long load_rhizome_db_socket_timeout=0;
+
+int load_rhizome_db_async(char *servald_server,
+			  char *credential, char **token)
+{
+  // Make sure we have a socket, and that it isn't stale
+  if (load_rhizome_db_socket_timeout<gettime_ms()) {
+    if (load_rhizome_db_socket>=0) close(load_rhizome_db_socket);
+    load_rhizome_db_socket=-1;
+  }
+  if (load_rhizome_db_socket<0) {
+    if (load_rhizome_db_async_start(servald_server,credential,token)<0)
+      return -1;
+    else
+      load_rhizome_db_socket_timeout=gettime_ms()+60000;
+  }
+  while (1) {
+    int r=http_read_next_line(load_rhizome_db_socket,
+			      load_rhizome_db_line,
+			    &load_rhizome_db_line_bytes,1024);
+    switch(r) {
+    case 0: // Got a line
+      printf("HTTP Line read: '%s'\n",load_rhizome_db_line);
+      load_rhizome_db_line_bytes=0;
+      // Reset timeout
+      load_rhizome_db_socket_timeout=gettime_ms()+60000;
+      break;
+    case 1: // end of connection, socket already closed
+      load_rhizome_db_socket=-1; 
+      break;
+    case -1: // EAGAIN, so keep trying
+      break;
+    }
+
+    r=http_read_next_line(load_rhizome_db_socket,
+			      load_rhizome_db_line,
+			    &load_rhizome_db_line_bytes,1024);
+  }
+  
+}
+
+
 int hex_byte_value(char *hexstring)
 {
   char hex[3];
