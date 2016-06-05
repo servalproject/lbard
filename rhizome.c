@@ -83,7 +83,7 @@ int load_rhizome_db_async_start(char *servald_server,
   
   // We use the new-since-time version once we have a token
   // to make this much faster.
-  if ((!token)||(!(random()&0x1f))) {
+  if ((!token)||(!token[0])||(!(random()&0x1f))) {
       snprintf(path,8192,"/restful/rhizome/bundlelist.json");
   } else
     snprintf(path,8192,"/restful/rhizome/newsince/%s/bundlelist.json",
