@@ -112,6 +112,7 @@ int load_rhizome_db_async(char *servald_server,
     else
       load_rhizome_db_socket_timeout=gettime_ms()+60000;
   }
+  
   while (1) {
     int r=http_read_next_line(load_rhizome_db_socket,
 			      load_rhizome_db_line,
