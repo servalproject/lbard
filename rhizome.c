@@ -149,9 +149,11 @@ int load_rhizome_db_async(char *servald_server,
       load_rhizome_db_socket_timeout=gettime_ms()+60000;
       break;
     case 1: // end of connection, socket already closed
-      load_rhizome_db_socket=-1; 
+      load_rhizome_db_socket=-1;
+      return 0;
       break;
-    case -1: // EAGAIN, so keep trying
+    case -1: // EAGAIN, so keep trying, but return for now
+      return 0;
       break;
     }
 
