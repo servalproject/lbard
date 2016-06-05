@@ -75,133 +75,19 @@ int rhizome_log(char *service,
   return 0;
 }
 
-
-int load_rhizome_db(int timeout,
-		    char *prefix, char *servald_server,
-		    char *credential, char **token)
-{
-  char path[8192];
-
-  // printf("%s(): ENTERED\n",__FUNCTION__);
-  
-  // A timeout of zero means forever. Never do this.
-  if (!timeout) timeout=1;
-  
-  // We use the new-since-time version once we have a token
-  // to make this much faster.
-  if ((!*token)||(!(random()&0x1f))) {
-      snprintf(path,8192,"/restful/rhizome/bundlelist.json");
-      // Allow a bit more time to read all the bundles this time around
-      timeout=15000;
-  } else
-    snprintf(path,8192,"/restful/rhizome/newsince/%s/bundlelist.json",
-	     *token);
-    
-  char filename[1024];
-  snprintf(filename,1024,"%sbundle.list",prefix);
-  unlink(filename);
-  FILE *f=fopen(filename,"w");
-  if (!f) {
-    printf("could not open output file '%s'.\n",filename);
-    perror("fopen");
-    return -1;
-  }
-
-  int ignore_token=0;
-  long long last_read_time=0LL;  
-  int result_code=http_get_simple(servald_server,
-				  credential,path,f,timeout,&last_read_time);
-
-  // By default ignore the advance token, unless we actually read the end of the
-  // rhizome bundle json file.  This is the most reliable way to know when we have
-  // hit the end of the list, and can thus safely accept the new token.
-  ignore_token=1;
-  
-  fclose(f);
-  if(result_code!=200) {
-    printf("rhizome HTTP API request failed. URLPATH:%s\n",path);
-    return -1;
-  } else {
-    // printf("rhizome HTTP API request succeeded. URLPATH:%s\n",path);
-  }
-
-  // printf("Read bundle list.\n");
-
-  // Now read database into memory.
-  f=fopen(filename,"r");
-  if (!f) return -1;
-  char line[8192];
-  int count=0;
-
-  char fields[14][8192];
-  char candidate_token[128]="";
-  
-  line[0]=0; fgets(line,8192,f);
-  while(line[0]) {
-    if (line[0]=='}') ignore_token=0;
-    int n=parse_json_line(line,fields,14);
-    if (n==14) {
-      if (strcmp(fields[0],"null")) {
-	// We have a token that will allow us to ask for only newer bundles in a
-	// future call. Remember it and use it.
-
-	strcpy(candidate_token,fields[0]);
-      }
-      
-      // Now we have the fields, so register the bundles into our internal list.
-      register_bundle(fields[2] // service (file/meshms1/meshsm2)
-		      ,fields[3] // bundle id (BID)
-		      ,fields[4] // version
-		      ,fields[7] // author
-		      ,fields[8] // originated here
-		      ,strtoll(fields[9],NULL,10) // size of data/file
-		      ,fields[10] // file hash
-		      ,fields[11] // sender
-		      ,fields[12] // recipient
-		      );
-      count++;
-    }
-
-    line[0]=0; fgets(line,8192,f);
-  }
-
-  if (!ignore_token) {
-    if (candidate_token[0]) {
-      if (*token) free(*token);
-      *token=strdup(candidate_token);
-      if (1) printf("Saw rhizome progressive fetch token '%s'\n",*token);
-    }
-  } else {
-    if (1) printf("Ignoring rhizome progressive fetch token '%s' because of timeout\n",candidate_token);
-  }
-
-  
-  if (0)
-    message_buffer_length+=
-      snprintf(&message_buffer[message_buffer_length],
-	       message_buffer_size-message_buffer_length,
-	       "Querying rhizome DB for new content (timeout %d ms)\n"
-	       "Rhizome contains %d new bundles (token = %s). We now know about %d bundles.\n",
-	       timeout,count,*token,bundle_count);
-  fclose(f);
-  // unlink(filename);
-  
-  return 0;
-}
-
 int load_rhizome_db_socket=-1;
 int load_rhizome_db_async_start(char *servald_server,
-				char *credential, char **token)
+				char *credential, char *token)
 {
   char path[8192];
   
   // We use the new-since-time version once we have a token
   // to make this much faster.
-  if ((!*token)||(!(random()&0x1f))) {
+  if ((!token)||(!(random()&0x1f))) {
       snprintf(path,8192,"/restful/rhizome/bundlelist.json");
   } else
     snprintf(path,8192,"/restful/rhizome/newsince/%s/bundlelist.json",
-	     *token);
+	     token);
     
   load_rhizome_db_socket=http_get_async(servald_server,credential,path,5000);
 
@@ -213,7 +99,7 @@ int load_rhizome_db_line_bytes=0;
 long long load_rhizome_db_socket_timeout=0;
 
 int load_rhizome_db_async(char *servald_server,
-			  char *credential, char **token)
+			  char *credential, char *token)
 {
   // Make sure we have a socket, and that it isn't stale
   if (load_rhizome_db_socket_timeout<gettime_ms()) {
@@ -232,7 +118,31 @@ int load_rhizome_db_async(char *servald_server,
 			    &load_rhizome_db_line_bytes,1024);
     switch(r) {
     case 0: // Got a line
-      printf("HTTP Line read: '%s'\n",load_rhizome_db_line);
+      {
+	printf("HTTP Line read: '%s'\n",load_rhizome_db_line);
+	char fields[14][8192];
+	int n=parse_json_line(load_rhizome_db_line,fields,14);
+	if (n==14) {
+	  if (strcmp(fields[0],"null")) {
+	    // We have a token that will allow us to ask for only newer bundles in a
+	    // future call. Remember it and use it.
+	    
+	    strcpy(token,fields[0]);
+	  }
+	  
+	  // Now we have the fields, so register the bundles into our internal list.
+	  register_bundle(fields[2] // service (file/meshms1/meshsm2)
+			  ,fields[3] // bundle id (BID)
+			  ,fields[4] // version
+			  ,fields[7] // author
+			  ,fields[8] // originated here
+			  ,strtoll(fields[9],NULL,10) // size of data/file
+			  ,fields[10] // file hash
+			  ,fields[11] // sender
+			  ,fields[12] // recipient
+			  );
+	}
+      }
       load_rhizome_db_line_bytes=0;
       // Reset timeout
       load_rhizome_db_socket_timeout=gettime_ms()+60000;

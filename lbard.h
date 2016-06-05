@@ -410,4 +410,6 @@ int progress_log_bundle_receipt(char *bid_prefix, long long version);
 int http_get_async(char *server_and_port, char *auth_token,
 		   char *path, int timeout_ms);
 int http_read_next_line(int sock, char *line, int *len, int maxlen);
+int load_rhizome_db_async(char *servald_server,
+			  char *credential, char *token);
 

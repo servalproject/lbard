@@ -146,7 +146,7 @@ long long start_time=0;
 
 int main(int argc, char **argv)
 {
-  fprintf(stderr,"Version 20160602.1508.1\n");
+  fprintf(stderr,"Version 20160606.0535.1\n");
   
   start_time = gettime_ms();
   
@@ -343,43 +343,22 @@ int main(int argc, char **argv)
     }
     
   }
+
+  char token[1024]="";
   
-  long long next_rhizome_db_load_time=0;
   while(1) {
-
-    // Deal gracefully with clocks that run backwards sometimes
-    if ((next_rhizome_db_load_time-gettime_ms())>5000)
-      next_rhizome_db_load_time=gettime_ms()+5000;
-    
-    if (argc>2)
-      if (next_rhizome_db_load_time<=gettime_ms()) {
-	long long load_timeout=message_update_interval
-	  -(gettime_ms()-last_message_update_time);
-
-	// Don't wait around forever for rhizome -- we want to receive inbound
-	// messages within a reasonable timeframe to prevent input buffer overflow,
-	// and peers wasting time sending bundles that we already know about, and that
-	// we can inform them about.
-	if (load_timeout>1500) load_timeout=1500;
-	
-	if (load_timeout<500) load_timeout=500;
-	
-	printf("Rhizome db load timeout = %lldms\n",load_timeout);
-	
-	if (!monitor_mode)
-	  load_rhizome_db(load_timeout,
-			  prefix, servald_server,credential,&token);
-	next_rhizome_db_load_time=gettime_ms()+3000;
-      }
 
     unsigned char msg_out[LINK_MTU];
 
     radio_read_bytes(serialfd,monitor_mode);
 
+    load_rhizome_db_async(servald_server,
+			  credential, token);
+    
     // Deal with clocks running backwards sometimes
     if ((congestion_update_time-gettime_ms())>4000)
       congestion_update_time=gettime_ms()+4000;
-    
+
     if (gettime_ms()>congestion_update_time) {
       /* Very 4 seconds count how many radio packets we have seen, so that we can
 	 dynamically adjust our packet rate based on our best estimate of the channel
