@@ -120,7 +120,6 @@ int load_rhizome_db_async(char *servald_server,
     switch(r) {
     case 0: // Got a line
       {
-	printf("HTTP Line read: '%s'\n",load_rhizome_db_line);
 	char fields[14][8192];
 	int n=parse_json_line(load_rhizome_db_line,fields,14);
 	if (n==14) {
