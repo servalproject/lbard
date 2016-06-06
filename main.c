@@ -494,11 +494,6 @@ int main(int argc, char **argv)
 			 |MSG_NOSIGNAL
 #endif	       
 			 ,(const struct sockaddr *)&addr,sizeof(addr));
-	    if (r==-1) {
-	      fprintf(stderr,"sendto(%s) for time announcement failed (errno=%d)\n",
-		      time_broadcast_addrs[i],errno);
-	      perror("errno");
-	    }
 	  }
 	  // printf("--- Sent %d time announcement packets.\n",i);
 	}
