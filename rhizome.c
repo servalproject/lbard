@@ -117,11 +117,18 @@ int load_rhizome_db_async(char *servald_server,
     int r=http_read_next_line(load_rhizome_db_socket,
 			      load_rhizome_db_line,
 			    &load_rhizome_db_line_bytes,1024);
+
+    if (load_rhizome_db_line[0]=='}') {
+      // End of JSON
+      close(load_rhizome_db_socket);
+      load_rhizome_db_socket=-1;
+      return 0;
+    }
+    
     switch(r) {
     case 0: // Got a line
       {
 	char fields[14][8192];
-	printf("Parsing '%s'\n",load_rhizome_db_line);
 	int n=parse_json_line(load_rhizome_db_line,fields,14);
 	if (n==14) {
 	  if (strcmp(fields[0],"null")) {
@@ -129,6 +136,9 @@ int load_rhizome_db_async(char *servald_server,
 	    // future call. Remember it and use it.
 	    
 	    strcpy(token,fields[0]);
+
+	    printf("New rhizome progress token: '%s'\n",token);
+	    sleep(5);
 	  }
 	  
 	  // Now we have the fields, so register the bundles into our internal list.
@@ -142,7 +152,7 @@ int load_rhizome_db_async(char *servald_server,
 			  ,fields[11] // sender
 			  ,fields[12] // recipient
 			  );
-	}
+	} 
       }
       // Reset timeout
       load_rhizome_db_socket_timeout=gettime_ms()+60000;
@@ -155,10 +165,6 @@ int load_rhizome_db_async(char *servald_server,
       return 0;
       break;
     }
-
-    r=http_read_next_line(load_rhizome_db_socket,
-			      load_rhizome_db_line,
-			    &load_rhizome_db_line_bytes,1024);
   }
   
 }
