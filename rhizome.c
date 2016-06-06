@@ -114,7 +114,7 @@ int load_rhizome_db_async(char *servald_server,
       if (load_rhizome_db_async_start(servald_server,credential,token)<0)
 	return -1;
       else
-	load_rhizome_db_socket_timeout=gettime_ms()+60000;
+	load_rhizome_db_socket_timeout=gettime_ms()+5000;
     } else return -1;
   }
   
@@ -161,7 +161,7 @@ int load_rhizome_db_async(char *servald_server,
 	} 
       }
       // Reset timeout
-      load_rhizome_db_socket_timeout=gettime_ms()+60000;
+      load_rhizome_db_socket_timeout=gettime_ms()+5000;
       break;
     case 1: // end of connection, socket already closed
       printf("End of connection -- assuming socket closed (socket was %d)\n",
