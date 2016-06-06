@@ -892,8 +892,8 @@ int http_get_async(char *server_and_port, char *auth_token,
   }
 
   // Got headers
-  printf("Read %d header bytes (response code %d). Ready for async fetch.\n",
-	 header_bytes,http_response);
+  if (0) printf("Read %d header bytes (response code %d). Ready for async fetch.\n",
+		header_bytes,http_response);
   return sock;
 }
 
