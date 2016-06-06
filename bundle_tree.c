@@ -676,7 +676,6 @@ int lookup_bundle_by_prefix_hex(char *prefix)
   return -1;
 }
 
-// XXX - Ignores version!
 int lookup_bundle_by_prefix_bin_and_version(unsigned char *prefix, long long version)
 {
   int bundle;
@@ -685,7 +684,10 @@ int lookup_bundle_by_prefix_bin_and_version(unsigned char *prefix, long long ver
     for(i=0;i<8;i++) {
       if (prefix[i]!=bundles[bundle].bid_bin[i]) break;
     }
-    if (i==8) return bundle;
+    if (i==8) {
+      if (bundles[bundle].version>=version)
+	return bundle;
+    }
   }
   return -1;
 }
