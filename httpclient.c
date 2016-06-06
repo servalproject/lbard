@@ -850,8 +850,6 @@ int http_get_async(char *server_and_port, char *auth_token,
 	   path,
 	   authdigest,
 	   server_name,server_port);
-
-  printf("Async http request: \n%s\n",request);
   
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
