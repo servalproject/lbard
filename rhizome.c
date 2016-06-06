@@ -104,6 +104,7 @@ int load_rhizome_db_async(char *servald_server,
 {
   // Make sure we have a socket, and that it isn't stale
   if (load_rhizome_db_socket_timeout<gettime_ms()) {
+    printf("Timing out on async connection\n");
     if (load_rhizome_db_socket>=0) close(load_rhizome_db_socket);
     load_rhizome_db_socket=-1;
   }
@@ -124,6 +125,7 @@ int load_rhizome_db_async(char *servald_server,
 
     if (load_rhizome_db_line[0]=='}') {
       // End of JSON
+      printf("End of JSON\n");
       close(load_rhizome_db_socket);
       load_rhizome_db_socket=-1;
       return 0;
