@@ -104,7 +104,6 @@ int load_rhizome_db_async(char *servald_server,
 {
   // Make sure we have a socket, and that it isn't stale
   if (load_rhizome_db_socket_timeout<gettime_ms()) {
-    printf("Timing out on async connection\n");
     if (load_rhizome_db_socket>=0) close(load_rhizome_db_socket);
     load_rhizome_db_socket=-1;
   }
@@ -125,7 +124,6 @@ int load_rhizome_db_async(char *servald_server,
 
     if (load_rhizome_db_line[0]=='}') {
       // End of JSON
-      printf("End of JSON\n");
       close(load_rhizome_db_socket);
       load_rhizome_db_socket=-1;
       return 0;
@@ -143,8 +141,6 @@ int load_rhizome_db_async(char *servald_server,
 	    
 	    strcpy(token,fields[0]);
 
-	    printf("New rhizome progress token: '%s'\n",token);
-	    sleep(5);
 	  }
 	  
 	  // Now we have the fields, so register the bundles into our internal list.
@@ -164,8 +160,6 @@ int load_rhizome_db_async(char *servald_server,
       load_rhizome_db_socket_timeout=gettime_ms()+5000;
       break;
     case 1: // end of connection, socket already closed
-      printf("End of connection -- assuming socket closed (socket was %d)\n",
-	     load_rhizome_db_socket);
       load_rhizome_db_socket=-1;
       return 0;
       break;
