@@ -56,7 +56,9 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
   if (bundle_number<0) return -1;
   
   if ((!bid_of_cached_bundle)
-      ||strcasecmp(bundles[bundle_number].bid_hex,bid_of_cached_bundle)) {
+      ||strcasecmp(bundles[bundle_number].bid_hex,bid_of_cached_bundle)
+      ||(cached_version!=bundles[bundle_number].version)
+      ) {
     // Cache is invalid - release
     if (bid_of_cached_bundle) {
       free(bid_of_cached_bundle); bid_of_cached_bundle=NULL;
