@@ -570,7 +570,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 #ifdef SYNC_BY_BAR
       peer_note_bar(p,bid_prefix,version,recipient_prefix,size_byte);
 #else
-      int bundle=lookup_bundle_by_prefix_bin_and_version(bid_prefix_bin,version);
+      int bundle=lookup_bundle_by_prefix_bin_and_version_or_older(bid_prefix_bin,version);
       if (bundle>-1) {
 	printf("T+%lldms : SYNC FIN: %s* has finished receiving"
 		" %s version %lld (bundle #%d)\n",

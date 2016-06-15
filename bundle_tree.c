@@ -676,7 +676,7 @@ int lookup_bundle_by_prefix_hex(char *prefix)
   return -1;
 }
 
-int lookup_bundle_by_prefix_bin_and_version(unsigned char *prefix, long long version)
+int lookup_bundle_by_prefix_bin_and_version_exact(unsigned char *prefix, long long version)
 {
   int bundle;
   int i;
@@ -685,7 +685,44 @@ int lookup_bundle_by_prefix_bin_and_version(unsigned char *prefix, long long ver
       if (prefix[i]!=bundles[bundle].bid_bin[i]) break;
     }
     if (i==8) {
-      if (bundles[bundle].version>=version)
+      if (bundles[bundle].version==version)
+	return bundle;
+    }
+  }
+  return -1;
+}
+
+// Returns newest bundle version of relevance
+int lookup_bundle_by_prefix_bin_and_version_or_newer(unsigned char *prefix, long long version)
+{
+  int best_bundle=-1;
+  int bundle;
+  int i;
+  for(bundle=0;bundle<bundle_count;bundle++) {
+    for(i=0;i<8;i++) {
+      if (prefix[i]!=bundles[bundle].bid_bin[i]) break;
+    }
+    if (i==8) {
+      if (bundles[bundle].version>=version) {
+	if ((best_bundle==-1)||(bundles[bundle].version>bundles[best_bundle].version))
+	  best_bundle=bundle;
+      }
+      
+    }
+  }
+  return best_bundle;
+}
+
+int lookup_bundle_by_prefix_bin_and_version_or_older(unsigned char *prefix, long long version)
+{
+  int bundle;
+  int i;
+  for(bundle=0;bundle<bundle_count;bundle++) {
+    for(i=0;i<8;i++) {
+      if (prefix[i]!=bundles[bundle].bid_bin[i]) break;
+    }
+    if (i==8) {
+      if (bundles[bundle].version<=version)
 	return bundle;
     }
   }
