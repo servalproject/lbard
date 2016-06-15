@@ -665,15 +665,19 @@ int sync_schedule_progress_report(int peer, int partial)
 
 int lookup_bundle_by_prefix_hex(char *prefix)
 {
+  int best_bundle=-1;
   int bundle;
   int i;
   for(bundle=0;bundle<bundle_count;bundle++) {
     for(i=0;i<8;i++) {
-      if (prefix[i]!=bundles[bundle].bid_hex[i]) break;
+      if (prefix[i]!=bundles[bundle].bid_bin[i]) break;
     }
-    if (i==8) return bundle;
+    if (i==8) {
+      if ((best_bundle==-1)||(bundles[bundle].version>bundles[best_bundle].version))
+	best_bundle=bundle;      
+    }
   }
-  return -1;
+  return best_bundle;
 }
 
 int lookup_bundle_by_prefix_bin_and_version_exact(unsigned char *prefix, long long version)
