@@ -488,12 +488,12 @@ int main(int argc, char **argv)
 	  for(i=0;time_broadcast_addrs[i];i++) {
 	    addr.sin_addr.s_addr = inet_addr(time_broadcast_addrs[i]);
 	    errno=0;
-	    int r=sendto(timesocket,msg_out,offset,
-			 MSG_DONTROUTE|MSG_DONTWAIT
+	    sendto(timesocket,msg_out,offset,
+		   MSG_DONTROUTE|MSG_DONTWAIT
 #ifdef MSG_NOSIGNAL
-			 |MSG_NOSIGNAL
+		   |MSG_NOSIGNAL
 #endif	       
-			 ,(const struct sockaddr *)&addr,sizeof(addr));
+		   ,(const struct sockaddr *)&addr,sizeof(addr));
 	  }
 	  // printf("--- Sent %d time announcement packets.\n",i);
 	}
