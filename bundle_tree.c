@@ -330,10 +330,11 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
     if ((!peer_records[peer]->tx_bundle_body_offset)
 	||(peer_records[peer]->tx_bundle_body_offset>=cached_body_len))
       {
-	fprintf(stderr,"T+%lldms : Sending length of bundle %s (bundle #%d, version %lld)\n",
+	fprintf(stderr,"T+%lldms : Sending length of bundle %s (bundle #%d, version %lld, cached_version %lld)\n",
 		gettime_ms()-start_time,
 		bundles[bundle_number].bid_hex,
-		bundle_number,bundles[bundle_number].version);
+		bundle_number,bundles[bundle_number].version,
+		cached_version);
 	if ((mtu-*offset)>(1+8+8+4)) {
 	  // Announce length of bundle
 	  msg[(*offset)++]='L';
