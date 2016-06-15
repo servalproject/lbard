@@ -675,8 +675,11 @@ int lookup_bundle_by_prefix_hex(char *prefix)
     if (i==8) {
       if ((best_bundle==-1)||(bundles[bundle].version>bundles[best_bundle].version))
 	best_bundle=bundle;      
+      printf("  %s* could be bundle #%d (after check it is bundle #%d)\n",
+	     prefix,bundle,best_bundle);
     }
   }
+  printf("  %s* is bundle #%d\n",prefix,best_bundle);
   return best_bundle;
 }
 
