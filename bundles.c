@@ -119,6 +119,7 @@ int register_bundle(char *service,
   for(i=0;i<bundle_count;i++) {
     if (!strcmp(bundles[i].bid_hex,bid)) {
       // Updating an existing bundle
+      printf("Updating bundle #%d\n",i);
       bundle_number=i; break;
     }
   }
@@ -196,12 +197,13 @@ int register_bundle(char *service,
   }
 
   
-  printf("  >> Inserted %s*/%lld into the tree: key=%02X%02X%02X (now %d bundles, %d ignored)\n",
+  printf("  >> Inserted %s*/%lld into the tree: key=%02X%02X%02X (this is bundle #%d, now total of %d bundles, %d ignored)\n",
 	 bundles[bundle_number].bid_hex,
 	 bundles[bundle_number].version,
 	 bundle_sync_key.key[0],
 	 bundle_sync_key.key[1],
-	 bundle_sync_key.key[2],bundle_number,ignored_bundles);
+	 bundle_sync_key.key[2],
+	 bundle_number,bundle_count,ignored_bundles);
   
   rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
 	      "Bundle registered");
