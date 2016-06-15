@@ -208,7 +208,7 @@ int register_bundle(char *service,
   return 0;
 }
 
-int we_have_this_bundle(char *bid_prefix, long long version)
+int we_have_this_bundle_or_newer(char *bid_prefix, long long version)
 {
   int i;
   for(i=0;i<bundle_count;i++) {

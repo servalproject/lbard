@@ -680,7 +680,7 @@ int lookup_bundle_by_prefix_hex(char *prefix)
 	     prefix,bundle,best_bundle);
     }
   }
-  printf("  %s* is bundle #%d\n",prefix,best_bundle);
+  printf("  %s* is bundle #%d of %d\n",prefix,best_bundle,bundle_count);
   return best_bundle;
 }
 

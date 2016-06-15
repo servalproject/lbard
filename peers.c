@@ -159,8 +159,8 @@ int peers_most_interesting_bundle(int peer)
     int interesting=1;
     if (!peer_records[peer]->bid_prefixes[bundle]) interesting=0;
     else {
-      if (we_have_this_bundle(peer_records[peer]->bid_prefixes[bundle],
-			      peer_records[peer]->versions[bundle]))
+      if (we_have_this_bundle_or_newer(peer_records[peer]->bid_prefixes[bundle],
+				       peer_records[peer]->versions[bundle]))
 	interesting=0;
     }
     if (interesting) {

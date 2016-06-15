@@ -328,7 +328,7 @@ long long calculate_bundle_intrinsic_priority(char *bid,
 					      int insert_failures);
 int bid_to_peer_bundle_index(int peer,char *bid_hex);
 int manifest_extract_bid(unsigned char *manifest_data,char *bid_hex);
-int we_have_this_bundle(char *bid_prefix, long long version);
+int we_have_this_bundle_or_newer(char *bid_prefix, long long version);
 int register_bundle(char *service,
 		    char *bid,
 		    char *version,
