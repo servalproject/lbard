@@ -119,7 +119,6 @@ int register_bundle(char *service,
   for(i=0;i<bundle_count;i++) {
     if (!strcmp(bundles[i].bid_hex,bid)) {
       // Updating an existing bundle
-      printf("Updating bundle #%d\n",i);
       bundle_number=i; break;
     }
   }
