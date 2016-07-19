@@ -146,7 +146,7 @@ long long start_time=0;
 
 int main(int argc, char **argv)
 {
-  fprintf(stderr,"Version 20160616.0320.1\n");
+  fprintf(stderr,"Version 20160719.1637.1\n");
   
   start_time = gettime_ms();
   
