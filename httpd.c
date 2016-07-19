@@ -96,13 +96,12 @@ int http_process(struct sockaddr *cliaddr,
     {
       char location[8192]="";
       char message[8192]="";
-      int f=0;
-      if ((f=sscanf(uri,"/submitmessage?location=%[^&]&message=%[^&]",
-		    location,message))==2) {
+      if (sscanf(uri,"/submitmessage?location=%[^&]&message=%[^&]",
+		    location,message)==2) {
 	urldecode(location);
 	urldecode(message);
       
-	printf("  scanned %d URI fields.\n",f);
+	printf("  scanned URI fields.\n");
 	printf("    location=[%s]\n",location);
 	printf("    message=[%s]\n",message);
 	
@@ -156,8 +155,14 @@ int http_process(struct sockaddr *cliaddr,
 	inreach_gateway_ip
 	  = strdup(inet_ntoa(((struct sockaddr_in *)cliaddr)->sin_addr));
 	inreach_gateway_time=time(0);
+	char m[1024];
+	snprintf(m,1024,"HTTP/1.0 201 OK\nServer: Serval LBARD\n\n");
+	write_all(socket,m,strlen(m));
+	close(socket);
+	return 0;	
       } else if (!strcasecmp(uri,"/inreachgateway/query")) {
 	char m[1024];
+	printf("inreach gateway age %lld\n",(long long)(time(0)-inreach_gateway_time));
 	if (inreach_gateway_ip&&((time(0)-inreach_gateway_time)<20)) 
 	  snprintf(m,1024,"HTTP/1.0 200 OK\nServer: Serval LBARD\n\n%s",
 		   inreach_gateway_ip);
