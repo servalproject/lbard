@@ -44,6 +44,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+char *inreach_gateway_ip=NULL;
+time_t inreach_gateway_time=0;
+
 int urldecode(char *s)
 {
   int i,o=0;
@@ -73,7 +76,8 @@ int urldecode(char *s)
   
 }
 
-int http_process(char *servald_server,char *credential,
+int http_process(struct sockaddr *cliaddr,
+		 char *servald_server,char *credential,
 		 char *my_sid_hex,
 		 int socket)
 {
@@ -92,60 +96,77 @@ int http_process(char *servald_server,char *credential,
     {
       char location[8192]="";
       char message[8192]="";
-      int f=sscanf(uri,"/submitmessage?location=%[^&]&message=%[^&]",
-		   location,message);
-
-      urldecode(location);
-      urldecode(message);
+      int f=0;
+      if ((f=sscanf(uri,"/submitmessage?location=%[^&]&message=%[^&]",
+		    location,message))==2) {
+	urldecode(location);
+	urldecode(message);
       
-      printf("  scanned %d URI fields.\n",f);
-      printf("    location=[%s]\n",location);
-      printf("    message=[%s]\n",message);
-
-      char *m="HTTP/1.0 200 OK\nServer: Serval LBARD\n\nYour message has been submitted.";
-
-      // Try to actually send meshms
-      // First: compose the string safely.  It might contain UTF-8 text, so we should
-      // try to be nice about that.
-      {
-	unsigned char combined[8192+8192+1024];
-	snprintf((char *)combined,sizeof(combined),
-		 "Message from message_form.html: Location = %s,"
-		 " Message as follows: %s",
-		 location,message);
-
-	// XXX - Read recipient
-	{
-	  int successful=0;
-	  int failed=0;
-	  char recipient[1024];
-	  
-	  FILE *f=fopen("/dos/helpdesk.sid","r");
-	  recipient[0]=0; fgets(recipient,1024,f);
-	  while(recipient[0]) {
-	    // Trim new lines / carriage returns from end of lines.
-	    while(recipient[0]&&(recipient[strlen(recipient)-1]<' '))
-	      recipient[strlen(recipient)-1]=0;
-
-	    int res = http_post_meshms(servald_server,credential,
-				       (char *)combined,
-				       my_sid_hex,recipient,5000);
+	printf("  scanned %d URI fields.\n",f);
+	printf("    location=[%s]\n",location);
+	printf("    message=[%s]\n",message);
 	
-	    if (res!=200) {
-	      m="HTTP/1.0 500 ERROR\nServer: Serval LBARD\n\nYour message could not be submitted.";
-	      failed++;
-	    } else successful++;
-
+	char *m="HTTP/1.0 200 OK\nServer: Serval LBARD\n\nYour message has been submitted.";
+	
+	// Try to actually send meshms
+	// First: compose the string safely.  It might contain UTF-8 text, so we should
+	// try to be nice about that.
+	{
+	  unsigned char combined[8192+8192+1024];
+	  snprintf((char *)combined,sizeof(combined),
+		   "Message from message_form.html: Location = %s,"
+		   " Message as follows: %s",
+		   location,message);
+	  
+	  // XXX - Read recipient
+	  {
+	    int successful=0;
+	    int failed=0;
+	    char recipient[1024];
+	    
+	    FILE *f=fopen("/dos/helpdesk.sid","r");
 	    recipient[0]=0; fgets(recipient,1024,f);
-	  }
-	  fclose(f);
+	    while(recipient[0]) {
+	      // Trim new lines / carriage returns from end of lines.
+	      while(recipient[0]&&(recipient[strlen(recipient)-1]<' '))
+		recipient[strlen(recipient)-1]=0;
+	      
+	      int res = http_post_meshms(servald_server,credential,
+					 (char *)combined,
+					 my_sid_hex,recipient,5000);
+	      
+	      if (res!=200) {
+		m="HTTP/1.0 500 ERROR\nServer: Serval LBARD\n\nYour message could not be submitted.";
+		failed++;
+	      } else successful++;
+	      
+	      recipient[0]=0; fgets(recipient,1024,f);
+	    }
+	    fclose(f);
 	  }
 	  
+	}
+	
+	write_all(socket,m,strlen(m));
+	close(socket);
+	return 0;      
+      } else if (!strcasecmp(uri,"/inreachgateway/register")) {
+	if (inreach_gateway_ip) free(inreach_gateway_ip);
+	inreach_gateway_ip=NULL;
+	inreach_gateway_ip
+	  = strdup(inet_ntoa(((struct sockaddr_in *)cliaddr)->sin_addr));
+	inreach_gateway_time=time(0);
+      } else if (!strcasecmp(uri,"/inreachgateway/query")) {
+	char m[1024];
+	if (inreach_gateway_ip&&((time(0)-inreach_gateway_time)<20)) 
+	  snprintf(m,1024,"HTTP/1.0 200 OK\nServer: Serval LBARD\n\n%s",
+		   inreach_gateway_ip);
+	else
+	  snprintf(m,1024,"HTTP/1.0 204 OK\nServer: Serval LBARD\n\n");
+	write_all(socket,m,strlen(m));
+	close(socket);
+	return 0;	
       }
-      
-      write_all(socket,m,strlen(m));
-      close(socket);
-      return 0;      
     }
   char *m="HTTP/1.0 400 Couldn't parse message\nServer: Serval LBARD\n\n";
   write_all(socket,m,strlen(m));

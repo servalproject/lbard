@@ -532,7 +532,7 @@ int main(int argc, char **argv)
 	      // for one new connection.  We also don't allow the request
 	      // to linger: if it doesn't contain the request almost immediately,
 	      // we reject it with a timeout error.
-	      http_process(servald_server,credential,my_sid_hex,s);
+	      http_process(&cliaddr,servald_server,credential,my_sid_hex,s);
 	    }
 	  }		
       if (!monitor_mode)

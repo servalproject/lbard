@@ -357,7 +357,8 @@ int manifest_binary_to_text(unsigned char *bin_in, int len_in,
 int monitor_log(char *sender_prefix, char *recipient_prefix,char *msg);
 int bytes_to_prefix(unsigned char *bytes_in,char *prefix_out);
 int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv);
-int http_process(char *servald_server,char *credential,
+int http_process(struct sockaddr *cliaddr,
+		 char *servald_server,char *credential,
 		 char *my_sid_hex,
 		 int socket);
 int chartohex(int c);

@@ -5,8 +5,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <string.h>
-#include "sync.h"
-#include "lbard.h"
 #ifdef linux
 #include <sys/ioctl.h>
 #include <net/if.h>
@@ -14,6 +12,19 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #endif
+
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <dirent.h>
+#include <assert.h>
+#include <fcntl.h>
+#include <time.h>
+#include <sys/time.h>
+#include <ctype.h>
+
+#include "sync.h"
+#include "lbard.h"
+
 
 // From os.c in serval-dna
 long long gettime_us()
