@@ -164,8 +164,8 @@ int http_process(struct sockaddr *cliaddr,
 	char m[1024];
 	printf("inreach gateway age %lld\n",(long long)(time(0)-inreach_gateway_time));
 	if (inreach_gateway_ip&&((time(0)-inreach_gateway_time)<20)) 
-	  snprintf(m,1024,"HTTP/1.0 200 OK\nServer: Serval LBARD\n\n%s",
-		   inreach_gateway_ip);
+	  snprintf(m,1024,"HTTP/1.0 200 OK\nServer: Serval LBARD\nContent-length: %d\n\n%s",
+		   (int)strlen(inreach_gateway_ip),inreach_gateway_ip);
 	else
 	  snprintf(m,1024,"HTTP/1.0 204 OK\nServer: Serval LBARD\n\n");
 	write_all(socket,m,strlen(m));
