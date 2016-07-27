@@ -146,7 +146,7 @@ long long start_time=0;
 
 int main(int argc, char **argv)
 {
-  fprintf(stderr,"Version 20160719.1637.1\n");
+  fprintf(stderr,"Version 20160727.1654.1\n");
   
   start_time = gettime_ms();
   
@@ -337,6 +337,8 @@ int main(int argc, char **argv)
       addr.sin_family = AF_INET;
       addr.sin_addr.s_addr = INADDR_ANY;
       addr.sin_port = htons(0x5402);
+      int optval = 1;
+      setsockopt(httpsocket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
       bind(httpsocket, (struct sockaddr *) &addr, sizeof(addr));
       set_nonblock(httpsocket);
       listen(httpsocket,10);
