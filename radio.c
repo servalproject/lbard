@@ -48,10 +48,17 @@ extern char *prefix;
 
 int serial_errors=0;
 
+
 // Count radio transmissions seen, so that we can dynamically adjust the packet
 // rate based on an estimate of channel congestion.
 int radio_transmissions_seen=0;
 int radio_transmissions_byus=0;
+
+#define RADIO_RFD900 1
+#define RADIO_BARRETT_HF 2
+#define RADIO_CODAN_HF 3
+
+int radio_mode=RADIO_RFD900;
 
 int radio_read_bytes(int serialfd,int monitor_mode)
 {
@@ -155,6 +162,48 @@ int dump_bytes(char *msg,unsigned char *bytes,int length)
   return 0;
 }
 
+int radio_send_message_codanhf(int serialfd,unsigned char *out, int offset)
+{
+  return -1;
+}
+
+int radio_send_message_barretthf(int serialfd,unsigned char *out, int offset)
+{
+  return -1;
+}
+
+int radio_send_message_rfd900(int serialfd,unsigned char *out, int offset)
+{
+  // Now escape any ! characters, and append !! to the end for the RFD900 CSMA
+  // packetised firmware.
+
+  unsigned char escaped[2+offset*2+2];
+  int elen=0;
+  int i;
+
+  // Begin with clear TX buffer command
+  escaped[elen++]='!'; escaped[elen++]='C';
+
+  // Then stuff the escaped bytes to send
+  for(i=0;i<offset;i++) {
+    if (out[i]=='!') {
+      escaped[elen++]='!'; escaped[elen++]='.';
+    } else escaped[elen++]=out[i];
+  }
+  // Finally include TX packet command
+  escaped[elen++]='!'; escaped[elen++]='!';
+  
+  radio_set_tx_power(serialfd);
+  
+  if (write_all(serialfd,escaped,elen)==-1) {
+    serial_errors++;
+    return -1;
+  } else {
+    serial_errors=0;
+    return 0;
+  }
+}
+
 int radio_send_message(int serialfd, unsigned char *buffer,int length)
 {
   unsigned char out[3+FEC_MAX_BYTES+FEC_LENGTH+3];
@@ -185,37 +234,16 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   
   assert( offset <= (FEC_MAX_BYTES+FEC_LENGTH) );
 
-  // Now escape any ! characters, and append !! to the end for the RFD900 CSMA
-  // packetised firmware.
-
-  unsigned char escaped[2+offset*2+2];
-  int elen=0;
-  int i;
-
-  // Begin with clear TX buffer command
-  escaped[elen++]='!'; escaped[elen++]='C';
-
-  // Then stuff the escaped bytes to send
-  for(i=0;i<offset;i++) {
-    if (out[i]=='!') {
-      escaped[elen++]='!'; escaped[elen++]='.';
-    } else escaped[elen++]=out[i];
+  switch(radio_mode) {
+  case RADIO_RFD900: radio_send_message_rfd900(serialfd,out,offset); break;
+  case RADIO_BARRETT_HF: radio_send_message_barretthf(serialfd,out,offset); break;
+  case RADIO_CODAN_HF: radio_send_message_codanhf(serialfd,out,offset); break;
   }
-  // Finally include TX packet command
-  escaped[elen++]='!'; escaped[elen++]='!';
-  
-  radio_set_tx_power(serialfd);
 
   // Don't forget to count our own transmissions
   radio_transmissions_byus++;
-  
-  if (write_all(serialfd,escaped,elen)==-1) {
-    serial_errors++;
-    return -1;
-  } else {
-    serial_errors=0;
-    return 0;
-  }
+
+  return 0;
 }
 
 #define MAX_PACKET_SIZE 255
