@@ -4,6 +4,9 @@
 #define RADIO_BARRETT_HF 2
 #define RADIO_CODAN_HF 3
 
+#define RADIO_ALE_2G (1<<0)
+#define RADIO_ALE_3G (1<<1)
+
 extern struct sync_state *sync_state;
 #define SYNC_SALT_LEN 8
 
@@ -422,3 +425,4 @@ int lookup_bundle_by_prefix_bin_and_version_or_older(unsigned char *prefix, long
 int lookup_bundle_by_prefix_bin_and_version_or_newer(unsigned char *prefix, long long version);
 
 int radio_set_type(int radio_type);
+int radio_set_feature(int bitmask);

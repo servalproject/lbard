@@ -55,13 +55,24 @@ int radio_transmissions_seen=0;
 int radio_transmissions_byus=0;
 
 int radio_mode=RADIO_RFD900;
+int radio_features=0;
 
 int radio_set_type(int radio_type)
 {
   radio_mode=radio_type;
+  radio_features=0;
   return 0;
 }
 
+int radio_set_feature(int bitmask)
+{
+  radio_features|=bitmask;
+  if (radio_features&RADIO_ALE_2G)
+    fprintf(stderr,"Radio supports ALE 2G messaging (90 6-bit characters per message)\n");
+  if (radio_features&RADIO_ALE_3G)
+    fprintf(stderr,"Radio supports ALE 3G messaging (256 8-bit characters per message)\n");
+  return 0;
+}
 
 int radio_read_bytes(int serialfd,int monitor_mode)
 {
@@ -210,12 +221,33 @@ int ascii64_decode(char *in, unsigned char *out, int out_len,int radio_type)
   return out_ofs;
 }
 
-int radio_send_message_codanhf(int serialfd,unsigned char *out, int offset)
+int message_sequence_number=0;
+
+int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
 {
+  // We can send upto 90 ALE encoded bytes.  ALE bytes are 6-bit, so we can send
+  // 22 groups of 3 bytes = 66 bytes raw and 88 encoded bytes.  We can use the first
+  // two bytes for fragmentation, since we would still like to support 256-byte
+  // messages.  This means we need upto 4 pieces for each message.
+  char message[8192];
+  char fragment[8192];
+
+  int i;
+
+  for(i=0;i<len;i+=66) {
+
+    fragment[0]=0x30+(message_sequence_number&0x1f);
+    fragment[1]=0x30+(i/66);
+    
+    snprintf(message,8192,"amd %s\n",fragment);
+    write_all(serialfd,message,strlen(message));
+    // XXX - Wait for radio to respond
+  }
+  
   return -1;
 }
 
-int radio_send_message_barretthf(int serialfd,unsigned char *out, int offset)
+int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
 {
   return -1;
 }
