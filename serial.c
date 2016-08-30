@@ -172,16 +172,27 @@ int serial_setup_port(int fd)
      radios are HF radios, and set our radio mode and serial speed accordingly.
   */
   unsigned char buf[8192];
+  unsigned clr[3]={21,13,10};
+  int verhi,verlo;
 
+  fprintf(stderr,"Attempting to detect radio type.\n");
+  
   // Set serial port for HF radios
-  serial_setup_port_with_speed(fd,9600);  
-  write_all(fd,"\r\n",2); // Clear any partial command
+  serial_setup_port_with_speed(fd,9600);
+  write_all(fd,clr,3); // Clear any partial command
   sleep(1); // give the radio the chance to respond
   ssize_t count = read_nonblock(fd,buf,8192);  // read and ignore any stuff
-  write_all(fd,"ver\r",4); // ask Codan radio for version
+  write_all(fd,"VER\r",4); // ask Codan radio for version
   sleep(1); // give the radio the chance to respond
   count = read_nonblock(fd,buf,8192);  // read reply
+  dump_bytes("modem response",buf,count);
   // If we get a version string -> Codan HF
+  if (sscanf((char *)buf,"VER\r\nCICS: V%d.%d",&verhi,&verlo)==2) {
+    fprintf(stderr,"Codan HF Radio running CICS V%d.%d\n",
+	    verhi,verlo);
+    radio_set_type(RADIO_CODAN_HF);
+    return 0;
+  }
   // If we get a Barrett error message -> Barrett HF
   // Anything else -> assume RFD900
   
