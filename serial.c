@@ -27,6 +27,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "sync.h"
+#include "lbard.h"
+
 int set_nonblock(int fd)
 {
   int flags;
@@ -162,5 +165,28 @@ int serial_setup_port_with_speed(int fd,int speed)
 
 int serial_setup_port(int fd)
 {
-  return serial_setup_port_with_speed(fd,230400);
+  /* Try to work out what type of radio we are using.
+     We support RFD900-series radios at 230400bps, and also
+     Codan and Barrett HF radios at 9600.  The HF radios use simple text commands for
+     everything, and are always in command mode, so we can first try to detect if the
+     radios are HF radios, and set our radio mode and serial speed accordingly.
+  */
+  unsigned char buf[8192];
+
+  // Set serial port for HF radios
+  serial_setup_port_with_speed(fd,9600);  
+  write_all(fd,"\r\n",2); // Clear any partial command
+  sleep(1); // give the radio the chance to respond
+  ssize_t count = read_nonblock(fd,buf,8192);  // read and ignore any stuff
+  write_all(fd,"ver\r",4); // ask Codan radio for version
+  sleep(1); // give the radio the chance to respond
+  count = read_nonblock(fd,buf,8192);  // read reply
+  // If we get a version string -> Codan HF
+  // If we get a Barrett error message -> Barrett HF
+  // Anything else -> assume RFD900
+  
+  
+  serial_setup_port_with_speed(fd,230400);
+  radio_set_type(RADIO_RFD900);
+  return 0;
 }

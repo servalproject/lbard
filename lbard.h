@@ -1,5 +1,9 @@
 #include <sys/time.h>
 
+#define RADIO_RFD900 1
+#define RADIO_BARRETT_HF 2
+#define RADIO_CODAN_HF 3
+
 extern struct sync_state *sync_state;
 #define SYNC_SALT_LEN 8
 
@@ -416,3 +420,5 @@ int load_rhizome_db_async(char *servald_server,
 int lookup_bundle_by_prefix_bin_and_version_exact(unsigned char *prefix, long long version);
 int lookup_bundle_by_prefix_bin_and_version_or_older(unsigned char *prefix, long long version);
 int lookup_bundle_by_prefix_bin_and_version_or_newer(unsigned char *prefix, long long version);
+
+int radio_set_type(int radio_type);

@@ -54,11 +54,14 @@ int serial_errors=0;
 int radio_transmissions_seen=0;
 int radio_transmissions_byus=0;
 
-#define RADIO_RFD900 1
-#define RADIO_BARRETT_HF 2
-#define RADIO_CODAN_HF 3
-
 int radio_mode=RADIO_RFD900;
+
+int radio_set_type(int radio_type)
+{
+  radio_mode=radio_type;
+  return 0;
+}
+
 
 int radio_read_bytes(int serialfd,int monitor_mode)
 {
