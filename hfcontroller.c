@@ -522,6 +522,7 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
   char fragment[8192];
 
   int i;
+  time_t absolute_timeout=time(0)+90;
 
   if (hf_state!=HF_ALELINK) return -1;
   if (ale_inprogress) return -1;
@@ -545,6 +546,12 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
 
     int not_ready=1;
     while (not_ready) {
+      if (time(0)>absolute_timeout) {
+	fprintf(stderr,"Failed to send packet in reasonable amount of time. Aborting.\n");
+	message_sequence_number++;
+	return -1;
+      }
+
       usleep(100000);
 
       unsigned char buffer[8192];
@@ -584,6 +591,8 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
 
   int i;
 
+  time_t absolute_timeout=time(0)+90;
+
   if (hf_state!=HF_ALELINK) return -1;
   if (ale_inprogress) return -1;
   if (!barrett_link_partner_string[0]) return -1;
@@ -616,6 +625,12 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
 
     int not_accepted=1;
     while (not_accepted) {
+      if (time(0)>absolute_timeout) {
+	fprintf(stderr,"Failed to send packet in reasonable amount of time. Aborting.\n");
+	message_sequence_number++;
+	return -1;
+      }
+      
       write_all(serialfd,message,strlen(message));
 
       // Any ALE send will take at least a second, so we can safely wait that long
