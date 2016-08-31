@@ -32,6 +32,7 @@ station "103" 5 minutes every 2 hours
 #include "sync.h"
 #include "lbard.h"
 
+time_t hf_next_packet_time=0;
 time_t last_outbound_call=0;
 
 int hf_callout_duty_cycle=0;
@@ -364,7 +365,13 @@ int hf_codan_process_line(char *l)
     if (hf_link_partner>=-1)
       hf_stations[hf_link_partner].consecutive_connection_failures=0;
     ale_inprogress=0;
-    hf_state=HF_ALELINK;
+    if ((hf_state&0xff)!=HF_CONNECTING) {
+      // We have a link, but without us asking for it.
+      // So allow 10 seconds before trying to TX, else we start TXing immediately.
+      hf_next_packet_time=time(0)+10;
+    } else hf_next_packet_time=0;
+    
+    hf_state=HF_ALELINK;    
   } else if ((!strcmp(l,"ALE-LINK: FAILED"))||(!strcmp(l,"LINK: CLOSED"))) {
     if (hf_state==HF_ALELINK) {
       // disconnected
