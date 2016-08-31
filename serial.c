@@ -191,7 +191,7 @@ int serial_setup_port(int fd)
     fprintf(stderr,"Codan HF Radio running CICS V%d.%d\n",
 	    verhi,verlo);
     if ((verhi>3)||((verhi==3)&&(verlo>=37)))
-      // Codan radio supports ALE 3G (256 x 8-bit chars per message)
+      // Codan radio supports ALE 3G (255 x 8-bit chars per message)
       radio_set_feature(RADIO_ALE_2G|RADIO_ALE_3G);
     else
       // Codan radio supports only ALE 2G (90 x 6-bit chars per message)

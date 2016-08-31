@@ -57,6 +57,11 @@ int radio_transmissions_byus=0;
 int radio_mode=RADIO_RFD900;
 int radio_features=0;
 
+int radio_get_type()
+{
+  return radio_mode;
+}
+
 int radio_set_type(int radio_type)
 {
   radio_mode=radio_type;

@@ -7,6 +7,11 @@
 #define RADIO_ALE_2G (1<<0)
 #define RADIO_ALE_3G (1<<1)
 
+// For now we use a fixed link MTU for all radio types for now.
+// For ALE 2G we fragment frames.  We can revise this for ALE 3G large message blocks,
+// and when we implement a better analog modem down the track.
+#define LINK_MTU 200
+
 extern struct sync_state *sync_state;
 #define SYNC_SALT_LEN 8
 
@@ -136,6 +141,9 @@ extern int radio_transmissions_seen;
 extern long long last_message_update_time;
 extern long long congestion_update_time;
 extern int message_update_interval;
+extern int message_update_interval_randomness;
+extern long long last_message_update_time;
+extern long long congestion_update_time;
 
 extern int monitor_mode;
 
@@ -426,3 +434,7 @@ int lookup_bundle_by_prefix_bin_and_version_or_newer(unsigned char *prefix, long
 
 int radio_set_type(int radio_type);
 int radio_set_feature(int bitmask);
+int hf_read_configuration(char *filename);
+int hf_serviceloop(int fd);
+int uhf_serviceloop(int fd);
+int radio_get_type();
