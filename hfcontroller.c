@@ -63,6 +63,8 @@ int hf_station_count=0;
 
 int has_hf_plan=0;
 
+char barrett_link_partner_string[1024]="";
+
 int hf_next_station_to_call()
 {
   int i;
@@ -171,6 +173,10 @@ int hf_serviceloop(int serialfd)
 	  hf_link_partner=next_station;
 	  hf_state = HF_CALLREQUESTED|HF_COMMANDISSUED;
 	} else {
+	  // Ensure we have a clear line for new command (we were getting some
+	  // errors here intermittantly).
+	  write(serialfd,"\r\n",2);
+	  
 	  snprintf(cmd,1024,"AXLINK%s\r\n",hf_stations[next_station].name);
 	  write(serialfd,cmd,strlen(cmd));
 	  hf_state = HF_CALLREQUESTED;
@@ -306,8 +312,6 @@ int hf_codan_process_line(char *l)
 
 int hf_barrett_process_line(char *l)
 {
-  int link;
-
   // Skip XON/XOFF character at start of line
   while(l[0]&&l[0]<' ') l++;
   while(l[0]&&(l[strlen(l)-1]<' ')) l[strlen(l)-1]=0;
@@ -329,9 +333,21 @@ int hf_barrett_process_line(char *l)
 
       // We have to also wait for the > prompt again
       hf_state=HF_DISCONNECTED;
-  } else if ((sscanf(l,"AILTBL%d",&link)==1)&&(hf_state!=HF_ALELINK)) {
+  } else if ((sscanf(l,"AILTBL%s",barrett_link_partner_string)==1)&&(hf_state!=HF_ALELINK)) {
     // Link established
-    fprintf(stderr,"ALE Link established\n");
+    barrett_link_partner_string[0]=barrett_link_partner_string[4];
+    barrett_link_partner_string[1]=barrett_link_partner_string[5];
+    barrett_link_partner_string[4]=0;
+
+    int i;
+    hf_link_partner=-1;
+    for(i=0;i<hf_station_count;i++)
+      if (!strcmp(barrett_link_partner_string,hf_stations[i].name))
+	{ hf_link_partner=i; break; }
+    
+    fprintf(stderr,"ALE Link established with %s (station #%d)\n",
+	    barrett_link_partner_string,hf_link_partner);
+    
     hf_state=HF_ALELINK;
   }
 
@@ -407,5 +423,33 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
 
 int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
 {
+  // We can send upto 90 ALE encoded bytes.  ALE bytes are 6-bit, so we can send
+  // 22 groups of 3 bytes = 66 bytes raw and 88 encoded bytes.  We can use the first
+  // two bytes for fragmentation, since we would still like to support 256-byte
+  // messages.  This means we need upto 4 pieces for each message.
+  char message[8192];
+  char fragment[8192];
+
+  int i;
+
+  if (hf_state!=HF_ALELINK) return -1;
+  if (ale_inprogress) return -1;
+  if (!barrett_link_partner_string[0]) return -1;
+  
+  fprintf(stderr,"Sending message of %d bytes via Barrett HF\n",len);
+  for(i=0;i<len;i+=66) {
+
+    fragment[0]=0x30+(message_sequence_number&0x1f);
+    fragment[1]=0x30+(i/66);
+    int frag_len=66; if (len-i<66) frag_len=len-i;
+    ascii64_encode(&out[i],&fragment[2],frag_len,radio_get_type());
+    
+    snprintf(message,8192,"AXNMSG%s%02d%s\r\n",
+	     barrett_link_partner_string,
+	     (int)strlen(fragment),fragment);
+    write_all(serialfd,message,strlen(message));
+    // XXX - Wait for radio to respond
+  }
+  
   return -1;
 }
