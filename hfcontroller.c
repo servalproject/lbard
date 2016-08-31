@@ -469,6 +469,9 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
     write_all(serialfd,message,strlen(message));
     // XXX - Wait for radio to respond
   }
+
+  fprintf(stderr,"Finished sending packet.\n");
+  message_sequence_number++;
   
   return -1;
 }
@@ -528,6 +531,7 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
 
   }
   fprintf(stderr,"Finished sending packet.\n");
+  message_sequence_number++;
   
   return 0;
 }
