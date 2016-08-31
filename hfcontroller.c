@@ -161,13 +161,19 @@ int hf_serviceloop(int serialfd)
     if ((hf_station_count>0)&&(time(0)>=hf_next_call_time)) {
       int next_station = hf_next_station_to_call();
       if (next_station>-1) {
-	snprintf(cmd,1024,"alecall %s \"!SERVAL,1,0\"\r\n",
-		 hf_stations[next_station].name);
-	write(serialfd,cmd,strlen(cmd));
+	if (radio_get_type()==RADIO_CODAN_HF) {
+	  snprintf(cmd,1024,"alecall %s \"!SERVAL,1,0\"\r\n",
+		   hf_stations[next_station].name);
+	  write(serialfd,cmd,strlen(cmd));
+	  hf_link_partner=next_station;
+	  hf_state = HF_CALLREQUESTED|HF_COMMANDISSUED;
+	} else {
+	  snprintf(cmd,1024,"AXCALL %s\r\n",hf_stations[next_station].name);
+	  write(serialfd,cmd,strlen(cmd));
+	  hf_state = HF_CALLREQUESTED;
+	}
 	fprintf(stderr,"HF: Attempting to call station #%d '%s'\n",
 		next_station,hf_stations[next_station].name);
-	hf_link_partner=next_station;
-	hf_state = HF_CALLREQUESTED|HF_COMMANDISSUED;
       }
     }
     break;

@@ -205,6 +205,19 @@ int serial_setup_port(int fd)
     fprintf(stderr,"Detected Barrett HF Radio.\n");
     radio_set_type(RADIO_BARRETT_HF);
     radio_set_feature(RADIO_ALE_2G);
+
+    // Tell Barrett radio we want to know when various events occur.
+    char *setup_string[4]={"ARAMDM1\r\n","ARLTBL1\r\n",
+			   "ARMESS1\r\n","ARSTAT1\r\n"};
+    int i;
+    for(i=0;i<4;i++) {
+      write(fd,setup_string[i],strlen(setup_string[i]));
+      usleep(200000);
+      count = read_nonblock(fd,buf,8192);  // read reply
+      dump_bytes(setup_string[i],buf,count);
+    }
+
+    
     return 0;
   }
   
