@@ -35,6 +35,7 @@ station "103" 5 minutes every 2 hours
 time_t last_outbound_call=0;
 
 int hf_callout_duty_cycle=0;
+int hf_callout_interval=5; // minutes
 
 struct hf_station {
   char *name;
@@ -78,6 +79,13 @@ int hf_read_configuration(char *filename)
 	fprintf(stderr,"  Offending line: %s\n",line);
 	exit(-1);
       }
+    } else if (sscanf(line,"call every %d minutes%n",&hf_callout_interval,&offset)==1) {
+      if (hf_callout_interval<0||hf_callout_interval>10000) {
+	fprintf(stderr,"Invalid call out interval: Must be between 0 and 10000 minutes\n");
+	fprintf(stderr,"  Offending line: %s\n",line);
+	exit(-1);
+      }
+      
     } else {
       fprintf(stderr,"Unknown directive in HF radio plan file.\n");
       fprintf(stderr,"  Offending line: %s\n",line);
