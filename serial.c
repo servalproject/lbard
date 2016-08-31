@@ -185,7 +185,7 @@ int serial_setup_port(int fd)
   write_all(fd,"VER\r",4); // ask Codan radio for version
   sleep(1); // give the radio the chance to respond
   count = read_nonblock(fd,buf,8192);  // read reply
-  dump_bytes("modem response",buf,count);
+  // dump_bytes("modem response",buf,count);
   // If we get a version string -> Codan HF
   if (sscanf((char *)buf,"VER\r\nCICS: V%d.%d",&verhi,&verlo)==2) {
     fprintf(stderr,"Codan HF Radio running CICS V%d.%d\n",

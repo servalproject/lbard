@@ -58,6 +58,16 @@ int hf_station_count=0;
 
 int has_hf_plan=0;
 
+int hf_next_station_to_call()
+{
+  int i;
+  for(i=0;i<hf_station_count;i++) {
+    if (time(0)>hf_stations[i].next_link_time) return i;
+  }
+  return random()%hf_station_count;
+}
+
+
 int hf_read_configuration(char *filename)
 {  
   FILE *f=fopen(filename,"r");
@@ -116,12 +126,145 @@ int hf_read_configuration(char *filename)
   return 0;
 }
 
+#define HF_DISCONNECTED 1
+#define HF_CALLREQUESTED 2
+#define HF_CONNECTING 3
+#define HF_ALELINK 4
+#define HF_DISCONNECTING 5
+#define HF_ALESENDING 6
+#define HF_COMMANDISSUED 0x100
+
+int hf_state=HF_DISCONNECTED;
+int hf_link_partner=-1;
+
+time_t hf_next_call_time=0;
+
 int hf_serviceloop(int serialfd)
 {
+  char cmd[1024];
+  
   if (!has_hf_plan) {
     fprintf(stderr,"You must specify a HF radio plan via the hfplan= command line option.\n");
     exit(-1);
   }
+
+  switch(hf_state) {
+  case HF_DISCONNECTED:
+    // Currently disconnected. If the current time is later than the next scheduled
+    // call-out time, then pick a hf station to call
+    if ((hf_station_count>0)&&(time(0)>=hf_next_call_time)) {
+      int next_station = hf_next_station_to_call();
+      if (next_station>-1) {
+	snprintf(cmd,1024,"alecall %s \"!SERVAL,1,0\"\r\n",
+		 hf_stations[next_station].name);
+	write(serialfd,cmd,strlen(cmd));
+	fprintf(stderr,"HF: Attempting to call station #%d '%s'\n",
+		next_station,hf_stations[next_station].name);
+	hf_link_partner=next_station;
+	hf_state = HF_CALLREQUESTED|HF_COMMANDISSUED;
+      }
+    }
+    break;
+  case HF_CALLREQUESTED:
+    break;
+  case HF_CONNECTING:
+    break;
+  case HF_ALELINK:
+    break;
+  case HF_DISCONNECTING:
+    break;
+  default:
+    break;
+  }
   
   return 0;
+}
+
+int hf_codan_process_line(char *l)
+{
+  fprintf(stderr,"Codan radio (state 0x%04x) says: %s\n",hf_state,l);
+  if (hf_state&HF_COMMANDISSUED) {
+    // Ignore echoed commands, and wait for ">" prompt
+    if (l[0]=='>') hf_state&=~HF_COMMANDISSUED;
+    else if (!strcmp(l,"CALL STARTED")) {
+      hf_state=HF_COMMANDISSUED|HF_CONNECTING;
+    }
+  }
+  return 0;
+}
+
+int hf_barrett_process_line(char *l)
+{
+  fprintf(stderr,"Barrett radio says: %s\n",l);
+  return 0;
+}
+
+
+char hf_response_line[1024];
+int hf_rl_len=0;
+
+int hf_codan_receive_bytes(unsigned char *bytes,int count)
+{ 
+  int i;
+  for(i=0;i<count;i++) {
+    if (bytes[i]==13||bytes[i]==10) {
+      hf_response_line[hf_rl_len]=0;
+      if (hf_rl_len) hf_codan_process_line(hf_response_line);
+      hf_rl_len=0;
+    } else {
+      if (hf_rl_len<1024) hf_response_line[hf_rl_len++]=bytes[i];
+    }
+  }
+  
+  return 0;
+}
+
+int hf_barrett_receive_bytes(unsigned char *bytes,int count)
+{
+  int i;
+  for(i=0;i<count;i++) {
+    if (bytes[i]==13||bytes[i]==10) {
+      hf_response_line[hf_rl_len]=0;
+      if (hf_rl_len) hf_barrett_process_line(hf_response_line);
+      hf_rl_len=0;
+    } else {
+      if (hf_rl_len<1024) hf_response_line[hf_rl_len++]=bytes[i];
+    }
+  }
+  return 0;
+}
+
+int message_sequence_number=0;
+
+int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
+{
+  // We can send upto 90 ALE encoded bytes.  ALE bytes are 6-bit, so we can send
+  // 22 groups of 3 bytes = 66 bytes raw and 88 encoded bytes.  We can use the first
+  // two bytes for fragmentation, since we would still like to support 256-byte
+  // messages.  This means we need upto 4 pieces for each message.
+  char message[8192];
+  char fragment[8192];
+
+  int i;
+
+  if (hf_state!=HF_ALELINK) return -1;
+  
+  fprintf(stderr,"Sending message of %d bytes via Codan HF\n",len);
+  for(i=0;i<len;i+=66) {
+
+    fragment[0]=0x30+(message_sequence_number&0x1f);
+    fragment[1]=0x30+(i/66);
+    // XXX - Add other bits here
+    
+    snprintf(message,8192,"amd %s\r\n",fragment);
+    write_all(serialfd,message,strlen(message));
+    // XXX - Wait for radio to respond
+  }
+  
+  return -1;
+}
+
+int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
+{
+  return -1;
 }

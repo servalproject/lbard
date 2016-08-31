@@ -438,3 +438,8 @@ int hf_read_configuration(char *filename);
 int hf_serviceloop(int fd);
 int uhf_serviceloop(int fd);
 int radio_get_type();
+int uhf_receive_bytes(unsigned char *bytes,int count);
+int hf_codan_receive_bytes(unsigned char *bytes,int count);
+int hf_barrett_receive_bytes(unsigned char *bytes,int count);
+int radio_send_message_codanhf(int serialfd,unsigned char *out, int len);
+int radio_send_message_barretthf(int serialfd,unsigned char *out, int len);

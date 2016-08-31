@@ -226,37 +226,6 @@ int ascii64_decode(char *in, unsigned char *out, int out_len,int radio_type)
   return out_ofs;
 }
 
-int message_sequence_number=0;
-
-int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
-{
-  // We can send upto 90 ALE encoded bytes.  ALE bytes are 6-bit, so we can send
-  // 22 groups of 3 bytes = 66 bytes raw and 88 encoded bytes.  We can use the first
-  // two bytes for fragmentation, since we would still like to support 256-byte
-  // messages.  This means we need upto 4 pieces for each message.
-  char message[8192];
-  char fragment[8192];
-
-  int i;
-
-  for(i=0;i<len;i+=66) {
-
-    fragment[0]=0x30+(message_sequence_number&0x1f);
-    fragment[1]=0x30+(i/66);
-    
-    snprintf(message,8192,"amd %s\n",fragment);
-    write_all(serialfd,message,strlen(message));
-    // XXX - Wait for radio to respond
-  }
-  
-  return -1;
-}
-
-int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
-{
-  return -1;
-}
-
 int radio_send_message_rfd900(int serialfd,unsigned char *out, int offset)
 {
   // Now escape any ! characters, and append !! to the end for the RFD900 CSMA
@@ -331,16 +300,6 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   return 0;
 }
 
-#define MAX_PACKET_SIZE 255
-
-// This need only be the maximum control header size + maximum packet size
-#define RADIO_RXBUFFER_SIZE 16+MAX_PACKET_SIZE
-unsigned char radio_rx_buffer[RADIO_RXBUFFER_SIZE];
-
-int radio_temperature=-1;
-int last_rx_rssi=-1;
-unsigned char *packet_data=NULL;
-
 int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
 {
   int i,j;
@@ -364,106 +323,9 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
     }
   }
 
-  for(i=0;i<count;i++) {
+  if (radio_get_type()==RADIO_RFD900) uhf_receive_bytes(bytes,count);
+  else if (radio_get_type()==RADIO_CODAN_HF) hf_codan_receive_bytes(bytes,count);
+  else if (radio_get_type()==RADIO_BARRETT_HF) hf_barrett_receive_bytes(bytes,count);
 
-    bcopy(&radio_rx_buffer[1],&radio_rx_buffer[0],RADIO_RXBUFFER_SIZE-1);
-    radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]=bytes[i];
-
-    if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0xdd)
-	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0xec)
-	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xce))
-      {
-	if (debug_gpio) {
-	  printf("GPIO ADC values = ");
-	  for(int j=0;j<6;j++) {
-	    printf("%s0x%02x",
-		    j?",":"",
-		    radio_rx_buffer[RADIO_RXBUFFER_SIZE-7+j]);
-	  }
-	  printf(".  Radio TX interval = %dms, TX seen = %d, TX us = %d\n",
-		  message_update_interval,
-		  radio_transmissions_seen,
-		  radio_transmissions_byus);
-	}
-      } else if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0x55)
-	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0x55)
-	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xaa))
-      {
-	// Found RFD900 CSMA envelope: packet follows after this
-	int packet_bytes=radio_rx_buffer[RADIO_RXBUFFER_SIZE-4];
-	radio_temperature=radio_rx_buffer[RADIO_RXBUFFER_SIZE-5];
-	last_rx_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-7];
-
-	int buffer_space=radio_rx_buffer[RADIO_RXBUFFER_SIZE-3];
-	buffer_space+=radio_rx_buffer[RADIO_RXBUFFER_SIZE-2]*256;	
-
-	if (packet_bytes>MAX_PACKET_SIZE) packet_bytes=0;
-	packet_data = &radio_rx_buffer[RADIO_RXBUFFER_SIZE-9-packet_bytes];
-	radio_transmissions_seen++;
-	
-	if (packet_bytes) {
-	  // Have whole packet
-	  if (debug_radio)
-	    message_buffer_length+=
-	      snprintf(&message_buffer[message_buffer_length],
-		       message_buffer_size-message_buffer_length,
-		       "Saw RFD900 CSMA Data frame: temp=%dC, last rx RSSI=%d, frame len=%d\n",
-		       radio_temperature, last_rx_rssi,
-		       packet_bytes);
-	  
-	  if (debug_radio) dump_bytes("packet before decode_rs",packet_data,packet_bytes);
-
-	  int rs_error_count = decode_rs_8(packet_data,NULL,0,
-					   FEC_MAX_BYTES-packet_bytes+FEC_LENGTH);
-
-	  if (debug_radio) dump_bytes("received packet",packet_data,packet_bytes);
-	  
-	  if (rs_error_count>=0&&rs_error_count<8) {
-	  if (0) printf("CHECKPOINT: %s:%d %s() error counts = %d for packet of %d bytes.\n",
-			 __FILE__,__LINE__,__FUNCTION__,
-			 rs_error_count,packet_bytes);
-
-	  saw_message(packet_data,packet_bytes-FEC_LENGTH,
-		      my_sid_hex,prefix,servald_server,credential);
-	  
-	  // attach presumed SID prefix
-	  if (debug_radio) {
-	    if (message_buffer_length) message_buffer_length--; // chop NL
-	    message_buffer_length+=
-	      snprintf(&message_buffer[message_buffer_length],
-		       message_buffer_size-message_buffer_length,
-		       ", FEC OK : sender SID=%02x%02x%02x%02x%02x%02x*\n",
-		       packet_data[0],packet_data[1],packet_data[2],
-		       packet_data[3],packet_data[4],packet_data[5]);
-	  }
-	  
-	  if (monitor_mode)
-	    {
-	      char sender_prefix[128];
-	      char monitor_log_buf[1024];
-	      bytes_to_prefix(&packet_data[0],sender_prefix);
-	      snprintf(monitor_log_buf,sizeof(monitor_log_buf),
-		       "CSMA Data frame: temp=%dC, last rx RSSI=%d,"
-		       " frame len=%d, FEC OK",
-		       radio_temperature, last_rx_rssi,
-		       packet_bytes);
-	      
-	      monitor_log(sender_prefix,NULL,monitor_log_buf);
-	    }
-	  } else {
-	    if (debug_radio) {
-	      if (message_buffer_length) message_buffer_length--; // chop NL
-	      message_buffer_length+=
-		snprintf(&message_buffer[message_buffer_length],
-			 message_buffer_size-message_buffer_length,
-			 ", FEC FAIL (rs_error_count=%d)\n",
-			 rs_error_count);
-	    }
-	  }
-	  
-	  packet_bytes=0;
-	}
-    }
-  }
   return 0;
 }
