@@ -71,16 +71,17 @@ int hf_read_configuration(char *filename)
 
   line[0]=0; fgets(line,1024,f);
   while(line[0]) {
-    if (sscanf(line,"%d%% duty cycle%n",&hf_callout_duty_cycle,&offset)==2) {
+    printf("line: %s\n",line);
+    if (sscanf(line,"%d%% duty cycle%n",&hf_callout_duty_cycle,&offset)==1) {
       if (hf_callout_duty_cycle<0||hf_callout_duty_cycle>100) {
 	fprintf(stderr,"Invalid call out duty cycle: Must be between 0%% and 100%%\n");
 	fprintf(stderr,"  Offending line: %s\n",line);
 	exit(-1);
-      } else {
-	fprintf(stderr,"Unknown directive in HF radio plan file.\n");
-	fprintf(stderr,"  Offending line: %s\n",line);
-	exit(-1);	
       }
+    } else {
+      fprintf(stderr,"Unknown directive in HF radio plan file.\n");
+      fprintf(stderr,"  Offending line: %s\n",line);
+      exit(-1);	
     }
     line[0]=0; fgets(line,1024,f);
   }
