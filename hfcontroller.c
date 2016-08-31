@@ -360,17 +360,18 @@ int hf_codan_process_line(char *l)
     hf_process_fragment(fragment);
   } else if (sscanf(l,"ALE-LINK: %d, %d, %d, %d/%d %d:%d",
 	     &channel,&caller,&callee,&day,&month,&hour,&minute)==7) {
-    fprintf(stderr,"ALE Link from %d -> %d on channel %d\n",
-	    caller,callee,channel);
     if (hf_link_partner>=-1)
       hf_stations[hf_link_partner].consecutive_connection_failures=0;
     ale_inprogress=0;
     if ((hf_state&0xff)!=HF_CONNECTING) {
       // We have a link, but without us asking for it.
       // So allow 10 seconds before trying to TX, else we start TXing immediately.
-      hf_next_packet_time=time(0)+10;
-    } else hf_next_packet_time=0;
-    
+      hf_next_packet_time=time(0)+8+random()%10;
+    } else hf_next_packet_time=time(0);
+    fprintf(stderr,"ALE Link from %d -> %d on channel %d, I will send a packet in %ld seconds\n",
+	    caller,callee,channel,
+    	    hf_next_packet_time-time(0));
+
     hf_state=HF_ALELINK;    
   } else if ((!strcmp(l,"ALE-LINK: FAILED"))||(!strcmp(l,"LINK: CLOSED"))) {
     if (hf_state==HF_ALELINK) {
@@ -450,9 +451,16 @@ int hf_barrett_process_line(char *l)
 	{ hf_link_partner=i;
 	  hf_stations[hf_link_partner].consecutive_connection_failures=0;
 	  break; }
+
+    if ((hf_state&0xff)!=HF_CONNECTING) {
+      // We have a link, but without us asking for it.
+      // So allow 10 seconds before trying to TX, else we start TXing immediately.
+      hf_next_packet_time=time(0)+8+random()%10;
+    } else hf_next_packet_time=time(0);
     
-    fprintf(stderr,"ALE Link established with %s (station #%d)\n",
-	    barrett_link_partner_string,hf_link_partner);
+    fprintf(stderr,"ALE Link established with %s (station #%d), I will send a packet in %ld seconds\n",
+	    barrett_link_partner_string,hf_link_partner,
+	    hf_next_packet_time-time(0));
     
     hf_state=HF_ALELINK;
   }
