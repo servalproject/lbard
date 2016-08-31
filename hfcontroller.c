@@ -95,15 +95,16 @@ int hf_read_configuration(char *filename)
   char line[1024];
   int offset;
   char station_name[1024];
-  int minutes,hours;
+  int minutes,hours,seconds;
 
   line[0]=0; fgets(line,1024,f);
   while(line[0]) {
     if ((line[0]=='#')||(line[0]<' ')) {
       // ignore blank lines and # comments
-    } else if (sscanf(line,"wait %d seconds%n",&minutes,&offset)==1) {
+    } else if (sscanf(line,"wait %d seconds%n",&seconds,&offset)==1) {
       // Wait this long before making first call
-      last_outbound_call=time(0)+minutes;
+      last_outbound_call=time(0)+seconds;
+      hf_next_packet_time=time(0)+seconds;
     } else if (sscanf(line,"%d%% duty cycle%n",&hf_callout_duty_cycle,&offset)==1) {
       if (hf_callout_duty_cycle<0||hf_callout_duty_cycle>100) {
 	fprintf(stderr,"Invalid call out duty cycle: Must be between 0%% and 100%%\n");
