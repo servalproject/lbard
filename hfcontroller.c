@@ -294,6 +294,39 @@ int ascii64_decode(char *in, unsigned char *out, int out_len,int radio_type)
   return out_ofs;
 }
 
+int pieces_seen[6]={0,0,0,0,0,0};
+unsigned char accummulated_packet[256];
+
+char *radio_type_name(int radio_type)
+{
+  switch (radio_type) {
+  case RADIO_CODAN_HF: return "Codan HF";
+  case RADIO_BARRETT_HF: return "Barrett HF";
+  default: return "Unknown";
+  }
+}
+
+int hf_process_fragment(char *fragment)
+{
+  int peer_radio=-1;
+  int sequence=-1;
+  if ((fragment[0]>='0')&&(fragment[0]<='7')) {
+    peer_radio=RADIO_CODAN_HF;
+    sequence=fragment[0]-'0';
+  }
+  if ((fragment[0]>='A')&&(fragment[0]<='H')) {
+    peer_radio=RADIO_BARRETT_HF;
+    sequence=fragment[0]-'A';
+  }
+  if (peer_radio<0) return -1;
+  int pieces=(fragment[1]-'0')/6;
+  int piece_number=(fragment[1]-'0')%6;
+  fprintf(stderr,"Received piece %d/%d of packet sequence #%d from a %s radio.\n",
+	  piece_number,pieces,sequence,radio_type_name(peer_radio));
+  
+  return 0;
+}
+
 int ale_inprogress=0;
 
 int hf_codan_process_line(char *l)
@@ -308,9 +341,16 @@ int hf_codan_process_line(char *l)
       hf_state=HF_COMMANDISSUED|HF_CONNECTING;
     }
   }
+
+  char fragment[8192];
+  
   if (!strcmp(l,"AMD CALL STARTED")) ale_inprogress=1;
   else if (!strcmp(l,"AMD CALL FINISHED")) ale_inprogress=0;
-  else if (sscanf(l,"ALE-LINK: %d, %d, %d, %d/%d %d:%d",
+  else if (sscanf(l,"AMD-CALL: %d, %d, %d, %d/%d %d:%d, \"%[^\"]\"",
+		  &channel,&caller,&callee,&day,&month,&hour,&minute,fragment)==7) {
+    // Saw a fragment
+    hf_process_fragment(fragment);
+  } else if (sscanf(l,"ALE-LINK: %d, %d, %d, %d/%d %d:%d",
 	     &channel,&caller,&callee,&day,&month,&hour,&minute)==7) {
     fprintf(stderr,"ALE Link from %d -> %d on channel %d\n",
 	    caller,callee,channel);
@@ -456,12 +496,17 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
 
   if (hf_state!=HF_ALELINK) return -1;
   if (ale_inprogress) return -1;
+
+  // How many pieces to send (1-6)
+  // This means we have 36 possible fragment indications, if we wish to imply the
+  // number of fragments in the fragment counter.
+  int pieces=len/43; if (len%43) pieces++;
   
   fprintf(stderr,"Sending message of %d bytes via Codan HF\n",len);
   for(i=0;i<len;i+=43) {
-
-    fragment[0]=0x30+(message_sequence_number&0x1f);
-    fragment[1]=0x30+(i/43);
+    // Indicate radio type in fragment header
+    fragment[0]=0x30+(message_sequence_number&0x07);
+    fragment[1]=0x30+(pieces*6)+(i/43);
     int frag_len=43; if (len-i<43) frag_len=len-i;
     hex_encode(&out[i],&fragment[2],frag_len,radio_get_type());
     
@@ -512,10 +557,16 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
   if (ale_inprogress) return -1;
   if (!barrett_link_partner_string[0]) return -1;
   
+  // How many pieces to send (1-6)
+  // This means we have 36 possible fragment indications, if we wish to imply the
+  // number of fragments in the fragment counter.
+  int pieces=len/43; if (len%43) pieces++;
+  
+  fprintf(stderr,"Sending message of %d bytes via Barratt HF\n",len);
   for(i=0;i<len;i+=43) {
-
-    fragment[0]=0x30+(message_sequence_number&0x1f);
-    fragment[1]=0x30+(i/43);
+    // Indicate radio type in fragment header
+    fragment[0]=0x41+(message_sequence_number&0x07);
+    fragment[1]=0x30+(pieces*6)+(i/43);
     int frag_len=43; if (len-i<43) frag_len=len-i;
     hex_encode(&out[i],&fragment[2],frag_len,radio_get_type());
 
