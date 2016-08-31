@@ -307,7 +307,12 @@ int hf_codan_process_line(char *l)
 int hf_barrett_process_line(char *l)
 {
   int link;
-  fprintf(stderr,"Barrett radio says: %s\n",l);
+
+  // Skip XON/XOFF character at start of line
+  while(l[0]&&l[0]<' ') l++;
+  while(l[0]&&(l[strlen(l)-1]<' ')) l[strlen(l)-1]=0;
+  
+  fprintf(stderr,"Barrett radio says (in state 0x%04x): %s\n",hf_state,l);
   if ((!strcmp(l,"AILTBL"))&&(hf_state==HF_ALELINK)) {
       if (hf_link_partner>-1) {
 	// Mark link partner as having been attempted now, so that we can
@@ -324,7 +329,7 @@ int hf_barrett_process_line(char *l)
 
       // We have to also wait for the > prompt again
       hf_state=HF_DISCONNECTED;
-  } else if ((sscanf(l,"AILTBL%d",&link))&&(hf_state!=HF_ALELINK)) {
+  } else if ((sscanf(l,"AILTBL%d",&link)==1)&&(hf_state!=HF_ALELINK)) {
     // Link established
     fprintf(stderr,"ALE Link established\n");
     hf_state=HF_ALELINK;
