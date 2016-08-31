@@ -28,6 +28,7 @@ station "103" 5 minutes every 2 hours
 #include <strings.h>
 #include <string.h>
 #include <assert.h>
+#include <ctype.h>
 
 #include "sync.h"
 #include "lbard.h"
@@ -225,19 +226,36 @@ int hf_serviceloop(int serialfd)
   return 0;
 }
 
-int tohex(int v)
+int nybltohexchar(int v)
 {
   if (v<10) return '0'+v;
   return 'A'+v-10;
 }
+
+int ishex(int c)
+{
+  if (c>='0'&&c<='9') return 1;
+  if (c>='A'&&c<='F') return 1;
+  if (c>='a'&&c<='f') return 1;
+  return 0;
+}
+
+int chartohexnybl(int c)
+{
+  if (c>='0'&&c<='9') return c-'0';
+  if (c>='A'&&c<='F') return c-'A'+10;
+  if (c>='a'&&c<='f') return c-'a'+10;
+  return 0;
+}
+
 
 int hex_encode(unsigned char *in, char *out, int in_len, int radio_type)
 {
   int out_ofs=0;
   int i;
   for(i=0;i<in_len;i++) {
-    out[out_ofs++]=tohex(in[i]>>4);
-    out[out_ofs++]=tohex(in[i]&0xf);
+    out[out_ofs++]=nybltohexchar(in[i]>>4);
+    out[out_ofs++]=nybltohexchar(in[i]&0xf);
   }
   out[out_ofs]=0;
   return out_ofs;
@@ -337,6 +355,19 @@ int hf_process_fragment(char *fragment)
   fprintf(stderr,"Piece number OK.\n");
   fprintf(stderr,"Received piece %d/%d of packet sequence #%d from a %s radio.\n",
 	  piece_number,pieces,sequence,radio_type_name(peer_radio));
+
+  int packet_offset=piece_number*43;
+  int i;
+  for(i=3;i<strlen(fragment);i+=2) {
+    if (ishex(fragment[i+0])&&ishex(fragment[i+1])) {
+      int v=(chartohexnybl(fragment[i+0])<<4)+chartohexnybl(fragment[i+1]);
+      accummulated_packet[packet_offset++]=v;
+    }
+  }
+  if (piece_number==(pieces-1)) {
+    // We have a terminal piece: so assume we have the whole packet.
+    // (the FEC will reject it if it is incorrectly assembled).
+  }
   
   return 0;
 }
