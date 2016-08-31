@@ -375,7 +375,12 @@ int hf_process_fragment(char *fragment)
     // (the FEC will reject it if it is incorrectly assembled).
     saw_packet(accummulated_packet,packet_offset,
 	       my_sid_hex,prefix,servald_server,credential);
-  }
+
+    // Now it is our turn to send
+    hf_next_packet_time=0;
+  } else
+    // Not end of packet, wait 8+1d8 seconds before we try transmitting.
+    hf_next_packet_time=time(0)+8+random()%8;
   
   return 0;
 }
