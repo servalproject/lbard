@@ -93,6 +93,9 @@ int hf_read_configuration(char *filename)
   while(line[0]) {
     if ((line[0]=='#')||(line[0]<' ')) {
       // ignore blank lines and # comments
+    } else if (sscanf(line,"wait %d seconds%n",&minutes,&offset)==1) {
+      // Wait this long before making first call
+      last_outbound_call=time(0)+minutes;
     } else if (sscanf(line,"%d%% duty cycle%n",&hf_callout_duty_cycle,&offset)==1) {
       if (hf_callout_duty_cycle<0||hf_callout_duty_cycle>100) {
 	fprintf(stderr,"Invalid call out duty cycle: Must be between 0%% and 100%%\n");
@@ -162,6 +165,10 @@ int hf_serviceloop(int serialfd)
   case HF_DISCONNECTED:
     // Currently disconnected. If the current time is later than the next scheduled
     // call-out time, then pick a hf station to call
+
+    // Wait until we are allowed our first call before doing so
+    if (time(0)<last_outbound_call) return 0;
+    
     if ((hf_station_count>0)&&(time(0)>=hf_next_call_time)) {
       int next_station = hf_next_station_to_call();
       if (next_station>-1) {

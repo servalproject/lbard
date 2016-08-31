@@ -66,6 +66,7 @@ int radio_set_type(int radio_type)
 {
   radio_mode=radio_type;
   radio_features=0;
+  
   return 0;
 }
 
