@@ -1,0 +1,5 @@
+10% duty cycle
+call every 5 minutes
+# For barrett radios, we use the 2-digit DDSS code for making connections,
+# and sending messages.
+station "0100" 5 minutes every 2 hours

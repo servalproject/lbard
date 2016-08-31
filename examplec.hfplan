@@ -1,0 +1,6 @@
+10% duty cycle
+call every 5 minutes
+# For Codan radios we use the 3-digit station numbers
+station "104" 5 minutes every 2 hours
+station "101" 5 minutes every 2 hours
+station "102" 5 minutes every 2 hours
