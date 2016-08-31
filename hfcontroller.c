@@ -92,6 +92,15 @@ int hf_read_configuration(char *filename)
 		      station_name,&minutes,&hours)==3) {
       fprintf(stderr,"Registering station '%s' (%d minutes every %d hours)\n",
 	      station_name,minutes,hours);
+      if (hf_station_count<MAX_HF_STATIONS) {
+	hf_stations[hf_station_count].name=strdup(station_name);
+	hf_stations[hf_station_count].link_time_target=minutes;
+	hf_stations[hf_station_count].line_time_interval=hours;
+	hf_station_count++;
+      } else {
+	fprintf(stderr,"Too many HF stations. Reduce list or increase MAX_HF_STATIONS.\n");
+	exit(-1);
+      }
     } else {
       fprintf(stderr,"Unknown directive in HF radio plan file.\n");
       fprintf(stderr,"  Offending line: %s\n",line);
@@ -102,6 +111,7 @@ int hf_read_configuration(char *filename)
   fclose(f);
 
   has_hf_plan=1;
+  fprintf(stderr,"Configured %d stations.\n",hf_station_count);
   
   return 0;
 }
