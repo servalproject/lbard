@@ -448,3 +448,5 @@ int saw_packet(unsigned char *packet_data,int packet_bytes,
 	       char *servald_server,char *credential);
 int radio_ready();
 int hf_radio_ready();
+int hf_radio_pause_for_turnaround();
+int hf_radio_send_now();

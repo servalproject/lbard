@@ -33,6 +33,9 @@ station "103" 5 minutes every 2 hours
 #include "sync.h"
 #include "lbard.h"
 
+#define HF_BARRETT_TURNAROUND_TIME (15+random()%10)
+#define HF_CODAN_TURNAROUND_TIME (10+random()%10)
+
 extern unsigned char my_sid[32];
 extern char *my_sid_hex;
 extern char *servald_server;
@@ -385,10 +388,10 @@ int hf_process_fragment(char *fragment)
 	       my_sid_hex,prefix,servald_server,credential);
 
     // Now it is our turn to send
-    hf_next_packet_time=0;
+    hf_radio_send_now();
   } else
     // Not end of packet, wait 8+1d8 seconds before we try transmitting.
-    hf_next_packet_time=time(0)+8+random()%8;
+    hf_radio_pause_for_turnaround();
   
   return 0;
 }
@@ -413,7 +416,7 @@ int hf_codan_process_line(char *l)
   if (!strcmp(l,"AMD CALL STARTED")) ale_inprogress=1;
   else if (!strcmp(l,"CALL DETECTED")) {
     // Incoming ALE message -- so don't try sending anything for a little while
-    hf_next_packet_time=time(0)+5+random()%10;
+    hf_radio_pause_for_turnaround();
   } else if (!strcmp(l,"AMD CALL FINISHED")) ale_inprogress=0;
   else if (sscanf(l,"AMD-CALL: %d, %d, %d, %d/%d %d:%d, \"%[^\"]\"",
 		  &channel,&caller,&callee,&day,&month,&hour,&minute,fragment)==8) {
@@ -427,8 +430,9 @@ int hf_codan_process_line(char *l)
     if ((hf_state&0xff)!=HF_CONNECTING) {
       // We have a link, but without us asking for it.
       // So allow 10 seconds before trying to TX, else we start TXing immediately.
-      hf_next_packet_time=time(0)+8+random()%10;
-    } else hf_next_packet_time=time(0);
+      hf_radio_pause_for_turnaround();
+    } else hf_radio_send_now();
+
     fprintf(stderr,"ALE Link from %d -> %d on channel %d, I will send a packet in %ld seconds\n",
 	    caller,callee,channel,
     	    hf_next_packet_time-time(0));
@@ -517,8 +521,9 @@ int hf_barrett_process_line(char *l)
 	&&((hf_state&0xff)!=HF_CALLREQUESTED)) {
       // We have a link, but without us asking for it.
       // So allow 10 seconds before trying to TX, else we start TXing immediately.
-      hf_next_packet_time=time(0)+8+random()%10;
-    } else hf_next_packet_time=time(0);
+    hf_radio_pause_for_turnaround();
+    } else hf_radio_send_now();
+
     
     fprintf(stderr,"ALE Link established with %s (station #%d), I will send a packet in %ld seconds\n",
 	    barrett_link_partner_string,hf_link_partner,
@@ -630,7 +635,7 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
     }    
   }
   
-  hf_next_packet_time=time(0)+8+random()%10;
+  hf_radio_pause_for_turnaround();
   message_sequence_number++;
   char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
   if (timestr[0]) timestr[strlen(timestr)-1]=0;
@@ -713,12 +718,42 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
     }    
 
   }
-  hf_next_packet_time=time(0)+8+random()%10;
+  hf_radio_pause_for_turnaround();
   message_sequence_number++;
   char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
   if (timestr[0]) timestr[strlen(timestr)-1]=0;
   fprintf(stderr,"  [%s] Finished sending packet, next in %ld seconds.\n",
 	  timestr,hf_next_packet_time-time(0));
   
+  return 0;
+}
+
+int hf_radio_send_now()
+{
+  hf_next_packet_time=0;
+  char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
+  if (timestr[0]) timestr[strlen(timestr)-1]=0;
+  fprintf(stderr,"  [%s] It is our turn to send.\n",timestr);
+  return 0;
+
+}
+
+int hf_radio_pause_for_turnaround()
+{
+  switch(radio_get_type()) {
+  case RADIO_BARRETT_HF:
+    hf_next_packet_time=time(0)+HF_BARRETT_TURNAROUND_TIME;
+    break;
+  case RADIO_CODAN_HF:
+    hf_next_packet_time=time(0)+HF_CODAN_TURNAROUND_TIME;
+    break;
+  default:
+    fprintf(stderr,"Unknown radio type 0x%04x\n",radio_get_type());
+    break;
+  }
+  char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
+  if (timestr[0]) timestr[strlen(timestr)-1]=0;
+  fprintf(stderr,"  [%s] Delaying %ld seconds to allow other side to send.\n",
+	  timestr,hf_next_packet_time-time(0));
   return 0;
 }
