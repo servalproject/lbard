@@ -125,6 +125,7 @@ int update_my_message(int serialfd,
 		      unsigned char *my_sid, int mtu,unsigned char *msg_out,
 		      char *servald_server,char *credential)
 {
+  fprintf(stderr,"Entering update_my_message()\n");
 #ifdef SYNC_BY_BAR
   /* There are a few possible options here.
      1. We have no peers. In which case, there is little point doing anything.

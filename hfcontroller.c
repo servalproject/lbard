@@ -33,7 +33,9 @@ station "103" 5 minutes every 2 hours
 #include "sync.h"
 #include "lbard.h"
 
-#define HF_BARRETT_TURNAROUND_TIME (15+random()%10)
+// Barrett turnaround is longer, because it must include the TX time for the last
+// sent fragment.
+#define HF_BARRETT_TURNAROUND_TIME (20+random()%10)
 #define HF_CODAN_TURNAROUND_TIME (10+random()%10)
 
 extern unsigned char my_sid[32];
@@ -76,10 +78,29 @@ int has_hf_plan=0;
 
 char barrett_link_partner_string[1024]="";
 
+time_t last_ready_report_time=0;
+
 int hf_radio_ready()
 {
-  if (time(0)>=hf_next_packet_time) return 1;
-  else return 0;
+  if (time(0)>=hf_next_packet_time) {
+    if (time(0)!=last_ready_report_time) {
+      char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
+      if (timestr[0]) timestr[strlen(timestr)-1]=0;
+      fprintf(stderr,"  [%s] HF Radio cleared to transmit.\n",
+	      timestr);
+    }
+    last_ready_report_time=time(0);
+    return 1;
+  } else {
+    if (time(0)!=last_ready_report_time) {
+      char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
+      if (timestr[0]) timestr[strlen(timestr)-1]=0;
+      fprintf(stderr,"  [%s] Wait %ld more seconds to allow other side to send.\n",
+	      timestr,hf_next_packet_time-time(0));
+    }
+    last_ready_report_time=time(0);
+    return 0;
+  }
 }
 
 int hf_next_station_to_call()
