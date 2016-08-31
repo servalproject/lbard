@@ -240,7 +240,7 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   bcopy(parity,&out[offset],FEC_LENGTH);
   offset+=FEC_LENGTH;
 
-  // dump_bytes("sent packet",buffer,offset);
+  // dump_bytes("sending packet",buffer,offset);
 
   
   assert( offset <= (FEC_MAX_BYTES+FEC_LENGTH) );

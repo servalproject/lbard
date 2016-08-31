@@ -443,6 +443,8 @@ int hf_codan_process_line(char *l)
 		  &channel,&caller,&callee,&day,&month,&hour,&minute,fragment)==8) {
     // Saw a fragment
     hf_process_fragment(fragment);
+    // We must also by definition be connected
+    hf_state=HF_ALELINK;
   } else if (sscanf(l,"ALE-LINK: %d, %d, %d, %d/%d %d:%d",
 	     &channel,&caller,&callee,&day,&month,&hour,&minute)==7) {
     if (hf_link_partner>=-1)
@@ -605,8 +607,14 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
   int i;
   time_t absolute_timeout=time(0)+90;
 
-  if (hf_state!=HF_ALELINK) return -1;
-  if (ale_inprogress) return -1;
+  if (hf_state!=HF_ALELINK) {
+    fprintf(stderr,"Not sending packet, because we don't think we are in an ALE link.\n");
+    return -1;
+  }
+  if (ale_inprogress) {
+    fprintf(stderr,"Not sending packet, because we think an ALE transaction is already occurring.\n");
+    return -1;
+  }
 
   // How many pieces to send (1-6)
   // This means we have 36 possible fragment indications, if we wish to imply the
