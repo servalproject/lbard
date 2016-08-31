@@ -433,23 +433,24 @@ int main(int argc, char **argv)
 	      // we reject it with a timeout error.
 	      http_process(&cliaddr,servald_server,credential,my_sid_hex,s);
 	    }
-	  }	
-      if (!monitor_mode)
-	update_my_message(serialfd,
-			  my_sid,
-			  LINK_MTU,msg_out,
-			  servald_server,credential);
-
-      // Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
-      last_message_update_time=gettime_ms()+(random()%message_update_interval_randomness);
-
-      // Update the state file to help debug things
-      // (but not too often, since it is SLOW on the MR3020s
-      //  XXX fix all those linear searches, and it will be fine!)
-      if (time(0)>last_status_time) {
-	last_status_time=time(0)+3;
-	status_dump();
-      }
+	  }
+	
+	if (!monitor_mode)
+	  update_my_message(serialfd,
+			    my_sid,
+			    LINK_MTU,msg_out,
+			    servald_server,credential);
+	
+	// Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
+	last_message_update_time=gettime_ms()+(random()%message_update_interval_randomness);
+	
+	// Update the state file to help debug things
+	// (but not too often, since it is SLOW on the MR3020s
+	//  XXX fix all those linear searches, and it will be fine!)
+	if (time(0)>last_status_time) {
+	  last_status_time=time(0)+3;
+	  status_dump();
+	}
     }
     if ((serial_errors>20)&&reboot_when_stuck) {
       // If we are unable to write to the serial port repeatedly for a while,
