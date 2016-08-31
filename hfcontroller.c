@@ -509,7 +509,6 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
     int not_accepted=1;
     while (not_accepted) {
       write_all(serialfd,message,strlen(message));
-      fprintf(stderr,"  [%s] %s",barrett_link_partner_string,message);
 
       // Any ALE send will take at least a second, so we can safely wait that long
       sleep(1);
@@ -521,13 +520,14 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
       if (strstr((const char *)buffer,"OK")
 	  &&(!strstr((const char *)buffer,"EV"))) {
 	not_accepted=0;
+	fprintf(stderr,"  Sent %s",message);
+
       } else not_accepted=1;
       
-    }
+    }    
 
-    
-    // XXX - Wait for radio to respond
   }
+  fprintf(stderr,"Finished sending packet.\n");
   
-  return -1;
+  return 0;
 }
