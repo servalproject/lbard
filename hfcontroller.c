@@ -550,6 +550,7 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
       unsigned char buffer[8192];
       int count = read_nonblock(serialfd,buffer,8192);
       if (count) dump_bytes("postsend",buffer,count);
+      if (count) hf_codan_receive_bytes(buffer,count);
       if (strstr((const char *)buffer,"AMD CALL FINISHED")) {
 	not_ready=0;
 	fprintf(stderr,"  Sent %s",message);
@@ -607,6 +608,7 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
     usleep(100000);
     count = read_nonblock(serialfd,buffer,8192);
     if (count) dump_bytes("presend",buffer,count);
+    if (count) hf_barrett_receive_bytes(buffer,count);
     
     snprintf(message,8192,"AXNMSG%s%02d%s\r\n",
 	     barrett_link_partner_string,
@@ -623,6 +625,7 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
       // being sent, and we have to wait and try again.
       count = read_nonblock(serialfd,buffer,8192);
       if (count) dump_bytes("postsend",buffer,count);
+      if (count) hf_barrett_receive_bytes(buffer,count);
       if (strstr((const char *)buffer,"OK")
 	  &&(!strstr((const char *)buffer,"EV"))) {
 	not_accepted=0;
