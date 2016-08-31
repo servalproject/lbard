@@ -145,6 +145,8 @@ int hf_link_partner=-1;
 
 time_t hf_next_call_time=0;
 
+time_t last_link_probe_time=0;
+
 int hf_serviceloop(int serialfd)
 {
   char cmd[1024];
@@ -162,8 +164,9 @@ int hf_serviceloop(int serialfd)
       int next_station = hf_next_station_to_call();
       if (next_station>-1) {
 	if (radio_get_type()==RADIO_CODAN_HF) {
-	  snprintf(cmd,1024,"alecall %s \"!SERVAL,1,0\"\r\n",
-		   hf_stations[next_station].name);
+	  snprintf(cmd,1024,"alecall %s \"!SERVAL,1,0,%s\"\r\n",
+		   hf_stations[next_station].name,
+		   radio_get_type()==RADIO_CODAN_HF?"CODAN":"BARRETT");
 	  write(serialfd,cmd,strlen(cmd));
 	  hf_link_partner=next_station;
 	  hf_state = HF_CALLREQUESTED|HF_COMMANDISSUED;
@@ -178,10 +181,22 @@ int hf_serviceloop(int serialfd)
     }
     break;
   case HF_CALLREQUESTED:
+    if (radio_get_type()==RADIO_BARRETT_HF) {
+      // Probe periodically with AILTBL to get link table, because the modem doesn't
+      // preemptively tell us when we get a link established
+      if (time(0)!=last_link_probe_time)  write(serialfd,"AILTBL\r\n",8);
+      else last_link_probe_time=time(0);
+    }
     break;
   case HF_CONNECTING:
     break;
   case HF_ALELINK:
+    if (radio_get_type()==RADIO_BARRETT_HF) {
+      // Probe periodically with AILTBL to get link table, because the modem doesn't
+      // preemptively tell us when we lose a link
+      if (time(0)!=last_link_probe_time)  write(serialfd,"AILTBL\r\n",8);
+      else last_link_probe_time=time(0);
+    }
     break;
   case HF_DISCONNECTING:
     break;
@@ -287,7 +302,30 @@ int hf_codan_process_line(char *l)
 
 int hf_barrett_process_line(char *l)
 {
+  int link;
   fprintf(stderr,"Barrett radio says: %s\n",l);
+  if ((!strcmp(l,"AILTBL"))&&(hf_state==HF_ALELINK)) {
+      if (hf_link_partner>-1) {
+	// Mark link partner as having been attempted now, so that we can
+	// round-robin better.  Basically we should probably mark the station we failed
+	// to connect to for re-attempt in a few minutes.
+	hf_stations[hf_link_partner].consecutive_connection_failures++;
+	fprintf(stderr,"Failed to connect to station #%d '%s' (%d times in a row)\n",
+		hf_link_partner,
+		hf_stations[hf_link_partner].name,
+		hf_stations[hf_link_partner].consecutive_connection_failures);
+      }
+      hf_link_partner=-1;
+      ale_inprogress=0;
+
+      // We have to also wait for the > prompt again
+      hf_state=HF_DISCONNECTED;
+  } else if ((sscanf(l,"AILTBL%d",&link))&&(hf_state!=HF_ALELINK)) {
+    // Link established
+    fprintf(stderr,"ALE Link established\n");
+    hf_state=HF_ALELINK;
+  }
+
   return 0;
 }
 
