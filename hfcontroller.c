@@ -282,6 +282,8 @@ int hf_codan_process_line(char *l)
 	     &channel,&caller,&callee,&day,&month,&hour,&minute)==7) {
     fprintf(stderr,"ALE Link from %d -> %d on channel %d\n",
 	    caller,callee,channel);
+    if (hf_link_partner>=-1)
+      hf_stations[hf_link_partner].consecutive_connection_failures=0;
     ale_inprogress=0;
     hf_state=HF_ALELINK;
   } else if ((!strcmp(l,"ALE-LINK: FAILED"))||(!strcmp(l,"LINK: CLOSED"))) {
@@ -343,7 +345,9 @@ int hf_barrett_process_line(char *l)
     hf_link_partner=-1;
     for(i=0;i<hf_station_count;i++)
       if (!strcmp(barrett_link_partner_string,hf_stations[i].name))
-	{ hf_link_partner=i; break; }
+	{ hf_link_partner=i;
+	  hf_stations[hf_link_partner].consecutive_connection_failures=0;
+	  break; }
     
     fprintf(stderr,"ALE Link established with %s (station #%d)\n",
 	    barrett_link_partner_string,hf_link_partner);
