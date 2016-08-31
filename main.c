@@ -434,15 +434,16 @@ int main(int argc, char **argv)
 	      http_process(&cliaddr,servald_server,credential,my_sid_hex,s);
 	    }
 	  }
-	
-	if (!monitor_mode)
+
+	if ((!monitor_mode)&&(radio_ready())) {
 	  update_my_message(serialfd,
 			    my_sid,
 			    LINK_MTU,msg_out,
 			    servald_server,credential);
 	
-	// Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
-	last_message_update_time=gettime_ms()+(random()%message_update_interval_randomness);
+	  // Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
+	  last_message_update_time=gettime_ms()+(random()%message_update_interval_randomness);
+	}
 	
 	// Update the state file to help debug things
 	// (but not too often, since it is SLOW on the MR3020s

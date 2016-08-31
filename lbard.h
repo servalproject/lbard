@@ -446,3 +446,5 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len);
 int saw_packet(unsigned char *packet_data,int packet_bytes,
 	       char *my_sid_hex,char *prefix,
 	       char *servald_server,char *credential);
+int radio_ready();
+int hf_radio_ready();

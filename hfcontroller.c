@@ -73,6 +73,12 @@ int has_hf_plan=0;
 
 char barrett_link_partner_string[1024]="";
 
+int hf_radio_ready()
+{
+  if (time(0)>=hf_next_packet_time) return 1;
+  else return 0;
+}
+
 int hf_next_station_to_call()
 {
   int i;
@@ -604,11 +610,13 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
 
       unsigned char buffer[8192];
       int count = read_nonblock(serialfd,buffer,8192);
-      if (count) dump_bytes("postsend",buffer,count);
+      // if (count) dump_bytes("postsend",buffer,count);
       if (count) hf_codan_receive_bytes(buffer,count);
       if (strstr((const char *)buffer,"AMD CALL FINISHED")) {
 	not_ready=0;
-	fprintf(stderr,"  Sent %s",message);
+	char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
+	if (timestr[0]) timestr[strlen(timestr)-1]=0;
+	fprintf(stderr,"  [%s] Sent %s",timestr,message);
 
       } else not_ready=1;
       if (strstr((const char *)buffer,"ERROR")) {
@@ -687,12 +695,14 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
       // Check that it gets accepted for TX. If we see EV04, then something is still
       // being sent, and we have to wait and try again.
       count = read_nonblock(serialfd,buffer,8192);
-      if (count) dump_bytes("postsend",buffer,count);
+      // if (count) dump_bytes("postsend",buffer,count);
       if (count) hf_barrett_receive_bytes(buffer,count);
       if (strstr((const char *)buffer,"OK")
 	  &&(!strstr((const char *)buffer,"EV"))) {
 	not_accepted=0;
-	fprintf(stderr,"  Sent %s",message);
+	char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
+	if (timestr[0]) timestr[strlen(timestr)-1]=0;
+	fprintf(stderr,"  [%s] Sent %s",timestr,message);
 
       } else not_accepted=1;
       

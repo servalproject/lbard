@@ -341,3 +341,9 @@ int saw_packet(unsigned char *packet_data,int packet_bytes,
   }
 
 }
+
+int radio_ready()
+{
+  if (radio_get_type()==RADIO_RFD900) return 1;
+  else return hf_radio_ready();
+}
