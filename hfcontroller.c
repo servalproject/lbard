@@ -33,6 +33,12 @@ station "103" 5 minutes every 2 hours
 #include "sync.h"
 #include "lbard.h"
 
+extern unsigned char my_sid[32];
+extern char *my_sid_hex;
+extern char *servald_server;
+extern char *credential;
+extern char *prefix;
+
 time_t hf_next_packet_time=0;
 time_t last_outbound_call=0;
 
@@ -367,6 +373,8 @@ int hf_process_fragment(char *fragment)
   if (piece_number==(pieces-1)) {
     // We have a terminal piece: so assume we have the whole packet.
     // (the FEC will reject it if it is incorrectly assembled).
+    saw_packet(accummulated_packet,packet_offset,
+	       my_sid_hex,prefix,servald_server,credential);
   }
   
   return 0;

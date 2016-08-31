@@ -207,57 +207,12 @@ int uhf_receive_bytes(unsigned char *bytes,int count)
 		       "Saw RFD900 CSMA Data frame: temp=%dC, last rx RSSI=%d, frame len=%d\n",
 		       radio_temperature, last_rx_rssi,
 		       packet_bytes);
-	  
-	  if (debug_radio) dump_bytes("packet before decode_rs",packet_data,packet_bytes);
-	  
-	  int rs_error_count = decode_rs_8(packet_data,NULL,0,
-					   FEC_MAX_BYTES-packet_bytes+FEC_LENGTH);
-	  
-	  if (debug_radio) dump_bytes("received packet",packet_data,packet_bytes);
-	  
-	  if (rs_error_count>=0&&rs_error_count<8) {
-	    if (0) printf("CHECKPOINT: %s:%d %s() error counts = %d for packet of %d bytes.\n",
-			  __FILE__,__LINE__,__FUNCTION__,
-			  rs_error_count,packet_bytes);
-	    
-	    saw_message(packet_data,packet_bytes-FEC_LENGTH,
-			my_sid_hex,prefix,servald_server,credential);
-	    
-	    // attach presumed SID prefix
-	    if (debug_radio) {
-	      if (message_buffer_length) message_buffer_length--; // chop NL
-	      message_buffer_length+=
-		snprintf(&message_buffer[message_buffer_length],
-			 message_buffer_size-message_buffer_length,
-			 ", FEC OK : sender SID=%02x%02x%02x%02x%02x%02x*\n",
-			 packet_data[0],packet_data[1],packet_data[2],
-			 packet_data[3],packet_data[4],packet_data[5]);
-	    }
-	    
-	    if (monitor_mode)
-	      {
-		char sender_prefix[128];
-		char monitor_log_buf[1024];
-		bytes_to_prefix(&packet_data[0],sender_prefix);
-		snprintf(monitor_log_buf,sizeof(monitor_log_buf),
-			 "CSMA Data frame: temp=%dC, last rx RSSI=%d,"
-			 " frame len=%d, FEC OK",
-			 radio_temperature, last_rx_rssi,
-			 packet_bytes);
-		
-		monitor_log(sender_prefix,NULL,monitor_log_buf);
-	      }
+
+	  if (saw_packet(packet_data,packet_bytes,my_sid_hex,prefix,
+			 servald_server,credential)) {
 	  } else {
-	    if (debug_radio) {
-	      if (message_buffer_length) message_buffer_length--; // chop NL
-	      message_buffer_length+=
-		snprintf(&message_buffer[message_buffer_length],
-			 message_buffer_size-message_buffer_length,
-			 ", FEC FAIL (rs_error_count=%d)\n",
-			 rs_error_count);
-	    }
 	  }
-	  
+	  	  
 	  packet_bytes=0;
 	}
       }

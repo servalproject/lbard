@@ -443,3 +443,6 @@ int hf_codan_receive_bytes(unsigned char *bytes,int count);
 int hf_barrett_receive_bytes(unsigned char *bytes,int count);
 int radio_send_message_codanhf(int serialfd,unsigned char *out, int len);
 int radio_send_message_barretthf(int serialfd,unsigned char *out, int len);
+int saw_packet(unsigned char *packet_data,int packet_bytes,
+	       char *my_sid_hex,char *prefix,
+	       char *servald_server,char *credential);
