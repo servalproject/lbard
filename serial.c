@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <time.h>
 #include <termios.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 
 #include "sync.h"
@@ -175,6 +176,8 @@ int serial_setup_port(int fd)
   unsigned clr[3]={21,13,10};
   int verhi,verlo;
 
+  unsigned char barrett_e0_string[6]={0x13,'E','0',13,10,0x11};
+  
   fprintf(stderr,"Attempting to detect radio type.\n");
   
   // Set serial port for HF radios
@@ -185,7 +188,7 @@ int serial_setup_port(int fd)
   write_all(fd,"VER\r",4); // ask Codan radio for version
   sleep(1); // give the radio the chance to respond
   count = read_nonblock(fd,buf,8192);  // read reply
-  // dump_bytes("modem response",buf,count);
+  dump_bytes("modem response",buf,count);
   // If we get a version string -> Codan HF
   if (sscanf((char *)buf,"VER\r\nCICS: V%d.%d",&verhi,&verlo)==2) {
     fprintf(stderr,"Codan HF Radio running CICS V%d.%d\n",
@@ -198,7 +201,13 @@ int serial_setup_port(int fd)
       radio_set_feature(RADIO_ALE_2G);
     radio_set_type(RADIO_CODAN_HF);
     return 0;
+  } else if (!memcmp(buf,barrett_e0_string,6)) {
+    fprintf(stderr,"Detected Barrett HF Radio.\n");
+    radio_set_type(RADIO_BARRETT_HF);
+    radio_set_feature(RADIO_ALE_2G);
+    return 0;
   }
+  
   // If we get a Barrett error message -> Barrett HF
   // Anything else -> assume RFD900
   
