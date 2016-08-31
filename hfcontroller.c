@@ -217,6 +217,38 @@ int hf_serviceloop(int serialfd)
   return 0;
 }
 
+int tohex(int v)
+{
+  if (v<10) return '0'+v;
+  return 'A'+v-10;
+}
+
+int hex_encode(unsigned char *in, char *out, int in_len, int radio_type)
+{
+  int out_ofs=0;
+  int i;
+  for(i=0;i<in_len;i++) {
+    out[out_ofs++]=tohex(in[i]>>4);
+    out[out_ofs++]=tohex(in[i]&0xf);
+  }
+  out[out_ofs]=0;
+  return out_ofs;
+}
+
+int hex_decode(char *in, unsigned char *out, int out_len,int radio_type)
+{
+  int i;
+  int out_count=0;
+
+  for(i=0;i<strlen(in);i+=2) {
+    int v=hextochar(in[i+0])<<4;
+    v|=hextochar(in[i+1]);
+    out[out_count++]=v;
+  }
+  out[out_count]=0;
+  return out_count;
+}
+
 int ascii64_encode(unsigned char *in, char *out, int in_len, int radio_type)
 {
   // ASCII-64 is use by HF ALE radio links. It is just ASCII codes 0x20 - 0x5f
@@ -319,6 +351,20 @@ int hf_barrett_process_line(char *l)
   while(l[0]&&(l[strlen(l)-1]<' ')) l[strlen(l)-1]=0;
   
   fprintf(stderr,"Barrett radio says (in state 0x%04x): %s\n",hf_state,l);
+
+  if ((!strcmp(l,"EV00"))&&(hf_state==HF_CALLREQUESTED)) {
+    // Syntax error in our request to call.
+    hf_state = HF_DISCONNECTED;
+    return 0;
+  }
+  if ((!strcmp(l,"E0"))&&(hf_state==HF_CALLREQUESTED)) {
+    // Syntax error in our request to call.
+    hf_state = HF_DISCONNECTED;
+    return 0;
+  }
+
+  char tmp[8192];
+  
   if ((!strcmp(l,"AILTBL"))&&(hf_state==HF_ALELINK)) {
       if (hf_link_partner>-1) {
 	// Mark link partner as having been attempted now, so that we can
@@ -335,10 +381,12 @@ int hf_barrett_process_line(char *l)
 
       // We have to also wait for the > prompt again
       hf_state=HF_DISCONNECTED;
-  } else if ((sscanf(l,"AILTBL%s",barrett_link_partner_string)==1)&&(hf_state!=HF_ALELINK)) {
+  } else if ((sscanf(l,"AILTBL%s",tmp)==1)&&(hf_state!=HF_ALELINK)) {
     // Link established
-    barrett_link_partner_string[0]=barrett_link_partner_string[4];
-    barrett_link_partner_string[1]=barrett_link_partner_string[5];
+    barrett_link_partner_string[0]=tmp[4];
+    barrett_link_partner_string[1]=tmp[5];
+    barrett_link_partner_string[2]=tmp[2];
+    barrett_link_partner_string[3]=tmp[3];
     barrett_link_partner_string[4]=0;
 
     int i;
@@ -410,12 +458,12 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
   if (ale_inprogress) return -1;
   
   fprintf(stderr,"Sending message of %d bytes via Codan HF\n",len);
-  for(i=0;i<len;i+=66) {
+  for(i=0;i<len;i+=43) {
 
     fragment[0]=0x30+(message_sequence_number&0x1f);
-    fragment[1]=0x30+(i/66);
-    int frag_len=66; if (len-i<66) frag_len=len-i;
-    ascii64_encode(&out[i],&fragment[2],frag_len,radio_get_type());
+    fragment[1]=0x30+(i/43);
+    int frag_len=43; if (len-i<43) frag_len=len-i;
+    hex_encode(&out[i],&fragment[2],frag_len,radio_get_type());
     
     snprintf(message,8192,"amd %s\r\n",fragment);
     write_all(serialfd,message,strlen(message));
@@ -440,18 +488,44 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
   if (ale_inprogress) return -1;
   if (!barrett_link_partner_string[0]) return -1;
   
-  fprintf(stderr,"Sending message of %d bytes via Barrett HF\n",len);
-  for(i=0;i<len;i+=66) {
+  for(i=0;i<len;i+=43) {
 
     fragment[0]=0x30+(message_sequence_number&0x1f);
-    fragment[1]=0x30+(i/66);
-    int frag_len=66; if (len-i<66) frag_len=len-i;
-    ascii64_encode(&out[i],&fragment[2],frag_len,radio_get_type());
+    fragment[1]=0x30+(i/43);
+    int frag_len=43; if (len-i<43) frag_len=len-i;
+    hex_encode(&out[i],&fragment[2],frag_len,radio_get_type());
+
+    unsigned char buffer[8192];
+    int count;
+
+    usleep(100000);
+    count = read_nonblock(serialfd,buffer,8192);
+    if (count) dump_bytes("presend",buffer,count);
     
     snprintf(message,8192,"AXNMSG%s%02d%s\r\n",
 	     barrett_link_partner_string,
 	     (int)strlen(fragment),fragment);
-    write_all(serialfd,message,strlen(message));
+
+    int not_accepted=1;
+    while (not_accepted) {
+      write_all(serialfd,message,strlen(message));
+      fprintf(stderr,"  [%s] %s",barrett_link_partner_string,message);
+
+      // Any ALE send will take at least a second, so we can safely wait that long
+      sleep(1);
+
+      // Check that it gets accepted for TX. If we see EV04, then something is still
+      // being sent, and we have to wait and try again.
+      count = read_nonblock(serialfd,buffer,8192);
+      if (count) dump_bytes("postsend",buffer,count);
+      if (strstr((const char *)buffer,"OK")
+	  &&(!strstr((const char *)buffer,"EV"))) {
+	not_accepted=0;
+      } else not_accepted=1;
+      
+    }
+
+    
     // XXX - Wait for radio to respond
   }
   
