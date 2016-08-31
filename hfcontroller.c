@@ -467,9 +467,30 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
     
     snprintf(message,8192,"amd %s\r\n",fragment);
     write_all(serialfd,message,strlen(message));
-    // XXX - Wait for radio to respond
+
+    int not_ready=1;
+    while (not_ready) {
+      usleep(100000);
+
+      unsigned char buffer[8192];
+      int count = read_nonblock(serialfd,buffer,8192);
+      if (count) dump_bytes("postsend",buffer,count);
+      if (strstr((const char *)buffer,"AMD CALL FINISHED")) {
+	not_ready=0;
+	fprintf(stderr,"  Sent %s",message);
+
+      } else not_ready=1;
+      if (strstr((const char *)buffer,"ERROR")) {
+	// Something went wrong
+	fprintf(stderr,"Error sending packet: Aborted.\n");
+	message_sequence_number++;
+	return -1;
+      }
+      
+    }    
   }
 
+  
   fprintf(stderr,"Finished sending packet.\n");
   message_sequence_number++;
   
