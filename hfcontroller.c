@@ -186,8 +186,12 @@ int hf_serviceloop(int serialfd)
   return 0;
 }
 
+int ale_inprogress=0;
+
 int hf_codan_process_line(char *l)
 {
+  int channel,caller,callee,day,month,hour,minute;
+  
   fprintf(stderr,"Codan radio (state 0x%04x) says: %s\n",hf_state,l);
   if (hf_state&HF_COMMANDISSUED) {
     // Ignore echoed commands, and wait for ">" prompt
@@ -196,7 +200,15 @@ int hf_codan_process_line(char *l)
       hf_state=HF_COMMANDISSUED|HF_CONNECTING;
     }
   }
-  if ((!strcmp(l,"ALE-LINK: FAILED"))||(!strcmp(l,"LINK: CLOSED"))) {
+  if (!strcmp(l,"AMD CALL STARTED")) ale_inprogress=1;
+  else if (!strcmp(l,"AMD CALL FINISHED")) ale_inprogress=0;
+  else if (sscanf(l,"ALE-LINK: %d, %d, %d, %d/%d %d:%d",
+	     &channel,&caller,&callee,&day,&month,&hour,&minute)==7) {
+    fprintf(stderr,"ALE Link from %d -> %d on channel %d\n",
+	    caller,callee,channel);
+    ale_inprogress=0;
+    hf_state=HF_ALELINK;
+  } else if ((!strcmp(l,"ALE-LINK: FAILED"))||(!strcmp(l,"LINK: CLOSED"))) {
     if (hf_state==HF_ALELINK) {
       // disconnected
     }
@@ -212,6 +224,7 @@ int hf_codan_process_line(char *l)
 		hf_stations[hf_link_partner].consecutive_connection_failures);
       }
       hf_link_partner=-1;
+      ale_inprogress=0;
 
       // We have to also wait for the > prompt again
       hf_state=HF_DISCONNECTED|HF_COMMANDISSUED;
@@ -276,6 +289,7 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
   int i;
 
   if (hf_state!=HF_ALELINK) return -1;
+  if (ale_inprogress) return -1;
   
   fprintf(stderr,"Sending message of %d bytes via Codan HF\n",len);
   for(i=0;i<len;i+=66) {
