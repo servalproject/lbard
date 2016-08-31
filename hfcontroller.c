@@ -186,6 +186,51 @@ int hf_serviceloop(int serialfd)
   return 0;
 }
 
+int ascii64_encode(unsigned char *in, char *out, int in_len, int radio_type)
+{
+  // ASCII-64 is use by HF ALE radio links. It is just ASCII codes 0x20 - 0x5f
+  // On Barrett, nothing is escaped.
+  // On Codan, spaces must be escaped
+
+  int out_ofs=0;
+  int i,j;
+  for(i=0;i<in_len;i+=3) {
+    // Encode 3 bytes using 4
+    unsigned char ob[4];
+    ob[0]=0x20+(in[i+0]&0x3f);
+    ob[1]=0x20+((in[i+0]&0xc0)>>6)+((in[i+1]&0x0f)<<2);
+    ob[2]=0x20+((in[i+1]&0xf0)>>4)+((in[i+2]&0x03)<<4);
+    ob[3]=0x20+((in[i+2]&0xfc)>>2);
+
+    for(j=0;j<4;j++) {
+      if ((ob[j]==' ')&&(radio_type==RADIO_CODAN_HF)) {
+	out[out_ofs++]='\\';
+      }
+      out[out_ofs++]=ob[j];
+    }
+  }
+  out[out_ofs]=0;
+  return 0;
+}
+
+int ascii64_decode(char *in, unsigned char *out, int out_len,int radio_type)
+{
+  int i;
+  int out_ofs=0;
+  for(i=0;in[i];i+=4) {
+    unsigned char ob[3];
+    ob[0]=(in[i+0]-0x20)&0x3f;
+    ob[0]|=(((in[i+1]-0x20)&0x03)<<6);
+    ob[1]=(((in[i+1]-0x20)&0x3c)>>2);
+    ob[1]|=(((in[i+2]-0x20)&0x0f)<<4);
+    ob[2]=(((in[i+2]-0x20)&0x30)>>4);
+    ob[2]|=(((in[i+3]-0x20)&0x3f)<<2);
+    out_ofs+=3;
+  }
+
+  return out_ofs;
+}
+
 int ale_inprogress=0;
 
 int hf_codan_process_line(char *l)
@@ -296,7 +341,8 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
 
     fragment[0]=0x30+(message_sequence_number&0x1f);
     fragment[1]=0x30+(i/66);
-    // XXX - Add other bits here
+    int frag_len=66; if (len-i<66) frag_len=len-i;
+    ascii64_encode(&out[i],&fragment[2],frag_len,radio_get_type());
     
     snprintf(message,8192,"amd %s\r\n",fragment);
     write_all(serialfd,message,strlen(message));
