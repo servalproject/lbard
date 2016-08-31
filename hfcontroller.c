@@ -168,7 +168,7 @@ int hf_serviceloop(int serialfd)
 	  hf_link_partner=next_station;
 	  hf_state = HF_CALLREQUESTED|HF_COMMANDISSUED;
 	} else {
-	  snprintf(cmd,1024,"AXCALL %s\r\n",hf_stations[next_station].name);
+	  snprintf(cmd,1024,"AXLINK%s\r\n",hf_stations[next_station].name);
 	  write(serialfd,cmd,strlen(cmd));
 	  hf_state = HF_CALLREQUESTED;
 	}
