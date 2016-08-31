@@ -361,7 +361,7 @@ int hf_codan_process_line(char *l)
   if (!strcmp(l,"AMD CALL STARTED")) ale_inprogress=1;
   else if (!strcmp(l,"AMD CALL FINISHED")) ale_inprogress=0;
   else if (sscanf(l,"AMD-CALL: %d, %d, %d, %d/%d %d:%d, \"%[^\"]\"",
-		  &channel,&caller,&callee,&day,&month,&hour,&minute,fragment)==7) {
+		  &channel,&caller,&callee,&day,&month,&hour,&minute,fragment)==8) {
     // Saw a fragment
     hf_process_fragment(fragment);
   } else if (sscanf(l,"ALE-LINK: %d, %d, %d, %d/%d %d:%d",
