@@ -185,6 +185,8 @@ int serial_setup_port(int fd)
   write_all(fd,clr,3); // Clear any partial command
   sleep(1); // give the radio the chance to respond
   ssize_t count = read_nonblock(fd,buf,8192);  // read and ignore any stuff
+  dump_bytes("modem response to clr string",buf,count);
+  fprintf(stderr,"Autodetecting Codan/Barrett HF Radio...\n");
   write_all(fd,"VER\r",4); // ask Codan radio for version
   sleep(1); // give the radio the chance to respond
   count = read_nonblock(fd,buf,8192);  // read reply
@@ -223,7 +225,7 @@ int serial_setup_port(int fd)
   
   // If we get a Barrett error message -> Barrett HF
   // Anything else -> assume RFD900
-  
+  fprintf(stderr,"No HF radio detected, assuming RFD900 series radio.\n");
   
   serial_setup_port_with_speed(fd,230400);
   radio_set_type(RADIO_RFD900);
