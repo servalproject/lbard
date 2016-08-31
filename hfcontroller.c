@@ -50,6 +50,11 @@ struct hf_station {
   // Time for next hangup, based on aiming for a call to have a maximum duration of
   // linke_time_target.
   time_t hangup_time;
+
+  // How many successive failures in connecting to this station
+  // (used to condition the selection of which station to talk to.  Basically if we
+  // keep failing to connect, then we will be more likely to try other stations first)
+  int consecutive_connection_failures;
 };
 
 #define MAX_HF_STATIONS 1024
@@ -103,6 +108,7 @@ int hf_read_configuration(char *filename)
       fprintf(stderr,"Registering station '%s' (%d minutes every %d hours)\n",
 	      station_name,minutes,hours);
       if (hf_station_count<MAX_HF_STATIONS) {
+	bzero(&hf_stations[hf_station_count],sizeof(struct hf_station));
 	hf_stations[hf_station_count].name=strdup(station_name);
 	hf_stations[hf_station_count].link_time_target=minutes;
 	hf_stations[hf_station_count].line_time_interval=hours;
@@ -190,6 +196,28 @@ int hf_codan_process_line(char *l)
       hf_state=HF_COMMANDISSUED|HF_CONNECTING;
     }
   }
+  if ((!strcmp(l,"ALE-LINK: FAILED"))||(!strcmp(l,"LINK: CLOSED"))) {
+    if (hf_state==HF_ALELINK) {
+      // disconnected
+    }
+    if ((!strcmp(l,"ALE-LINK: FAILED"))||(hf_state!=HF_CONNECTING)) {
+      if (hf_link_partner>-1) {
+	// Mark link partner as having been attempted now, so that we can
+	// round-robin better.  Basically we should probably mark the station we failed
+	// to connect to for re-attempt in a few minutes.
+	hf_stations[hf_link_partner].consecutive_connection_failures++;
+	fprintf(stderr,"Failed to connect to station #%d '%s' (%d times in a row)\n",
+		hf_link_partner,
+		hf_stations[hf_link_partner].name,
+		hf_stations[hf_link_partner].consecutive_connection_failures);
+      }
+      hf_link_partner=-1;
+
+      // We have to also wait for the > prompt again
+      hf_state=HF_DISCONNECTED|HF_COMMANDISSUED;
+    }
+  }
+  
   return 0;
 }
 
