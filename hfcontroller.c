@@ -184,8 +184,10 @@ int hf_serviceloop(int serialfd)
     if (radio_get_type()==RADIO_BARRETT_HF) {
       // Probe periodically with AILTBL to get link table, because the modem doesn't
       // preemptively tell us when we get a link established
-      if (time(0)!=last_link_probe_time)  write(serialfd,"AILTBL\r\n",8);
-      else last_link_probe_time=time(0);
+      if (time(0)!=last_link_probe_time)  {
+	write(serialfd,"AILTBL\r\n",8);
+	last_link_probe_time=time(0);
+      }
     }
     break;
   case HF_CONNECTING:
@@ -194,8 +196,10 @@ int hf_serviceloop(int serialfd)
     if (radio_get_type()==RADIO_BARRETT_HF) {
       // Probe periodically with AILTBL to get link table, because the modem doesn't
       // preemptively tell us when we lose a link
-      if (time(0)!=last_link_probe_time)  write(serialfd,"AILTBL\r\n",8);
-      else last_link_probe_time=time(0);
+      if (time(0)!=last_link_probe_time)  {
+	write(serialfd,"AILTBL\r\n",8);
+	last_link_probe_time=time(0);
+      }
     }
     break;
   case HF_DISCONNECTING:
