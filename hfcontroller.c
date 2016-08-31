@@ -403,7 +403,10 @@ int hf_codan_process_line(char *l)
   char fragment[8192];
   
   if (!strcmp(l,"AMD CALL STARTED")) ale_inprogress=1;
-  else if (!strcmp(l,"AMD CALL FINISHED")) ale_inprogress=0;
+  else if (!strcmp(l,"CALL DETECTED")) {
+    // Incoming ALE message -- so don't try sending anything for a little while
+    hf_next_packet_time=time(0)+5+random()%10;
+  } else if (!strcmp(l,"AMD CALL FINISHED")) ale_inprogress=0;
   else if (sscanf(l,"AMD-CALL: %d, %d, %d, %d/%d %d:%d, \"%[^\"]\"",
 		  &channel,&caller,&callee,&day,&month,&hour,&minute,fragment)==8) {
     // Saw a fragment
