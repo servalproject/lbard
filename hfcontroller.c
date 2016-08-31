@@ -357,17 +357,16 @@ int hf_process_fragment(char *fragment)
     peer_radio=RADIO_BARRETT_HF;
     sequence=fragment[0]-'A';
   }
-  fprintf(stderr,"Checking if message is a fragment.\n");
+  int piece_number=(fragment[1]-'0');
+  int pieces=(fragment[2]-'0');
+
+  fprintf(stderr,"Checking if message is a fragment (piece %d/%d, peer=%d).\n",
+	  piece_number,pieces,peer_radio);
   if (peer_radio<0) return -1;
-  fprintf(stderr,"Radio OK.\n");
-  int pieces=(fragment[1]-'0');
-  int piece_number=(fragment[2]-'0');
   if (pieces<1||pieces>6) return -1;
-  fprintf(stderr,"Pieces OK.\n");
   if (piece_number<0||piece_number>5) return -1;
-  fprintf(stderr,"Piece number OK.\n");
   fprintf(stderr,"Received piece %d/%d of packet sequence #%d from a %s radio.\n",
-	  piece_number,pieces,sequence,radio_type_name(peer_radio));
+	  piece_number+1,pieces,sequence,radio_type_name(peer_radio));
 
   int packet_offset=piece_number*43;
   int i;
@@ -380,6 +379,8 @@ int hf_process_fragment(char *fragment)
   if (piece_number==(pieces-1)) {
     // We have a terminal piece: so assume we have the whole packet.
     // (the FEC will reject it if it is incorrectly assembled).
+    fprintf(stderr,"Passing reassembled packet of %d bytes up for processing.\n",
+	    packet_offset);
     saw_packet(accummulated_packet,packet_offset,
 	       my_sid_hex,prefix,servald_server,credential);
 
@@ -628,12 +629,15 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
       
     }    
   }
-
   
-  fprintf(stderr,"Finished sending packet.\n");
+  hf_next_packet_time=time(0)+8+random()%10;
   message_sequence_number++;
+  char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
+  if (timestr[0]) timestr[strlen(timestr)-1]=0;
+  fprintf(stderr,"  [%s] Finished sending packet, next in %ld seconds.\n",
+	  timestr,hf_next_packet_time-time(0));
   
-  return -1;
+  return 0;
 }
 
 int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
@@ -709,8 +713,12 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
     }    
 
   }
-  fprintf(stderr,"Finished sending packet.\n");
+  hf_next_packet_time=time(0)+8+random()%10;
   message_sequence_number++;
+  char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
+  if (timestr[0]) timestr[strlen(timestr)-1]=0;
+  fprintf(stderr,"  [%s] Finished sending packet, next in %ld seconds.\n",
+	  timestr,hf_next_packet_time-time(0));
   
   return 0;
 }
