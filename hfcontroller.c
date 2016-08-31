@@ -326,9 +326,15 @@ int hf_process_fragment(char *fragment)
     peer_radio=RADIO_BARRETT_HF;
     sequence=fragment[0]-'A';
   }
+  fprintf(stderr,"Checking if message is a fragment.\n");
   if (peer_radio<0) return -1;
-  int pieces=(fragment[1]-'0')/6;
-  int piece_number=(fragment[1]-'0')%6;
+  fprintf(stderr,"Radio OK.\n");
+  int pieces=(fragment[1]-'0');
+  int piece_number=(fragment[2]-'0');
+  if (pieces<1||pieces>6) return -1;
+  fprintf(stderr,"Pieces OK.\n");
+  if (piece_number<0||piece_number>5) return -1;
+  fprintf(stderr,"Piece number OK.\n");
   fprintf(stderr,"Received piece %d/%d of packet sequence #%d from a %s radio.\n",
 	  piece_number,pieces,sequence,radio_type_name(peer_radio));
   
@@ -452,7 +458,8 @@ int hf_barrett_process_line(char *l)
 	  hf_stations[hf_link_partner].consecutive_connection_failures=0;
 	  break; }
 
-    if ((hf_state&0xff)!=HF_CONNECTING) {
+    if (((hf_state&0xff)!=HF_CONNECTING)
+	&&((hf_state&0xff)!=HF_CALLREQUESTED)) {
       // We have a link, but without us asking for it.
       // So allow 10 seconds before trying to TX, else we start TXing immediately.
       hf_next_packet_time=time(0)+8+random()%10;
@@ -528,9 +535,10 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len)
   for(i=0;i<len;i+=43) {
     // Indicate radio type in fragment header
     fragment[0]=0x30+(message_sequence_number&0x07);
-    fragment[1]=0x30+(pieces*6)+(i/43);
+    fragment[1]=0x30+(i/43);
+    fragment[2]=0x30+pieces;
     int frag_len=43; if (len-i<43) frag_len=len-i;
-    hex_encode(&out[i],&fragment[2],frag_len,radio_get_type());
+    hex_encode(&out[i],&fragment[3],frag_len,radio_get_type());
     
     snprintf(message,8192,"amd %s\r\n",fragment);
     write_all(serialfd,message,strlen(message));
@@ -588,9 +596,10 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len)
   for(i=0;i<len;i+=43) {
     // Indicate radio type in fragment header
     fragment[0]=0x41+(message_sequence_number&0x07);
-    fragment[1]=0x30+(pieces*6)+(i/43);
+    fragment[1]=0x30+(i/43);
+    fragment[2]=0x30+pieces;
     int frag_len=43; if (len-i<43) frag_len=len-i;
-    hex_encode(&out[i],&fragment[2],frag_len,radio_get_type());
+    hex_encode(&out[i],&fragment[3],frag_len,radio_get_type());
 
     unsigned char buffer[8192];
     int count;
