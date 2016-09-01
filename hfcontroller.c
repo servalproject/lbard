@@ -424,7 +424,7 @@ int hf_codan_process_line(char *l)
 {
   int channel,caller,callee,day,month,hour,minute;
   
-  fprintf(stderr,"Codan radio (state 0x%04x) says: %s\n",hf_state,l);
+  //  fprintf(stderr,"Codan radio (state 0x%04x) says: %s\n",hf_state,l);
   if (hf_state&HF_COMMANDISSUED) {
     // Ignore echoed commands, and wait for ">" prompt
     if (l[0]=='>') hf_state&=~HF_COMMANDISSUED;
@@ -494,7 +494,7 @@ int hf_barrett_process_line(char *l)
   while(l[0]&&l[0]<' ') l++;
   while(l[0]&&(l[strlen(l)-1]<' ')) l[strlen(l)-1]=0;
   
-  fprintf(stderr,"Barrett radio says (in state 0x%04x): %s\n",hf_state,l);
+  //  fprintf(stderr,"Barrett radio says (in state 0x%04x): %s\n",hf_state,l);
 
   if ((!strcmp(l,"EV00"))&&(hf_state==HF_CALLREQUESTED)) {
     // Syntax error in our request to call.
@@ -508,6 +508,11 @@ int hf_barrett_process_line(char *l)
   }
 
   char tmp[8192];
+
+  if (sscanf(l,"AIAMDM%s",tmp)==1) {
+    fprintf(stderr,"Barrett radio saw ALE AMD message '%s'\n",&tmp[6]);
+    hf_process_fragment(&tmp[6]);
+  }
   
   if ((!strcmp(l,"AILTBL"))&&(hf_state==HF_ALELINK)) {
       if (hf_link_partner>-1) {
