@@ -38,6 +38,21 @@ station "103" 5 minutes every 2 hours
 #define HF_BARRETT_TURNAROUND_TIME (20+random()%10)
 #define HF_CODAN_TURNAROUND_TIME (10+random()%10)
 
+#define HF_DISCONNECTED 1
+#define HF_CALLREQUESTED 2
+#define HF_CONNECTING 3
+#define HF_ALELINK 4
+#define HF_DISCONNECTING 5
+#define HF_ALESENDING 6
+#define HF_COMMANDISSUED 0x100
+
+int hf_state=HF_DISCONNECTED;
+int hf_link_partner=-1;
+
+time_t hf_next_call_time=0;
+
+time_t last_link_probe_time=0;
+
 extern unsigned char my_sid[32];
 extern char *my_sid_hex;
 extern char *servald_server;
@@ -86,8 +101,9 @@ int hf_radio_ready()
     if (time(0)!=last_ready_report_time) {
       char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
       if (timestr[0]) timestr[strlen(timestr)-1]=0;
-      fprintf(stderr,"  [%s] HF Radio cleared to transmit.\n",
-	      timestr);
+      if (hf_state==HF_ALELINK)
+	fprintf(stderr,"  [%s] HF Radio cleared to transmit.\n",
+		timestr);
     }
     last_ready_report_time=time(0);
     return 1;
@@ -175,21 +191,6 @@ int hf_read_configuration(char *filename)
   
   return 0;
 }
-
-#define HF_DISCONNECTED 1
-#define HF_CALLREQUESTED 2
-#define HF_CONNECTING 3
-#define HF_ALELINK 4
-#define HF_DISCONNECTING 5
-#define HF_ALESENDING 6
-#define HF_COMMANDISSUED 0x100
-
-int hf_state=HF_DISCONNECTED;
-int hf_link_partner=-1;
-
-time_t hf_next_call_time=0;
-
-time_t last_link_probe_time=0;
 
 int hf_serviceloop(int serialfd)
 {
