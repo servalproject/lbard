@@ -24,6 +24,7 @@
 
 #include "sync.h"
 #include "lbard.h"
+#include "serial.h"
 
 
 // From os.c in serval-dna
@@ -223,5 +224,130 @@ int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
     }
   }    
   
+  return 0;
+}
+
+struct packet_data {
+  int packet_number;
+  int packet_len;
+  int gap_us;
+  int pulse_width_us;
+  int pulse_frequency;
+  int wifiup_hold_time_us;
+};
+
+int packet_number=0;
+int build_packet(unsigned char *packet,
+		 int gap_us,int packet_len,int pulse_width_us,
+		 int pulse_frequency,int wifiup_hold_time_us)
+{
+
+  // Make packet empty
+  bzero(packet,packet_len);
+
+  // Copy packet information
+  struct packet_data p;
+  p.packet_number=++packet_number;
+  p.packet_len=packet_len;
+  p.gap_us=gap_us;
+  p.pulse_width_us=pulse_width_us;
+  p.pulse_frequency=pulse_frequency;
+  p.wifiup_hold_time_us=wifiup_hold_time_us;
+  bcopy(&p,packet,sizeof(p));
+  
+  return 0;
+}
+
+int send_packet(int sock,unsigned char *packet,int len)
+{
+  struct sockaddr_in addr;
+  bzero(&addr, sizeof(addr)); 
+  addr.sin_family = AF_INET; 
+  addr.sin_port = htons(19002);
+
+  sendto(sock,packet,len,
+	 MSG_DONTROUTE|MSG_DONTWAIT
+#ifdef MSG_NOSIGNAL
+	 |MSG_NOSIGNAL
+#endif	       
+	 ,(const struct sockaddr *)&addr,sizeof(addr));
+  return 0;
+}
+
+int run_energy_experiment(int sock,
+			  int gap_us,int packet_len,int pulse_width_us,
+			  int pulse_frequency,int wifiup_hold_time_us)
+{
+  // First, send a chain of packets until we get a reply acknowledging that
+  // the required mode has been selected.
+  unsigned char packet[1500];
+
+  build_packet(packet,gap_us,packet_len,pulse_width_us,
+	       pulse_frequency,wifiup_hold_time_us);
+  send_packet(sock,packet,packet_len);
+
+
+  // Then wait 3 seconds to ensure that we everything is flushed through
+
+
+  // Then run experiment:
+  // Send 100 packet pairs, with enough delay between them to ensure wifi has
+  // switched off again, and keep track of the number of replies we receive, and
+  // then log the result of the experiment.
+
+
+  return 0;
+}
+
+
+int energy_experiment_master()
+{
+  int sock=socket(AF_INET, SOCK_DGRAM, 0);
+  if (sock==-1) {
+    perror("Could not create UDP socket");
+    exit(-1);
+  }
+  
+  struct sockaddr_in addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(19001);
+  bind(sock, (struct sockaddr *) &addr, sizeof(addr));
+  set_nonblock(sock);
+  
+  // Enable broadcast
+  int one=1;
+  int r=setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &one, sizeof(one));
+  if (r) {
+    fprintf(stderr,"WARNING: setsockopt(): Could not enable SO_BROADCAST\n");
+  }
+
+  /*
+    For this experiment we vary the gap between sending pairs of packets,
+    and keep track of the percentage of replies in each case.  The client side
+    will be using the energy sampler program to control its wifi interface.
+    We will also send it the parameters it should be using.
+  */
+  int gap_us;
+  int packet_len;
+  int pulse_width_us;
+  int pulse_frequency;
+  int wifiup_hold_time_us;
+  for(gap_us=500;gap_us<10000000;gap_us*=1.5) {
+    for(packet_len=100;packet_len<=1500;packet_len+=100) {
+      for(pulse_width_us=500;pulse_width_us<100000;pulse_width_us*=1.5) {
+	for(pulse_frequency=1;(pulse_frequency*pulse_width_us)<=900000;
+	    pulse_frequency+=5) {
+	  for(wifiup_hold_time_us=1000;wifiup_hold_time_us<5000000;
+	      wifiup_hold_time_us*=1.5) {
+	    run_energy_experiment(sock,
+				  gap_us,packet_len,pulse_width_us,
+				  pulse_frequency,wifiup_hold_time_us);
+	  }
+	}
+      }
+    }
+  }
   return 0;
 }

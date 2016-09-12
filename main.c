@@ -143,6 +143,9 @@ int main(int argc, char **argv)
   }
   
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
+  if ((argc==2)&&(!strcasecmp(argv[1],"energysamplemaster"))) {
+    return energy_experiment_master();
+  }
   if ((argc==7)&&(!strcasecmp(argv[1],"energysample"))) {
     char *port=argv[2];
     float pulse_width_ms=atof(argv[3]);
