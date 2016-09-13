@@ -217,11 +217,13 @@ int energy_experiment(char *port, char *interface_name)
   char nul[1]={0};
   while(1) {
     {
+      printf("loop...\n");
+      
       struct sockaddr_storage src_addr;
       socklen_t src_addr_len=sizeof(src_addr);
       unsigned char rx[9000];
-      int r=recvfrom(sock,rx,9000,0,(struct sockaddr *)&src_addr,&src_addr_len);      
-      if (r>0) {
+      int r;
+      while((r=recvfrom(sock,rx,9000,0,(struct sockaddr *)&src_addr,&src_addr_len))>0) {
 	// Reflect packet back to sender
 	sendto(sock,rx,r,0,(struct sockaddr *)&src_addr,src_addr_len);
 	
@@ -271,7 +273,9 @@ int energy_experiment(char *port, char *interface_name)
 	// if we get woken up fractionally late.
 	// Watcharachai will need to use an oscilliscope to see how adequate this is.
 	// If there is too much jitter, then we will need to get more sophisticated.
-	if (next_time-now>10) usleep(next_time-now-10);
+	long long delay=next_time-now-10;
+	printf("Snoozing for %lldusec\n",delay);
+	if (delay>10) usleep(delay);
       }
       char buf[1024];
       ssize_t bytes = read_nonblock(serialfd, buf, sizeof buf);
@@ -410,9 +414,10 @@ int run_energy_experiment(int sock,
       int r=recvfrom(sock,rx,9000,0,NULL,0);
       if (r>0) {
 	struct experiment_data *pd=(void *)&rx[0];
-	if (pd->key==key) {
-	  printf("Saw candidate reply, packet_number=%lld (expecting %lld or %lld)\n",
-		 pd->packet_number,first_id,second_id);
+	if (0)
+	  printf("Saw candidate reply, key=0x%08x, packet_number=%lld (expecting %lld or %lld)\n",
+		 pd->key,pd->packet_number,first_id,second_id);
+	if (pd->key==key2) {
 	  if (pd->packet_number==second_id) {
 	    received_replies_to_second_packets++;
 	    printf("  received reply to data packet.\n");
