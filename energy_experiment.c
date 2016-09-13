@@ -217,9 +217,14 @@ int energy_experiment(char *port, char *interface_name)
   char nul[1]={0};
   while(1) {
     {
+      struct sockaddr_storage src_addr;
+      socklen_t src_addr_len=sizeof(src_addr);
       unsigned char rx[9000];
-      int r=recvfrom(sock,rx,9000,0,NULL,0);
+      int r=recvfrom(sock,rx,9000,0,(struct sockaddr *)&src_addr,&src_addr_len);      
       if (r>0) {
+	// Reflect packet back to sender
+	sendto(sock,rx,r,0,(struct sockaddr *)&src_addr,src_addr_len);
+	
 	struct experiment_data *pd=(void *)&rx[0];
 	printf("Saw packet with key 0x%08x : Updating experimental settings\n",
 	       pd->key);
