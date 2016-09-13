@@ -404,7 +404,9 @@ int energy_experiment_master(char *broadcast_address)
   int wifiup_hold_time_us;
   for(gap_us=500;gap_us<10000000;gap_us*=1.5) {
     for(packet_len=100;packet_len<=1500;packet_len+=100) {
-      for(pulse_width_us=500;pulse_width_us<100000;pulse_width_us*=1.5) {
+      int pulse_width_index=0;
+      for(pulse_width_us=pulse_widths[pulse_width_index];
+	  pulse_widths[pulse_width_index];pulse_width_index++) {
 	for(pulse_frequency=1;(pulse_frequency*pulse_width_us)<=900000;
 	    pulse_frequency+=5) {
 	  for(wifiup_hold_time_us=1000;wifiup_hold_time_us<5000000;
