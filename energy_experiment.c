@@ -164,6 +164,10 @@ int setup_experiment(struct experiment_data *exp)
     }
     return -1;
   }
+
+  fprintf(stderr,"  serial port speed = %d\n",exp->speed);
+
+  
   exp->speed=speed;
   return 0;
 }
@@ -198,88 +202,87 @@ int energy_experiment(char *port, char *interface_name)
   }
   fprintf(stderr,"Serial port open as fd %d\n",serialfd);
 
-  int pulse_interval_usec=999999999;
+  // Start with reasonable interval, so that we can receive UDP from master in
+  // reasonable time.
+  int pulse_interval_usec=100000;
   
-  while (1) {
-
-    // Start with wifi down
-    int wifi_down=1;
-    wifi_disable();
-    long long wifi_down_time=0;
+  // Start with wifi down
+  int wifi_down=1;
+  wifi_disable();
+  long long wifi_down_time=0;
+  
+  int missed_pulses=0,sent_pulses=0;
+  long long next_time=gettime_us();
+  long long report_time=gettime_us()+1000;
+  char nul[1]={0};
+  while(1) {
+    {
+      unsigned char rx[9000];
+      int r=recvfrom(sock,rx,9000,0,NULL,0);
+      if (r>0) {
+	struct experiment_data *pd=(void *)&rx[0];
+	printf("Saw packet with key 0x%08x : Updating experimental settings\n",
+	       pd->key);
+	exp=*pd;
+	experiment_invalid=setup_experiment(&exp);
+	if (!experiment_invalid)
+	  if (serial_setup_port_with_speed(serialfd,exp.speed))
+	    {
+	      fprintf(stderr,"Failed to setup serial port. Exiting.\n");
+	      exit(-1);
+	    }
+	pulse_interval_usec=1000000.0/exp.pulse_frequency;
+	fprintf(stderr,"Sending a pulse every %dusec to achieve %dHz\n",
+		pulse_interval_usec,exp.pulse_frequency);
+	
+      }
+    }
     
-    int missed_pulses=0,sent_pulses=0;
-    long long next_time=gettime_us();
-    long long report_time=gettime_us()+1000;
-    char nul[1]={0};
-    while(1) {
-      {
-	unsigned char rx[9000];
-	int r=recvfrom(sock,rx,9000,0,NULL,0);
-	if (r>0) {
-	  struct experiment_data *pd=(void *)&rx[0];
-	  printf("Saw packet with key 0x%08x : Updating experimental settings\n",
-		 pd->key);
-	  exp=*pd;
-	  experiment_invalid=setup_experiment(&exp);
-	  if (!experiment_invalid)
-	    if (serial_setup_port_with_speed(serialfd,exp.speed))
-	      {
-		fprintf(stderr,"Failed to setup serial port. Exiting.\n");
-		exit(-1);
-	      }
-	  pulse_interval_usec=1000000.0/exp.pulse_frequency;
-	  fprintf(stderr,"Sending a pulse every %dusec to achieve %dHz\n",
-		  pulse_interval_usec,exp.pulse_frequency);
-
-	}
-      }
-      
-      long long now=gettime_us();
-      if (now>report_time) {
-	report_time+=1000000;
-	if ((sent_pulses != exp.pulse_frequency)||missed_pulses)
-	  fprintf(stderr,"Sent %d pulses in the past second, and missed %d deadlines (target is %d).\n",
-		  sent_pulses,missed_pulses,exp.pulse_frequency);
-	sent_pulses=0;
-	missed_pulses=0;
-      }
-      if (now>=next_time) {
-	// Next pulse is due, so write a single character of 0x00 to the serial port so
-	// that the TX line is held low for 10 serial ticks (or should the byte be 0xff?)
-	// which will cause the energy sampler to be powered for that period of time.
-	write(serialfd, nul, 1);
-	sent_pulses++;
-	// Work out next time to send a character to turn on the energy sampler.
-	// Don't worry about pulses that we can't send because we lost time somewhere,
-	// just keep track of how many so that we can report this to the user.
+    long long now=gettime_us();
+    if (now>report_time) {
+      report_time+=1000000;
+      if ((sent_pulses != exp.pulse_frequency)||missed_pulses)
+	fprintf(stderr,"Sent %d pulses in the past second, and missed %d deadlines (target is %d).\n",
+		sent_pulses,missed_pulses,exp.pulse_frequency);
+      sent_pulses=0;
+      missed_pulses=0;
+    }
+    if (now>=next_time) {
+      // Next pulse is due, so write a single character of 0x00 to the serial port so
+      // that the TX line is held low for 10 serial ticks (or should the byte be 0xff?)
+      // which will cause the energy sampler to be powered for that period of time.
+      write(serialfd, nul, 1);
+      sent_pulses++;
+      // Work out next time to send a character to turn on the energy sampler.
+      // Don't worry about pulses that we can't send because we lost time somewhere,
+      // just keep track of how many so that we can report this to the user.
+      next_time+=pulse_interval_usec;
+      while(next_time<now) {
 	next_time+=pulse_interval_usec;
-	while(next_time<now) {
-	  next_time+=pulse_interval_usec;
-	  missed_pulses++;
-	}
-      } else {
-	// Wait for a little while if we have a while before the next time we need
-	// to send a character. But busy wait the last 10usec, so that it doesn't matter
-	// if we get woken up fractionally late.
-	// Watcharachai will need to use an oscilliscope to see how adequate this is.
-	// If there is too much jitter, then we will need to get more sophisticated.
-	if (next_time-now>10) usleep(next_time-now-10);
+	missed_pulses++;
       }
-      char buf[1024];
-      ssize_t bytes = read_nonblock(serialfd, buf, sizeof buf);
-      if (bytes>0) {
-	// Work out when to take wifi low
-	wifi_down_time=gettime_us()+exp.wifiup_hold_time_us;
-	fprintf(stderr,"Saw energy on channel @ %lldms, holding Wi-Fi for %lld more usec\n",
-		gettime_ms(),wifi_down_time-gettime_us());
-	if (wifi_down) { wifi_enable(); wifi_down=0; }
-      } else {
-	if (now>wifi_down_time) {
-	  if (wifi_down==0) wifi_disable();
-	  wifi_down=1;
-	}
+    } else {
+      // Wait for a little while if we have a while before the next time we need
+      // to send a character. But busy wait the last 10usec, so that it doesn't matter
+      // if we get woken up fractionally late.
+      // Watcharachai will need to use an oscilliscope to see how adequate this is.
+      // If there is too much jitter, then we will need to get more sophisticated.
+      if (next_time-now>10) usleep(next_time-now-10);
+    }
+    char buf[1024];
+    ssize_t bytes = read_nonblock(serialfd, buf, sizeof buf);
+    if (bytes>0) {
+      // Work out when to take wifi low
+      wifi_down_time=gettime_us()+exp.wifiup_hold_time_us;
+      fprintf(stderr,"Saw energy on channel @ %lldms, holding Wi-Fi for %lld more usec\n",
+	      gettime_ms(),wifi_down_time-gettime_us());
+      if (wifi_down) { wifi_enable(); wifi_down=0; }
+    } else {
+      if (now>wifi_down_time) {
+	if (wifi_down==0) wifi_disable();
+	wifi_down=1;
       }
-    }    
+    }
 
   }
   return 0;
@@ -309,12 +312,13 @@ int build_packet(unsigned char *packet,
   return 0;
 }
 
-int send_packet(int sock,unsigned char *packet,int len)
+int send_packet(int sock,unsigned char *packet,int len, char *broadcast_address)
 {
   struct sockaddr_in addr;
   bzero(&addr, sizeof(addr)); 
   addr.sin_family = AF_INET; 
   addr.sin_port = htons(19002);
+  addr.sin_addr.s_addr = inet_addr(broadcast_address);
 
   sendto(sock,packet,len,
 	 MSG_DONTROUTE|MSG_DONTWAIT
@@ -327,7 +331,8 @@ int send_packet(int sock,unsigned char *packet,int len)
 
 int run_energy_experiment(int sock,
 			  int gap_us,int packet_len,int pulse_width_us,
-			  int pulse_frequency,int wifiup_hold_time_us)
+			  int pulse_frequency,int wifiup_hold_time_us,
+			  char *broadcast_address)
 {
   // First, send a chain of packets until we get a reply acknowledging that
   // the required mode has been selected.
@@ -338,7 +343,7 @@ int run_energy_experiment(int sock,
   build_packet(packet,gap_us,packet_len,pulse_width_us,
 	       pulse_frequency,wifiup_hold_time_us,
 	       key);
-  send_packet(sock,packet,packet_len);
+  send_packet(sock,packet,packet_len,broadcast_address);
   printf("Sent packet with key 0x%08x\n",key);
 
   // Then wait 3 seconds to ensure that we everything is flushed through
@@ -363,7 +368,7 @@ int run_energy_experiment(int sock,
 }
 
 
-int energy_experiment_master()
+int energy_experiment_master(char *broadcast_address)
 {
   int sock=socket(AF_INET, SOCK_DGRAM, 0);
   if (sock==-1) {
@@ -406,7 +411,8 @@ int energy_experiment_master()
 	      wifiup_hold_time_us*=1.5) {
 	    run_energy_experiment(sock,
 				  gap_us,packet_len,pulse_width_us,
-				  pulse_frequency,wifiup_hold_time_us);
+				  pulse_frequency,wifiup_hold_time_us,
+				  broadcast_address);
 	  }
 	}
       }
