@@ -168,17 +168,27 @@ int setup_experiment(struct experiment_data *exp)
   return 0;
 }
 
-int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
-		      int wifiup_hold_time_ms, char *interface_name)
+int energy_experiment(char *port, char *interface_name)
 {
+  int sock=socket(AF_INET, SOCK_DGRAM, 0);
+  if (sock==-1) {
+    perror("Could not create UDP socket");
+    exit(-1);
+  }
+  
+  struct sockaddr_in addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(19002);
+  bind(sock, (struct sockaddr *) &addr, sizeof(addr));
+  set_nonblock(sock);
+
   wifi_interface_name=interface_name;
 
   struct experiment_data exp;
 
-  exp.pulse_width_us=pulse_width_ms*1000.0;
-  exp.pulse_frequency=pulse_frequency;
-  exp.wifiup_hold_time_us=wifiup_hold_time_ms*1000;
-  int experiment_valid=setup_experiment(&exp);
+  int experiment_invalid=1;
   
   int serialfd=-1;
   serialfd = open(port,O_RDWR);
@@ -186,19 +196,11 @@ int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
     perror("Opening serial port");
     exit(-1);
   }
-    fprintf(stderr,"Serial port open as fd %d\n",serialfd);
+  fprintf(stderr,"Serial port open as fd %d\n",serialfd);
 
+  int pulse_interval_usec=999999999;
+  
   while (1) {
-    if (experiment_valid)
-      if (serial_setup_port_with_speed(serialfd,exp.speed))
-	{
-	  fprintf(stderr,"Failed to setup serial port. Exiting.\n");
-	  exit(-1);
-	}
-
-    int pulse_interval_usec=1000000.0/exp.pulse_frequency;
-    fprintf(stderr,"Sending a pulse every %dusec to achieve %dHz\n",
-	    pulse_interval_usec,pulse_frequency);
 
     // Start with wifi down
     int wifi_down=1;
@@ -210,12 +212,34 @@ int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
     long long report_time=gettime_us()+1000;
     char nul[1]={0};
     while(1) {
+      {
+	unsigned char rx[9000];
+	int r=recvfrom(sock,rx,9000,0,NULL,0);
+	if (r>0) {
+	  struct experiment_data *pd=(void *)&rx[0];
+	  printf("Saw packet with key 0x%08x : Updating experimental settings\n",
+		 pd->key);
+	  exp=*pd;
+	  experiment_invalid=setup_experiment(&exp);
+	  if (!experiment_invalid)
+	    if (serial_setup_port_with_speed(serialfd,exp.speed))
+	      {
+		fprintf(stderr,"Failed to setup serial port. Exiting.\n");
+		exit(-1);
+	      }
+	  pulse_interval_usec=1000000.0/exp.pulse_frequency;
+	  fprintf(stderr,"Sending a pulse every %dusec to achieve %dHz\n",
+		  pulse_interval_usec,exp.pulse_frequency);
+
+	}
+      }
+      
       long long now=gettime_us();
       if (now>report_time) {
 	report_time+=1000000;
-	if ((sent_pulses != pulse_frequency)||missed_pulses)
+	if ((sent_pulses != exp.pulse_frequency)||missed_pulses)
 	  fprintf(stderr,"Sent %d pulses in the past second, and missed %d deadlines (target is %d).\n",
-		  sent_pulses,missed_pulses,pulse_frequency);
+		  sent_pulses,missed_pulses,exp.pulse_frequency);
 	sent_pulses=0;
 	missed_pulses=0;
       }
@@ -245,7 +269,7 @@ int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
       ssize_t bytes = read_nonblock(serialfd, buf, sizeof buf);
       if (bytes>0) {
 	// Work out when to take wifi low
-	wifi_down_time=gettime_us()+wifiup_hold_time_ms*1000;
+	wifi_down_time=gettime_us()+exp.wifiup_hold_time_us;
 	fprintf(stderr,"Saw energy on channel @ %lldms, holding Wi-Fi for %lld more usec\n",
 		gettime_ms(),wifi_down_time-gettime_us());
 	if (wifi_down) { wifi_enable(); wifi_down=0; }

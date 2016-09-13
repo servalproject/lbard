@@ -329,8 +329,7 @@ int show_progress();
 int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_out);
 int dump_segment_list(struct segment_list *s);
 
-int energy_experiment(char *port, int pulse_frequency,float pulse_width_ms,
-		      int wifi_hold_time_ms,char *interface_name);
+int energy_experiment(char *port, char *interface_name);
 int energy_experiment_master();
 
 int serial_setup_port_with_speed(int fd,int speed);
