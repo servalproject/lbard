@@ -234,12 +234,14 @@ struct packet_data {
   int pulse_width_us;
   int pulse_frequency;
   int wifiup_hold_time_us;
+  int key;
 };
 
 int packet_number=0;
 int build_packet(unsigned char *packet,
 		 int gap_us,int packet_len,int pulse_width_us,
-		 int pulse_frequency,int wifiup_hold_time_us)
+		 int pulse_frequency,int wifiup_hold_time_us,
+		 int key)
 {
 
   // Make packet empty
@@ -253,6 +255,7 @@ int build_packet(unsigned char *packet,
   p.pulse_width_us=pulse_width_us;
   p.pulse_frequency=pulse_frequency;
   p.wifiup_hold_time_us=wifiup_hold_time_us;
+  p.key=key;
   bcopy(&p,packet,sizeof(p));
   
   return 0;
@@ -282,12 +285,24 @@ int run_energy_experiment(int sock,
   // the required mode has been selected.
   unsigned char packet[1500];
 
+  int key=random();
+  
   build_packet(packet,gap_us,packet_len,pulse_width_us,
-	       pulse_frequency,wifiup_hold_time_us);
+	       pulse_frequency,wifiup_hold_time_us,
+	       key);
   send_packet(sock,packet,packet_len);
-
+  printf("Sent packet with key 0x%08x\n",key);
 
   // Then wait 3 seconds to ensure that we everything is flushed through
+  time_t timeout=time(0)+3;
+  while(time(0)<timeout) {
+    unsigned char rx[9000];
+    int r=recvfrom(sock,rx,9000,0,NULL,0);
+    if (r>0) {
+      struct packet_data *pd=(void *)&rx[0];
+      printf("Saw packet with key 0x%08x\n",pd->key);
+    }
+  }
 
 
   // Then run experiment:
