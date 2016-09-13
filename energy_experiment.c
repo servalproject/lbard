@@ -217,8 +217,6 @@ int energy_experiment(char *port, char *interface_name)
   char nul[1]={0};
   while(1) {
     {
-      printf("loop...\n");
-      
       struct sockaddr_storage src_addr;
       socklen_t src_addr_len=sizeof(src_addr);
       unsigned char rx[9000];
@@ -274,7 +272,6 @@ int energy_experiment(char *port, char *interface_name)
 	// Watcharachai will need to use an oscilliscope to see how adequate this is.
 	// If there is too much jitter, then we will need to get more sophisticated.
 	long long delay=next_time-now-10;
-	printf("Snoozing for %lldusec\n",delay);
 	if (delay>10) usleep(delay);
       }
       char buf[1024];
