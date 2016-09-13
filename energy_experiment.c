@@ -348,7 +348,7 @@ int run_energy_experiment(int sock,
 
   unsigned int key=random()&0xffffff;
   unsigned int key2=key|0xff000000;
-  
+
   build_packet(packet,gap_us,packet_len,pulse_width_us,
 	       pulse_frequency,wifiup_hold_time_us,
 	       key);
@@ -363,13 +363,15 @@ int run_energy_experiment(int sock,
     int r=recvfrom(sock,rx,9000,0,NULL,0);
     if (r>0) {
       struct experiment_data *pd=(void *)&rx[0];
-      printf("Saw packet with key 0x%08x, confirming sync\n",pd->key);
+      fprintf(stderr,"Saw packet with key 0x%08x, confirming sync\n",pd->key);
       if (pd->key==key) peer_in_sync=1;
     }
     if (peer_in_sync) break; else usleep(random()%10000);
   }
   if (!peer_in_sync) {
     fprintf(stderr,"Failed to gain peers attention within 10 seconds.\n");
+    printf("%d:%d:%d:%d:%d:-1:0:0\n",gap_us,packet_len,pulse_width_us,
+	   pulse_frequency,wifiup_hold_time_us);
     return 0;
   }
 
@@ -380,7 +382,7 @@ int run_energy_experiment(int sock,
   unsigned char rx[9000];
   int queue=0;
   while (recvfrom(sock,rx,9000,0,NULL,0)>0) queue++;
-  printf("Cleared %d queued packets.\n",queue);
+  // printf("Cleared %d queued packets.\n",queue);
   
   // No run the experiment 20 times
 
@@ -389,7 +391,7 @@ int run_energy_experiment(int sock,
   
   int iteration;
   for(iteration=0;iteration<20;iteration++) {
-    printf("Iteration #%d\n",iteration);
+    // printf("Iteration #%d\n",iteration);
     
     // Wait for wifi to shut down on the remote side.
     usleep(wifiup_hold_time_us);  // time required
@@ -400,7 +402,7 @@ int run_energy_experiment(int sock,
 		 key2);
     long long first_id=packet_number;
     send_packet(sock,packet,packet_len,broadcast_address);
-    printf("Sent packet with key 0x%08x, id = %lld, then waiting %dusec before sending duplicate\n",
+    if (0) printf("Sent packet with key 0x%08x, id = %lld, then waiting %dusec before sending duplicate\n",
 	   key,packet_number,gap_us);
     usleep(gap_us);
     build_packet(packet,gap_us,packet_len,pulse_width_us,
@@ -420,20 +422,22 @@ int run_energy_experiment(int sock,
 	if (pd->key==key2) {
 	  if (pd->packet_number==second_id) {
 	    received_replies_to_second_packets++;
-	    printf("  received reply to data packet.\n");
+	    if (0) printf("  received reply to data packet.\n");
 	    break;
 	  } 
 	  if (pd->packet_number==first_id) {
 	    received_replies_to_first_packets++;
-	    printf("  received reply to wake packet.\n");
+	    if (0) printf("  received reply to wake packet.\n");
 	  } 
 	}
       }
     }
   }
-  printf("Results: %d/20 received (+ %d replies to wake-up packets)\n",
+  printf("%d:%d:%d:%d:%d:20:%d:%d\n",gap_us,packet_len,pulse_width_us,
+	 pulse_frequency,wifiup_hold_time_us,
 	 received_replies_to_second_packets,
 	 received_replies_to_first_packets);
+  
 
   return 0;
 }
@@ -473,15 +477,63 @@ int energy_experiment_master(char *broadcast_address)
   int pulse_width_us;
   int pulse_frequency;
   int wifiup_hold_time_us;
-  for(gap_us=500;gap_us<10000000;gap_us*=1.5) {
-    for(packet_len=100;packet_len<=1500;packet_len+=100) {
+
+  long long experiment_count=0;
+
+  int gaps[]={500,1000,1500,2000,3000,5000,7000,10000,15000,20000,25000,
+	      50000,75000,100000,150000,200000,300000,400000,500000,600000,
+	      700000,800000,900000,1000000,2000000,3000000,0};
+  int gap_number;
+
+  int pulse_frequencies[]={1,2,3,4,5,6,7,8,9,10,
+			   20,30,40,50,60,70,80,90,
+			   100,150,200,250,300,350,400,450,500,
+			   600,700,800,900,1000,0};
+  int freq_number;
+
+  int wifiup_hold_times[]={1000,2000,3000,4000,5000,7500,10000,15000,20000,
+			   25000,40000,60000,80000,100000,150000,200000,250000,
+			   350000,500000,750000,1000000,0};
+  int hold_number;
+  
+  for(gap_number=0;gaps[gap_number];gap_number++) {
+    gap_us=gaps[gap_number];
+    for(packet_len=100;packet_len<=1500;packet_len+=300) {
       int pulse_width_index=0;
       for(pulse_width_us=pulse_widths[pulse_width_index];
 	  pulse_widths[pulse_width_index];pulse_width_index++) {
-	for(pulse_frequency=1;(pulse_frequency*pulse_width_us)<=900000;
-	    pulse_frequency+=5) {
-	  for(wifiup_hold_time_us=1000;wifiup_hold_time_us<5000000;
-	      wifiup_hold_time_us*=1.5) {
+	for(freq_number=0;pulse_frequencies[freq_number]
+	      &&(pulse_frequencies[freq_number]*pulse_width_us)<=900000;
+	    freq_number++) {	  
+	  pulse_frequency=pulse_frequencies[freq_number];
+	  for(hold_number=0;wifiup_hold_times[hold_number];
+	      hold_number++)
+	    if (wifiup_hold_times[hold_number]>=gap_us) {
+	    wifiup_hold_time_us=wifiup_hold_times[hold_number];
+	    experiment_count++;
+	  }
+	}
+      }
+    }
+  }
+  fprintf(stderr,"Preparing to run %lld experiments.\n",
+	  experiment_count);
+
+  
+  for(gap_number=0;gaps[gap_number];gap_number++) {
+    gap_us=gaps[gap_number];
+    for(packet_len=100;packet_len<=1500;packet_len+=300) {
+      int pulse_width_index=0;
+      for(pulse_width_us=pulse_widths[pulse_width_index];
+	  pulse_widths[pulse_width_index];pulse_width_index++) {
+	for(freq_number=0;pulse_frequencies[freq_number]
+	      &&(pulse_frequencies[freq_number]*pulse_width_us)<=900000;
+	    freq_number++) {	  
+	  pulse_frequency=pulse_frequencies[freq_number];
+	  for(hold_number=0;wifiup_hold_times[hold_number];
+	      hold_number++)
+	    if (wifiup_hold_times[hold_number]>=gap_us) {
+	    wifiup_hold_time_us=wifiup_hold_times[hold_number];
 	    run_energy_experiment(sock,
 				  gap_us,packet_len,pulse_width_us,
 				  pulse_frequency,wifiup_hold_time_us,
