@@ -120,13 +120,15 @@ int setup_experiment(struct experiment_data *exp)
 {
   exp->cycle_duration = 1000.0/exp->pulse_frequency;
   exp->duty_cycle=exp->pulse_width_us/10.0/exp->cycle_duration;
-  
-  fprintf(stderr,"Running energy sample experiment:\n");
-  fprintf(stderr,"  pulse width = %.4fms\n",exp->pulse_width_us/1000.0);
-  fprintf(stderr,"  pulse frequency = %dHz\n",exp->pulse_frequency);
-  fprintf(stderr,"  cycle duration (1/freq) = %3.2fms",exp->cycle_duration);
-  fprintf(stderr,"  duty cycle = %3.2f%%\n",exp->duty_cycle);
-  fprintf(stderr,"  wifi hold time = %.1fms\n",exp->wifiup_hold_time_us/1000.0);
+
+  if (0) {
+    fprintf(stderr,"Running energy sample experiment:\n");
+    fprintf(stderr,"  pulse width = %.4fms\n",exp->pulse_width_us/1000.0);
+    fprintf(stderr,"  pulse frequency = %dHz\n",exp->pulse_frequency);
+    fprintf(stderr,"  cycle duration (1/freq) = %3.2fms",exp->cycle_duration);
+    fprintf(stderr,"  duty cycle = %3.2f%%\n",exp->duty_cycle);
+    fprintf(stderr,"  wifi hold time = %.1fms\n",exp->wifiup_hold_time_us/1000.0);
+  }
 
   if (exp->duty_cycle>99) {
     fprintf(stderr,"ERROR: Duty cycle cannot exceed 99%%\n");
@@ -165,7 +167,7 @@ int setup_experiment(struct experiment_data *exp)
     return -1;
   }
 
-  fprintf(stderr,"  serial port speed = %d\n",exp->speed);
+  if (0) fprintf(stderr,"  serial port speed = %d\n",exp->speed);
 
   
   exp->speed=speed;
@@ -215,30 +217,37 @@ int energy_experiment(char *port, char *interface_name)
   long long next_time=gettime_us();
   long long report_time=gettime_us()+1000;
   char nul[1]={0};
+  int last_speed=-1;
   while(1) {
     {
       struct sockaddr_storage src_addr;
       socklen_t src_addr_len=sizeof(src_addr);
       unsigned char rx[9000];
       int r;
+      
       while((r=recvfrom(sock,rx,9000,0,(struct sockaddr *)&src_addr,&src_addr_len))>0) {
 	// Reflect packet back to sender
 	sendto(sock,rx,r,0,(struct sockaddr *)&src_addr,src_addr_len);
 	
 	struct experiment_data *pd=(void *)&rx[0];
-	printf("Saw packet with key 0x%08x : Updating experimental settings\n",
-	       pd->key);
+	if (0) printf("Saw packet with key 0x%08x : Updating experimental settings\n",
+		      pd->key);
 	exp=*pd;
 	experiment_invalid=setup_experiment(&exp);
 	if (!experiment_invalid)
-	  if (serial_setup_port_with_speed(serialfd,exp.speed))
-	    {
-	      fprintf(stderr,"Failed to setup serial port. Exiting.\n");
-	      exit(-1);
-	    }
+	  if (last_speed!=exp.speed) {
+	    fprintf(stderr,"last_speed=%d, exp.speed=%d\n",
+		    last_speed,exp.speed);
+	    if (serial_setup_port_with_speed(serialfd,exp.speed))
+	      {
+		fprintf(stderr,"Failed to setup serial port. Exiting.\n");
+		exit(-1);
+	      }
+	    last_speed=exp.speed;
+	  }
 	pulse_interval_usec=1000000.0/exp.pulse_frequency;
-	fprintf(stderr,"Sending a pulse every %dusec to achieve %dHz\n",
-		pulse_interval_usec,exp.pulse_frequency);
+	if (0) fprintf(stderr,"Sending a pulse every %dusec to achieve %dHz\n",
+		       pulse_interval_usec,exp.pulse_frequency);
 	
       }
       
@@ -350,7 +359,8 @@ int run_energy_experiment(int sock,
 	       pulse_frequency,wifiup_hold_time_us,
 	       key);
 
-  // Then wait 3 seconds to ensure that we everything is flushed through
+  // Try for several seconds to get peers attention, sending lots of packets in short
+  // intervals to try to get the remote side to wake up at least once.
   time_t timeout=time(0)+10;
   int peer_in_sync=0;
   while(time(0)<timeout) {
