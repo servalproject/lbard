@@ -363,7 +363,7 @@ int run_energy_experiment(int sock,
     int r=recvfrom(sock,rx,9000,0,NULL,0);
     if (r>0) {
       struct experiment_data *pd=(void *)&rx[0];
-      fprintf(stderr,"Saw packet with key 0x%08x, confirming sync\n",pd->key);
+      // fprintf(stderr,"Saw packet with key 0x%08x, confirming sync\n",pd->key);
       if (pd->key==key) peer_in_sync=1;
     }
     if (peer_in_sync) break; else usleep(random()%10000);
@@ -495,6 +495,7 @@ int energy_experiment_master(char *broadcast_address)
 			   25000,40000,60000,80000,100000,150000,200000,250000,
 			   350000,500000,750000,1000000,0};
   int hold_number;
+
   
   for(gap_number=0;gaps[gap_number];gap_number++) {
     gap_us=gaps[gap_number];
@@ -519,7 +520,9 @@ int energy_experiment_master(char *broadcast_address)
   fprintf(stderr,"Preparing to run %lld experiments.\n",
 	  experiment_count);
 
-  
+  long long experiment_number=0;
+  time_t start_time=time(0);
+
   for(gap_number=0;gaps[gap_number];gap_number++) {
     gap_us=gaps[gap_number];
     for(packet_len=100;packet_len<=1500;packet_len+=300) {
@@ -534,6 +537,11 @@ int energy_experiment_master(char *broadcast_address)
 	      hold_number++)
 	    if (wifiup_hold_times[hold_number]>=gap_us) {
 	    wifiup_hold_time_us=wifiup_hold_times[hold_number];
+	    experiment_number++;
+	    fprintf(stderr,"T+%ld : Experiment %lld/%lld (%2.1f%%)\n",
+		    time(0)-start_time,
+		    experiment_number,experiment_count,
+		    experiment_number*100.0/experiment_count);
 	    run_energy_experiment(sock,
 				  gap_us,packet_len,pulse_width_us,
 				  pulse_frequency,wifiup_hold_time_us,
