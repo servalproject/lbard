@@ -26,6 +26,7 @@
 #include "lbard.h"
 #include "serial.h"
 
+int multimeterfd=-1;
 
 struct experiment_data {
   long long packet_number;
@@ -449,9 +450,18 @@ int run_energy_experiment(int sock,
   return 0;
 }
 
-
-int energy_experiment_master(char *broadcast_address)
+int energy_experiment_master(char *port,char *broadcast_address)
 {
+  // Setup serial port to speak to digital multi-meter to get current readings
+  // during the tests.
+  multimeterfd = open(port,O_RDWR);
+  if (multimeterfd<0) {
+    perror("Opening serial port");
+    exit(-1);
+  }
+  fprintf(stderr,"Multi-meter serial port open as fd %d\n",multimeterfd);
+  serial_setup_port_with_speed(multimeterfd,9600);
+
   int sock=socket(AF_INET, SOCK_DGRAM, 0);
   if (sock==-1) {
     perror("Could not create UDP socket");

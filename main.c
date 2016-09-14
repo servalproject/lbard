@@ -143,8 +143,8 @@ int main(int argc, char **argv)
   }
   
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
-  if ((argc==3)&&(!strcasecmp(argv[1],"energysamplemaster"))) {
-    return energy_experiment_master(argv[2]);
+  if ((argc==4)&&(!strcasecmp(argv[1],"energysamplemaster"))) {
+    return energy_experiment_master(argv[2],argv[3]);
   }
   if ((argc==4)&&(!strcasecmp(argv[1],"energysample"))) {
     char *port=argv[2];
