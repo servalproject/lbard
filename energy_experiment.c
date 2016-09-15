@@ -443,7 +443,7 @@ int run_energy_experiment(int sock,
   }
   if (!peer_in_sync) {
     fprintf(stderr,"Failed to gain peers attention within 10 seconds.\n");
-    printf("%d:%d:%d:%d:%d:-1:0:0\n",gap_us,packet_len,pulse_width_us,
+    printf("%d:%d:%d:%d:%d:-1:0:0:-1:-1\n",gap_us,packet_len,pulse_width_us,
 	   pulse_frequency,wifiup_hold_time_us);
     return 0;
   }
