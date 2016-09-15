@@ -26,6 +26,9 @@
 #include "lbard.h"
 #include "serial.h"
 
+// Don't probe multimeter too often, or it will give invalid results from time to time
+#define MEASURE_INTERVAL 100000
+
 int multimeterfd=-1;
 
 struct experiment_data {
@@ -344,6 +347,8 @@ int send_packet(int sock,unsigned char *packet,int len, char *broadcast_address)
   return 0;
 }
 
+float accumulated_current=0;
+int current_samples=0;
 
 unsigned char multimeter_message[1024];
 int mmm_len=0;
@@ -364,6 +369,8 @@ int process_multimeter_line(unsigned char *msg)
   if ((n=sscanf((char *)msg,"%f%n",&m,&ofs))==1) {
     if ((m<10)&&(m>=0.0000001)) {
       fprintf(stderr,"Read %lfA from multimeter (as %s)\n",m,msg);
+      accumulated_current+=m;
+      current_samples++;
     }
   }
   return 0;
@@ -445,6 +452,42 @@ int run_energy_experiment(int sock,
 
   int received_replies_to_first_packets=0;
   int received_replies_to_second_packets=0;
+
+  // Wait for wifi to shut down on the remote side.
+  usleep(wifiup_hold_time_us);  // time required
+  usleep(1000000); // insurance of extra 1 second
+  
+  // Measure current over a couple of seconds to get a clear idea of the current
+  // consumption in this mode
+  fprintf(stderr,"Calculating average current draw with wi-fi off...\n");
+  long long collect_timeout=gettime_us()+10000000;
+  long long next_measurement=0;
+  
+  accumulated_current=0;
+  current_samples=0;
+  while(gettime_us()<collect_timeout) {
+    // Poll for current draw every 20ms
+    if (gettime_us()>=next_measurement) {
+      //	fprintf(stderr,"Asking multimeter for instantaneous current reading.\n");
+      write(multimeterfd,"VAL?\r\n",6);
+      next_measurement=gettime_us()+MEASURE_INTERVAL;
+    }
+    unsigned char buff[8192];
+    int r=read(multimeterfd,buff,8192);
+    if (r>0) {
+      // Look for multimeter current reading reports
+      parse_multimeter_bytes(buff,r);
+    }
+    
+    // Sleep for a short while between events.
+    usleep(500);
+  }
+  if (current_samples) {
+    float average_current=accumulated_current/current_samples;
+    fprintf(stderr,"Average current draw while wifi off is %fA (from %d samples)\n",
+	    average_current,current_samples);
+  }
+
   
   int iteration;
   for(iteration=0;iteration<20;iteration++) {
@@ -458,6 +501,7 @@ int run_energy_experiment(int sock,
     unsigned char buff[8192];
     int r=read(multimeterfd,buff,8192);
     
+    // Then send a packet
     build_packet(packet,gap_us,packet_len,pulse_width_us,
 		 pulse_frequency,wifiup_hold_time_us,
 		 key2);
@@ -469,13 +513,13 @@ int run_energy_experiment(int sock,
     // Maasure current draw of experiment while waiting for gap timeout
     //usleep(gap_us);
     long long gap_timeout=gettime_us()+gap_us;
-    long long next_measurement=0;
+    next_measurement=0;
     while(gettime_us()<gap_timeout) {
       // Poll for current draw every 20ms
       if (gettime_us()>=next_measurement) {
 	//	fprintf(stderr,"Asking multimeter for instantaneous current reading.\n");
 	write(multimeterfd,"VAL?\r\n",6);
-	next_measurement=gettime_us()+20000;
+	next_measurement=gettime_us()+MEASURE_INTERVAL;
       }
       r=read(multimeterfd,buff,8192);
       if (r>0) {
@@ -524,7 +568,7 @@ int run_energy_experiment(int sock,
       if (gettime_us()>=next_measurement) {
 	//	fprintf(stderr,"Asking multimeter for instantaneous current reading.\n");
 	write(multimeterfd,"VAL?\r\n",6);
-	next_measurement=gettime_us()+20000;
+	next_measurement=gettime_us()+MEASURE_INTERVAL;
       }
       r=read(multimeterfd,buff,8192);
       if (r>0) {
