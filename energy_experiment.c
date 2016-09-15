@@ -474,22 +474,26 @@ int run_energy_experiment(int sock,
   
   accumulated_current=0;
   current_samples=0;
-  while(gettime_us()<collect_timeout) {
-    // Poll for current draw every 20ms
-    if (gettime_us()>=next_measurement) {
-      //	fprintf(stderr,"Asking multimeter for instantaneous current reading.\n");
-      write(multimeterfd,"VAL?\r\n",6);
-      next_measurement=gettime_us()+MEASURE_INTERVAL;
+  while(current_samples<10) {
+    collect_timeout=gettime_us()+10000000;
+    current_samples=0;
+    while(gettime_us()<collect_timeout) {
+      // Poll for current draw every 20ms
+      if (gettime_us()>=next_measurement) {
+	//	fprintf(stderr,"Asking multimeter for instantaneous current reading.\n");
+	write(multimeterfd,"VAL?\r\n",6);
+	next_measurement=gettime_us()+MEASURE_INTERVAL;
+      }
+      unsigned char buff[8192];
+      int r=read(multimeterfd,buff,8192);
+      if (r>0) {
+	// Look for multimeter current reading reports
+	parse_multimeter_bytes(buff,r);
+      }
+      
+      // Sleep for a short while between events.
+      usleep(500);
     }
-    unsigned char buff[8192];
-    int r=read(multimeterfd,buff,8192);
-    if (r>0) {
-      // Look for multimeter current reading reports
-      parse_multimeter_bytes(buff,r);
-    }
-    
-    // Sleep for a short while between events.
-    usleep(500);
   }
   float average_current=-1;
   int average_current_samples=current_samples;
