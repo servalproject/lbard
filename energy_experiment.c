@@ -344,6 +344,55 @@ int send_packet(int sock,unsigned char *packet,int len, char *broadcast_address)
   return 0;
 }
 
+
+unsigned char multimeter_message[1024];
+int mmm_len=0;
+
+int process_multimeter_line(unsigned char *msg)
+{
+  //  fprintf(stderr,"Multimeter says: %s\n",msg);
+  if (!strcasecmp((char *)msg,"=>")) {
+    //    fprintf(stderr,"Multimeter accepted a command.\n");
+    return 0;
+  }
+
+  // Check for valid reading.  It reports 1 billion amps sometimes, perhaps when
+  // we have asked for the result too frequenty.
+  float m=0;
+  int ofs;
+  int n;
+  if ((n=sscanf((char *)msg,"%f%n",&m,&ofs))==1) {
+    if ((m<10)&&(m>=0.0000001)) {
+      fprintf(stderr,"Read %lfA from multimeter (as %s)\n",m,msg);
+    }
+  }
+  return 0;
+}
+
+int parse_multimeter_byte(unsigned char c)
+{
+  if ((c=='\r')||(c=='\n')) {
+    multimeter_message[mmm_len]=0;
+    if (mmm_len) process_multimeter_line(multimeter_message);
+    mmm_len=0;
+    return 0;
+  }
+  if (mmm_len<1024) {
+    multimeter_message[mmm_len++]=c;
+    return 0;
+  }
+  return -1;
+}
+
+int parse_multimeter_bytes(unsigned char *buff,int count)
+{
+  if (count<1) return 0;
+
+  int i;
+  for(i=0;i<count;i++) parse_multimeter_byte(buff[i]);
+  return 0;
+}
+
 int run_energy_experiment(int sock,
 			  int gap_us,int packet_len,int pulse_width_us,
 			  int pulse_frequency,int wifiup_hold_time_us,
@@ -404,6 +453,10 @@ int run_energy_experiment(int sock,
     // Wait for wifi to shut down on the remote side.
     usleep(wifiup_hold_time_us);  // time required
     usleep(1000000); // insurance of extra 1 second
+
+    // Now flush multimeter serial input
+    unsigned char buff[8192];
+    int r=read(multimeterfd,buff,8192);
     
     build_packet(packet,gap_us,packet_len,pulse_width_us,
 		 pulse_frequency,wifiup_hold_time_us,
@@ -412,7 +465,34 @@ int run_energy_experiment(int sock,
     send_packet(sock,packet,packet_len,broadcast_address);
     if (0) printf("Sent packet with key 0x%08x, id = %lld, then waiting %dusec before sending duplicate\n",
 	   key,packet_number,gap_us);
-    usleep(gap_us);
+
+    // Maasure current draw of experiment while waiting for gap timeout
+    //usleep(gap_us);
+    long long gap_timeout=gettime_us()+gap_us;
+    long long next_measurement=0;
+    while(gettime_us()<gap_timeout) {
+      // Poll for current draw every 20ms
+      if (gettime_us()>=next_measurement) {
+	//	fprintf(stderr,"Asking multimeter for instantaneous current reading.\n");
+	write(multimeterfd,"VAL?\r\n",6);
+	next_measurement=gettime_us()+20000;
+      }
+      r=read(multimeterfd,buff,8192);
+      if (r>0) {
+	// Look for multimeter current reading reports
+	parse_multimeter_bytes(buff,r);
+      }
+
+      // Sleep for a short while between events.
+      usleep(500);
+    }
+
+    r=read(multimeterfd,buff,8192);
+    if (r>0) {
+      // Look for multimeter current reading reports
+      parse_multimeter_bytes(buff,r);
+    }
+    
     build_packet(packet,gap_us,packet_len,pulse_width_us,
 		 pulse_frequency,wifiup_hold_time_us,
 		 key2);
@@ -439,6 +519,19 @@ int run_energy_experiment(int sock,
 	  } 
 	}
       }
+
+      // Poll for current draw every 20ms
+      if (gettime_us()>=next_measurement) {
+	//	fprintf(stderr,"Asking multimeter for instantaneous current reading.\n");
+	write(multimeterfd,"VAL?\r\n",6);
+	next_measurement=gettime_us()+20000;
+      }
+      r=read(multimeterfd,buff,8192);
+      if (r>0) {
+	// Look for multimeter current reading reports
+	parse_multimeter_bytes(buff,r);
+      }
+      
     }
   }
   printf("%d:%d:%d:%d:%d:20:%d:%d\n",gap_us,packet_len,pulse_width_us,
@@ -461,6 +554,22 @@ int energy_experiment_master(char *port,char *broadcast_address)
   }
   fprintf(stderr,"Multi-meter serial port open as fd %d\n",multimeterfd);
   serial_setup_port_with_speed(multimeterfd,9600);
+  // Display measurement without exponent, because the multimeter sometimes reports
+  // the wrong exponent.
+  char *setup[]={"\r\n",
+		 "ADC\r\n",
+		 "FILTER 0\r\n",
+		 "RANGE 1\r\n",
+		 "FORMAT 3\r\n",
+		 NULL};
+  int i;
+  for(i=0;setup[i];i++) {
+    usleep(200000);
+    write(multimeterfd,setup[i],strlen(setup[i]));
+  }
+  unsigned char buff[8192];
+  int r=read(multimeterfd,buff,8192);
+  parse_multimeter_bytes(buff,r);
 
   int sock=socket(AF_INET, SOCK_DGRAM, 0);
   if (sock==-1) {
@@ -478,7 +587,7 @@ int energy_experiment_master(char *port,char *broadcast_address)
   
   // Enable broadcast
   int one=1;
-  int r=setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &one, sizeof(one));
+  r=setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &one, sizeof(one));
   if (r) {
     fprintf(stderr,"WARNING: setsockopt(): Could not enable SO_BROADCAST\n");
   }
