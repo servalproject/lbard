@@ -355,6 +355,15 @@ int mmm_len=0;
 
 int process_multimeter_line(unsigned char *msg)
 {
+  int plus_count=0;
+  int i;
+  for(i=0;msg[i];i++) if (msg[i]=='+') plus_count++;
+  if (plus_count>1) {
+    fprintf(stderr,"Ignoring malformed multimeter report '%s'\n",(char *)msg);
+    return 0;
+  }
+    
+  
   //  fprintf(stderr,"Multimeter says: %s\n",msg);
   if (!strcasecmp((char *)msg,"=>")) {
     //    fprintf(stderr,"Multimeter accepted a command.\n");
@@ -482,8 +491,10 @@ int run_energy_experiment(int sock,
     // Sleep for a short while between events.
     usleep(500);
   }
+  float average_current=-1;
+  int average_current_samples=current_samples;
   if (current_samples) {
-    float average_current=accumulated_current/current_samples;
+    average_current=accumulated_current/current_samples;
     fprintf(stderr,"Average current draw while wifi off is %fA (from %d samples)\n",
 	    average_current,current_samples);
   }
@@ -578,10 +589,11 @@ int run_energy_experiment(int sock,
       
     }
   }
-  printf("%d:%d:%d:%d:%d:20:%d:%d\n",gap_us,packet_len,pulse_width_us,
+  printf("%d:%d:%d:%d:%d:20:%d:%d:%f:%d\n",gap_us,packet_len,pulse_width_us,
 	 pulse_frequency,wifiup_hold_time_us,
 	 received_replies_to_second_packets,
-	 received_replies_to_first_packets);
+	 received_replies_to_first_packets,
+	 average_current,average_current_samples);
   
 
   return 0;
