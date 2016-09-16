@@ -216,6 +216,7 @@ int energy_experiment(char *port, char *interface_name)
     perror("Opening serial port");
     exit(-1);
   }
+  set_nonblock(serialfd);
   fprintf(stderr,"Serial port open as fd %d\n",serialfd);
 
   // Start with reasonable interval, so that we can receive UDP from master in
@@ -316,7 +317,6 @@ int energy_experiment(char *port, char *interface_name)
 	if (delay>10) usleep(delay);
       }
       char buf[1024];
-      set_nonblock(serialfd);
       ssize_t bytes = read_nonblock(serialfd, buf, sizeof buf);
       if (bytes>0) {
 	wifi_activity_bitmap[(now/1000)%1000]|='R';
