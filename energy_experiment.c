@@ -241,11 +241,8 @@ int energy_experiment(char *port, char *interface_name)
   int r;
   
   while(1) {
-    {
-      fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
-      
+    {      
       while((r=recvfrom(sock,rx,9000,0,(struct sockaddr *)&src_addr,&src_addr_len))>0) {
-	fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
       
 	// Reflect packet back to sender
 	sendto(sock,rx,r,0,(struct sockaddr *)&src_addr,src_addr_len);
@@ -271,7 +268,6 @@ int energy_experiment(char *port, char *interface_name)
 		       pulse_interval_usec,exp.pulse_frequency);
 	
       }
-      fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
       
       long long now=gettime_us();
       if (now>report_time) {
@@ -293,7 +289,6 @@ int energy_experiment(char *port, char *interface_name)
 	}
 	clear_wifi_activity_history();
       }
-      fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
       
       if (now>=next_time) {
 	// Next pulse is due, so write a single character of 0x00 to the serial port so
@@ -305,13 +300,11 @@ int energy_experiment(char *port, char *interface_name)
 	// Work out next time to send a character to turn on the energy sampler.
 	// Don't worry about pulses that we can't send because we lost time somewhere,
 	// just keep track of how many so that we can report this to the user.
-      fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
 	next_time+=pulse_interval_usec;
 	while(next_time<now) {
 	  next_time+=pulse_interval_usec;
 	  missed_pulses++;
 	}
-      fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
       } else {
 	// Wait for a little while if we have a while before the next time we need
 	// to send a character. But busy wait the last 10usec, so that it doesn't matter
@@ -319,16 +312,12 @@ int energy_experiment(char *port, char *interface_name)
 	// Watcharachai will need to use an oscilliscope to see how adequate this is.
 	// If there is too much jitter, then we will need to get more sophisticated.
 	long long delay=next_time-now-10;
-      fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
 	if (delay>100000) delay=100000;
 	if (delay>10) usleep(delay);
-      fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
       }
-      fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
       char buf[1024];
       set_nonblock(serialfd);
       ssize_t bytes = read_nonblock(serialfd, buf, sizeof buf);
-      fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
       if (bytes>0) {
 	wifi_activity_bitmap[(now/1000)%1000]|='R';
 	// Work out when to take wifi low
@@ -342,7 +331,6 @@ int energy_experiment(char *port, char *interface_name)
 	  wifi_down=1;
 	}
       }
-      fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
     }   
   }
   return 0;
