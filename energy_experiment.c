@@ -326,7 +326,9 @@ int energy_experiment(char *port, char *interface_name)
       }
       fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
       char buf[1024];
+      set_nonblock(serialfd);
       ssize_t bytes = read_nonblock(serialfd, buf, sizeof buf);
+      fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
       if (bytes>0) {
 	wifi_activity_bitmap[(now/1000)%1000]|='R';
 	// Work out when to take wifi low
@@ -340,6 +342,7 @@ int energy_experiment(char *port, char *interface_name)
 	  wifi_down=1;
 	}
       }
+      fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
     }   
   }
   return 0;
