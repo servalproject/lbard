@@ -309,6 +309,7 @@ int energy_experiment(char *port, char *interface_name)
 	// Watcharachai will need to use an oscilliscope to see how adequate this is.
 	// If there is too much jitter, then we will need to get more sophisticated.
 	long long delay=next_time-now-10;
+	if (delay>100000) delay=100000;
 	if (delay>10) usleep(delay);
       }
       char buf[1024];
