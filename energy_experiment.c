@@ -178,6 +178,16 @@ int setup_experiment(struct experiment_data *exp)
   return 0;
 }
 
+unsigned char wifi_activity_bitmap[1000];
+time_t last_wifi_report_time=0;
+
+int clear_wifi_activity_history()
+{
+  int i;
+  for(i=0;i<1000;i++) wifi_activity_bitmap[i]=0;
+  return 0;
+}
+
 int energy_experiment(char *port, char *interface_name)
 {
   int sock=socket(AF_INET, SOCK_DGRAM, 0);
@@ -222,6 +232,9 @@ int energy_experiment(char *port, char *interface_name)
   long long report_time=gettime_us()+1000;
   char nul[1]={0};
   int last_speed=-1;
+
+  clear_wifi_activity_history();
+  
   while(1) {
     {
       struct sockaddr_storage src_addr;
@@ -264,12 +277,23 @@ int energy_experiment(char *port, char *interface_name)
 	sent_pulses=0;
 	missed_pulses=0;
       }
+      if (time(0)!=last_wifi_report_time) {
+	last_wifi_report_time=time(0);
+      	int i;
+	printf("Wifi activity report @ %s",ctime(&last_wifi_report_time));
+	for(i=0;i<1000;i++) {
+	  printf("%c",wifi_activity_bitmap[i]);
+	  if ((i%80)==79) printf("\n");
+	}
+	clear_wifi_activity_history();
+      }
       if (now>=next_time) {
 	// Next pulse is due, so write a single character of 0x00 to the serial port so
 	// that the TX line is held low for 10 serial ticks (or should the byte be 0xff?)
 	// which will cause the energy sampler to be powered for that period of time.
 	write(serialfd, nul, 1);
 	sent_pulses++;
+	wifi_activity_bitmap[(now/1000)%1000]|='T';
 	// Work out next time to send a character to turn on the energy sampler.
 	// Don't worry about pulses that we can't send because we lost time somewhere,
 	// just keep track of how many so that we can report this to the user.
@@ -290,6 +314,7 @@ int energy_experiment(char *port, char *interface_name)
       char buf[1024];
       ssize_t bytes = read_nonblock(serialfd, buf, sizeof buf);
       if (bytes>0) {
+	wifi_activity_bitmap[(now/1000)%1000]|='R';
 	// Work out when to take wifi low
 	wifi_down_time=gettime_us()+exp.wifiup_hold_time_us;
 	fprintf(stderr,"Saw energy on channel @ %lldms, holding Wi-Fi for %lld more usec\n",
@@ -377,7 +402,7 @@ int process_multimeter_line(unsigned char *msg)
   int n;
   if ((n=sscanf((char *)msg,"%f%n",&m,&ofs))==1) {
     if ((m<10)&&(m>=0.0000001)) {
-      fprintf(stderr,"Read %lfA from multimeter (as %s)\n",m,msg);
+      //      fprintf(stderr,"Read %lfA from multimeter (as %s)\n",m,msg);
       accumulated_current+=m;
       current_samples++;
     }
@@ -465,7 +490,11 @@ int run_energy_experiment(int sock,
   // Wait for wifi to shut down on the remote side.
   usleep(wifiup_hold_time_us);  // time required
   usleep(1000000); // insurance of extra 1 second
-  
+
+  // Clear any pending input from the multimeter
+  unsigned char buff[8192];
+  int r=read(multimeterfd,buff,8192);
+
   // Measure current over a couple of seconds to get a clear idea of the current
   // consumption in this mode
   fprintf(stderr,"Calculating average current draw with wi-fi off...\n");
@@ -484,8 +513,7 @@ int run_energy_experiment(int sock,
 	write(multimeterfd,"VAL?\r\n",6);
 	next_measurement=gettime_us()+MEASURE_INTERVAL;
       }
-      unsigned char buff[8192];
-      int r=read(multimeterfd,buff,8192);
+      r=read(multimeterfd,buff,8192);
       if (r>0) {
 	// Look for multimeter current reading reports
 	parse_multimeter_bytes(buff,r);
