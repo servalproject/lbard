@@ -279,7 +279,6 @@ int energy_experiment(char *port, char *interface_name)
 	sent_pulses=0;
 	missed_pulses=0;
       }
-      fprintf(stderr,"%s:%d:Checkpoint\n",__FILE__,__LINE__);
       if (time(0)!=last_wifi_report_time) {
 	last_wifi_report_time=time(0);
       	int i;
