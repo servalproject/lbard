@@ -69,6 +69,8 @@ int wifi_fd=-1;
 
 static int wifi_disable()
 {
+	system("/sbin/wifi down");
+#if0
 #ifdef linux
   fprintf(stderr,"Disabling wifi interface %s @ %lldms\n",
 	  wifi_interface_name,gettime_ms());
@@ -90,11 +92,14 @@ static int wifi_disable()
   fprintf(stderr,"wifi_disable() not implemented for this platform.\n");
   return -1;
 #endif
+#endif
   return 0;
 }
 
 static int wifi_enable()
 {
+  system("/sbin/wifi up");
+#if 0
 #ifdef linux
   fprintf(stderr,"Enabling wifi interface %s @ %lldms\n",
 	  wifi_interface_name,gettime_ms());
@@ -116,6 +121,7 @@ static int wifi_enable()
   fprintf(stderr,"wifi_disable() not implemented for this platform.\n");
   return -1;
 #endif 
+#endif
   return 0;
 }
 
