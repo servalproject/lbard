@@ -693,7 +693,7 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
   bzero(&exp,sizeof(exp));
 
   parse_experiment(&exp,string);
-  setup_experiment(&exp);
+  if (setup_experiment(&exp)) exit(-1);
   
   fprintf(stderr,"Running energy sample experiment:\n");
   fprintf(stderr,"  pulse width = %.4fms\n",exp.pulse_width_us/1000.0);
