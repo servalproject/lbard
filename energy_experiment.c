@@ -70,7 +70,7 @@ int wifi_fd=-1;
 static int wifi_disable()
 {
 	system("/sbin/wifi down");
-#if0
+#if 0
 #ifdef linux
   fprintf(stderr,"Disabling wifi interface %s @ %lldms\n",
 	  wifi_interface_name,gettime_ms());
