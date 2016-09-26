@@ -663,6 +663,9 @@ int parse_experiment(struct experiment_data *exp,char *string)
  */
 int energy_experiment_calibrate(char *port, char *broadcast_address, char *string)
 {
+  fprintf(stderr,"Running calibrate, with port='%s', ba='%s',string='%s'\n",
+	  port,broadcast_address,string);
+  
   int sock=socket(AF_INET, SOCK_DGRAM, 0);
   if (sock==-1) {
     perror("Could not create UDP socket");
@@ -679,6 +682,7 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
 
   int serialfd = open(port,O_RDWR);
   if (serialfd<0) {
+    fprintf(stderr,"Failed to open %s as serial port.\n",port);
     perror("Opening serial port");
     exit(-1);
   }
