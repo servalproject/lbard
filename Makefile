@@ -20,7 +20,7 @@ HDRS=	lbard.h serial.h Makefile version.h sync.h
 #CC=/usr/local/Cellar/llvm/3.6.2/bin/clang
 #LDFLAGS= -lgmalloc
 #CFLAGS= -fno-omit-frame-pointer -fsanitize=address
-CC=clang
+#CC=clang
 #LDFLAGS= -lefence
 LDFLAGS=
 CFLAGS= -g -std=gnu99 -Wall -fno-omit-frame-pointer -D_GNU_SOURCE=1
