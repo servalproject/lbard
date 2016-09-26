@@ -447,7 +447,7 @@ int parse_multimeter_bytes(unsigned char *buff,int count)
 int run_energy_experiment(int sock,
 			  int gap_us,int packet_len,int pulse_width_us,
 			  int pulse_frequency,int wifiup_hold_time_us,
-			  char *broadcast_address)
+			  char *broadcast_address, char *backchannel_address)
 {
   // First, send a chain of packets until we get a reply acknowledging that
   // the required mode has been selected.
@@ -465,7 +465,7 @@ int run_energy_experiment(int sock,
   time_t timeout=time(0)+10;
   int peer_in_sync=0;
   while(time(0)<timeout) {
-    send_packet(sock,packet,packet_len,broadcast_address);
+    send_packet(sock,packet,packet_len,backchannel_address);
 
     unsigned char rx[9000];
     int r=recvfrom(sock,rx,9000,0,NULL,0);
@@ -641,7 +641,137 @@ int run_energy_experiment(int sock,
   return 0;
 }
 
-int energy_experiment_master(char *port,char *broadcast_address)
+int parse_experiment(struct experiment_data *exp,char *string)
+{
+  char *tok=strtok(string,",");
+  while (tok) {
+    sscanf(tok,"len=%d",&exp->packet_len);
+    sscanf(tok,"gap=%d",&exp->gap_us);
+    sscanf(tok,"pulsewidth=%d",&exp->pulse_width_us);
+    sscanf(tok,"pulsefreq=%d",&exp->pulse_frequency);
+    
+    tok=strtok(NULL,",");
+  }
+  return 0;
+}
+
+/*
+  Calibrate energy sampler:
+  Basically send an endless stream of chars so the serial port, and send
+  a goodly number of big UDP packets each second, and monitor for any responses
+  on the serial port.
+ */
+int energy_experiment_calibrate(char *port, char *broadcast_address, char *string)
+{
+  int sock=socket(AF_INET, SOCK_DGRAM, 0);
+  if (sock==-1) {
+    perror("Could not create UDP socket");
+    exit(-1);
+  }
+  
+  struct sockaddr_in addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(19001);
+  bind(sock, (struct sockaddr *) &addr, sizeof(addr));
+  set_nonblock(sock);
+
+  int serialfd = open(port,O_RDWR);
+  if (serialfd<0) {
+    perror("Opening serial port");
+    exit(-1);
+  }
+  fprintf(stderr,"Energy sampler serial port open as fd %d\n",serialfd);
+  set_nonblock(serialfd);
+
+  struct experiment_data exp;
+  bzero(&exp,sizeof(exp));
+
+  parse_experiment(&exp,string);
+  setup_experiment(&exp);
+  
+  fprintf(stderr,"Running energy sample experiment:\n");
+  fprintf(stderr,"  pulse width = %.4fms\n",exp.pulse_width_us/1000.0);
+  fprintf(stderr,"  pulse frequency = %dHz\n",exp.pulse_frequency);
+  fprintf(stderr,"  cycle duration (1/freq) = %3.2fms",exp.cycle_duration);
+  fprintf(stderr,"  duty cycle = %3.2f%%\n",exp.duty_cycle);
+  int pulse_interval_usec=1000000.0/exp.pulse_frequency;
+  if (0) fprintf(stderr,"Sending a pulse every %dusec to achieve %dHz\n",
+		 pulse_interval_usec,exp.pulse_frequency);
+
+  serial_setup_port_with_speed(serialfd,exp.speed);
+
+  long long report_time=0;
+  long long next_time=0;
+  int sent_pulses=0;
+  int missed_pulses=0;
+  while(1) {
+    long long now=gettime_us();
+    if (now>report_time) {
+      report_time+=1000000;
+      if ((sent_pulses != exp.pulse_frequency)||missed_pulses)
+	fprintf(stderr,"Sent %d pulses in the past second, and missed %d deadlines (target is %d).\n",
+		sent_pulses,missed_pulses,exp.pulse_frequency);
+      sent_pulses=0;
+      missed_pulses=0;
+    }
+    if (time(0)!=last_wifi_report_time) {
+      last_wifi_report_time=time(0);
+      int i;
+      printf("Wifi activity report @ %s",ctime(&last_wifi_report_time));
+      for(i=0;i<1000;i++) {
+	printf("%c",wifi_activity_bitmap[i]);
+	if ((i%80)==79) printf("\n");
+      }
+      clear_wifi_activity_history();
+    }
+    
+    if (now>=next_time) {
+      // Next pulse is due, so write a single character of 0x00 to the serial port so
+      // that the TX line is held low for 10 serial ticks (or should the byte be 0xff?)
+      // which will cause the energy sampler to be powered for that period of time.
+      char nul[1]={0};
+      write(serialfd, nul, 1);
+      sent_pulses++;
+      wifi_activity_bitmap[(now/1000)%1000]|='T';
+      // Work out next time to send a character to turn on the energy sampler.
+      // Don't worry about pulses that we can't send because we lost time somewhere,
+      // just keep track of how many so that we can report this to the user.
+      next_time+=pulse_interval_usec;
+      while(next_time<now) {
+	next_time+=pulse_interval_usec;
+	missed_pulses++;
+      }
+    } else {
+      // Wait for a little while if we have a while before the next time we need
+      // to send a character. But busy wait the last 10usec, so that it doesn't matter
+      // if we get woken up fractionally late.
+      // Watcharachai will need to use an oscilliscope to see how adequate this is.
+      // If there is too much jitter, then we will need to get more sophisticated.
+      long long delay=next_time-now-10;
+      if (delay>100000) delay=100000;
+      if (delay>10) usleep(delay);
+    }
+    char buf[1024];
+    ssize_t bytes = read_nonblock(serialfd, buf, sizeof buf);
+    if (bytes>0) {
+      wifi_activity_bitmap[(now/1000)%1000]|='R';
+      fprintf(stderr,"Saw energy on channel @ %lldms\n",
+	      gettime_ms());
+    }
+  }   
+
+  return 0;
+}
+
+/*
+  port - the serial port to talk to the multimeter via.
+  broadcast_address - the wifi broadcast address to send the wake-up and test packets to.
+  backchannel_address - the ethernet-based IP address for the slave unit, to receive updated
+  experiment configuration information.
+ */
+int energy_experiment_master(char *port,char *broadcast_address, char *backchannel_address)
 {
   // Setup serial port to speak to digital multi-meter to get current readings
   // during the tests.
@@ -762,7 +892,7 @@ int energy_experiment_master(char *port,char *broadcast_address)
 	    run_energy_experiment(sock,
 				  gap_us,packet_len,pulse_width_us,
 				  pulse_frequency,wifiup_hold_time_us,
-				  broadcast_address);
+				  broadcast_address,backchannel_address);
 	  }
 	}
       }

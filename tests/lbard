@@ -60,7 +60,7 @@ teardown() {
    report_all_servald_servers
 }
 
-doc_One="A single bundle transfers to peers"
+doc_One="A single very small bundle transfers to peers"
 setup_One() {
    setup
    # Insert a file to server A
@@ -68,6 +68,23 @@ setup_One() {
    rhizome_add_file file1 50
 }
 test_One() {
+   # Test that the bundle arrives at servers B, C and D
+   all_bundles_received() {
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
+   }
+   wait_until all_bundles_received
+}
+
+doc_OneBig="A single larger bundle transfers to peers"
+setup_OneBig() {
+   setup
+   # Insert a file to server A
+   set_instance +A
+   rhizome_add_file file1 50000
+}
+test_OneBig() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
       bundle_received_by $BID:$VERSION +B &&

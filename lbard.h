@@ -330,7 +330,9 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 int dump_segment_list(struct segment_list *s);
 
 int energy_experiment(char *port, char *interface_name);
-int energy_experiment_master(char *port, char *broadcast_address);
+int energy_experiment_master(char *port, char *broadcast_address,
+			     char *backchannel_address);
+int energy_experiment_calibrate(char *port, char *broadcast_address,char *exp_string);
 
 int serial_setup_port_with_speed(int fd,int speed);
 int status_dump();
