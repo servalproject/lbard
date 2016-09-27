@@ -706,8 +706,8 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
 
   serial_setup_port_with_speed(serialfd,exp.speed);
 
-  long long report_time=0;
-  long long next_time=0;
+  long long report_time=gettime_us();
+  long long next_time=gettime_us();
   int sent_pulses=0;
   int missed_pulses=0;
   while(1) {
@@ -759,7 +759,7 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
 	      __FILE__,__LINE__,__FUNCTION__,gettime_us());
     } else {
       // Wait for a little while if we have a while before the next time we need
-      // to send a character. But busy wait the last 10usec, so that it doesn't matter
+      // to send a character. But busy wait the las 10usec, so that it doesn't matter
       // if we get woken up fractionally late.
       // Watcharachai will need to use an oscilliscope to see how adequate this is.
       // If there is too much jitter, then we will need to get more sophisticated.
