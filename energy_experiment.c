@@ -711,8 +711,6 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
   int sent_pulses=0;
   int missed_pulses=0;
   while(1) {
-    fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
-	    __FILE__,__LINE__,__FUNCTION__,gettime_us());
     long long now=gettime_us();
     if (now>report_time) {
       report_time+=1000000;
@@ -722,8 +720,6 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
       sent_pulses=0;
       missed_pulses=0;
     }
-    fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
-	    __FILE__,__LINE__,__FUNCTION__,gettime_us());
     if (time(0)!=last_wifi_report_time) {
       last_wifi_report_time=time(0);
       int i;
@@ -735,8 +731,6 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
       clear_wifi_activity_history();
     }
     
-    fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
-	    __FILE__,__LINE__,__FUNCTION__,gettime_us());
     if (now>=next_time) {
       // Next pulse is due, so write a single character of 0x00 to the serial port so
       // that the TX line is held low for 10 serial ticks (or should the byte be 0xff?)
@@ -749,27 +743,19 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
       // Don't worry about pulses that we can't send because we lost time somewhere,
       // just keep track of how many so that we can report this to the user.
       next_time+=pulse_interval_usec;
-      fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
-	      __FILE__,__LINE__,__FUNCTION__,gettime_us());
       while(next_time<now) {
 	next_time+=pulse_interval_usec;
 	missed_pulses++;
       }
-      fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
-	      __FILE__,__LINE__,__FUNCTION__,gettime_us());
     } else {
       // Wait for a little while if we have a while before the next time we need
       // to send a character. But busy wait the las 10usec, so that it doesn't matter
       // if we get woken up fractionally late.
       // Watcharachai will need to use an oscilliscope to see how adequate this is.
       // If there is too much jitter, then we will need to get more sophisticated.
-      fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
-	      __FILE__,__LINE__,__FUNCTION__,gettime_us());
       long long delay=next_time-now-10;
       if (delay>100000) delay=100000;
       if (delay>10) usleep(delay);
-      fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
-	      __FILE__,__LINE__,__FUNCTION__,gettime_us());
     }
     char buf[1024];
     ssize_t bytes = read_nonblock(serialfd, buf, sizeof buf);
@@ -778,8 +764,6 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
       fprintf(stderr,"Saw energy on channel @ %lldms\n",
 	      gettime_ms());
     }
-    fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
-	    __FILE__,__LINE__,__FUNCTION__,gettime_us());
 
   }   
 
