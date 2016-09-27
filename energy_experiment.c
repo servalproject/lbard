@@ -219,7 +219,7 @@ int energy_experiment(char *port, char *interface_name)
   int serialfd=-1;
   serialfd = open(port,O_RDWR);
   if (serialfd<0) {
-    perror("Opening serial port");
+    perror("Opening serial port for experiment");
     exit(-1);
   }
   set_nonblock(serialfd);
@@ -683,7 +683,7 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
   int serialfd = open(port,O_RDWR);
   if (serialfd<0) {
     fprintf(stderr,"Failed to open %s as serial port.\n",port);
-    perror("Opening serial port");
+    perror("Opening serial port for calibrate");
     exit(-1);
   }
   fprintf(stderr,"Energy sampler serial port open as fd %d\n",serialfd);
@@ -711,6 +711,8 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
   int sent_pulses=0;
   int missed_pulses=0;
   while(1) {
+    fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
+	    __FILE__,__LINE__,__FUNCTION__,gettime_us());
     long long now=gettime_us();
     if (now>report_time) {
       report_time+=1000000;
@@ -720,6 +722,8 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
       sent_pulses=0;
       missed_pulses=0;
     }
+    fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
+	    __FILE__,__LINE__,__FUNCTION__,gettime_us());
     if (time(0)!=last_wifi_report_time) {
       last_wifi_report_time=time(0);
       int i;
@@ -731,6 +735,8 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
       clear_wifi_activity_history();
     }
     
+    fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
+	    __FILE__,__LINE__,__FUNCTION__,gettime_us());
     if (now>=next_time) {
       // Next pulse is due, so write a single character of 0x00 to the serial port so
       // that the TX line is held low for 10 serial ticks (or should the byte be 0xff?)
@@ -743,19 +749,27 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
       // Don't worry about pulses that we can't send because we lost time somewhere,
       // just keep track of how many so that we can report this to the user.
       next_time+=pulse_interval_usec;
+      fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
+	      __FILE__,__LINE__,__FUNCTION__,gettime_us());
       while(next_time<now) {
 	next_time+=pulse_interval_usec;
 	missed_pulses++;
       }
+      fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
+	      __FILE__,__LINE__,__FUNCTION__,gettime_us());
     } else {
       // Wait for a little while if we have a while before the next time we need
       // to send a character. But busy wait the last 10usec, so that it doesn't matter
       // if we get woken up fractionally late.
       // Watcharachai will need to use an oscilliscope to see how adequate this is.
       // If there is too much jitter, then we will need to get more sophisticated.
+      fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
+	      __FILE__,__LINE__,__FUNCTION__,gettime_us());
       long long delay=next_time-now-10;
       if (delay>100000) delay=100000;
       if (delay>10) usleep(delay);
+      fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
+	      __FILE__,__LINE__,__FUNCTION__,gettime_us());
     }
     char buf[1024];
     ssize_t bytes = read_nonblock(serialfd, buf, sizeof buf);
@@ -764,6 +778,9 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
       fprintf(stderr,"Saw energy on channel @ %lldms\n",
 	      gettime_ms());
     }
+    fprintf(stderr,"%s:%d:%s(): checkpoint @ %lldusec\n",
+	    __FILE__,__LINE__,__FUNCTION__,gettime_us());
+
   }   
 
   return 0;
@@ -781,7 +798,7 @@ int energy_experiment_master(char *port,char *broadcast_address, char *backchann
   // during the tests.
   multimeterfd = open(port,O_RDWR);
   if (multimeterfd<0) {
-    perror("Opening serial port");
+    perror("Opening serial port for master");
     exit(-1);
   }
   fprintf(stderr,"Multi-meter serial port open as fd %d\n",multimeterfd);

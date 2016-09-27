@@ -175,6 +175,9 @@ int main(int argc, char **argv)
       fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <serial port> [options ...]\n");
       fprintf(stderr,"usage: lbard monitor <serial port>\n");
       fprintf(stderr,"usage: lbard meshms <meshms command>\n");
+      fprintf(stderr,"usage: energysamplecalibrate <args>\n");
+      fprintf(stderr,"usage: energysamplemaster <args>\n");
+      fprintf(stderr,"usage: energysample <args>\n");
       exit(-1);
     }
     serial_port = argv[4];
@@ -183,7 +186,7 @@ int main(int argc, char **argv)
   int serialfd=-1;
   serialfd = open(serial_port,O_RDWR);
   if (serialfd<0) {
-    perror("Opening serial port");
+    perror("Opening serial port in main");
     exit(-1);
   }
   if (serial_setup_port(serialfd))
