@@ -290,7 +290,7 @@ int energy_experiment(char *port, char *interface_name)
       	int i;
 	printf("Wifi activity report @ %s",ctime(&last_wifi_report_time));
 	for(i=0;i<1000;i++) {
-	  printf("%c",wifi_activity_bitmap[i]);
+	  printf("%c",wifi_activity_bitmap[i]?wifi_activity_bitmap[i]:'.');
 	  if ((i%80)==79) printf("\n");
 	}
 	clear_wifi_activity_history();
@@ -723,9 +723,9 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
     if (time(0)!=last_wifi_report_time) {
       last_wifi_report_time=time(0);
       int i;
-      printf("Wifi activity report @ %s",ctime(&last_wifi_report_time));
+      printf("\nWifi activity report @ %s",ctime(&last_wifi_report_time));
       for(i=0;i<1000;i++) {
-	printf("%c",wifi_activity_bitmap[i]);
+	printf("%c",wifi_activity_bitmap[i]?wifi_activity_bitmap[i]:'.');
 	if ((i%80)==79) printf("\n");
       }
       clear_wifi_activity_history();
