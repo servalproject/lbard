@@ -107,7 +107,17 @@ int client_read_byte(int client,unsigned char byte)
 	int send_bytes=clients[client].buffer_count;
 	if (send_bytes>255) send_bytes=255;
 
-	// Build envelope
+	// First the packet body, upto 255 bytes
+	bcopy(&clients[client].buffer[0],
+	      &packet[packet_len],
+	      send_bytes);
+	packet_len+=send_bytes;
+	bcopy(&clients[client].buffer[send_bytes],
+	      &clients[client].buffer[0],
+	      clients[client].buffer_count-send_bytes);
+	clients[client].buffer_count-=send_bytes;
+	
+	// Then build and attach envelope
 	packet[packet_len++]=0xaa;
 	packet[packet_len++]=0x55;
 	packet[packet_len++]=200; // RSSI of this frame
@@ -117,15 +127,6 @@ int client_read_byte(int client,unsigned char byte)
 	packet[packet_len++]=0xff;  // 16-bit RX buffer space (always claim 4095 bytes)
 	packet[packet_len++]=0x0f;
 	packet[packet_len++]=0x55;	
-	// Now packet body, upto 255 bytes
-	bcopy(&clients[client].buffer[0],
-	      &packet[packet_len],
-	      send_bytes);
-	packet_len+=send_bytes;
-	bcopy(&clients[client].buffer[send_bytes],
-	      &clients[client].buffer[0],
-	      clients[client].buffer_count-send_bytes);
-	clients[client].buffer_count-=send_bytes;
 
 	// Work out when the packet should be delivered
 	// (include 8 bytes time for the preamble)
