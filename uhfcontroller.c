@@ -186,15 +186,15 @@ int uhf_receive_bytes(unsigned char *bytes,int count)
 		 &&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0x55)
 		 &&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xaa))
       {
-	// Found RFD900 CSMA envelope: packet follows after this
+	// Found RFD900 CSMA envelope: packet was immediately before this
 	int packet_bytes=radio_rx_buffer[RADIO_RXBUFFER_SIZE-4];
 	radio_temperature=radio_rx_buffer[RADIO_RXBUFFER_SIZE-5];
 	last_rx_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-7];
 	
 	int buffer_space=radio_rx_buffer[RADIO_RXBUFFER_SIZE-3];
 	buffer_space+=radio_rx_buffer[RADIO_RXBUFFER_SIZE-2]*256;	
-	
-	if (packet_bytes>MAX_PACKET_SIZE) packet_bytes=0;
+
+	if (packet_bytes>MAX_PACKET_SIZE) packet_bytes=0;       
 	packet_data = &radio_rx_buffer[RADIO_RXBUFFER_SIZE-9-packet_bytes];
 	radio_transmissions_seen++;
 	
