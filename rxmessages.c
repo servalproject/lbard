@@ -394,7 +394,7 @@ int saw_piece(char *peer_prefix,int for_me,
 	    char message[1024];
 	    char filesize[1024];
 	    manifest_get_field(manifest,manifest_len,"name",filename);
-	    manifest_get_field(manifest,manifest_len,"bid",bid);
+	    manifest_get_field(manifest,manifest_len,"id",bid);
 	    manifest_get_field(manifest,manifest_len,"filesize",filesize);
 	    snprintf(message,1024,"T+%lldms:%s:%s:%s:%s\n",
 		     (long long)(gettime_ms()-start_time),
