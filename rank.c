@@ -118,7 +118,10 @@ long long calculate_bundle_intrinsic_priority(char *bid,
 
   // Allow disabling of bundle prioritisation for comparison of effect
   // of prioritisation 
-  if (debug_noprioritisation) return 1;
+  if (debug_noprioritisation) {
+     printf("WARNING: Rhizome bundle prioritisation disabled.\n");
+     return 1;
+  }
 
   // Start with length
   long long this_bundle_priority = lengthToPriority(length);
@@ -189,7 +192,10 @@ int calculate_stored_bundle_priority(int i,int versus)
 {    
   // Allow disabling of bundle prioritisation for comparison of effect
   // of prioritisation 
-  if (debug_noprioritisation) return 1;
+  if (debug_noprioritisation) {
+     printf("WARNING: Rhizome bundle prioritisation disabled.\n");
+     return 1;
+  }
 
   // Start with intrinsic priority of the bundle based on size, service,
   // who it is addressed to, and whether we have had problems inserting it
