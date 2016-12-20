@@ -115,6 +115,11 @@ long long calculate_bundle_intrinsic_priority(char *bid,
 					      char *recipient,
 					      int insert_failures)
 {
+
+  // Allow disabling of bundle prioritisation for comparison of effect
+  // of prioritisation 
+  if (debug_noprioritisation) return 1;
+
   // Start with length
   long long this_bundle_priority = lengthToPriority(length);
 

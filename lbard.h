@@ -264,6 +264,7 @@ extern int debug_message_pieces;
 extern int debug_sync;
 extern int debug_sync_keys;
 extern int debug_bundlelog;
+extern int debug_noprioritisation;
 extern int radio_silence_count;
 extern int meshms_only;
 extern long long min_version;
