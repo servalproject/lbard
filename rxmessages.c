@@ -382,6 +382,26 @@ int saw_piece(char *peer_prefix,int for_me,
 				peer_records[peer]->partials[i].body_length,
 				servald_server,credential);
 
+	if (debug_bundlelog) {
+	  // Write details of bundle to a log file for monitoring
+	  // This is used for rhizome velocity experiments.  For that purpose,
+	  // we like to know the name of the bundle we are looking for, so we include
+	  // it in the message.
+	  FILE *bundlelogfile=fopen("bundles_received.log","a");
+	  if (bundlelogfile) {
+	    char bid[1024];
+	    char filename[1024];
+	    char message[1024];
+	    manifest_get_field(manifest,manifest_len,"filename",filename);
+	    manifest_get_field(manifest,manifest_len,"bid",bid);
+	    snprintf(message,1024,"T+%lldms:%s:%s\n",
+		     (long long)(gettime_ms()-start_time),
+		     bid,filename);
+	    fprintf(bundlelogfile,"%s",message);
+	    fclose(bundlelogfile);
+	  }
+	}
+	
 	// Take note of the bundle, so that we can tell any peer who is trying to
 	// send it to us, that we have recently received it.  This is irrespective
 	// of whether it inserted correctly. The reasoning behind this, is that we

@@ -263,6 +263,7 @@ extern int debug_insert;
 extern int debug_message_pieces;
 extern int debug_sync;
 extern int debug_sync_keys;
+extern int debug_bundlelog;
 extern int radio_silence_count;
 extern int meshms_only;
 extern long long min_version;
@@ -372,6 +373,9 @@ int manifest_text_to_binary(unsigned char *text_in, int len_in,
 			    unsigned char *bin_out, int *len_out);
 int manifest_binary_to_text(unsigned char *bin_in, int len_in,
 			    unsigned char *text_out, int *len_out);
+int manifest_get_field(unsigned char *manifest, int manifest_len,
+		       char *fieldname,
+		       char *field_value);
 int monitor_log(char *sender_prefix, char *recipient_prefix,char *msg);
 int bytes_to_prefix(unsigned char *bytes_in,char *prefix_out);
 int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv);

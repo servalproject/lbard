@@ -55,6 +55,7 @@ int debug_gpio=0;
 int debug_message_pieces=0;
 int debug_sync=0;
 int debug_sync_keys=0;
+int debug_bundlelog=0;
 
 int radio_silence_count=0;
 
@@ -247,6 +248,7 @@ int main(int argc, char **argv)
       else if (!strcasecmp("sync",argv[n])) debug_sync=1;
       else if (!strcasecmp("sync_keys",argv[n])) debug_sync_keys=1;
       else if (!strcasecmp("udptime",argv[n])) udp_time=1;
+      else if (!strcasecmp("bundlelog",argv[n])) debug_bundlelog=1;
       else if (!strcasecmp("nohttpd",argv[n])) http_server=0;
       else {
 	fprintf(stderr,"Illegal mode '%s'\n",argv[n]);

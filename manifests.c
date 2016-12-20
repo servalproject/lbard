@@ -405,3 +405,21 @@ int main(int argc,char **argv)
   fprintf(stderr,"Binary encoding of manifest requires %d bytes.\n",bin_len);
 }
 #endif
+
+int manifest_get_field(unsigned char *manifest, int manifest_len,
+		       char *fieldname,
+		       char *field_value)
+{
+    int offset;
+  for(offset=0;offset<manifest_len;offset++) {
+    // See if we are at a line of KEY=VALUE format.
+    unsigned char key[1024];
+    int length;
+    if (sscanf((const char *)&manifest[offset],"%[^=]=%[^\n]%n",
+	       key,field_value,&length)==2) {
+      if (!strcasecmp((char *)key,fieldname))
+	return 0;
+    }
+  }
+  return -1;
+}
