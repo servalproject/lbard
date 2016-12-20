@@ -187,6 +187,10 @@ long long calculate_bundle_intrinsic_priority(char *bid,
 
 int calculate_stored_bundle_priority(int i,int versus)
 {    
+  // Allow disabling of bundle prioritisation for comparison of effect
+  // of prioritisation 
+  if (debug_noprioritisation) return 1;
+
   // Start with intrinsic priority of the bundle based on size, service,
   // who it is addressed to, and whether we have had problems inserting it
   // into rhizome.
