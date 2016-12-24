@@ -137,6 +137,9 @@ int radio_set_tx_power(int serialfd)
       hipower_en=1;
       fclose(f);
     }
+#if 1
+    hipower_switch_set=1;
+#else
     f=fopen(gpio_file,"r");
     if (f) {
       char line[1024];
@@ -149,6 +152,7 @@ int radio_set_tx_power(int serialfd)
       }
       fclose(f);
     }
+#endif
   }
 
   if (hipower_switch_set&&hipower_en) {
