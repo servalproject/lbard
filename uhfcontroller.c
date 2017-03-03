@@ -42,7 +42,7 @@ long long congestion_update_time=0;
 #define MAX_PACKET_SIZE 255
 
 // This need only be the maximum control header size + maximum packet size
-#define RADIO_RXBUFFER_SIZE 16+MAX_PACKET_SIZE
+#define RADIO_RXBUFFER_SIZE 64+MAX_PACKET_SIZE
 unsigned char radio_rx_buffer[RADIO_RXBUFFER_SIZE];
 
 int radio_temperature=-1;
@@ -165,10 +165,62 @@ int uhf_receive_bytes(unsigned char *bytes,int count)
       
     bcopy(&radio_rx_buffer[1],&radio_rx_buffer[0],RADIO_RXBUFFER_SIZE-1);
     radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]=bytes[i];
-    
-    if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0xdd)
-	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0xec)
-	&&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xce))
+
+    /*
+      The revised RFD900+ firmware for the Mesh Extender 2.0 sends a little
+      more useful information.
+
+      It is framed with UTF-8 characters for in and out trays for human readability,
+      and the various internal fields have also been improved for human readability.
+
+      Preamble - 4 bytes 0xf0, 0x9f, 0x93, 0xa5
+      Radio temperature - 4 byts  <+/->nnn
+      Degree UTF-8 symbol - 2 bytes 0xc2, 0xb0
+      GPIO state - 6 bytes, each one of 0,1,X or x
+      Board frequency band - 2 bytes, e.g., "86" or "91"
+      Postamble - 4 bytes 0xf0, 0x9f, 0x93, 0xa4
+    */
+#define REPORT_LENGTH (4+4+2+6+2+4)
+    int template[REPORT_LENGTH]={
+      0xf0, 0x9f, 0x93, 0xa5,
+      -1,-1,-1,-1,
+      0xc2,0xb0,
+      -1,-1,-1,-1,-1,-1,
+      -1,-1,
+      0xf0,0x9f,0x93,0xa4};
+    int isReport=1;
+    for(int i=0;i<REPORT_LENGTH;i++)
+      if (template[i]!=-1)
+	if (radio_rx_buffer[RADIO_RXBUFFER_SIZE-REPORT_LENGTH+i]!=template[i])
+	  { isReport=0;
+	    break; }
+    if (isReport) {
+      char tempstring[5]={radio_rx_buffer[RADIO_RXBUFFER_SIZE-REPORT_LENGTH+4+0],
+			  radio_rx_buffer[RADIO_RXBUFFER_SIZE-REPORT_LENGTH+4+1],
+			  radio_rx_buffer[RADIO_RXBUFFER_SIZE-REPORT_LENGTH+4+2],
+			  radio_rx_buffer[RADIO_RXBUFFER_SIZE-REPORT_LENGTH+4+3],
+			  0};
+      radio_temperature=atoi(tempstring);
+      printf("Radio temperature = %dC, frequency band = %c%c\n",
+	     radio_temperature,
+	     radio_rx_buffer[RADIO_RXBUFFER_SIZE-REPORT_LENGTH+4+4+2+6+0],
+	     radio_rx_buffer[RADIO_RXBUFFER_SIZE-REPORT_LENGTH+4+4+2+6+1]);
+      if (debug_gpio) {
+	printf("GPIO ADC values = [");
+	for(int j=0;j<6;j++) {
+	  printf("%c",
+		 radio_rx_buffer[RADIO_RXBUFFER_SIZE-REPORT_LENGTH+4+4+2+j]);
+	}
+	printf("]  Radio TX interval = %dms, TX seen = %d, TX us = %d\n",
+	       message_update_interval,
+	       radio_transmissions_seen,
+	       radio_transmissions_byus);
+      }
+      
+    } else if ((radio_rx_buffer[RADIO_RXBUFFER_SIZE-1]==0xdd)
+	       &&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-8]==0xec)
+	       &&(radio_rx_buffer[RADIO_RXBUFFER_SIZE-9]==0xce))
+      // Support old-style RFD900 Mesh Extender firmware reports
       {
 	if (debug_gpio) {
 	  printf("GPIO ADC values = ");
@@ -218,4 +270,15 @@ int uhf_receive_bytes(unsigned char *bytes,int count)
       }
   }
   return 0;
+}
+
+int uhf_rfd900_setup(int fd)
+{
+  /* Initialise an RFD900 radio.
+     Here we want to reset the radio, and read out its attached I2C EEPROM, if any,
+     and set our max TX rate etc based on what we read from there, so that we can
+     adhere to the encoded radio regulations.
+  */
+  eeprom_read(fd);
+  
 }

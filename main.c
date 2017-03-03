@@ -66,7 +66,6 @@ int time_slave=0;
 int time_server=0;
 char *time_broadcast_addrs[]={DEFAULT_BROADCAST_ADDRESSES,NULL};
 
-
 int reboot_when_stuck=0;
 extern int serial_errors;
 

@@ -134,6 +134,8 @@ struct recent_bundle {
   time_t timeout;
 };
 
+extern int radio_temperature;
+
 extern long long start_time;
 extern int my_time_stratum;
 extern int radio_transmissions_byus;
@@ -444,6 +446,7 @@ int radio_set_type(int radio_type);
 int radio_set_feature(int bitmask);
 int hf_read_configuration(char *filename);
 int hf_serviceloop(int fd);
+int uhf_rfd900_setup(int fd);
 int uhf_serviceloop(int fd);
 int radio_get_type();
 int uhf_receive_bytes(unsigned char *bytes,int count);

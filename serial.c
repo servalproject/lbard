@@ -232,5 +232,7 @@ int serial_setup_port(int fd)
   
   serial_setup_port_with_speed(fd,230400);
   radio_set_type(RADIO_RFD900);
+  uhf_rfd900_setup(fd);
+  
   return 0;
 }
