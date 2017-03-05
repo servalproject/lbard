@@ -17,7 +17,7 @@ SRCS=	main.c rhizome.c txmessages.c rxmessages.c bundle_cache.c json.c peers.c \
 	hfcontroller.c uhfcontroller.c \
 	eeprom.c sha3.c
 
-HDRS=	lbard.h serial.h Makefile version.h sync.h sha3.h
+HDRS=	lbard.h serial.h Makefile version.h sync.h sha3.h miniz.c
 #CC=/usr/local/Cellar/llvm/3.6.2/bin/clang
 #LDFLAGS= -lgmalloc
 #CFLAGS= -fno-omit-frame-pointer -fsanitize=address

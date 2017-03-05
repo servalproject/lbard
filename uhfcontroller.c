@@ -279,6 +279,5 @@ int uhf_rfd900_setup(int fd)
      and set our max TX rate etc based on what we read from there, so that we can
      adhere to the encoded radio regulations.
   */
-  eeprom_read(fd);
-  
+  return eeprom_read(fd);
 }

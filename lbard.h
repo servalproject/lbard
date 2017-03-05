@@ -461,3 +461,4 @@ int radio_ready();
 int hf_radio_ready();
 int hf_radio_pause_for_turnaround();
 int hf_radio_send_now();
+int eeprom_read(int fd);
