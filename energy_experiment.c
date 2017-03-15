@@ -46,10 +46,8 @@ struct experiment_data {
   int speed;
 };
 
-int pulse_widths[]={43,86,173,260,520,1041,2083,4166,8333,33333,0};
-
-
-
+//int pulse_widths[]={43,86,173,260,520,1041,2083,4166,8333,33333,0};
+int pulse_widths[]={86,0};
 
 
 // From os.c in serval-dna
@@ -131,7 +129,7 @@ int setup_experiment(struct experiment_data *exp)
   exp->cycle_duration = 1000.0/exp->pulse_frequency;
   exp->duty_cycle=exp->pulse_width_us/10.0/exp->cycle_duration;
 
-  if (0) {
+  if (1) {
     fprintf(stderr,"Running energy sample experiment:\n");
     fprintf(stderr,"  pulse width = %.4fms\n",exp->pulse_width_us/1000.0);
     fprintf(stderr,"  pulse frequency = %dHz\n",exp->pulse_frequency);
@@ -151,7 +149,7 @@ int setup_experiment(struct experiment_data *exp)
     
   // Work out correct serial port speed to produce the required pulse width
   int speed=-1;
-  int possible_speeds[]={230400,115200,57600,38400,19200,9600,4800,2400,1200,300,0};
+  int possible_speeds[]={115200,0};
   int s;
   for(s=0;possible_speeds[s];s++) {
     // Pulse width will be 10 serial ticks wide for the complete character.
@@ -255,7 +253,7 @@ int energy_experiment(char *port, char *interface_name)
 	sendto(sock,rx,r,0,(struct sockaddr *)&src_addr,src_addr_len);
 	
 	struct experiment_data *pd=(void *)&rx[0];
-	if (0) printf("Saw packet with key 0x%08x : Updating experimental settings\n",
+	if (1) printf("Saw packet with key 0x%08x : Updating experimental settings\n",
 		      pd->key);
 	exp=*pd;
 	experiment_invalid=setup_experiment(&exp);
@@ -288,8 +286,11 @@ int energy_experiment(char *port, char *interface_name)
       if (time(0)!=last_wifi_report_time) {
 	last_wifi_report_time=time(0);
       	int i;
+	int count=0;
 	printf("Wifi activity report @ %s",ctime(&last_wifi_report_time));
 	for(i=0;i<1000;i++) {
+	  if ((wifi_activity_bitmap[i]=='R')||(wifi_activity_bitmap[i]=='V'))
+	    count++;
 	  printf("%c",wifi_activity_bitmap[i]?wifi_activity_bitmap[i]:'.');
 	  if ((i%80)==79) printf("\n");
 	}
@@ -300,7 +301,7 @@ int energy_experiment(char *port, char *interface_name)
 	// Next pulse is due, so write a single character of 0x00 to the serial port so
 	// that the TX line is held low for 10 serial ticks (or should the byte be 0xff?)
 	// which will cause the energy sampler to be powered for that period of time.
-	write(serialfd, nul, 1);
+	// write(serialfd, nul, 1);
 	sent_pulses++;
 	wifi_activity_bitmap[(now/1000)%1000]|='T';
 	// Work out next time to send a character to turn on the energy sampler.
@@ -318,7 +319,10 @@ int energy_experiment(char *port, char *interface_name)
 	// Watcharachai will need to use an oscilliscope to see how adequate this is.
 	// If there is too much jitter, then we will need to get more sophisticated.
 	long long delay=next_time-now-10;
-	if (delay>100000) delay=100000;
+	// if (delay>100000) delay=100000;
+	// PGS: Now that we are leaving the energy sampler powered the whole time,
+	// don't sleep too long, as we want to check every 83usec for a new character
+	if (delay>50) delay=50;
 	if (delay>10) usleep(delay);
       }
       char buf[1024];
@@ -327,7 +331,7 @@ int energy_experiment(char *port, char *interface_name)
 	wifi_activity_bitmap[(now/1000)%1000]|='R';
 	// Work out when to take wifi low
 	wifi_down_time=gettime_us()+exp.wifiup_hold_time_us;
-	fprintf(stderr,"Saw energy on channel @ %lldms, holding Wi-Fi for %lld more usec\n",
+	if (0) fprintf(stderr,"Saw energy on channel @ %lldms, holding Wi-Fi for %lld more usec\n",
 		gettime_ms(),wifi_down_time-gettime_us());
 	if (wifi_down) { wifi_enable(); wifi_down=0; }
       } else {
@@ -839,10 +843,10 @@ int energy_experiment_master(char *port,char *broadcast_address, char *backchann
 
   long long experiment_count=0;
 
-  int gaps[]={1000,3000,5000,10000,50000,100000,500000,1000000,0};
+  int gaps[]={1000,3000,5000,10000,50000,0};
   int gap_number;
 
-  int pulse_frequencies[]={10,50,100,500,1000,0};
+  int pulse_frequencies[]={900,0};
   int freq_number;
 
   int wifiup_hold_times[]={5000,50000,100000,500000,1000000,3000000,0};
