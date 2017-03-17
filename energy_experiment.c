@@ -734,14 +734,15 @@ int energy_experiment_master(char *port,char *broadcast_address,
     We will also send it the parameters it should be using.
   */
   int gap_us;
-  int packet_len=1000;
+  int packet_len;
   int pulse_width_us;
   int pulse_frequency;
   int wifiup_hold_time_us;
 
-  if (sscanf(params,"gap=%d,hold=%d",&gap_us,&wifiup_hold_time_us)<2)
+  if (sscanf(params,"gap=%d,hold=%d,len=%d",
+	     &gap_us,&wifiup_hold_time_us,&packet_len)<3)
     {
-      fprintf(stderr,"You must provide gap=<n>,hold=<n>\n");
+      fprintf(stderr,"You must provide gap=<n>,hold=<n>,len=<n>\n");
       exit(-1);
     }
 
