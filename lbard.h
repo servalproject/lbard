@@ -335,7 +335,7 @@ int dump_segment_list(struct segment_list *s);
 
 int energy_experiment(char *port, char *interface_name);
 int energy_experiment_master(char *port, char *broadcast_address,
-			     char *backchannel_address);
+			     char *backchannel_address,char *parameters);
 int energy_experiment_calibrate(char *port, char *broadcast_address,char *exp_string);
 
 int serial_setup_port_with_speed(int fd,int speed);
