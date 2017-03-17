@@ -703,7 +703,7 @@ int energy_experiment_calibrate(char *port, char *broadcast_address, char *strin
   backchannel_address - the ethernet-based IP address for the slave unit, to receive updated
   experiment configuration information.
  */
-int energy_experiment_master(char *port,char *broadcast_address,
+int energy_experiment_master(char *broadcast_address,
 			     char *backchannel_address,char *params)
 {
   int sock=socket(AF_INET, SOCK_DGRAM, 0);
@@ -739,10 +739,10 @@ int energy_experiment_master(char *port,char *broadcast_address,
   int pulse_frequency;
   int wifiup_hold_time_us;
 
-  if (sscanf(params,"gap=%d,hold=%d,len=%d",
+  if (sscanf(params,"gapusec=%d,holdusec=%d,packetbytes=%d",
 	     &gap_us,&wifiup_hold_time_us,&packet_len)<3)
     {
-      fprintf(stderr,"You must provide gap=<n>,hold=<n>,len=<n>\n");
+      fprintf(stderr,"You must provide gapusec=n,holdusec=n,packetbytes=n\n");
       exit(-1);
     }
 

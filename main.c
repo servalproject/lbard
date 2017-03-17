@@ -124,7 +124,7 @@ long long start_time=0;
 
 int main(int argc, char **argv)
 {
-  fprintf(stderr,"Version 20160927.1311.1\n");
+  fprintf(stderr,"Version 20170317.1611.1\n");
   
   start_time = gettime_ms();
   
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
   
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==5)&&(!strcasecmp(argv[1],"energysamplemaster"))) {
-    return energy_experiment_master(argv[2],argv[3],argv[4],argv[5]);
+    return energy_experiment_master(argv[2],argv[3],argv[4]);
   }
   if ((argc==4)&&(!strcasecmp(argv[1],"energysample"))) {
     char *port=argv[2];
@@ -177,7 +177,7 @@ int main(int argc, char **argv)
       fprintf(stderr,"usage: lbard monitor <serial port>\n");
       fprintf(stderr,"usage: lbard meshms <meshms command>\n");
       fprintf(stderr,"usage: energysamplecalibrate <args>\n");
-      fprintf(stderr,"usage: energysamplemaster <args>\n");
+      fprintf(stderr,"usage: energysamplemaster <broadcast addr> <backchannel addr> <gapusec=n,holdusec=n,packetbytes=n>\n");
       fprintf(stderr,"usage: energysample <args>\n");
       exit(-1);
     }
