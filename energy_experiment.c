@@ -492,8 +492,9 @@ int run_energy_experiment(int sock,
     
     timeout=gettime_ms()+1000;
     while(gettime_ms()<timeout) {
-      int r=recvfrom(sock,rx,9000,0,NULL,0);
-      if (r>0) {
+      int r=1;
+      while (r>0) {
+	r=recvfrom(sock,rx,9000,0,NULL,0);
 	struct experiment_data *pd=(void *)&rx[0];
 	if (0)
 	  printf("Saw candidate reply, key=0x%08x, packet_number=%lld (expecting %lld or %lld)\n",
