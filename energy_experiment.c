@@ -446,8 +446,7 @@ int run_energy_experiment(int sock,
   }
 
   // Wait for wifi to shut down on the remote side.
-  usleep(wifiup_hold_time_us);  // time required
-  usleep(1000000); // insurance of extra 1 second
+  usleep(wifiup_hold_time_us+100000);  // time required
   // Clear out any banked up packets
   unsigned char rx[9000];
   int queue=0;
@@ -460,16 +459,14 @@ int run_energy_experiment(int sock,
   int received_replies_to_second_packets=0;
 
   // Wait for wifi to shut down on the remote side.
-  usleep(wifiup_hold_time_us);  // time required
-  usleep(1000000); // insurance of extra 1 second
+  usleep(wifiup_hold_time_us+100000);  // time required
   
   int iteration;
   for(iteration=0;iteration<20;iteration++) {
     printf("Iteration #%d\n",iteration);
     
     // Wait for wifi to shut down on the remote side.
-    usleep(wifiup_hold_time_us);  // time required
-    usleep(1000000); // insurance of extra 1 second
+    usleep(wifiup_hold_time_us+100000);  // time required
     
     // Then send a packet
     build_packet(packet,gap_us,packet_len,pulse_width_us,
@@ -493,8 +490,8 @@ int run_energy_experiment(int sock,
     send_packet(sock,packet,packet_len,broadcast_address);
     printf("Sent second packet at T+%lldms\n",gettime_ms()-start_time);
     
-    timeout=time(0)+3;
-    while(time(0)<timeout) {
+    timeout=gettime_ms()+1000;
+    while(gettime_ms()<timeout) {
       int r=recvfrom(sock,rx,9000,0,NULL,0);
       if (r>0) {
 	struct experiment_data *pd=(void *)&rx[0];
@@ -504,6 +501,8 @@ int run_energy_experiment(int sock,
 	if (pd->key==key2) {
 	  if (pd->packet_number==second_id) {
 	    received_replies_to_second_packets++;
+	    // we can now stop waiting for packets
+	    timeout=0;
 	    if (0) printf("  received reply to data packet.\n");
 	    break;
 	  } 
