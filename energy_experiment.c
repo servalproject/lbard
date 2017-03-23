@@ -204,7 +204,7 @@ int energy_experiment(char *port, char *interface_name)
     exit(-1);
   }
 
-  start_time=gettime_us();
+  start_time=gettime_ms();
   
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
