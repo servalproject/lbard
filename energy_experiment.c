@@ -67,7 +67,8 @@ int wifi_fd=-1;
 
 static int wifi_disable()
 {
-	system("/sbin/wifi down");
+  if (getenv("WIFIDOWN")) system(getenv("WIFIDOWN"));
+  else system("/sbin/ifconfig wlan0 down");
 #if 0
 #ifdef linux
   fprintf(stderr,"Disabling wifi interface %s @ %lldms\n",
@@ -96,7 +97,8 @@ static int wifi_disable()
 
 static int wifi_enable()
 {
-  system("/sbin/wifi up");
+  if (getenv("WIFIUP")) system(getenv("WIFIUP"));
+  else system("/sbin/ifconfig wlan0 up && iw wlan0 ibss join energy-experiment 2462");
 #if 0
 #ifdef linux
   fprintf(stderr,"Enabling wifi interface %s @ %lldms\n",
