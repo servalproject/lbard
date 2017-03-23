@@ -416,6 +416,8 @@ int run_energy_experiment(int sock,
   unsigned int key=random()&0xffffff;
   unsigned int key2=key|0xff000000;
 
+  start_time=gettime_ms();
+  
   build_packet(packet,gap_us,packet_len,pulse_width_us,
 	       pulse_frequency,wifiup_hold_time_us,
 	       key);
@@ -475,23 +477,21 @@ int run_energy_experiment(int sock,
 		 key2);
     long long first_id=packet_number;
     send_packet(sock,packet,packet_len,broadcast_address);
+    long long gap_timeout=gettime_us()+gap_us;
+    printf("Sent first packet at T+%lldms\n",gettime_ms()-start_time);
     if (0) printf("Sent packet with key 0x%08x, id = %lld, then waiting %dusec before sending duplicate\n",
 	   key,packet_number,gap_us);
 
-    // Maasure current draw of experiment while waiting for gap timeout
-    //usleep(gap_us);
-    long long gap_timeout=gettime_us()+gap_us;
-    while(gettime_us()<gap_timeout) {
-
-      // Sleep for a short while between events.
-      usleep(500);
-    }
-    
     build_packet(packet,gap_us,packet_len,pulse_width_us,
 		 pulse_frequency,wifiup_hold_time_us,
 		 key2);
+    
+    // Maasure current draw of experiment while waiting for gap timeout
+    usleep(gettime_us()-gap_timeout);
+    
     long long second_id=packet_number;
     send_packet(sock,packet,packet_len,broadcast_address);
+    printf("Sent second packet at T+%lldms\n",gettime_ms()-start_time);
     
     timeout=time(0)+3;
     while(time(0)<timeout) {
