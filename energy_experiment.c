@@ -487,7 +487,7 @@ int run_energy_experiment(int sock,
 		 key2);
     
     // Maasure current draw of experiment while waiting for gap timeout
-    usleep(gettime_us()-gap_timeout);
+    usleep(gap_timeout-gettime_us());
     
     long long second_id=packet_number;
     send_packet(sock,packet,packet_len,broadcast_address);
