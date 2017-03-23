@@ -69,6 +69,7 @@ static int wifi_disable()
 {
   if (getenv("WIFIDOWN")) system(getenv("WIFIDOWN"));
   else system("/sbin/ifconfig wlan0 down");
+  fprintf(stderr,"T+%lldms - Wifi off\n",gettime_ms()-start_time);
 #if 0
 #ifdef linux
   fprintf(stderr,"Disabling wifi interface %s @ %lldms\n",
@@ -99,6 +100,7 @@ static int wifi_enable()
 {
   if (getenv("WIFIUP")) system(getenv("WIFIUP"));
   else system("/sbin/ifconfig wlan0 up && iw wlan0 ibss join energy-experiment 2462");
+  fprintf(stderr,"T+%lldms - Wifi on\n",gettime_ms()-start_time);
 #if 0
 #ifdef linux
   fprintf(stderr,"Enabling wifi interface %s @ %lldms\n",
@@ -201,6 +203,8 @@ int energy_experiment(char *port, char *interface_name)
     perror("Could not create UDP socket");
     exit(-1);
   }
+
+  start_time=gettime_us();
   
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
@@ -234,9 +238,6 @@ int energy_experiment(char *port, char *interface_name)
   wifi_disable();
   long long wifi_down_time=0;
   
-  int missed_pulses=0,sent_pulses=0;
-  long long next_time=gettime_us();
-  long long report_time=gettime_us()+1000;
   int last_speed=-1;
 
   clear_wifi_activity_history();
@@ -276,64 +277,15 @@ int energy_experiment(char *port, char *interface_name)
       }
       
       long long now=gettime_us();
-      if (now>report_time) {
-	report_time+=1000000;
-	if ((sent_pulses != exp.pulse_frequency)||missed_pulses)
-	  fprintf(stderr,"Sent %d pulses in the past second, and missed %d deadlines (target is %d).\n",
-		  sent_pulses,missed_pulses,exp.pulse_frequency);
-	sent_pulses=0;
-	missed_pulses=0;
-      }
-      if (time(0)!=last_wifi_report_time) {
-	last_wifi_report_time=time(0);
-      	int i;
-	int count=0;
-	printf("Wifi activity report @ %s",ctime(&last_wifi_report_time));
-	for(i=0;i<1000;i++) {
-	  if ((wifi_activity_bitmap[i]=='R')||(wifi_activity_bitmap[i]=='V'))
-	    count++;
-	  printf("%c",wifi_activity_bitmap[i]?wifi_activity_bitmap[i]:'.');
-	  if ((i%80)==79) printf("\n");
-	}
-	clear_wifi_activity_history();
-      }
       
-      if (now>=next_time) {
-	// Next pulse is due, so write a single character of 0x00 to the serial port so
-	// that the TX line is held low for 10 serial ticks (or should the byte be 0xff?)
-	// which will cause the energy sampler to be powered for that period of time.
-	// write(serialfd, nul, 1);
-	sent_pulses++;
-	wifi_activity_bitmap[(now/1000)%1000]|='T';
-	// Work out next time to send a character to turn on the energy sampler.
-	// Don't worry about pulses that we can't send because we lost time somewhere,
-	// just keep track of how many so that we can report this to the user.
-	next_time+=pulse_interval_usec;
-	while(next_time<now) {
-	  next_time+=pulse_interval_usec;
-	  missed_pulses++;
-	}
-      } else {
-	// Wait for a little while if we have a while before the next time we need
-	// to send a character. But busy wait the last 10usec, so that it doesn't matter
-	// if we get woken up fractionally late.
-	// Watcharachai will need to use an oscilliscope to see how adequate this is.
-	// If there is too much jitter, then we will need to get more sophisticated.
-	long long delay=next_time-now-10;
-	// if (delay>100000) delay=100000;
-	// PGS: Now that we are leaving the energy sampler powered the whole time,
-	// don't sleep too long, as we want to check every 83usec for a new character
-	if (delay>50) delay=50;
-	if (delay>10) usleep(delay);
-      }
       char buf[1024];
       ssize_t bytes = read_nonblock(serialfd, buf, sizeof buf);
       if (bytes>0) {
-	wifi_activity_bitmap[(now/1000)%1000]|='R';
+	//	wifi_activity_bitmap[(now/1000)%1000]|='R';
 	// Work out when to take wifi low
 	wifi_down_time=gettime_us()+exp.wifiup_hold_time_us;
-	if (0) fprintf(stderr,"Saw energy on channel @ %lldms, holding Wi-Fi for %lld more usec\n",
-		gettime_ms(),wifi_down_time-gettime_us());
+	if (1) fprintf(stderr,"T+%lldms - Saw energy on channel, holding Wi-Fi for %lld more usec\n",
+		gettime_ms()-start_time,wifi_down_time-gettime_us());
 	if (wifi_down) { wifi_enable(); wifi_down=0; }
       } else {
 	if (now>wifi_down_time) {
@@ -341,6 +293,9 @@ int energy_experiment(char *port, char *interface_name)
 	  wifi_down=1;
 	}
       }
+
+      // Wait 1ms before checking again
+      usleep(1000);
     }   
   }
   return 0;
