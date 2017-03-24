@@ -252,7 +252,9 @@ int energy_experiment(char *port, char *interface_name)
       while((r=recvfrom(sock,rx,9000,0,(struct sockaddr *)&src_addr,&src_addr_len))>0) {
       
 	// Reflect packet back to sender
-	sendto(sock,rx,r,0,(struct sockaddr *)&src_addr,src_addr_len);
+	int result=sendto(sock,rx,r,0,(struct sockaddr *)&src_addr,src_addr_len);
+	if (result!=-1)	printf("Sent %d byte in reply packet\n",result);
+	else perror("sendto");
 	
 	struct experiment_data *pd=(void *)&rx[0];
 	if (1) printf("Saw packet with key 0x%08x : Updating experimental settings\n",
