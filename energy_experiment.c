@@ -217,7 +217,7 @@ int energy_experiment(char *port, char *interface_name,char *broadcast_address)
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = INADDR_ANY;
-  addr.sin_port = htons(19002);
+  addr.sin_port = htons(19001);
   bind(sock, (struct sockaddr *) &addr, sizeof(addr));
   set_nonblock(sock);
 
@@ -344,7 +344,7 @@ int send_packet(int sock,unsigned char *packet,int len, char *broadcast_address)
   struct sockaddr_in addr;
   bzero(&addr, sizeof(addr)); 
   addr.sin_family = AF_INET; 
-  addr.sin_port = htons(19002);
+  addr.sin_port = htons(19001);
   addr.sin_addr.s_addr = inet_addr(broadcast_address);
 
   sendto(sock,packet,len,
@@ -465,7 +465,7 @@ int run_energy_experiment(int sock,
   unsigned char rx[9000];
   int queue=0;
   while (recvfrom(sock,rx,9000,0,NULL,0)>0) queue++;
-  // printf("Cleared %d queued packets.\n",queue);
+  printf("Cleared %d queued packets.\n",queue);
   
   // No run the experiment 20 times
 
@@ -510,7 +510,7 @@ int run_energy_experiment(int sock,
       while (r>0) {
 	r=recvfrom(sock,rx,9000,0,NULL,0);
 	struct experiment_data *pd=(void *)&rx[0];
-	if (0)
+	if (1)
 	  printf("Saw candidate reply, key=0x%08x, packet_number=%lld (expecting %lld or %lld)\n",
 		 pd->key,pd->packet_number,first_id,second_id);
 	if (pd->key==key2) {
@@ -518,12 +518,12 @@ int run_energy_experiment(int sock,
 	    received_replies_to_second_packets++;
 	    // we can now stop waiting for packets
 	    timeout=0;
-	    if (0) printf("  received reply to data packet.\n");
+	    if (1) printf("  received reply to data packet.\n");
 	    break;
 	  } 
 	  if (pd->packet_number==first_id) {
 	    received_replies_to_first_packets++;
-	    if (0) printf("  received reply to wake packet.\n");
+	    if (1) printf("  received reply to wake packet.\n");
 	  } 
 	}
       }
