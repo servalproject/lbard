@@ -333,7 +333,7 @@ int show_progress();
 int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_out);
 int dump_segment_list(struct segment_list *s);
 
-int energy_experiment(char *port, char *interface_name);
+int energy_experiment(char *port, char *interface_name,char *broadcast_address);
 int energy_experiment_master(char *broadcast_address,
 			     char *backchannel_address,char *parameters);
 int energy_experiment_calibrate(char *port, char *broadcast_address,char *exp_string);

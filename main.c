@@ -147,10 +147,11 @@ int main(int argc, char **argv)
   if ((argc==5)&&(!strcasecmp(argv[1],"energysamplemaster"))) {
     return energy_experiment_master(argv[2],argv[3],argv[4]);
   }
-  if ((argc==4)&&(!strcasecmp(argv[1],"energysample"))) {
+  if ((argc==5)&&(!strcasecmp(argv[1],"energysample"))) {
     char *port=argv[2];
     char *interface=argv[3];
-    return energy_experiment(port,interface);
+    char *broadcast_address=argv[4];
+    return energy_experiment(port,interface,broadcast_address);
   }
   if ((argc==5)&&(!strcasecmp(argv[1],"energysamplecalibrate"))) {
     char *port=argv[2];
@@ -178,7 +179,7 @@ int main(int argc, char **argv)
       fprintf(stderr,"usage: lbard meshms <meshms command>\n");
       fprintf(stderr,"usage: energysamplecalibrate <args>\n");
       fprintf(stderr,"usage: energysamplemaster <broadcast addr> <backchannel addr> <gapusec=n,holdusec=n,packetbytes=n>\n");
-      fprintf(stderr,"usage: energysample <args>\n");
+      fprintf(stderr,"usage: energysample <port> <interface> <broadcast address>\n");
       exit(-1);
     }
     serial_port = argv[4];

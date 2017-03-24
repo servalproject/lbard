@@ -196,7 +196,7 @@ int clear_wifi_activity_history()
   return 0;
 }
 
-int energy_experiment(char *port, char *interface_name)
+int energy_experiment(char *port, char *interface_name,char *broadcast_address)
 {
   int sock=socket(AF_INET, SOCK_DGRAM, 0);
   if (sock==-1) {
@@ -204,6 +204,13 @@ int energy_experiment(char *port, char *interface_name)
     exit(-1);
   }
 
+  // Enable broadcast
+  int one=1;
+  int r=setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &one, sizeof(one));
+  if (r) {
+    fprintf(stderr,"WARNING: setsockopt(): Could not enable SO_BROADCAST\n");
+  }
+  
   start_time=gettime_ms();
   
   struct sockaddr_in addr;
@@ -245,14 +252,19 @@ int energy_experiment(char *port, char *interface_name)
   struct sockaddr_storage src_addr;
   socklen_t src_addr_len=sizeof(src_addr);
   unsigned char rx[9000];
-  int r;
+
+  bzero(&addr, sizeof(addr)); 
+  addr.sin_family = AF_INET; 
+  addr.sin_addr.s_addr = inet_addr(broadcast_address);
+  socklen_t addr_len=sizeof(addr);
   
   while(1) {
     {      
       while((r=recvfrom(sock,rx,9000,0,(struct sockaddr *)&src_addr,&src_addr_len))>0) {
-      
-	// Reflect packet back to sender
-	int result=sendto(sock,rx,r,0,(struct sockaddr *)&src_addr,src_addr_len);
+	// Reply on broadcast address to avoid problems with missing ARP entries
+	// after we have taken down and up the interface.
+	addr.sin_port = htons(19001);
+	int result=sendto(sock,rx,r,0,(struct sockaddr *)&addr,addr_len);
 	if (result!=-1)	printf("Sent %d byte in reply packet\n",result);
 	else perror("sendto");
 	
