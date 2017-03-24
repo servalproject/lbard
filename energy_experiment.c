@@ -99,7 +99,7 @@ static int wifi_disable()
 static int wifi_enable()
 {
   if (getenv("WIFIUP")) system(getenv("WIFIUP"));
-  else system("/sbin/ifconfig wlan0 up && iw wlan0 ibss join energy-experiment 2462");
+  else system("/sbin/ifconfig wlan0 up && iw wlan0 ibss join energy-experiment 2462 fixed-freq beacon-interval 10000");
   fprintf(stderr,"T+%lldms - Wifi on\n",gettime_ms()-start_time);
 #if 0
 #ifdef linux
@@ -263,8 +263,14 @@ int energy_experiment(char *port, char *interface_name,char *broadcast_address)
       while((r=recvfrom(sock,rx,9000,0,(struct sockaddr *)&src_addr,&src_addr_len))>0) {
 	// Reply on broadcast address to avoid problems with missing ARP entries
 	// after we have taken down and up the interface.
-	addr.sin_port = htons(19001);
+	// Also reply to original address, so that we can reply to experiment setup
+	// calls via ethernet, when our wifi is off.
+
+	// wifi
 	int result=sendto(sock,rx,r,0,(struct sockaddr *)&addr,addr_len);
+	if (result==-1)
+	  // Ethernet if wifi was down
+	  result=sendto(sock,rx,r,0,(struct sockaddr *)&src_addr,src_addr_len);
 	if (result!=-1)	printf("Sent %d byte in reply packet\n",result);
 	else perror("sendto");
 	
@@ -507,7 +513,7 @@ int run_energy_experiment(int sock,
     long long reply_timeout=gettime_ms()+1000;
     while(gettime_ms()<reply_timeout) {
       int r=1;
-      printf("Looking for packet...\n"); usleep(100000);
+      usleep(50000);
       while (r>0) {
 	r=recvfrom(sock,rx,9000,0,NULL,0);
 	if (r>0) {
