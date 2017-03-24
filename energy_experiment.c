@@ -510,22 +510,24 @@ int run_energy_experiment(int sock,
       printf("Looking for packet...\n"); usleep(100000);
       while (r>0) {
 	r=recvfrom(sock,rx,9000,0,NULL,0);
-	struct experiment_data *pd=(void *)&rx[0];
-	if (1)
-	  printf("Saw candidate reply, key=0x%08x, packet_number=%lld (expecting %lld or %lld)\n",
-		 pd->key,pd->packet_number,first_id,second_id);
-	if (pd->key==key2) {
-	  if (pd->packet_number==second_id) {
-	    received_replies_to_second_packets++;
-	    // we can now stop waiting for packets
-	    timeout=0;
-	    if (1) printf("  received reply to data packet.\n");
-	    break;
-	  } 
-	  if (pd->packet_number==first_id) {
-	    received_replies_to_first_packets++;
-	    if (1) printf("  received reply to wake packet.\n");
-	  } 
+	if (r>0) {
+	  struct experiment_data *pd=(void *)&rx[0];
+	  if (1)
+	    printf("Saw candidate reply, key=0x%08x, packet_number=%lld (expecting %lld or %lld)\n",
+		   pd->key,pd->packet_number,first_id,second_id);
+	  if (pd->key==key2) {
+	    if (pd->packet_number==second_id) {
+	      received_replies_to_second_packets++;
+	      // we can now stop waiting for packets
+	      reply_timeout=0;
+	      if (1) printf("  received reply to data packet.\n");
+	      break;
+	    } 
+	    if (pd->packet_number==first_id) {
+	      received_replies_to_first_packets++;
+	      if (1) printf("  received reply to wake packet.\n");
+	    }
+	  }
 	}
       }
       
