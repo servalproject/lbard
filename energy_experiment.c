@@ -217,7 +217,7 @@ int energy_experiment(char *port, char *interface_name,char *broadcast_address)
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = INADDR_ANY;
-  addr.sin_port = htons(19001);
+  addr.sin_port = htons(19002);
   bind(sock, (struct sockaddr *) &addr, sizeof(addr));
   set_nonblock(sock);
 
@@ -344,7 +344,7 @@ int send_packet(int sock,unsigned char *packet,int len, char *broadcast_address)
   struct sockaddr_in addr;
   bzero(&addr, sizeof(addr)); 
   addr.sin_family = AF_INET; 
-  addr.sin_port = htons(19001);
+  addr.sin_port = htons(19002);
   addr.sin_addr.s_addr = inet_addr(broadcast_address);
 
   sendto(sock,packet,len,
@@ -507,6 +507,7 @@ int run_energy_experiment(int sock,
     timeout=gettime_ms()+1000;
     while(gettime_ms()<timeout) {
       int r=1;
+      printf("Looking for packet...\n"); usleep(100000);
       while (r>0) {
 	r=recvfrom(sock,rx,9000,0,NULL,0);
 	struct experiment_data *pd=(void *)&rx[0];
