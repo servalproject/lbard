@@ -504,8 +504,8 @@ int run_energy_experiment(int sock,
     send_packet(sock,packet,packet_len,broadcast_address);
     printf("Sent second packet at T+%lldms\n",gettime_ms()-start_time);
     
-    timeout=gettime_ms()+1000;
-    while(gettime_ms()<timeout) {
+    long long reply_timeout=gettime_ms()+1000;
+    while(gettime_ms()<reply_timeout) {
       int r=1;
       printf("Looking for packet...\n"); usleep(100000);
       while (r>0) {
