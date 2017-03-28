@@ -77,6 +77,7 @@ int saw_piece(char *peer_prefix,int for_me,
 	      char *prefix, char *servald_server, char *credential)
 {
   int next_byte_would_be_useful=0;
+  int new_bytes_in_piece=0;
   
   int peer=find_peer_by_prefix(peer_prefix);
   if (peer<0) return -1;
@@ -243,6 +244,7 @@ int saw_piece(char *peer_prefix,int for_me,
     
     if ((!(*s))||(segment_end<piece_offset)) {
       // Create a new segment before the current one
+      new_bytes_in_piece=piece_bytes;
 
       if (debug_pieces) printf("Inserting piece [%lld..%lld) before [%d..%d)\n",
 		     piece_offset,piece_offset+piece_bytes,
@@ -270,6 +272,7 @@ int saw_piece(char *peer_prefix,int for_me,
       break;
     } else if ((segment_start<=piece_offset)&&(segment_end>=piece_end)) {
       // Piece fits entirely within a current segment, i.e., is not new data
+      new_bytes_in_piece=0;
       break;
     } else if (piece_end<segment_start) {
       // Piece ends before this segment starts, so proceed down the list further.
@@ -315,6 +318,7 @@ int saw_piece(char *peer_prefix,int for_me,
 	(*s)->start_offset=piece_start;
 	(*s)->length=new_length;
 	free((*s)->data); (*s)->data=d;
+	new_bytes_in_piece+=extra_bytes;
       }
       if (piece_end>segment_end) {
 	// Need to sick bytes on the end
@@ -325,6 +329,7 @@ int saw_piece(char *peer_prefix,int for_me,
 	bcopy(&piece[piece_bytes-extra_bytes],&(*s)->data[(*s)->length],
 	      extra_bytes);
 	(*s)->length=new_length;
+	new_bytes_in_piece+=extra_bytes;
 
 	// We have extended beyond the end, so the next byte is most likely
 	// useful, unless it happens to extend to the start of the next segment.
@@ -447,9 +452,15 @@ int saw_piece(char *peer_prefix,int for_me,
       // Now release this partial.
       clear_partial(&peer_records[peer]->partials[i]);
     }
-  else 
-    if (!next_byte_would_be_useful)
-      sync_schedule_progress_report(peer,i);
+  else {
+    // To deal with multiple senders that are providing us with pieces in lock-step,
+    // we want to be able to redirect them to send from different positions in the bundle.
+    // XXX - Does this mean that we will never have to deal with next_byte_would_be_useful==0 ?
+    if (!new_bytes_in_piece)
+      sync_schedule_progress_report(peer,i,1 /* random jump */);
+    else if (!next_byte_would_be_useful)
+      sync_schedule_progress_report(peer,i,0 /* send from first required byte */);
+  }
   
   return 0;
 }
@@ -532,9 +543,10 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       fflush(stderr);
     }
     switch(msg[offset]) {
-    case 'A':
+    case 'A': case 'a':
       /* Acknowledgement of progress of bundle transfer */
-      sync_parse_ack(p,&msg[offset]);
+      sync_parse_ack(p,&msg[offset],
+		     prefix,servald_server,credential);
       offset+=15;
       break;
     case 'B':

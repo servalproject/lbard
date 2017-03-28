@@ -595,7 +595,80 @@ int partial_first_missing_byte(struct segment_list *s)
   else return candidates[0];
 }
 
-int sync_schedule_progress_report(int peer, int partial)
+int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
+{
+   int slot=report_queue_length;
+
+  for(int i=0;i<report_queue_length;i++) {
+    if (report_queue_peers[i]==peer_records[peer]) {
+      // We already want to tell this peer something.
+      // We should only need to tell a peer one thing at a time.
+      slot=i; break;
+    }
+  }
+  
+  if (slot>=REPORT_QUEUE_LEN) slot=random()%REPORT_QUEUE_LEN;
+
+  // Mark utilisation of slot, so that we can flush out stale messages
+  report_queue_partials[slot]=partial;
+  report_queue_peers[slot]=peer_records[peer];
+
+  int ofs=0;
+  // lower-case A tells the receiver to add a random offset to the position
+  // provided in the 
+  report_queue[slot][ofs++]='a';
+
+  if (report_queue_message[slot]) {
+    fprintf(stderr,"Replacing report_queue message '%s' with 'progress report'\n",
+	    report_queue_message[slot]);
+    free(report_queue_message[slot]);
+    report_queue_message[slot]=NULL;
+  } else {
+    fprintf(stderr,"Setting report_queue message to 'progress report'\n");
+  }
+  report_queue_message[slot]=strdup("progress report");
+
+  // BID prefix
+  for(int i=0;i<8;i++) {
+    int hex_value=0;
+    char hex_string[3]={peer_records[peer]->partials[partial].bid_prefix[i*2+0],
+			peer_records[peer]->partials[partial].bid_prefix[i*2+1],
+			0};
+    hex_value=strtoll(hex_string,NULL,16);
+    report_queue[slot][ofs++]=hex_value;
+  }
+  
+  // manifest and body offset
+  int first_required_manifest_offset
+    =partial_first_missing_byte(peer_records[peer]
+				->partials[partial].manifest_segments);
+  int first_required_body_offset
+    =partial_first_missing_byte(peer_records[peer]
+				->partials[partial].body_segments);  
+  
+  report_queue[slot][ofs++]=first_required_manifest_offset&0xff;
+  report_queue[slot][ofs++]=(first_required_manifest_offset>>8)&0xff;
+  report_queue[slot][ofs++]=first_required_body_offset&0xff;
+  report_queue[slot][ofs++]=(first_required_body_offset>>8)&0xff;
+  report_queue[slot][ofs++]=(first_required_body_offset>>16)&0xff;
+  report_queue[slot][ofs++]=(first_required_body_offset>>24)&0xff;
+
+  report_lengths[slot]=ofs;
+  assert(ofs<MAX_REPORT_LEN);
+  if (slot>=report_queue_length) report_queue_length=slot+1;
+
+  fprintf(stderr,
+	  "T+%lldms : Redirecting %s to an area we have not yet received of %s*. m_first=%d, b_first=%d\n",
+	  gettime_ms()-start_time,
+	  peer_records[peer]->sid_prefix,
+	  peer_records[peer]->partials[partial].bid_prefix,
+	  first_required_manifest_offset,
+	  first_required_body_offset);    
+  
+  return 0; 
+}
+
+int sync_schedule_progress_report(int peer, int partial, int randomJump)
 {
   int slot=report_queue_length;
 
@@ -614,7 +687,8 @@ int sync_schedule_progress_report(int peer, int partial)
   report_queue_peers[slot]=peer_records[peer];
 
   int ofs=0;
-  report_queue[slot][ofs++]='A';
+  if (randomJump) report_queue[slot][ofs++]='a';
+  else report_queue[slot][ofs++]='A';
 
   if (report_queue_message[slot]) {
     fprintf(stderr,"Replacing report_queue message '%s' with 'progress report'\n",
@@ -654,13 +728,22 @@ int sync_schedule_progress_report(int peer, int partial)
   assert(ofs<MAX_REPORT_LEN);
   if (slot>=report_queue_length) report_queue_length=slot+1;
 
-  fprintf(stderr,
-	  "T+%lldms : ACKing progress on transfer of %s* from %s. m_first=%d, b_first=%d\n",
-	  gettime_ms()-start_time,
-	  peer_records[peer]->partials[partial].bid_prefix,
-	  peer_records[peer]->sid_prefix,
-	  first_required_manifest_offset,
-	  first_required_body_offset);    
+  if (randomJump)
+    fprintf(stderr,
+	    "T+%lldms : Redirecting %s to an area we have not yet received of %s*, somewher after m_first=%d, b_first=%d\n",
+	    gettime_ms()-start_time,
+	    peer_records[peer]->sid_prefix,
+	    peer_records[peer]->partials[partial].bid_prefix,
+	    first_required_manifest_offset,
+	    first_required_body_offset);    
+  else
+    fprintf(stderr,
+	    "T+%lldms : ACKing progress on transfer of %s* from %s. m_first=%d, b_first=%d\n",
+	    gettime_ms()-start_time,
+	    peer_records[peer]->partials[partial].bid_prefix,
+	    peer_records[peer]->sid_prefix,
+	    first_required_manifest_offset,
+	    first_required_body_offset);    
   
   return 0;
 }
@@ -849,12 +932,19 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
 }
 
 
-int sync_parse_ack(struct peer_state *p,unsigned char *msg)
+int sync_parse_ack(struct peer_state *p,unsigned char *msg,
+		   char *sid_prefix_hex,
+		   char *servald_server, char *credential)
 {
   // Get fields
   int manifest_offset=msg[9]|(msg[10]<<8);
   int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[14]<<24);
 
+  // Does the ACK tell us to jump exactly here, or to a random place somewhere
+  // after it?
+  int randomJump=0;
+  if(msg[0]=='a') randomJump=1;
+  
   char bid_prefix_hex[8*2+1];
   snprintf(bid_prefix_hex,17,"%02X%02X%02X%02X%02X%02X%02X%02X",
 	   msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8]);
@@ -874,8 +964,21 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg)
 
   if (bundle<0) return -1;  
   if (bundle==p->tx_bundle) {
-    fprintf(stderr,"SYNC ACK: %s* is asking for us to send from m=%d, p=%d\n",
-	    p->sid_prefix,manifest_offset,body_offset);
+    if (randomJump) {
+      // Jump to a random position somewhere after the provided points.
+      if (!prime_bundle_cache(bundle,
+			      sid_prefix_hex,servald_server,credential))
+	{
+	  if (manifest_offset<cached_manifest_encoded_len)
+	    manifest_offset+=random()%(cached_manifest_encoded_len-manifest_offset);
+	  if (body_offset<cached_body_len)
+	    body_offset+=random()%(cached_body_len-body_offset);
+	  fprintf(stderr,"SYNC ACK: %s* is redirected us to a random location. Sending from m=%d, p=%d\n",
+		  p->sid_prefix,manifest_offset,body_offset);
+	}
+    } else 
+      fprintf(stderr,"SYNC ACK: %s* is asking for us to send from m=%d, p=%d\n",
+	      p->sid_prefix,manifest_offset,body_offset);
     p->tx_bundle_manifest_offset=manifest_offset;
     p->tx_bundle_body_offset=body_offset;      
   } else {

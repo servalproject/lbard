@@ -393,7 +393,9 @@ int append_bytes(int *offset,int mtu,unsigned char *msg_out,
 int sync_tree_receive_message(struct peer_state *p, unsigned char *msg);
 int lookup_bundle_by_sync_key(uint8_t bundle_sync_key[KEY_LEN]);
 int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int priority);
-int sync_parse_ack(struct peer_state *p,unsigned char *msg);
+int sync_parse_ack(struct peer_state *p,unsigned char *msg,
+		   char *sid_prefix_hex,
+		   char *servald_server, char *credential);
 int http_post_meshms(char *server_and_port, char *auth_token,
 		     char *message,char *sender,char *recipient,
 		     int timeout_ms);
@@ -403,7 +405,7 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 			      char *servald_server,char *credential);
 int sync_tell_peer_we_have_this_bundle(int peer, int bundle);
 int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial);
-int sync_schedule_progress_report(int peer, int partial);
+int sync_schedule_progress_report(int peer, int partial, int randomJump);
 int bundle_calculate_tree_key(sync_key_t *sync_key,
 			      uint8_t sync_tree_salt[SYNC_SALT_LEN],
 			      char *bid,
