@@ -94,6 +94,37 @@ int dump_bytes(char *msg,unsigned char *bytes,int length)
   return 0;
 }
 
+int filter_process_packet(int from,int to,
+					 uint8_t *packet,int *packet_len)
+{
+  // XXX - Implement packet decode and filter
+  // Ideally we will just delete any parts of the packet that are to be filtered,
+  // and fix up the FEC code to be correct after.
+  return 0;
+}
+
+int filter_and_enqueue_packet_for_client(int from,int to,
+					 uint8_t *packet,int packet_len)
+{
+  filter_process_packet(from,to,packet,&packet_len);
+
+  if (!packet_len) {
+    // Entire packet was filtered, so do nothing
+    return 0;
+  }
+  
+  bcopy(packet,clients[to].rx_queue,packet_len);
+  long long now=gettime_ms();
+  if (clients[to].rx_queue_len) {
+    printf("WARNING: RX colission for radio #%d (embargo time = T%+lldms, last packet = %d bytes)\n",
+	   to,clients[to].rx_embargo-now,clients[to].rx_queue_len);
+    clients[to].rx_colission=1;
+  } else clients[to].rx_colission=0;
+  clients[to].rx_queue_len=packet_len;
+  clients[to].rx_embargo=delivery_time;
+  return 0;
+}
+
 int client_read_byte(int client,unsigned char byte)
 {
   switch(clients[client].rx_state) {
@@ -142,19 +173,11 @@ int client_read_byte(int client,unsigned char byte)
 	printf("Radio #%d sends a packet of %d bytes at T+%lldms (TX will take %dms)\n",
 	       client,packet_len,gettime_ms()-start_time,transmission_time);
 
-	dump_bytes("packet",packet,packet_len);
+	// dump_bytes("packet",packet,packet_len);
 	
 	for(int j=0;j<client_count;j++) {
 	  if (j!=client) {
-	    bcopy(packet,clients[j].rx_queue,packet_len);
-	    long long now=gettime_ms();
-	    if (clients[j].rx_queue_len) {
-	      printf("WARNING: RX colission for radio #%d (embargo time = T%+lldms, last packet = %d bytes)\n",
-		     j,clients[j].rx_embargo-now,clients[j].rx_queue_len);
-	      clients[j].rx_colission=1;
-	    } else clients[j].rx_colission=0;
-	    clients[j].rx_queue_len=packet_len;
-	    clients[j].rx_embargo=delivery_time;
+	    filter_and_enqueue_packet_for_client(client,j,packet,packet_len);
 	  }
 	}
       }
