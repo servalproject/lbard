@@ -341,7 +341,10 @@ int filter_process_packet(int from,int to,
       f.fragment_length=offset-f.packet_start;
       filter_fragment(packet,packet_out,&out_len,&f);
       break;
-      
+    default:
+      fprintf(stderr,"WARNING: Saw unknown fragment type 0x%02x -- Ignoring packet\n",
+	      packet[offset]);
+	      return -1;
     }
 
   }
