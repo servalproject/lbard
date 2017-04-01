@@ -127,6 +127,16 @@ int main(int argc, char **argv)
   fprintf(stderr,"Version 20170324.1501.1\n");
   
   start_time = gettime_ms();
+
+  // Setup random seed, so that multiple LBARD's started at the same time
+  // can't easily end up in lock step.
+  uint32_t seed;
+  // Seed generator
+  urandombytes((unsigned char *)&seed,sizeof(uint32_t)); srandom(seed);
+  // Then skip 0 - 4095 initial values, so that even identical seeds won't
+  // easily cause problems
+  urandombytes((unsigned char *)&seed,sizeof(uint32_t)); seed&=0xfff;
+  while(seed--) random();
   
   sync_setup();
 
