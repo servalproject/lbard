@@ -246,6 +246,7 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
   
   memcpy(&packet_out[*out_len],&packet_in[f->packet_start],f->fragment_length);
   (*out_len)+=f->fragment_length;
+  
   return 0;
 }
 
@@ -271,6 +272,10 @@ int filter_process_packet(int from,int to,
 
   // Ignore msg number and is_retransmission flag bytes
   offset+=2;
+
+  // And copy those fields across to output packet
+  memcpy(packet_out,packet,6+1+1);
+  out_len=6+1+1;
 
   len-=9; // Envelope length
   len-=32; // FEC length
@@ -356,7 +361,13 @@ int filter_process_packet(int from,int to,
       dump_bytes("Packet",packet,*packet_len);
       return -1;
     }
+  }
 
+  if ((out_len!=len)||memcmp(packet,packet_out,out_len)) {
+    fprintf(stderr,"Filtered packet contains %d/%d bytes.\n",
+	    out_len,len);
+    dump_bytes("Filtered",packet_out,out_len);
+    dump_bytes("Original",packet,len);
   }
   
   return 0;
