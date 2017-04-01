@@ -17,6 +17,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+
+
 int packet_drop_threshold=0;
 
 char *socketname="/tmp/fakecsmaradio.socket";
@@ -95,15 +97,65 @@ int dump_bytes(char *msg,unsigned char *bytes,int length)
 }
 
 int filter_process_packet(int from,int to,
-					 uint8_t *packet,int *packet_len)
+			  uint8_t *packet,int *packet_len)
 {
   // XXX - Implement packet decode and filter
   // Ideally we will just delete any parts of the packet that are to be filtered,
   // and fix up the FEC code to be correct after.
+
+  int len=*packet_len;
+  uint8_t packet_out[256];
+  int out_len=0;
+
+  len-=32; // FEC length
+  
+  int offset=0;
+  while(offset<len) {
+    switch(packet[offset]) {
+    case 'A': case 'a':
+      // Ack of bundle transfer
+      offset+=15;
+      break;
+    case 'B':
+      // BAR announcement
+      offset+=8+8+4+1;
+      break;
+    case 'G':  // 32-bit instance ID of peer
+      offset+=1+4;
+      break;
+    case 'L': // Length of bundle
+      offset+=1+8+8+4;
+      break;
+    case 'P': case 'p': case 'q': case 'Q':
+      // Piece of a bundle
+      // 2 bytes of target SID
+      // 8 bytes of BID prefix
+      // 8 bytes of version
+      // 4 bytes of compound offset
+      // optional 2 bytes of extended compound offset
+      // 1 byte length
+      offset+=2+8+8+4+1+packet[offset+2+8+8+4];
+      break;
+    case 'R': // segment request
+      // 2 bytes target SID
+      // 8 bytes BID prefix
+      // 3 bytes offset
+      break;
+    case 'S': // sync-tree message
+      offset+=packet[offset+1];
+      break;
+    case 'T': // time stamp
+      offset+=1+8+3;
+      break;
+      
+    }
+
+  }
+  
   return 0;
 }
 
-int filter_and_enqueue_packet_for_client(int from,int to,
+int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_time,
 					 uint8_t *packet,int packet_len)
 {
   filter_process_packet(from,to,packet,&packet_len);
@@ -177,7 +229,8 @@ int client_read_byte(int client,unsigned char byte)
 	
 	for(int j=0;j<client_count;j++) {
 	  if (j!=client) {
-	    filter_and_enqueue_packet_for_client(client,j,packet,packet_len);
+	    filter_and_enqueue_packet_for_client(client,j,delivery_time,
+						 packet,packet_len);
 	  }
 	}
       }
