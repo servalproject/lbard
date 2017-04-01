@@ -17,6 +17,11 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include "fec-3.0.1/fixed.h"
+void encode_rs_8(data_t *data, data_t *parity,int pad);
+int decode_rs_8(data_t *data, int *eras_pos, int no_eras, int pad);
+#define FEC_LENGTH 32
+#define FEC_MAX_BYTES 223
 
 
 int packet_drop_threshold=0;
@@ -277,8 +282,7 @@ int filter_process_packet(int from,int to,
   memcpy(packet_out,packet,6+1+1);
   out_len=6+1+1;
 
-  len-=9; // Envelope length
-  len-=32; // FEC length
+  len-=FEC_LENGTH; // FEC length
   
   while(offset<len) {
     switch(packet[offset]) {
@@ -369,6 +373,27 @@ int filter_process_packet(int from,int to,
     dump_bytes("Filtered",packet_out,out_len);
     dump_bytes("Original",packet,len);
   }
+
+  // Append valid FEC
+  unsigned char parity[FEC_LENGTH];
+  encode_rs_8(packet_out,parity,FEC_MAX_BYTES-out_len);
+  memcpy(&packet_out[out_len],parity,FEC_LENGTH);
+  out_len+=FEC_LENGTH;
+
+  // Now update packet
+  memcpy(packet,packet_out,out_len);
+  *packet_len=out_len;
+
+  // Then build and attach envelope
+  packet[(*packet_len)++]=0xaa;
+  packet[(*packet_len)++]=0x55;
+  packet[(*packet_len)++]=200; // RSSI of this frame
+  packet[(*packet_len)++]=100; // Average RSSI remote side
+  packet[(*packet_len)++]=28; // Temperature of this radio
+  packet[(*packet_len)++]=out_len; // length of this packet
+  packet[(*packet_len)++]=0xff;  // 16-bit RX buffer space (always claim 4095 bytes)
+  packet[(*packet_len)++]=0x0f;
+  packet[(*packet_len)++]=0x55;	
   
   return 0;
 }
@@ -418,17 +443,6 @@ int client_read_byte(int client,unsigned char byte)
 	      clients[client].buffer_count-send_bytes);
 	clients[client].buffer_count-=send_bytes;
 	
-	// Then build and attach envelope
-	packet[packet_len++]=0xaa;
-	packet[packet_len++]=0x55;
-	packet[packet_len++]=200; // RSSI of this frame
-	packet[packet_len++]=100; // Average RSSI remote side
-	packet[packet_len++]=28; // Temperature of this radio
-	packet[packet_len++]=send_bytes; // length of this packet
-	packet[packet_len++]=0xff;  // 16-bit RX buffer space (always claim 4095 bytes)
-	packet[packet_len++]=0x0f;
-	packet[packet_len++]=0x55;	
-
 	// Work out when the packet should be delivered
 	// (include 8 bytes time for the preamble)
 	// Calculate first in usec, then divide down to ms
