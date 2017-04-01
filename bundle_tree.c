@@ -211,8 +211,8 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
     msg[(*offset)++]='p'+end_of_item;
 
   // Intended recipient
-  msg[(*offset)++]=peer_records[target_peer]->sid_prefix[0];
-  msg[(*offset)++]=peer_records[target_peer]->sid_prefix[1];
+  msg[(*offset)++]=peer_records[target_peer]->sid_prefix_bin[0];
+  msg[(*offset)++]=peer_records[target_peer]->sid_prefix_bin[1];
   
   for(int i=0;i<8;i++) msg[(*offset)++]=bundles[bundle_number].bid_bin[i];
   // Bundle version (8 bytes)
