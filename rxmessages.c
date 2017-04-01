@@ -702,7 +702,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       offset_compound=0;
       for(int i=0;i<6;i++) offset_compound|=((long long)msg[offset+i])<<(i*8LL);
       offset+=4;
-      if (above_1mb) offset+=2;
+      if (above_1mb) offset+=2; else offset_compound&=0xffffffff;
       piece_offset=(offset_compound&0xfffff)|((offset_compound>>12LL)&0xfff00000LL);
       piece_bytes=(offset_compound>>20)&0x7ff;
       piece_is_manifest=offset_compound&0x80000000;
