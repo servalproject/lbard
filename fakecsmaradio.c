@@ -96,6 +96,154 @@ int dump_bytes(char *msg,unsigned char *bytes,int length)
   return 0;
 }
 
+struct filterable {
+  uint8_t sender_sid_prefix[4];
+  uint8_t recipient_sid_prefix[4];
+
+  uint8_t type;
+
+  uint8_t bid_prefix[8];
+  uint64_t version;
+
+  uint32_t manifest_offset;
+  uint32_t body_offset;
+  uint32_t manifest_length;
+  uint32_t body_length;
+  uint8_t body_log_length;
+  uint16_t piece_length;
+  
+  uint64_t timestamp_sec;
+  uint64_t timestamp_usec;
+  uint32_t instance_id;
+
+  // The segment of the packet covered by this fragment
+  int packet_start;
+  int fragment_length;
+};
+
+void filterable_erase_fragment(struct filterable *f,int offset)
+{
+  memset(&(f->recipient_sid_prefix),0,
+	 sizeof(struct filterable)-sizeof(f->sender_sid_prefix));
+  f->packet_start=offset;
+}
+
+void filterable_parse_timestamp(struct filterable *f,
+				 const uint8_t *packet,int *offset)
+{
+  for(int i=0;i<8;i++) f->timestamp_sec|=((long long)packet[(*offset)+i])<<(i*8LL);
+  (*offset)+=8;
+  for(int i=0;i<3;i++) f->timestamp_usec|=((long long)packet[(*offset)+i])<<(i*8LL);
+  (*offset)+=3;
+}
+
+void filterable_parse_bid_prefix(struct filterable *f,
+				 const uint8_t *packet,int *offset)
+{
+  memcpy(f->bid_prefix,&packet[*offset],8); (*offset)+=8;
+}
+
+void filterable_parse_recipient_prefix_4(struct filterable *f,
+				       const uint8_t *packet,int *offset)
+{
+  memcpy(f->recipient_sid_prefix,&packet[*offset],4); (*offset)+=4;
+}
+
+void filterable_parse_recipient_prefix_2(struct filterable *f,
+					 const uint8_t *packet,int *offset)
+{
+  memcpy(f->recipient_sid_prefix,&packet[*offset],2); (*offset)+=2;
+}
+
+
+void filterable_parse_bundle_log_length(struct filterable *f,
+					const uint8_t *packet,int *offset)
+{
+  f->body_log_length=packet[*offset]; (*offset)++;
+}
+
+void filterable_parse_version(struct filterable *f,const uint8_t *packet,
+			      int *offset)
+{
+  for(int i=0;i<8;i++) f->version|=((long long)packet[(*offset)+i])<<(i*8LL);
+  (*offset)+=8;
+}
+
+void filterable_parse_manifest_offset(struct filterable *f,const uint8_t *packet,
+				      int *offset)
+{
+  f->manifest_offset=packet[*offset]|(packet[(*offset)+1]<<8); (*offset)+=2;
+}
+
+void filterable_parse_body_offset(struct filterable *f,const uint8_t *packet,
+				  int *offset)
+{
+  f->body_offset=packet[*offset]|(packet[(*offset)+1]<<8)
+    |(packet[(*offset)+2]<<16)|(packet[(*offset)+3]<<24);
+  (*offset)+=4;
+}
+
+void filterable_parse_instance_id(struct filterable *f,const uint8_t *packet,
+				  int *offset)
+{
+  for(int i=0;i<4;i++) f->instance_id|=((long long)packet[(*offset)+i])<<(i*8LL);
+  (*offset)+=4;
+}
+
+void filterable_parse_offset_compound(struct filterable *f,const uint8_t *packet,
+				      int *offset)
+{
+  uint64_t offset_compound=0;
+  if (f->type&0x20) {
+    for(int i=0;i<6;i++) offset_compound|=((long long)packet[(*offset)+i])<<(i*8LL);
+    (*offset)+=6;
+  } else {
+    for(int i=0;i<4;i++) offset_compound|=((long long)packet[(*offset)+i])<<(i*8LL);
+    (*offset)+=4;
+  }
+  int piece_bytes=offset_compound&0x7ff;
+  int piece_offset=(offset_compound&0xfffff)|((offset_compound>>12LL)&0xfff00000LL);
+  if (offset_compound&0x80000000) {
+    // Manifest offset
+    f->manifest_offset=piece_offset;
+  } else {
+    // Piece offset
+    f->body_offset=piece_offset;
+  }
+  f->piece_length=piece_bytes;
+  
+}
+
+void filterable_parse_segment_offset(struct filterable *f,const uint8_t *packet,
+				     int *offset)
+{
+  uint32_t offset_compound=0;
+  for(int i=0;i<3;i++) offset_compound|=((long long)packet[(*offset)+i])<<(i*8LL);
+  (*offset)+=3;
+
+  if (offset_compound&0x800000) {
+    // Manifest offset
+    f->manifest_offset=offset_compound&0x7fffff;
+  } else {
+    // Body offset
+    f->body_offset=offset_compound&0x7fffff;
+  }
+}
+
+
+
+/*
+  Apply filters against the supplied fragment.
+  If the fragment is not dropped, it should be appended to packet out
+*/
+int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
+		    struct filterable *f)
+{
+  memcpy(&packet_out[*out_len],&packet_in[f->packet_start],f->fragment_length);
+  (*out_len)+=f->fragment_length;
+  return 0;
+}
+
 int filter_process_packet(int from,int to,
 			  uint8_t *packet,int *packet_len)
 {
@@ -103,49 +251,95 @@ int filter_process_packet(int from,int to,
   // Ideally we will just delete any parts of the packet that are to be filtered,
   // and fix up the FEC code to be correct after.
 
+  struct filterable f; 
+  
   int len=*packet_len;
   uint8_t packet_out[256];
   int out_len=0;
 
+  int offset=0;
+
+  memset(&f,0,sizeof(f));
+
+  // Extract SID prefix of sender
+  memcpy(f.sender_sid_prefix,&packet[offset],4); offset+=4;
+  
   len-=32; // FEC length
   
-  int offset=0;
   while(offset<len) {
     switch(packet[offset]) {
     case 'A': case 'a':
       // Ack of bundle transfer
-      offset+=15;
+      filterable_erase_fragment(&f,offset);
+      f.type=packet[offset++];
+      filterable_parse_bid_prefix(&f,packet,&offset);
+      filterable_parse_manifest_offset(&f,packet,&offset);
+      filterable_parse_body_offset(&f,packet,&offset);
+      f.fragment_length=offset-f.packet_start;
+      filter_fragment(packet,packet_out,&out_len,&f);
       break;
     case 'B':
       // BAR announcement
-      offset+=8+8+4+1;
+      filterable_erase_fragment(&f,offset);
+      f.type=packet[offset++];
+      filterable_parse_bid_prefix(&f,packet,&offset);
+      filterable_parse_version(&f,packet,&offset);
+      filterable_parse_recipient_prefix_4(&f,packet,&offset);
+      filterable_parse_bundle_log_length(&f,packet,&offset);
+      f.fragment_length=offset-f.packet_start;
+      filter_fragment(packet,packet_out,&out_len,&f);
       break;
     case 'G':  // 32-bit instance ID of peer
-      offset+=1+4;
+      filterable_erase_fragment(&f,offset);
+      f.type=packet[offset++];
+      filterable_parse_instance_id(&f,packet,&offset);
+      f.fragment_length=offset-f.packet_start;
+      filter_fragment(packet,packet_out,&out_len,&f);
       break;
     case 'L': // Length of bundle
-      offset+=1+8+8+4;
+      filterable_erase_fragment(&f,offset);
+      f.type=packet[offset++];
+      filterable_parse_bid_prefix(&f,packet,&offset);
+      filterable_parse_version(&f,packet,&offset);
+      filterable_parse_offset_compound(&f,packet,&offset);
+      f.fragment_length=offset-f.packet_start;
+      filter_fragment(packet,packet_out,&out_len,&f);
       break;
     case 'P': case 'p': case 'q': case 'Q':
-      // Piece of a bundle
-      // 2 bytes of target SID
-      // 8 bytes of BID prefix
-      // 8 bytes of version
-      // 4 bytes of compound offset
-      // optional 2 bytes of extended compound offset
-      // 1 byte length
-      offset+=2+8+8+4+1+packet[offset+2+8+8+4];
+      // Piece of body or manifest
+      filterable_erase_fragment(&f,offset);
+      f.type=packet[offset++];
+      filterable_parse_recipient_prefix_2(&f,packet,&offset);
+      filterable_parse_bid_prefix(&f,packet,&offset);
+      filterable_parse_version(&f,packet,&offset);
+      filterable_parse_offset_compound(&f,packet,&offset);
+      f.fragment_length=offset-f.packet_start;
+      filter_fragment(packet,packet_out,&out_len,&f);
       break;
     case 'R': // segment request
       // 2 bytes target SID
       // 8 bytes BID prefix
       // 3 bytes offset
+      filterable_erase_fragment(&f,offset);
+      f.type=packet[offset++];
+      filterable_parse_recipient_prefix_2(&f,packet,&offset);
+      filterable_parse_bid_prefix(&f,packet,&offset);
+      filterable_parse_segment_offset(&f,packet,&offset);
+      f.fragment_length=offset-f.packet_start;
+      filter_fragment(packet,packet_out,&out_len,&f);
       break;
     case 'S': // sync-tree message
+      // We don't filter these, just copy the bytes
+      memcpy(&packet_out[out_len],&packet[offset],packet[offset+1]);
+      out_len+=packet[offset+1];
       offset+=packet[offset+1];
       break;
     case 'T': // time stamp
-      offset+=1+8+3;
+      filterable_erase_fragment(&f,offset);
+      f.type=packet[offset++];
+      filterable_parse_timestamp(&f,packet,&offset);
+      f.fragment_length=offset-f.packet_start;
+      filter_fragment(packet,packet_out,&out_len,&f);
       break;
       
     }
