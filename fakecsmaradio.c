@@ -97,7 +97,7 @@ int dump_bytes(char *msg,unsigned char *bytes,int length)
 }
 
 struct filterable {
-  uint8_t sender_sid_prefix[4];
+  uint8_t sender_sid_prefix[6];
   uint8_t recipient_sid_prefix[4];
 
   uint8_t type;
@@ -111,7 +111,8 @@ struct filterable {
   uint32_t body_length;
   uint8_t body_log_length;
   uint16_t piece_length;
-  
+
+  uint8_t stratum;
   uint64_t timestamp_sec;
   uint64_t timestamp_usec;
   uint32_t instance_id;
@@ -131,6 +132,7 @@ void filterable_erase_fragment(struct filterable *f,int offset)
 void filterable_parse_timestamp(struct filterable *f,
 				 const uint8_t *packet,int *offset)
 {
+  f->stratum=packet[(*offset)++];
   for(int i=0;i<8;i++) f->timestamp_sec|=((long long)packet[(*offset)+i])<<(i*8LL);
   (*offset)+=8;
   for(int i=0;i<3;i++) f->timestamp_usec|=((long long)packet[(*offset)+i])<<(i*8LL);
@@ -239,6 +241,9 @@ void filterable_parse_segment_offset(struct filterable *f,const uint8_t *packet,
 int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
 		    struct filterable *f)
 {
+  fprintf(stderr,"Fragment type '%c' @ %d, length = %d\n",
+	  f->type,f->packet_start,f->fragment_length);
+  
   memcpy(&packet_out[*out_len],&packet_in[f->packet_start],f->fragment_length);
   (*out_len)+=f->fragment_length;
   return 0;
@@ -262,8 +267,12 @@ int filter_process_packet(int from,int to,
   memset(&f,0,sizeof(f));
 
   // Extract SID prefix of sender
-  memcpy(f.sender_sid_prefix,&packet[offset],4); offset+=4;
-  
+  memcpy(f.sender_sid_prefix,&packet[offset],6); offset+=6;
+
+  // Ignore msg number and is_retransmission flag bytes
+  offset+=2;
+
+  len-=9; // Envelope length
   len-=32; // FEC length
   
   while(offset<len) {
@@ -342,9 +351,10 @@ int filter_process_packet(int from,int to,
       filter_fragment(packet,packet_out,&out_len,&f);
       break;
     default:
-      fprintf(stderr,"WARNING: Saw unknown fragment type 0x%02x -- Ignoring packet\n",
-	      packet[offset]);
-	      return -1;
+      fprintf(stderr,"WARNING: Saw unknown fragment type 0x%02x @ %d -- Ignoring packet\n",
+	      packet[offset],offset);
+      dump_bytes("Packet",packet,*packet_len);
+      return -1;
     }
 
   }
