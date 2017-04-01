@@ -201,14 +201,14 @@ void filterable_parse_offset_compound(struct filterable *f,const uint8_t *packet
 				      int *offset)
 {
   uint64_t offset_compound=0;
-  if (f->type&0x20) {
+  if (!(f->type&0x20)) {
     for(int i=0;i<6;i++) offset_compound|=((long long)packet[(*offset)+i])<<(i*8LL);
     (*offset)+=6;
   } else {
     for(int i=0;i<4;i++) offset_compound|=((long long)packet[(*offset)+i])<<(i*8LL);
     (*offset)+=4;
   }
-  int piece_bytes=offset_compound&0x7ff;
+  int piece_bytes=(offset_compound>>20)&0x7ff;
   int piece_offset=(offset_compound&0xfffff)|((offset_compound>>12LL)&0xfff00000LL);
   if (offset_compound&0x80000000) {
     // Manifest offset
@@ -218,6 +218,7 @@ void filterable_parse_offset_compound(struct filterable *f,const uint8_t *packet
     f->body_offset=piece_offset;
   }
   f->piece_length=piece_bytes;
+  (*offset)+=piece_bytes;
   
 }
 
