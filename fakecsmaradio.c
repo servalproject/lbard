@@ -289,8 +289,9 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
 	fprintf(stderr,"          manifest bytes [%d..%d]\n",
 		f->manifest_offset,f->manifest_offset+f->piece_length-1);
       if (f->is_body_piece)
-	fprintf(stderr,"          body bytes [%d..%d]\n",
-		f->body_offset,f->body_offset+f->piece_length-1);
+	fprintf(stderr,"          body bytes [%d..%d] (%d bytes) @ T+%lldms\n",
+		f->body_offset,f->body_offset+f->piece_length-1,f->piece_length,
+		gettime_ms()-start_time);
       break;
     case 'A': case 'a':
       fprintf(stderr,"          Acknowledging to manifest offset %d, body offset %d\n",
