@@ -246,10 +246,10 @@ void filterable_parse_segment_offset(struct filterable *f,const uint8_t *packet,
 char *fragment_name(int type)
 {
   switch(type) {
-  case 'p': return "Bundle piece (offset < 1MB)";
-  case 'P': return "Bundle piece (offset >= 1MB)";
-  case 'q': return "Bundle end piece (offset < 1MB)";
-  case 'Q': return "Bundle end piece (offset >= 1MB)";
+  case 'p': return "Bundle end piece (offset < 1MB)";
+  case 'P': return "Bundle end piece (offset >= 1MB)";
+  case 'q': return "Bundle piece (offset < 1MB)";
+  case 'Q': return "Bundle piece (offset >= 1MB)";
   case 'G': return "LBARD instance identifier";
   case 'T': return "Time stamp";
   case 'A': return "Bundle transfer progress acknowledgement";
@@ -277,7 +277,14 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
     fprintf(stderr,"          Fragment type '%c' : %s\n",
 	    f->type,fragment_name(f->type));
     switch(f->type) {
-    case 'P': case 'p': case 'q': case 'Q':
+    case 'P': case 'p':
+      if (f->is_manifest_piece)
+	fprintf(stderr,"          manifest length = %d\n",
+		f->manifest_offset+f->piece_length-1);
+      if (f->is_body_piece)
+	fprintf(stderr,"          body length = %d\n",
+		f->body_offset+f->piece_length-1);
+    case 'q': case 'Q':
       if (f->is_manifest_piece)
 	fprintf(stderr,"          manifest bytes [%d..%d]\n",
 		f->manifest_offset,f->manifest_offset+f->piece_length-1);
@@ -286,9 +293,9 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
 		f->body_offset,f->body_offset+f->piece_length-1);
       break;
     case 'A': case 'a':
-      fprintf(stderr,"         Acknowledging to manifest offset %d, body offset %d\n",
+      fprintf(stderr,"          Acknowledging to manifest offset %d, body offset %d\n",
 	      f->manifest_offset,f->body_offset);
-      if (f->type=='a') fprintf(stderr,"         Requesting redirection to a random offset thereafter.\n");
+      if (f->type=='a') fprintf(stderr,"          Requesting redirection to a random offset thereafter.\n");
       break;
     }
   

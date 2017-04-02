@@ -730,7 +730,7 @@ int sync_schedule_progress_report(int peer, int partial, int randomJump)
 
   if (randomJump)
     fprintf(stderr,
-	    "T+%lldms : Redirecting %s to an area we have not yet received of %s*, somewher after m_first=%d, b_first=%d\n",
+	    "T+%lldms : Redirecting %s to an area we have not yet received of %s*, i.e., somewhere not before m_first=%d, b_first=%d\n",
 	    gettime_ms()-start_time,
 	    peer_records[peer]->sid_prefix,
 	    peer_records[peer]->partials[partial].bid_prefix,
@@ -862,6 +862,8 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     p->tx_bundle_body_offset=random()%bundles[bundle].length;
     p->tx_bundle_manifest_offset=0;
     p->tx_bundle_priority=priority;
+    fprintf(stderr,"Beginning transmission from random offset (= %d)\n",
+	    p->tx_bundle_body_offset);
   }
 
   // peer_queue_list_dump(p);
@@ -951,12 +953,13 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
   
   int bundle=lookup_bundle_by_prefix_hex(bid_prefix_hex);
 
-  fprintf(stderr,"T+%lldms : SYNC ACK: %s* is asking for us to send from m=%d, p=%d of"
-	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d)\n",
+  fprintf(stderr,"T+%lldms : SYNC ACK: '%c' %s* is asking for us to send from m=%d, p=%d of"
+	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d/%d)\n",
 	  gettime_ms()-start_time,
+	  msg[0],
 	  p?p->sid_prefix:"<null>",manifest_offset,body_offset,
 	  msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8],
-	  bundle);
+	  bundle,bundle_count);
 
   // Sanity check inputs, so that we don't mishandle memory.
   if (manifest_offset<0) manifest_offset=0;
