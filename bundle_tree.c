@@ -748,16 +748,18 @@ int sync_schedule_progress_report(int peer, int partial, int randomJump)
   return 0;
 }
 
-int lookup_bundle_by_prefix_hex(char *prefix)
+int lookup_bundle_by_prefix(const unsigned char *prefix,int len)
 {
+  if (len>8) len=8;
+  
   int best_bundle=-1;
   int bundle;
   int i;
   for(bundle=0;bundle<bundle_count;bundle++) {
-    for(i=0;i<8;i++) {
+    for(i=0;i<len;i++) {
       if (prefix[i]!=bundles[bundle].bid_bin[i]) break;
     }
-    if (i==8) {
+    if (i==len) {
       if ((best_bundle==-1)||(bundles[bundle].version>bundles[best_bundle].version))
 	best_bundle=bundle;      
       printf("  %s* could be bundle #%d (after check it is bundle #%d)\n",
@@ -946,12 +948,10 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
   // after it?
   int randomJump=0;
   if(msg[0]=='a') randomJump=1;
-  
-  char bid_prefix_hex[8*2+1];
-  snprintf(bid_prefix_hex,17,"%02X%02X%02X%02X%02X%02X%02X%02X",
-	   msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8]);
-  
-  int bundle=lookup_bundle_by_prefix_hex(bid_prefix_hex);
+
+  unsigned char *bid_prefix=&msg[1];
+
+  int bundle=lookup_bundle_by_prefix(bid_prefix,8);
 
   fprintf(stderr,"T+%lldms : SYNC ACK: '%c' %s* is asking for us to send from m=%d, p=%d of"
 	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d/%d)\n",
