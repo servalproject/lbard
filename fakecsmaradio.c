@@ -201,7 +201,7 @@ void filterable_parse_offset_compound(struct filterable *f,const uint8_t *packet
 				      int *offset)
 {
   uint64_t offset_compound=0;
-  if (!(f->type&0x20)) {
+  if ((f->type!='L')&&(!(f->type&0x20))) {
     for(int i=0;i<6;i++) offset_compound|=((long long)packet[(*offset)+i])<<(i*8LL);
     (*offset)+=6;
   } else {
