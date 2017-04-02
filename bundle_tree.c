@@ -615,7 +615,7 @@ int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
 
   int ofs=0;
   // lower-case A tells the receiver to add a random offset to the position
-  // provided in the 
+  // provided in the message.
   report_queue[slot][ofs++]='a';
 
   if (report_queue_message[slot]) {
@@ -638,6 +638,17 @@ int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
     report_queue[slot][ofs++]=hex_value;
   }
   
+  // Providing the first unseen manifest or body byte is fine for 'A' definite
+  // redirection.  However, for random redirection, this is not ideal, as the remote
+  // party has no way to know how long the unseen region is, and when it picks a random
+  // offset to it, it may well pick an offset that has already been seen.
+  // Thus we should pick the end of a randomly selected segment, and send an 'A'
+  // instead of an 'a', provided that we have enough segments, or if the gaps are
+  // smaller than the ranges received.  The problem is if we have more senders than we
+  // have segments, as we still want some means for random reception.  This requires
+  // some thought. For now, we can pick the end of a random segment, and have the
+  // sender only add a random offset half the time when seeing an 'a'.
+  
   // manifest and body offset
   int first_required_manifest_offset
     =partial_first_missing_byte(peer_records[peer]
@@ -645,6 +656,22 @@ int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
   int first_required_body_offset
     =partial_first_missing_byte(peer_records[peer]
 				->partials[partial].body_segments);  
+  int body_segments=0;
+  int add_zero=1;
+  struct segment_list *s=peer_records[peer]->partials[partial].body_segments;
+  while(s) {
+    if (!s->start_offset) add_zero=0;
+    body_segments++;
+    s=s->next;
+  }
+  int segment_num=random()%(body_segments+add_zero);
+  if (segment_num==body_segments) first_required_body_offset=0;
+  s=peer_records[peer]->partials[partial].body_segments;
+  while(s) {
+    segment_num--;
+    if (!segment_num) first_required_body_offset=s->start_offset+s->length;
+    s=s->next;
+  }
   
   report_queue[slot][ofs++]=first_required_manifest_offset&0xff;
   report_queue[slot][ofs++]=(first_required_manifest_offset>>8)&0xff;
@@ -762,11 +789,11 @@ int lookup_bundle_by_prefix(const unsigned char *prefix,int len)
     if (i==len) {
       if ((best_bundle==-1)||(bundles[bundle].version>bundles[best_bundle].version))
 	best_bundle=bundle;      
-      printf("  %s* could be bundle #%d (after check it is bundle #%d)\n",
-	     prefix,bundle,best_bundle);
     }
   }
-  printf("  %s* is bundle #%d of %d\n",prefix,best_bundle,bundle_count);
+  printf("  %02X%02X%02X%02x* is bundle #%d of %d\n",
+	 prefix[0],prefix[1],prefix[2],prefix[3],
+	 best_bundle,bundle_count);
   return best_bundle;
 }
 
@@ -945,9 +972,9 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
   int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[14]<<24);
 
   // Does the ACK tell us to jump exactly here, or to a random place somewhere
-  // after it?
+  // after it?  If it indicates a random jump, only do the jump 1/2 the time.
   int randomJump=0;
-  if(msg[0]=='a') randomJump=1;
+  if(msg[0]=='a') randomJump=random()&1;
 
   unsigned char *bid_prefix=&msg[1];
 
