@@ -23,6 +23,7 @@ int decode_rs_8(data_t *data, int *eras_pos, int no_eras, int pad);
 #define FEC_LENGTH 32
 #define FEC_MAX_BYTES 223
 
+int filter_verbose=1;
 
 int packet_drop_threshold=0;
 
@@ -110,6 +111,8 @@ struct filterable {
   uint8_t bid_prefix[8];
   uint64_t version;
 
+  uint8_t is_manifest_piece;
+  uint8_t is_body_piece;
   uint32_t manifest_offset;
   uint32_t body_offset;
   uint32_t manifest_length;
@@ -213,9 +216,11 @@ void filterable_parse_offset_compound(struct filterable *f,const uint8_t *packet
   if (offset_compound&0x80000000) {
     // Manifest offset
     f->manifest_offset=piece_offset;
+    f->is_manifest_piece=1;
   } else {
     // Piece offset
     f->body_offset=piece_offset;
+    f->is_body_piece=1;
   }
   f->piece_length=piece_bytes;
   (*offset)+=piece_bytes;
@@ -238,6 +243,20 @@ void filterable_parse_segment_offset(struct filterable *f,const uint8_t *packet,
   }
 }
 
+char *fragment_name(int type)
+{
+  switch(type) {
+  case 'p': return "Bundle piece (offset < 1MB)";
+  case 'P': return "Bundle piece (offset >= 1MB)";
+  case 'q': return "Bundle end piece (offset < 1MB)";
+  case 'Q': return "Bundle end piece (offset >= 1MB)";
+  case 'G': return "LBARD instance identifier";
+  case 'T': return "Time stamp";
+  case 'A': return "Bundle transfer progress acknowledgement";
+  case 'a': return "Bundle transfer redirect and acknowledgement";
+  default: return "unknown";
+  }
+}
 
 
 /*
@@ -246,9 +265,43 @@ void filterable_parse_segment_offset(struct filterable *f,const uint8_t *packet,
 */
 int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
 		    struct filterable *f)
-{
-  fprintf(stderr,"Fragment type '%c' @ %d, length = %d\n",
-	  f->type,f->packet_start,f->fragment_length);
+{  
+  if (filter_verbose) {
+    fprintf(stderr,"T+%lldms : from sid:%02X%02X%02X%02X%02X%02X* to sid:%02X%02X[%02X%02X]*\n",
+	    gettime_ms()-start_time,
+	    f->sender_sid_prefix[0],f->sender_sid_prefix[1],f->sender_sid_prefix[2],
+	    f->sender_sid_prefix[3],f->sender_sid_prefix[4],f->sender_sid_prefix[5],
+	    f->recipient_sid_prefix[0],f->recipient_sid_prefix[1],
+	    f->recipient_sid_prefix[2],f->recipient_sid_prefix[3]);
+
+    fprintf(stderr,"          Fragment type '%c' : %s\n",
+	    f->type,fragment_name(f->type));
+    switch(f->type) {
+    case 'P': case 'p': case 'q': case 'Q':
+      if (f->is_manifest_piece)
+	fprintf(stderr,"          manifest bytes [%d..%d]\n",
+		f->manifest_offset,f->manifest_offset+f->piece_length-1);
+      if (f->is_body_piece)
+	fprintf(stderr,"          body bytes [%d..%d]\n",
+		f->body_offset,f->body_offset+f->piece_length-1);
+      break;
+    case 'A': case 'a':
+      fprintf(stderr,"         Acknowledging to manifest offset %d, body offset %d\n",
+	      f->manifest_offset,f->body_offset);
+      if (f->type=='a') fprintf(stderr,"         Requesting redirection to a random offset thereafter.\n");
+      break;
+    }
+  
+    if ((f->type!='G')&&(f->type!='T')) {
+      fprintf(stderr,"          bid=%02X%02X%02X%02X%02X%02X%02X%02X*, version=%016llx\n",
+	      f->bid_prefix[0],f->bid_prefix[1],f->bid_prefix[2],f->bid_prefix[3],
+	      f->bid_prefix[4],f->bid_prefix[5],f->bid_prefix[6],f->bid_prefix[7],
+	      f->version);
+      fprintf(stderr,"          manifest length=%d, body length=%d (or 2^%d)\n",
+	      f->manifest_length,f->body_length,f->body_log_length
+	      );
+    }
+  }
   
   memcpy(&packet_out[*out_len],&packet_in[f->packet_start],f->fragment_length);
   (*out_len)+=f->fragment_length;
@@ -573,7 +626,7 @@ int main(int argc,char **argv)
 	for(int j=0;j<count;j++) client_read_byte(i,buffer[j]);
 	activity++;
       }
-
+      
       // Release any queued packet once we pass the embargo time
       if (clients[i].rx_queue_len&&(clients[i].rx_embargo<now))
 	{
