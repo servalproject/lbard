@@ -669,7 +669,24 @@ int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
   s=peer_records[peer]->partials[partial].body_segments;
   while(s) {
     segment_num--;
-    if (!segment_num) first_required_body_offset=s->start_offset+s->length;
+    if (!segment_num) {
+      first_required_body_offset=s->start_offset+s->length;
+      fprintf(stderr,"This gap @ %d, prev segment @ %d+%d, next segment @ %d+%d\n",
+	      first_required_body_offset,
+	      s->prev?s->prev->start_offset:-1,
+	      s->prev?s->prev->length:-1,
+	      s->next?s->next->start_offset:-1,
+	      s->next?s->next->length:-1);
+      if (s->prev
+	  &&((s->prev->start_offset-first_required_body_offset)<200)) {
+	fprintf(stderr,"Demoting 'a' back to 'A' due to short inter-segment gap"
+		" [%d,%d] of %d bytes.\n",
+		first_required_body_offset,s->prev->start_offset,
+		s->prev->start_offset-first_required_body_offset);
+	report_queue[slot][ofs++]='A';
+      }
+      break;
+    }
     s=s->next;
   }
   
