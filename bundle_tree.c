@@ -880,7 +880,6 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
   // (also used to putting new bundle in the current TX slot if there was something
   // lower priority in there previously.)
   if (p->tx_bundle==-1) {
-    p->tx_bundle=bundle;
     // Start body transmission at a random point, so that if we are sending the
     // bundle to multiple peers, we at least have a chance of not sending the same
     // piece to each in a redundant manner. It would be even better to have some
@@ -888,6 +887,22 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     // XXX - The benefit of this disappears as soon as the peer requests a
     // re-transmission, since it will start requesting from the earliest byte that it
     // lacks.
+
+    for(int i=0;i<peer_count;i++)
+      if ((p!=peer_records[i])&&(peer_records[i]->tx_bundle==bundle)) {
+	// We are already sending this bundle to someone else -- try to keep
+	// it in sync
+	p->tx_bundle=bundle;
+	p->tx_bundle_body_offset=peer_records[i]->tx_bundle_body_offset;
+	p->tx_bundle_manifest_offset=peer_records[i]->tx_bundle_manifest_offset;
+	p->tx_bundle_priority=priority;
+	fprintf(stderr,"Beginning transmission from same offset as for another peer (= %d)\n",
+	    p->tx_bundle_body_offset);
+	return 0;
+      }
+
+    // Not already sending to another peer, so just pick a random point and start
+    p->tx_bundle=bundle;
     p->tx_bundle_body_offset=random()%bundles[bundle].length;
     p->tx_bundle_manifest_offset=0;
     p->tx_bundle_priority=priority;
