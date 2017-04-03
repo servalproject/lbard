@@ -45,6 +45,78 @@ setup() {
    fork %lbardC lbard "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$tty3" pull
    fork %lbardD lbard "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$tty4" pull
 }
+setup20() {
+   # Configure four servald daemons without any interfaces connecting them, and
+   # start them running.
+   setup_servald
+   assert_no_servald_processes
+   foreach_instance +A +B +C +D +E +F +G +H +I +J +K +L +M +N +O +P +Q +R +S +T create_single_identity
+   foreach_instance +A +B +C +D +E +F +G +H +I +J +K +L +M +N +O +P +Q +R +S +T start_servald_server
+   get_servald_restful_http_server_port PORTA +A
+   get_servald_restful_http_server_port PORTB +B
+   get_servald_restful_http_server_port PORTC +C
+   get_servald_restful_http_server_port PORTD +D
+   get_servald_restful_http_server_port PORTE +E
+   get_servald_restful_http_server_port PORTF +F
+   get_servald_restful_http_server_port PORTG +G
+   get_servald_restful_http_server_port PORTH +H
+   get_servald_restful_http_server_port PORTI +I
+   get_servald_restful_http_server_port PORTJ +J
+   get_servald_restful_http_server_port PORTK +K
+   get_servald_restful_http_server_port PORTL +L
+   get_servald_restful_http_server_port PORTM +M
+   get_servald_restful_http_server_port PORTN +N
+   get_servald_restful_http_server_port PORTO +O
+   get_servald_restful_http_server_port PORTP +P
+   get_servald_restful_http_server_port PORTQ +Q
+   get_servald_restful_http_server_port PORTR +R
+   get_servald_restful_http_server_port PORTS +S
+   get_servald_restful_http_server_port PORTT +T
+   # Start the fake radio daemon.
+   fork %fakeradio fakecsmaradio 20 ttys.txt $1
+   wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 20 ]
+   tty1=$(sed -n 1p ttys.txt)
+   tty2=$(sed -n 2p ttys.txt)
+   tty3=$(sed -n 3p ttys.txt)
+   tty4=$(sed -n 4p ttys.txt)
+   tty5=$(sed -n 5p ttys.txt)
+   tty6=$(sed -n 6p ttys.txt)
+   tty7=$(sed -n 7p ttys.txt)
+   tty8=$(sed -n 8p ttys.txt)
+   tty9=$(sed -n 9p ttys.txt)
+   tty10=$(sed -n 10p ttys.txt)
+   tty11=$(sed -n 11p ttys.txt)
+   tty12=$(sed -n 12p ttys.txt)
+   tty13=$(sed -n 13p ttys.txt)
+   tty14=$(sed -n 14p ttys.txt)
+   tty15=$(sed -n 15p ttys.txt)
+   tty16=$(sed -n 16p ttys.txt)
+   tty17=$(sed -n 17p ttys.txt)
+   tty18=$(sed -n 18p ttys.txt)
+   tty19=$(sed -n 19p ttys.txt)
+   tty20=$(sed -n 20p ttys.txt)
+   # Start four lbard daemons.
+   fork %lbardA lbard "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$tty1" announce pull
+   fork %lbardB lbard "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$tty2" pull
+   fork %lbardC lbard "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$tty3" pull
+   fork %lbardD lbard "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$tty4" pull
+   fork %lbardE lbard "$addr_localhost:$PORTE" lbard:lbard "$SIDE" "$tty5" pull
+   fork %lbardF lbard "$addr_localhost:$PORTF" lbard:lbard "$SIDF" "$tty6" pull
+   fork %lbardG lbard "$addr_localhost:$PORTG" lbard:lbard "$SIDG" "$tty7" pull
+   fork %lbardH lbard "$addr_localhost:$PORTH" lbard:lbard "$SIDH" "$tty8" pull
+   fork %lbardI lbard "$addr_localhost:$PORTI" lbard:lbard "$SIDI" "$tty9" pull
+   fork %lbardJ lbard "$addr_localhost:$PORTJ" lbard:lbard "$SIDJ" "$tty10" pull
+   fork %lbardK lbard "$addr_localhost:$PORTK" lbard:lbard "$SIDK" "$tty11" pull
+   fork %lbardL lbard "$addr_localhost:$PORTL" lbard:lbard "$SIDL" "$tty12" pull
+   fork %lbardM lbard "$addr_localhost:$PORTM" lbard:lbard "$SIDM" "$tty13" pull
+   fork %lbardN lbard "$addr_localhost:$PORTN" lbard:lbard "$SIDN" "$tty14" pull
+   fork %lbardO lbard "$addr_localhost:$PORTO" lbard:lbard "$SIDO" "$tty15" pull
+   fork %lbardP lbard "$addr_localhost:$PORTP" lbard:lbard "$SIDP" "$tty16" pull
+   fork %lbardQ lbard "$addr_localhost:$PORTQ" lbard:lbard "$SIDQ" "$tty17" pull
+   fork %lbardR lbard "$addr_localhost:$PORTR" lbard:lbard "$SIDR" "$tty18" pull
+   fork %lbardS lbard "$addr_localhost:$PORTS" lbard:lbard "$SIDS" "$tty19" pull
+   fork %lbardT lbard "$addr_localhost:$PORTT" lbard:lbard "$SIDT" "$tty20" pull
+}
 
 configure_servald_server() {
    # Do not configure any network interfaces.
@@ -60,7 +132,7 @@ teardown() {
    report_all_servald_servers
 }
 
-doc_One="A single very small bundle transfers to peers"
+doc_One="A single very small bundle transfers to 3 peers"
 setup_One() {
    setup
    # Insert a file to server A
@@ -77,14 +149,52 @@ test_One() {
    wait_until all_bundles_received
 }
 
-doc_OneBig="A single larger bundle transfers to peers"
-setup_OneBig() {
+doc_One20="A single very small bundle transfers to 19 peers"
+setup_One20() {
+   setup20
+   # Insert a file to server A
+   set_instance +A
+   rhizome_add_file file1 50
+}
+test_One20() {
+   # Test that the bundle arrives at servers B - T
+   all_bundles_received() {
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D &&
+         bundle_received_by $BID:$VERSION +E &&
+         bundle_received_by $BID:$VERSION +F &&
+         bundle_received_by $BID:$VERSION +G &&
+         bundle_received_by $BID:$VERSION +H &&
+         bundle_received_by $BID:$VERSION +I &&
+         bundle_received_by $BID:$VERSION +J &&
+         bundle_received_by $BID:$VERSION +K &&
+         bundle_received_by $BID:$VERSION +L &&
+         bundle_received_by $BID:$VERSION +M &&
+         bundle_received_by $BID:$VERSION +N &&
+         bundle_received_by $BID:$VERSION +O &&
+         bundle_received_by $BID:$VERSION +P &&
+         bundle_received_by $BID:$VERSION +Q &&
+         bundle_received_by $BID:$VERSION +R &&
+         bundle_received_by $BID:$VERSION +S &&
+         bundle_received_by $BID:$VERSION +T
+   }
+   wait_until all_bundles_received
+}
+
+# ~150 bytes / sec * 50 seconds = ~9KB possible, less a bit for time redirecting around already received parts. 
+# XXX - If we made senders realise when they are already sending the same bundle to someone else, and use the
+# same offsets, we could obtain higher efficiency in transfer, and also reduce the number of segments during
+# reception.
+# For now, we have to be conservative, and just try 5KB in one minute.
+doc_One2K="A single 2KB bundle transfers to peers"
+setup_One2K() {
    setup
    # Insert a file to server A
    set_instance +A
-   rhizome_add_file file1 50000
+   rhizome_add_file file1 2048
 }
-test_OneBig() {
+test_One2K() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
       bundle_received_by $BID:$VERSION +B &&
@@ -93,6 +203,35 @@ test_OneBig() {
    }
    wait_until all_bundles_received
 }
+
+doc_TwoSenders="A single bundle is offered by two senders"
+setup_TwoSenders() {
+   setup
+   # Insert a file to server A
+   set_instance +A
+   echo "Clear Text" >file1
+   shasum -a 512 file1
+   echo -e "service=File\nsender=$SIDA\nrecipient=$SIDB" >file1.manifest
+   executeOk_servald rhizome add file $SIDA file1 file1.manifest
+   extract_manifest_id BID file1.manifest
+   extract_manifest_version VERSION file1.manifest
+   executeOk_servald rhizome export bundle $BID file1e file1e.manifest
+   hexdump -C file1e.manifest
+   hexdump -C file1e
+   shasum -a 512 file1e
+   set_instance +B
+   executeOk_servald rhizome import bundle file1e file1e.manifest
+}
+test_TwoSenders() {
+   # Test that the bundle arrives at servers B, C and D
+   all_bundles_received() {
+      bundle_received_by $BID:$VERSION +B &&
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
+   }
+   wait_until all_bundles_received
+}
+
 
 doc_All="All peers receive bundles from all other peers"
 setup_All() {
