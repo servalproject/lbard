@@ -210,15 +210,11 @@ setup_TwoSenders() {
    # Insert a file to server A
    set_instance +A
    echo "Clear Text" >file1
-   shasum -a 512 file1
    echo -e "service=File\nsender=$SIDA\nrecipient=$SIDB" >file1.manifest
    executeOk_servald rhizome add file $SIDA file1 file1.manifest
    extract_manifest_id BID file1.manifest
    extract_manifest_version VERSION file1.manifest
-   executeOk_servald rhizome export bundle $BID file1e file1e.manifest
-   hexdump -C file1e.manifest
-   hexdump -C file1e
-   shasum -a 512 file1e
+   executeOk_servald rhizome export bundle $BID file1e.manifest file1e
    set_instance +B
    executeOk_servald rhizome import bundle file1e file1e.manifest
 }
