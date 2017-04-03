@@ -33,7 +33,7 @@ setup() {
    get_servald_restful_http_server_port PORTC +C
    get_servald_restful_http_server_port PORTD +D
    # Start the fake radio daemon.
-   fork %fakeradio fakecsmaradio 4 ttys.txt $1
+   fork %fakeradio fakecsmaradio 4 ttys.txt "$1"
    wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
    tty1=$(sed -n 1p ttys.txt)
    tty2=$(sed -n 2p ttys.txt)
@@ -73,7 +73,7 @@ setup20() {
    get_servald_restful_http_server_port PORTS +S
    get_servald_restful_http_server_port PORTT +T
    # Start the fake radio daemon.
-   fork %fakeradio fakecsmaradio 20 ttys.txt $1
+   fork %fakeradio fakecsmaradio 20 ttys.txt "$1"
    wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 20 ]
    tty1=$(sed -n 1p ttys.txt)
    tty2=$(sed -n 2p ttys.txt)
@@ -219,6 +219,30 @@ setup_TwoSenders() {
    executeOk_servald rhizome import bundle file1e file1e.manifest
 }
 test_TwoSenders() {
+   # Test that the bundle arrives at servers B, C and D
+   all_bundles_received() {
+         bundle_received_by $BID:$VERSION +C &&
+         bundle_received_by $BID:$VERSION +D
+   }
+   wait_until all_bundles_received
+}
+
+
+doc_TwoSendersCombined="A bundle can be received by combining pieces from different senders"
+setup_TwoSendersCombined() {
+   setup "drop manifest from 0; drop body from 1;"
+   # Insert a file to server A
+   set_instance +A
+   echo "Clear Text" >file1
+   echo -e "service=File\nsender=$SIDA\nrecipient=$SIDB" >file1.manifest
+   executeOk_servald rhizome add file $SIDA file1 file1.manifest
+   extract_manifest_id BID file1.manifest
+   extract_manifest_version VERSION file1.manifest
+   executeOk_servald rhizome export bundle $BID file1e.manifest file1e
+   set_instance +B
+   executeOk_servald rhizome import bundle file1e file1e.manifest
+}
+test_TwoSendersCombined() {
    # Test that the bundle arrives at servers B, C and D
    all_bundles_received() {
          bundle_received_by $BID:$VERSION +C &&
