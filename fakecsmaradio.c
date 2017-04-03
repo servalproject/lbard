@@ -330,13 +330,26 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
     }
   }
 
-  int match=1;
+  int match;
   int r;
   for(r=0;r<filter_rule_count;r++) {
-    if ((filter_rules[r]->src==-1)||(filter_rules[r]->src!=f->src_radio)) match=0;
-    if ((filter_rules[r]->dst==-1)||(filter_rules[r]->dst!=f->src_radio)) match=0;
-    if (filter_rules[r]->manifestP&&(!f->is_manifest_piece)) match=0;
-    if (filter_rules[r]->bodyP&&(!f->is_body_piece)) match=0;
+    match=1;
+#if 0
+    if ((f->type=='p')||(f->type=='P')||(f->type=='q')||(f->type=='Q')) {
+      fprintf(stderr,"FILTER: rule: src=%d, dst=%d, mP=%d, pP=%d  -- fragment: src=%d, dst=%d, mP=%d, pP=%d\n",
+	      filter_rules[r]->src,filter_rules[r]->dst,
+	      filter_rules[r]->manifestP,filter_rules[r]->bodyP,
+	      f->src_radio,f->dst_radio,
+	      f->is_manifest_piece,f->is_body_piece);
+    }
+#endif
+    if ((filter_rules[r]->src!=-1)&&(filter_rules[r]->src!=f->src_radio)) match=2;
+    if ((filter_rules[r]->dst!=-1)&&(filter_rules[r]->dst!=f->dst_radio)) match=3;
+    if (filter_rules[r]->manifestP&&(!f->is_manifest_piece)) match=4;
+    if (filter_rules[r]->bodyP&&(!f->is_body_piece)) match=5;
+    if (match>1) {
+      if (0) fprintf(stderr,"  rule not matched due to criterion #%d\n",match);
+      match=0; }
     if (match) break;
   }
 
@@ -464,12 +477,14 @@ int filter_process_packet(int from,int to,
     }
   }
 
+#if 0
   if ((out_len!=len)||memcmp(packet,packet_out,out_len)) {
     fprintf(stderr,"Filtered packet contains %d/%d bytes.\n",
 	    out_len,len);
     dump_bytes("Filtered",packet_out,out_len);
     dump_bytes("Original",packet,len);
   }
+#endif
 
   // Append valid FEC
   unsigned char parity[FEC_LENGTH];
@@ -477,6 +492,10 @@ int filter_process_packet(int from,int to,
   memcpy(&packet_out[out_len],parity,FEC_LENGTH);
   out_len+=FEC_LENGTH;
 
+#if 0
+  if (out_len!=len) dump_bytes("With FEC",packet_out,out_len);
+#endif
+  
   // Now update packet
   memcpy(packet,packet_out,out_len);
   *packet_len=out_len;
@@ -496,8 +515,14 @@ int filter_process_packet(int from,int to,
 }
 
 int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_time,
-					 uint8_t *packet,int packet_len)
+					 uint8_t *packet_in,int packet_len)
 {
+  fprintf(stderr,"Filter and enqueue %d bytes from %d -> %d\n",
+	  packet_len,from,to);
+
+  uint8_t packet[256];
+  memcpy(packet,packet_in,packet_len);
+  
   filter_process_packet(from,to,packet,&packet_len);
 
   if (!packet_len) {
