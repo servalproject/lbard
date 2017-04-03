@@ -102,7 +102,21 @@ int dump_bytes(char *msg,unsigned char *bytes,int length)
   return 0;
 }
 
+struct filter_rule {
+  int src;
+  int dst;
+  int manifestP;
+  int bodyP;
+};
+
+#define MAX_FILTER_RULES 1024
+struct filter_rule *filter_rules[MAX_FILTER_RULES];
+int filter_rule_count=0;
+
 struct filterable {
+  int src_radio;
+  int dst_radio;
+  
   uint8_t sender_sid_prefix[6];
   uint8_t recipient_sid_prefix[4];
 
@@ -132,8 +146,13 @@ struct filterable {
 
 void filterable_erase_fragment(struct filterable *f,int offset)
 {
-  memset(&(f->recipient_sid_prefix),0,
-	 sizeof(struct filterable)-sizeof(f->sender_sid_prefix));
+  struct filterable ff;
+  memcpy(&ff,f,sizeof(struct filterable));
+  memset(f,0,sizeof(struct filterable));
+  memcpy(f->sender_sid_prefix,ff.sender_sid_prefix,6);
+  f->src_radio=ff.src_radio;
+  f->dst_radio=ff.dst_radio;
+  
   f->packet_start=offset;
 }
 
@@ -310,6 +329,21 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
 	      );
     }
   }
+
+  int match=1;
+  int r;
+  for(r=0;r<filter_rule_count;r++) {
+    if ((filter_rules[r]->src==-1)||(filter_rules[r]->src!=f->src_radio)) match=0;
+    if ((filter_rules[r]->dst==-1)||(filter_rules[r]->dst!=f->src_radio)) match=0;
+    if (filter_rules[r]->manifestP&&(!f->is_manifest_piece)) match=0;
+    if (filter_rules[r]->bodyP&&(!f->is_body_piece)) match=0;
+    if (match) break;
+  }
+
+  if (match) {
+    fprintf(stderr,"         *** Fragment dropped due to filter rule #%d\n",r);
+    return 0;
+  }
   
   memcpy(&packet_out[*out_len],&packet_in[f->packet_start],f->fragment_length);
   (*out_len)+=f->fragment_length;
@@ -333,6 +367,7 @@ int filter_process_packet(int from,int to,
   int offset=0;
 
   memset(&f,0,sizeof(f));
+  f.src_radio=from; f.dst_radio=to;
 
   // Extract SID prefix of sender
   memcpy(f.sender_sid_prefix,&packet[offset],6); offset+=6;
@@ -575,6 +610,57 @@ int client_read_byte(int client,unsigned char byte)
   return 0;
 }
 
+int filter_rule_add(char *rule)
+{
+  if (filter_rule_count>=MAX_FILTER_RULES) {
+    fprintf(stderr,"Too many filter rules. Increase MAX_FILTER_RULES.\n");
+    exit(-1);
+  }
+
+  while(rule[0]==' ') rule++;
+  
+  char thing[1024];
+  int src_radio;
+  int offset;
+  if (sscanf(rule,"drop %s from %d%n",thing,&src_radio,&offset)==2) {
+    if (offset<strlen(rule)) {
+      fprintf(stderr,"Could not parse filter rule '%s': Extraneous material at character %d\n",rule,offset);
+    }
+    struct filter_rule *r=calloc(sizeof(struct filter_rule),1);
+    r->src=src_radio;
+    r->dst=-1;
+    if (!strcmp(thing,"manifest")) r->manifestP=1;
+    else if (!strcmp(thing,"manifests")) r->manifestP=1;
+    else if (!strcmp(thing,"body")) r->bodyP=1;
+    else if (!strcmp(thing,"bodies")) r->bodyP=1;
+    else {
+      fprintf(stderr,"Could not parse filter rule '%s': Unknown object '%s'\n",rule,thing);
+      return -1;
+    }
+    filter_rules[filter_rule_count++]=r;
+    fprintf(stderr,"Added filter rule '%s'\n",rule);
+    return 0;
+  } else {
+    fprintf(stderr,"Could not parse filter rule '%s'\n",rule);
+    return -1;
+  }
+}
+
+int filter_rules_parse(char *text)
+{
+  char rule[1024];
+  int len=0;
+  for(int i=0;i<=strlen(text);i++) {
+    if (text[i]==';'||text[i]==0) {
+      if (len) if (filter_rule_add(rule)) return -1;
+      len=0; rule[0]=0;
+    } else {
+      if (len<1024) { rule[len++]=text[i]; rule[len]=0; }
+    }
+  }
+  return 0;
+}
+
 int main(int argc,char **argv)
 {
   int radio_count=2;
@@ -585,22 +671,31 @@ int main(int argc,char **argv)
   if (argv&&argv[1]) radio_count=atoi(argv[1]);
   if (argc>2) tty_file=fopen(argv[2],"w");
   if ((argc<3)||(argc>4)||(!tty_file)||(radio_count<2)||(radio_count>=MAX_CLIENTS)) {
-    fprintf(stderr,"usage: fakecsmaradio <number of radios> <tty file> [packet drop probability]\n");
+    fprintf(stderr,"usage: fakecsmaradio <number of radios> <tty file> [packet drop probability|filter rules]\n");
     fprintf(stderr,"\nNumber of radios must be between 2 and %d.\n",MAX_CLIENTS-1);
     fprintf(stderr,"The name of each tty will be written to <tty file>\n");
-    fprintf(stderr,"The optional packet drop probability allows the simulation of packet loss.\n"); 
+    fprintf(stderr,"The optional packet drop probability allows the simulation of packet loss.\n");
+    fprintf(stderr,"Filter rules take the form of:  \"drop <manifest|body> <from|to> <radio id>; ...\"\n");
     exit(-1);
   }
   if (argc>3) 
     {
-      float p=atof(argv[3]);
-      if (p<0||p>1) {
-	fprintf(stderr,"Packet drop probability must be in range [0..1]\n");
-	exit(-1);
+      if (argv[3][0]=='d') {
+	// Filter rules
+	if (filter_rules_parse(argv[3])) {
+	  fprintf(stderr,"Invalid filter rules.\n");
+	  exit(-1);
+	}
+      } else {
+	float p=atof(argv[3]);
+	if (p<0||p>1) {
+	  fprintf(stderr,"Packet drop probability must be in range [0..1]\n");
+	  exit(-1);
+	}
+	packet_drop_threshold = p*0x7fffffff;
+	fprintf(stderr,"Simulating %3.2f%% packet loss (threshold = 0x%08x)\n",
+		p*100.0,packet_drop_threshold);
       }
-      packet_drop_threshold = p*0x7fffffff;
-      fprintf(stderr,"Simulating %3.2f%% packet loss (threshold = 0x%08x)\n",
-	      p*100.0,packet_drop_threshold);
     }
   srandom(time(0));
 
