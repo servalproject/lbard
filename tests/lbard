@@ -21,6 +21,17 @@
 source "${0%/*}/../serval-dna/testframework.sh"
 source "${0%/*}/../testdefs.sh"
 
+lbard_console() {
+   local C="$instance_name"
+   executeOk --executable="lbard"  --stdout-file="${C}_LBARDOUT" --stderr-file="${C}_LBARDERR" $*
+   tfw_cat --stdout --stderr
+}
+
+fork_lbard_console() {
+   local C="$instance_name"
+   fork %lbard$C lbard_console "$*"
+}
+
 setup() {
    # Configure four servald daemons without any interfaces connecting them, and
    # start them running.
@@ -40,10 +51,14 @@ setup() {
    tty3=$(sed -n 3p ttys.txt)
    tty4=$(sed -n 4p ttys.txt)
    # Start four lbard daemons.
-   fork %lbardA lbard "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$tty1" announce pull
-   fork %lbardB lbard "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$tty2" pull
-   fork %lbardC lbard "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$tty3" pull
-   fork %lbardD lbard "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$tty4" pull
+   set_instance +A
+   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$tty1" announce pull
+   set_instance +B
+   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$tty2" pull
+   set_instance +C
+   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$tty3" pull
+   set_instance +D
+   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$tty4" pull
 }
 setup20() {
    # Configure four servald daemons without any interfaces connecting them, and
@@ -140,10 +155,12 @@ setup_DetectRFD900() {
 }
 test_DetectRFD900() {
    # Test that the bundle arrives at servers B, C and D
-   all_radios_detected() {
-      radio_is_rfd900 +A +B +C +D
-   }
-   wait_until --timeout=15 all_radios_detected
+   fork_terminate %lbardA %lbardB %lbardC %lbardD 
+   fork_terminate_all
+   wait_until --timeout=10 grep "No HF radio detected, assuming RFD900 series radio" A_LBARDERR
+   wait_until --timeout=10 grep "No HF radio detected, assuming RFD900 series radio" B_LBARDERR
+   wait_until --timeout=10 grep "No HF radio detected, assuming RFD900 series radio" C_LBARDERR
+   wait_until --timeout=10 grep "No HF radio detected, assuming RFD900 series radio" D_LBARDERR
 }
 
 doc_One="A single very small bundle transfers to 3 peers"

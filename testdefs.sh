@@ -25,16 +25,3 @@ export PATH="$lbard_build_root:$PATH"
 source "$lbard_source_root/serval-dna/testdefs.sh"
 source "$lbard_source_root/serval-dna/testdefs_rhizome.sh"
 
-radio_is_rfd900() {
-   local I N
-   executeOk_servald route print
-   for I; do
-      [ $I = $instance_arg ] && continue
-      for ((N=1; 1; ++N)); do
-         if ! grep "No HF radio detected, assuming RFD900 series radio" $_tfw_tmp/stderr; then
-            return 1
-         fi
-      done
-   done
-   return 0
-}
