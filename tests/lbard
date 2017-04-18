@@ -132,6 +132,20 @@ teardown() {
    report_all_servald_servers
 }
 
+doc_DetectRFD900="LBARD detects RFD900 radios"
+setup_DetectRFD900() {
+   setup
+   set_instance +A
+   rhizome_add_file file1 50
+}
+test_DetectRFD900() {
+   # Test that the bundle arrives at servers B, C and D
+   all_radios_detected() {
+      radio_is_rfd900 +A +B +C +D
+   }
+   wait_until --timeout=15 all_radios_detected
+}
+
 doc_One="A single very small bundle transfers to 3 peers"
 setup_One() {
    setup
