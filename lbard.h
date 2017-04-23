@@ -15,9 +15,9 @@
 extern struct sync_state *sync_state;
 #define SYNC_SALT_LEN 8
 
-#define SERVALD_STOP "/serval/servald stop"
+#define SERVALD_STOP "/usr/bin/servald stop"
 #define DEFAULT_BROADCAST_ADDRESSES "10.255.255.255","192.168.2.255","192.168.2.1"
-#define SEND_HELP_MESSAGE "/serval/servald meshms send message `/serval/servald id self | tail -1` `cat /dos/helpdesk.sid` '"
+#define SEND_HELP_MESSAGE "/usr/bin/servald meshms send message `/usr/bin/servald id self | tail -1` `cat /dos/helpdesk.sid` '"
 
 #define C fprintf(stderr,"%s:%d CHECKPOINT in %s()\n",__FILE__,__LINE__,__FUNCTION__)
 
