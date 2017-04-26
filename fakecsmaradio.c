@@ -330,8 +330,9 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
     }
   }
 
-  int match;
+  int match=0;
   int r;
+  fprintf(stderr,"There are %d filter rules.\n",filter_rule_count);
   for(r=0;r<filter_rule_count;r++) {
     match=1;
 #if 0
