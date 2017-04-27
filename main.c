@@ -328,7 +328,8 @@ int main(int argc, char **argv)
   }
 
   // HTTP Server socket for accepting MeshMS message submission via web form
-  // (Used for sending anonymous messages to a help desk for a mesh network).
+  // (Used for sending anonymous messages to a help desk for a mesh network, and
+  //  for providing simple web-based diagnostics).
   int httpsocket=-1;
   if (http_server) {
     httpsocket=socket(AF_INET, SOCK_STREAM, 0);
