@@ -130,15 +130,15 @@ int generate_progress_string(struct partial_bundle *partial,
   return 0;
 }
 
-int show_progress()
+int show_progress(FILE *f, int verbose)
 {
   int peer,i;
 
-  fprintf(stderr,"%s",message_buffer);
+  fprintf(f,"%s",message_buffer);
   message_buffer_length=0; message_buffer[0]=0;
 
   int count=0;
-  int progress_has_occurred=0;
+  int progress_has_occurred=verbose;
 
   for(peer=0;peer<peer_count;peer++) {
     for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
@@ -159,7 +159,7 @@ int show_progress()
 	  long long version=peer_records[peer]->partials[i].bundle_version;
 	  char progress_string[80];
 	  if (!count) {
-	    fprintf(stderr,
+	    fprintf(f,
 		    ">> List of bundles currently being received"
 		    " (%d in rhizome store)\n",
 		    bundle_count);
@@ -167,15 +167,15 @@ int show_progress()
 	  count++;
 	  generate_progress_string(&peer_records[peer]->partials[i],
 				   progress_string,sizeof(progress_string));
-	  fprintf(stderr,"   PEER:%s* %s* version %-18lld: [%s]\n",
+	  fprintf(f,"   PEER:%s* %s* version %-18lld: [%s]\n",
 		  peer_prefix,bid_prefix,version,
 		  progress_string);
 	}
       }
     }
-    if (count) fprintf(stderr,"<< end of bundle transfer list.\n");
+    if (count) fprintf(f,"<< end of bundle transfer list.\n");
   }
-  progress_report_bundle_receipts();
+  progress_report_bundle_receipts(f);
   
   return 0;
 }
@@ -212,7 +212,7 @@ int progress_log_bundle_receipt(char *bid_prefix, long long version)
   return 0;
 }
 
-int progress_report_bundle_receipts()
+int progress_report_bundle_receipts(FILE *f)
 {
   int newstuff=0;
   
@@ -222,7 +222,7 @@ int progress_report_bundle_receipts()
   if (newstuff) {
     for(int i=0;i<received_bundle_count;i++)
     {
-      fprintf(stderr,"Received %s*/%-16lld @ T%lldms %s\n",
+      fprintf(f,"Received %s*/%-16lld @ T%lldms %s\n",
 	      received_bundles[i].bid_prefix_hex,
 	      received_bundles[i].version,
 	      received_bundles[i].rx_time-gettime_ms(),

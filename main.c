@@ -486,7 +486,7 @@ int main(int argc, char **argv)
 
     if (time(0)>last_summary_time) {
       last_summary_time=time(0);
-      show_progress();
+      show_progress(stderr,0);
     }    
   }
 }

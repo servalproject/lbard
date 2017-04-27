@@ -292,7 +292,7 @@ int saw_piece(char *peer_prefix,int for_me,
       assert( ((segment_start>=piece_start)&&(segment_start<=piece_end))
 	      ||((segment_end>=piece_start)&&(segment_end<=piece_end))
 	      );      
-
+      if (0)
       {
 	message_buffer_length+=
 	  snprintf(&message_buffer[message_buffer_length],

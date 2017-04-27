@@ -294,8 +294,8 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 int prime_bundle_cache(int bundle_number,char *prefix,
 		       char *servald_server, char *credential);
 int hex_byte_value(char *hexstring);
-int find_highest_priority_bundle();
-int find_highest_priority_bar();
+int find_highest_priority_bundle(void);
+int find_highest_priority_bar(void);
 int find_peer_by_prefix(char *peer_prefix);
 int clear_partial(struct partial_bundle *p);
 int dump_partial(struct partial_bundle *p);
@@ -325,11 +325,11 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 		     unsigned char *manifest_data, int manifest_length,
 		     unsigned char *body_data, int body_length,
 		     int timeout_ms);
-long long gettime_ms();
-long long gettime_us();
+long long gettime_ms(void);
+long long gettime_us(void);
 int generate_progress_string(struct partial_bundle *partial,
 			     char *progress,int progress_size);
-int show_progress();
+int show_progress(FILE *f,int verbose);
 int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_out);
 int dump_segment_list(struct segment_list *s);
 
@@ -339,7 +339,7 @@ int energy_experiment_master(char *broadcast_address,
 int energy_experiment_calibrate(char *port, char *broadcast_address,char *exp_string);
 
 int serial_setup_port_with_speed(int fd,int speed);
-int status_dump();
+int status_dump(void);
 int status_log(char *msg);
 
 long long calculate_bundle_intrinsic_priority(char *bid,
@@ -387,7 +387,7 @@ int http_process(struct sockaddr *cliaddr,
 		 char *my_sid_hex,
 		 int socket);
 int chartohex(int c);
-int random_active_peer();
+int random_active_peer(void);
 int append_bytes(int *offset,int mtu,unsigned char *msg_out,
 		 unsigned char *data,int count);
 int sync_tree_receive_message(struct peer_state *p, unsigned char *msg);
@@ -399,7 +399,7 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
 int http_post_meshms(char *server_and_port, char *auth_token,
 		     char *message,char *sender,char *recipient,
 		     int timeout_ms);
-int sync_setup();
+int sync_setup(void);
 int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 			      char *sid_prefix_bin,
 			      char *servald_server,char *credential);
@@ -414,7 +414,7 @@ int bundle_calculate_tree_key(sync_key_t *sync_key,
 			      char *filehash);
 int dump_bytes(char *msg,unsigned char *bytes,int length);
 int urandombytes(unsigned char *buf, size_t len);
-int active_peer_count();
+int active_peer_count(void);
 int sync_dequeue_bundle(struct peer_state *p,int bundle);
 int meshms_parse_command(int argc,char **argv);
 int http_list_meshms_conversations(char *server_and_port, char *auth_token,
@@ -431,7 +431,7 @@ int sync_is_bundle_recently_received(char *bid_prefix, long long version);
 int sync_tell_peer_we_have_bundle_by_id(int peer,unsigned char *bid_bin,
 					long long version);
 unsigned char *bid_prefix_hex_to_bin(char *hex);
-int progress_report_bundle_receipts();
+int progress_report_bundle_receipts(FILE *f);
 int progress_log_bundle_receipt(char *bid_prefix, long long version);
 
 int http_get_async(char *server_and_port, char *auth_token,
@@ -450,7 +450,7 @@ int hf_read_configuration(char *filename);
 int hf_serviceloop(int fd);
 int uhf_rfd900_setup(int fd);
 int uhf_serviceloop(int fd);
-int radio_get_type();
+int radio_get_type(void);
 int uhf_receive_bytes(unsigned char *bytes,int count);
 int hf_codan_receive_bytes(unsigned char *bytes,int count);
 int hf_barrett_receive_bytes(unsigned char *bytes,int count);
@@ -459,8 +459,10 @@ int radio_send_message_barretthf(int serialfd,unsigned char *out, int len);
 int saw_packet(unsigned char *packet_data,int packet_bytes,
 	       char *my_sid_hex,char *prefix,
 	       char *servald_server,char *credential);
-int radio_ready();
-int hf_radio_ready();
-int hf_radio_pause_for_turnaround();
-int hf_radio_send_now();
+int radio_ready(void);
+int hf_radio_ready(void);
+int hf_radio_pause_for_turnaround(void);
+int hf_radio_send_now(void);
 int eeprom_read(int fd);
+int http_report_network_status(int socket);
+int http_send_file(int socket,char *filename);

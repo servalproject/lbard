@@ -91,6 +91,14 @@ int status_dump()
     order[i].priority=bundles[i].last_priority;
   }
   qsort(order,bundle_count,sizeof(struct b),compare_b);
+
+  fprintf(f,"<h2>Peer list</h2>\n<table border=1 padding=2 spacing=2><tr><th>Time since last message</th></tr>\n");
+  for (i=0;i<peer_count;i++)
+    fprintf(f,"<tr><td>%s*</td><td>%lld</td></tr>\n",
+	    peer_records[i]->sid_prefix,
+	    (long long)(time(0)-peer_records[i]->last_message_time));
+  fprintf(f,"</table>\n");
+  fflush(f);
   
   fprintf(f,"<h2>Bundles in local store</h2>\n<table border=1 padding=2 spacing=2><tr><th>Bundle #</th><th>BID Prefix</th><th>Service</th><th>Bundle version</th><th>Bundle length</th><th>Last calculated priority</th><th># peers who don't have this bundle</th></tr>\n");
   for (n=0;n<bundle_count;n++) {
@@ -104,14 +112,6 @@ int status_dump()
 	    bundles[i].last_priority,bundles[i].last_priority,
 	    bundles[i].num_peers_that_dont_have_it);
   }
-  fprintf(f,"</table>\n");
-  fflush(f);
-
-  fprintf(f,"<h2>Peer list</h2>\n<table border=1 padding=2 spacing=2><tr><th>Time since last message</th></tr>\n");
-  for (i=0;i<peer_count;i++)
-    fprintf(f,"<tr><td>%s*</td><td>%lld</td></tr>\n",
-	    peer_records[i]->sid_prefix,
-	    (long long)(time(0)-peer_records[i]->last_message_time));
   fprintf(f,"</table>\n");
   fflush(f);
 
@@ -177,4 +177,56 @@ int status_dump()
   fclose(f);
   
   return 0;
+}
+
+time_t last_network_status_call=0;
+int http_report_network_status(int socket)
+{
+  if ((time(0)-last_network_status_call)>1)
+    {
+      last_network_status_call=time(0);
+      FILE *f=fopen("/tmp/networkstatus.html","w");
+      if (!f) {
+	char *m="HTTP/1.0 500 Couldn't create temporary file\nServer: Serval LBARD\n\nCould not create temporariy file";
+	write_all(socket,m,strlen(m));
+	
+	return -1;
+      }
+      
+      fprintf(f,"<html>\n<head>\n<title>Mesh Extender Radio Link Status</title>\n");
+      fprintf(f,"<meta http-equiv=\"refresh\" content=\"2\" />\n</head>\n<body>\n");
+      
+      // Show peer reachability with indication of activity
+      fprintf(f,"<h2>Mesh Extenders Reachable via Radio</h2>\n<table border=1 padding=2 spacing=2><tr><th>Mesh Extender ID</th><th>Time since last message</th></tr>\n");
+      int i;
+      for (i=0;i<peer_count;i++) {
+	long long age=(time(0)-peer_records[i]->last_message_time);
+	if (age<2) {
+	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"#00ff00\">%lld sec</td></tr>\n",
+		  peer_records[i]->sid_prefix,age);
+	} else if (age<3) {
+	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"#ffffff\">%lld sec</td></tr>\n",
+		  peer_records[i]->sid_prefix,age);
+	} else if (age<10) {
+	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"#ffff00\">%lld sec</td></tr>\n",
+		  peer_records[i]->sid_prefix,age);
+	} else if (age<20) {
+	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"#ff4f00\">%lld sec</td></tr>\n",
+		  peer_records[i]->sid_prefix,age);
+	}
+      }
+      fprintf(f,"</table>\n");
+      
+      
+      // Show current transfer progress bars
+      fprintf(f,"<h2>Current Bundle Transfers</h2>\n");
+      fprintf(f,"<pre>\n");
+      show_progress(f,1);
+      fprintf(f,"</pre>\n");
+      
+      printf("</body>\n</html>\n");
+      
+      fclose(f);
+    }
+  return http_send_file(socket,"/tmp/networkstatus.html");     
 }

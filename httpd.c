@@ -40,6 +40,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <time.h>
 #include <sys/time.h>
 #include <ctype.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "sync.h"
 #include "lbard.h"
@@ -171,10 +174,48 @@ int http_process(struct sockaddr *cliaddr,
 	write_all(socket,m,strlen(m));
 	close(socket);
 	return 0;	
+      } else if (!strcasecmp(uri,"/")) {
+	// Report on current peer status
+	http_report_network_status(socket);
+	close(socket);
+	return 0;	
       }
     }
   char *m="HTTP/1.0 400 Couldn't parse message\nServer: Serval LBARD\n\n";
   write_all(socket,m,strlen(m));
   close(socket);
   return 0;
+}
+
+int http_send_file(int socket,char *filename)
+{
+  char m[1024];
+  FILE *f=fopen(filename,"r");
+  if (!f) {
+    snprintf(m,1024,"HTTP/1.0 404 File not found\nServer: Serval LBARD\n\nCould not read file '%s'\n",filename);
+    write_all(socket,m,strlen(m));
+    return -1;
+  }
+  struct stat s;
+  if (fstat(fileno(f),&s)) {
+    snprintf(m,1024,"HTTP/1.0 404 File not found\nServer: Serval LBARD\n\nCould not read file '%s'\n",filename);
+    write_all(socket,m,strlen(m));
+    return -1;
+  }
+
+  int len=s.st_size;
+  
+  snprintf(m,1024,"HTTP/1.0 200 OK\nServer: Serval LBARD\nContent-Type: text/html\nContent-length: %d\n\n",
+	   len);
+  write_all(socket,m,strlen(m));
+
+  char buffer[1024+1];
+  int count=fread(buffer,1,1024,f);
+  while(count>0) {
+    write_all(socket,buffer,count);
+    count=fread(buffer,1,1024,f);
+  }
+  fclose(f);
+  return 0;
+  
 }
