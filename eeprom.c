@@ -21,7 +21,7 @@ unsigned long configuration_directives_length=strlen("nodirectives=true\n");
 
 int eeprom_write_page(int fd, int address,unsigned char *readblock);
 
-int eeprom_decode_data(char *msg,unsigned char *datablock)
+int eeprom_decode_data(char *msg,unsigned char *datablock,FILE *f)
 {
 
   // Parse radio parameter block
@@ -33,7 +33,7 @@ int eeprom_decode_data(char *msg,unsigned char *datablock)
   int i;
   for(i=0;i<16;i++) if (datablock[0x7F0+i]!=ctx.s[i>>3][i&7]) break;
   if (i==16) {
-    fprintf(stderr,"Radio parameter block checksum valid.\n");
+    fprintf(f,"Radio parameter block checksum valid.\n");
 
     uint8_t format_version=datablock[0x7EF];
     char primary_iso_code[3]={datablock[0x7ED],datablock[0x7EE],0};
@@ -46,24 +46,24 @@ int eeprom_decode_data(char *msg,unsigned char *datablock)
     uint8_t radio_max_dutycycle=datablock[0x7E0];
 
     if (format_version!=0x01) {
-      fprintf(stderr,"Radio parameter block data format version is 0x%02x, which I don't understand.\n",format_version);
+      fprintf(f,"Radio parameter block data format version is 0x%02x, which I don't understand.\n",format_version);
     } else {    
-      fprintf(stderr,
+      fprintf(f,
 	      "                radio max TX power = %d dBm\n",
 	      (int)radio_txpower_dbm);
-      fprintf(stderr,
+      fprintf(f,
 	      "              radio max duty-cycle = %d %%\n",
 	      (int)radio_max_dutycycle);
-      fprintf(stderr,
+      fprintf(f,
 	      "                   radio air speed = %d Kbit/sec\n",
 	      (int)radio_bitrate);
-      fprintf(stderr,
+      fprintf(f,
 	      "            radio centre frequency = %d Hz\n",
 	      (int)radio_centre_frequency);
-      fprintf(stderr,
+      fprintf(f,
 	      "regulations require firmware lock? = '%c'\n",
 	      regulatory_lock_required);
-      fprintf(stderr,
+      fprintf(f,
 	      "          primary ISO country code = \"%s\"\n",
 	      primary_iso_code);
 
@@ -72,7 +72,7 @@ int eeprom_decode_data(char *msg,unsigned char *datablock)
       // we can obey them.
     }
   }
-  else fprintf(stderr,
+  else fprintf(f,
 	       "ERROR: Radio parameter block checksum is wrong:\n"	       
 	       "       Radio will ignore EEPROM data!\n");
 
@@ -82,27 +82,27 @@ int eeprom_decode_data(char *msg,unsigned char *datablock)
   sha3_Finalize();
   for(i=0;i<16;i++) if (datablock[0x7B0+i]!=ctx.s[i>>3][i&7]) break;
   if (i==16) {
-    fprintf(stderr,
+    fprintf(f,
 	    "Radio regulatory information text checksum is valid.\n");
     regulatory_information_length=sizeof(regulatory_information);
     int result=mz_uncompress((unsigned char *)regulatory_information,
 			     &regulatory_information_length,
 			     &datablock[0x400], 0x7B0-0x400);
     if (result!=MZ_OK)
-      fprintf(stderr,"Failed to decompress regulatory information block.\n");
+      fprintf(f,"Failed to decompress regulatory information block.\n");
     else {
       // XXX - This should be recorded somewhere, so that we can present it using
       // our web server.
-      fprintf(stderr,
+      fprintf(f,
 	      "The information text is as follows:\n  > ");
       for(i=0;regulatory_information[i];i++) {
-	if (regulatory_information[i]) fprintf(stderr,"%c",regulatory_information[i]);
+	if (regulatory_information[i]) fprintf(f,"%c",regulatory_information[i]);
 	if ((regulatory_information[i]=='\r')||(regulatory_information[i]=='\n'))
-	  fprintf(stderr,"  > ");
+	  fprintf(f,"  > ");
       }
-      fprintf(stderr,"\n");
+      fprintf(f,"\n");
     }
-  } else fprintf(stderr,
+  } else fprintf(f,
 		 "ERROR: Radio regulatory information text checksum is wrong:\n"	       
 		 "       LBARD will report only ISO code from radio parameter block.\n");
 
@@ -112,7 +112,7 @@ int eeprom_decode_data(char *msg,unsigned char *datablock)
   sha3_Finalize();
   for(i=0;i<16;i++) if (datablock[0x3E0+i]!=ctx.s[i>>3][i&7]) break;
   if (i==16) {
-    fprintf(stderr,
+    fprintf(f,
 	    "Mesh-Extender configuration directive text checksum is valid.\n"
 	    "The information text is as follows:\n  > ");
     configuration_directives_length=sizeof(configuration_directives);
@@ -120,18 +120,18 @@ int eeprom_decode_data(char *msg,unsigned char *datablock)
 			     &configuration_directives_length,
 			     &datablock[0x0], 0x3F0);
     if (result!=MZ_OK)
-      fprintf(stderr,"Failed to decompress configuration directive block.\n");
+      fprintf(f,"Failed to decompress configuration directive block.\n");
     else {
     for(i=0;configuration_directives[i];i++) {
       if (configuration_directives[i])
-	fprintf(stderr,"%c",configuration_directives[i]);
+	fprintf(f,"%c",configuration_directives[i]);
       if ((configuration_directives[i]=='\r')||(configuration_directives[i]=='\n'))
-	fprintf(stderr,"  > ");
+	fprintf(f,"  > ");
     }
-    fprintf(stderr,"\n");
+    fprintf(f,"\n");
     }
   } else
-    fprintf(stderr,
+    fprintf(f,
 	    "ERROR: Mesh-Extender configuration directive block checksum is wrong:\n");
   
   return 0;
@@ -205,9 +205,11 @@ int eeprom_read(int fd)
     fprintf(stderr,"."); fflush(stderr);
   }
   fprintf(stderr,"\n"); fflush(stderr);
-    
-  eeprom_decode_data("Datablock read from EEPROM",readblock);
-  
+
+  FILE *f=fopen("/tmp/eeprom.data","w");
+  if (!f) f=stderr;
+  eeprom_decode_data("Datablock read from EEPROM",readblock,f);
+  if (f!=stderr) fclose(f);
   
   return 0;      
 }

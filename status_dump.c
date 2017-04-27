@@ -223,6 +223,20 @@ int http_report_network_status(int socket)
       fprintf(f,"<pre>\n");
       show_progress(f,1);
       fprintf(f,"</pre>\n");
+
+      // And EEPROM data (copy from /tmp/eeprom.data)
+      {
+	char buffer[16384];
+	FILE *e=fopen("/tmp/eeprom.data","r");
+	if (e) {
+	  fprintf(f,"<h2>EEPROM Radio information</h2>\n<pre>\n");
+	  int bytes=fread(buffer,1,16384,e);
+	  if (bytes>0) fwrite(buffer,bytes,1,f);
+	  fclose(e);
+	  fprintf(f,"</pre>\n");
+	}
+      }
+      
       
       printf("</body>\n</html>\n");
       
