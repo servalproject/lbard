@@ -729,7 +729,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 		piece_is_manifest,&msg[offset],
 		prefix, servald_server,credential);
 
-      offset+=piece_bytes;
+      if (piece_bytes>0) offset+=piece_bytes;
 
       break;
     case 'R':
@@ -826,7 +826,23 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       sync_tree_receive_message(p,&msg[offset]);
 
       // Skip over the message
-      offset+=msg[offset+1];
+      if (msg[offset+1]) offset+=msg[offset+1];
+      // Zero field length is clearly an error, so abort
+      else {
+	if (monitor_mode)
+	  {
+	    char sender_prefix[128];
+	    char monitor_log_buf[1024];
+	    sprintf(sender_prefix,"%s*",p->sid_prefix);
+	    
+	    snprintf(monitor_log_buf,sizeof(monitor_log_buf),
+		     "S field with zero length at radio packet offset %d",
+		     msg[offset],offset);
+	    
+	    monitor_log(sender_prefix,NULL,monitor_log_buf);
+	  }      
+	return -1;
+      }
       break;
     case 'T':
       // Time stamp
