@@ -329,4 +329,85 @@ test_All() {
    wait_until all_bundles_received
 }
 
+doc_MessageDelivery="Send messages, ack and read them in a 2 party conversation via UHF"
+setup_MessageDelivery() {
+   setup
+}
+test_MessageDelivery() {
+   # 1. empty list
+   set_instance +A
+   executeOk_servald meshms list messages $SIDA $SIDB
+   assertStdoutIs --stdout --line=1 -e '6\n'
+   assertStdoutIs --stdout --line=2 -e '_id:my_offset:their_offset:age:type:message\n'
+   assertStdoutLineCount '==' 2
+
+   # 2. create a manifest with a single message, list it back and wait for delivery
+   set_instance +A
+   executeOk_servald meshms send message $SIDA $SIDB "Hi"
+   executeOk_servald rhizome list
+   b_receives_first_message() {
+       set_instance +B
+       executeOk_servald meshms list messages $SIDB $SIDA
+       if ! grep ":<:Hi\$" $_tfw_tmp/stdout; then
+	   return 1
+       fi
+   }   
+   wait_until b_receives_first_message
+   
+   # 3. append a second message and list them both
+   set_instance +A
+   executeOk_servald meshms send message $SIDA $SIDB "How are you"
+   executeOk_servald meshms list messages $SIDA $SIDB
+   assertStdoutGrep --stdout --matches=1 ":>:How are you\$"
+   assertStdoutGrep --stdout --matches=1 ":>:Hi\$"
+   assertStdoutLineCount '==' 4
+   
+   # 4. list the messages from the receivers point of view (which ACKs them)
+   b_receives_second_message() {
+       set_instance +B
+       executeOk_servald meshms list messages $SIDB $SIDA
+       tfw_cat --stdout
+       if ! grep "^0:25:$rexp_age:<:How are you\$" $_tfw_tmp/stdout; then
+	   return 1
+       fi
+       if ! grep "^1:5:$rexp_age:<:Hi\$"; then
+	   return 1;
+       fi
+   }
+   wait_until b_receives_second_message
+   
+   CONV_BID=$(replayStderr | sed -n -e '/MESHMS CONVERSATION BUNDLE/s/.*bid=\([0-9A-F]*\).*/\1/p')
+   CONV_SECRET=$(replayStderr | sed -n -e '/MESHMS CONVERSATION BUNDLE/s/.*secret=\([0-9A-F]*\).*/\1/p')
+   tfw_log "CONV_BID=$CONV_BID CONV_SECRET=$CONV_SECRET"
+   
+   # 5. mark the first message as read
+   set_instance +B
+   executeOk_servald meshms read messages $SIDB $SIDA 5
+   tfw_cat --stderr
+   check_meshms_bundles
+   executeOk_servald meshms list messages $SIDB $SIDA
+   assertStdoutGrep --stdout --matches=1 "^0:25:$rexp_age:<:How are you\$"
+   assertStdoutGrep --stdout --matches=1 "^1:5:$rexp_age:MARK:read\$"
+   assertStdoutGrep --stdout --matches=1 "^2:5:$rexp_age:<:Hi\$"
+   assertStdoutLineCount '==' 5
+   
+   # 6. mark all messages as read
+   set_instance +B
+   executeOk_servald meshms read messages $SIDB
+   check_meshms_bundles
+   executeOk_servald meshms list messages $SIDB $SIDA
+   assertStdoutGrep --stdout --matches=1 "^0:25:$rexp_age:MARK:read\$"
+   assertStdoutGrep --stdout --matches=1 "^1:25:$rexp_age:<:How are you\$"
+   assertStdoutGrep --stdout --matches=1 "^2:5:$rexp_age:<:Hi\$"
+   assertStdoutLineCount '==' 5
+   
+   # 7. list messages from the senders point of view after they have been delivered
+   set_instance +A
+   executeOk_servald meshms list messages $SIDA $SIDB
+   assertStdoutGrep --stdout --matches=1 "^0:3:$rexp_age:ACK:delivered\$"
+   assertStdoutGrep --stdout --matches=1 "^1:25:$rexp_age:>:How are you\$"
+   assertStdoutGrep --stdout --matches=1 "^2:5:$rexp_age:>:Hi\$"
+   assertStdoutLineCount '==' 5
+}
+   
 runTests "$@"
