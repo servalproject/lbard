@@ -88,7 +88,7 @@ setup20() {
    get_servald_restful_http_server_port PORTS +S
    get_servald_restful_http_server_port PORTT +T
    # Start the fake radio daemon.
-   fork %fakeradio fakecsmaradio rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900 ttys.txt "$1"
+   fork %fakeradio fakecsmaradio rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900 ttys.txt "$1"
    wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 20 ]
    tty1=$(sed -n 1p ttys.txt)
    tty2=$(sed -n 2p ttys.txt)
@@ -149,7 +149,6 @@ teardown() {
 
 doc_DetectRadios="LBARD detects radios"
 setup_DetectRadios() {
-
    setup_servald
    assert_no_servald_processes
    foreach_instance +A +B +C +D create_single_identity
@@ -167,23 +166,23 @@ setup_DetectRadios() {
    tty4=$(sed -n 4p ttys.txt)
    # Start four lbard daemons.
    set_instance +A
-   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$tty1" announce pull
+   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$tty1" pull
    set_instance +B
    fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$tty2" pull
    set_instance +C
    fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$tty3" pull
    set_instance +D
    fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$tty4" pull
-
 }
 test_DetectRadios() {
-   # Test that the bundle arrives at servers B, C and D
-   fork_terminate %lbardA %lbardB %lbardC %lbardD 
-   fork_terminate_all
+   # Test that all radios are detected
    wait_until --timeout=10 grep "No HF radio detected, assuming RFD900 series radio" A_LBARDERR
    wait_until --timeout=10 grep "Codan HF Radio running CICS" B_LBARDERR
    wait_until --timeout=10 grep "Detected Barrett HF Radio" C_LBARDERR
    wait_until --timeout=10 grep "No HF radio detected, assuming RFD900 series radio" D_LBARDERR
+
+   fork_terminate %lbardA %lbardB %lbardC %lbardD 
+   fork_terminate_all
 }
 
 
