@@ -72,7 +72,9 @@ ssize_t write_all(int fd, const void *buf, size_t len)
 {
   ssize_t written = write(fd, buf, len);
   if (written == -1)
-    { perror("write_all(): written == -1"); return -1; }
+    { perror("write_all(): written == -1");
+      fprintf(stderr,"(fd=%d)\n",fd);
+      return -1; }
 
   if ((size_t)written != len)
     { perror("write_all(): written != len"); return -1; }
