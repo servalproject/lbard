@@ -124,7 +124,7 @@ long long start_time=0;
 
 int main(int argc, char **argv)
 {
-  fprintf(stderr,"Version 20170324.1501.1\n");
+  fprintf(stderr,"Version 20170504.0709.1\n");
   
   start_time = gettime_ms();
 
@@ -195,6 +195,40 @@ int main(int argc, char **argv)
     serial_port = argv[4];
   }
 
+  if (message_update_interval<0) message_update_interval=0;
+  
+  last_message_update_time=0;
+  congestion_update_time=0;
+  
+  my_sid_hex="00000000000000000000000000000000";
+  prefix="000000";
+  if (!monitor_mode) {
+    prefix=strdup(argv[3]);
+    if (strlen(prefix)<32) {
+      fprintf(stderr,"You must provide a valid SID for the ID of the local node.\n");
+      exit(-1);
+    }
+    prefix[6]=0;  
+    if (argc>3) {
+      // set my_sid from argv[3]
+      for(int i=0;i<32;i++) {
+	char hex[3];
+	hex[0]=argv[3][i*2];
+	hex[1]=argv[3][i*2+1];
+	hex[2]=0;
+	my_sid[i]=strtoll(hex,NULL,16);
+      }
+      my_sid_hex=strdup(argv[3]);
+    }
+  }
+
+  fprintf(stderr,"%d:My SID as hex is %s\n",__LINE__,my_sid_hex);
+  fprintf(stderr,"My SID prefix is %02X%02X%02X%02X%02X%02X\n",
+	 my_sid[0],my_sid[1],my_sid[2],my_sid[3],my_sid[4],my_sid[5]);
+  
+  if (argc>2) credential=argv[2];
+  if (argc>1) servald_server=argv[1];
+  
   int serialfd=-1;
   serialfd = open(serial_port,O_RDWR);
   if (serialfd<0) {
@@ -207,7 +241,6 @@ int main(int argc, char **argv)
       exit(-1);
     }
   fprintf(stderr,"Serial port open as fd %d\n",serialfd);
-
       
   int n=5;
   while (n<argc) {
@@ -270,39 +303,6 @@ int main(int argc, char **argv)
     n++;
   }
 
-  if (message_update_interval<0) message_update_interval=0;
-  
-  last_message_update_time=0;
-  congestion_update_time=0;
-  
-  my_sid_hex="00000000000000000000000000000000";
-  prefix="000000";
-  if (!monitor_mode) {
-    prefix=strdup(argv[3]);
-    if (strlen(prefix)<32) {
-      fprintf(stderr,"You must provide a valid SID for the ID of the local node.\n");
-      exit(-1);
-    }
-    prefix[6]=0;  
-    if (argc>3) {
-      // set my_sid from argv[3]
-      for(int i=0;i<32;i++) {
-	char hex[3];
-	hex[0]=argv[3][i*2];
-	hex[1]=argv[3][i*2+1];
-	hex[2]=0;
-	my_sid[i]=strtoll(hex,NULL,16);
-      }
-      my_sid_hex=argv[3];
-    }
-  }
-
-  printf("My SID prefix is %02X%02X%02X%02X%02X%02X\n",
-	 my_sid[0],my_sid[1],my_sid[2],my_sid[3],my_sid[4],my_sid[5]);
-  
-  if (argc>2) credential=argv[2];
-  if (argc>1) servald_server=argv[1];
-
   // Open UDP socket to listen for time updates from other LBARD instances
   // (poor man's NTP for LBARD nodes that lack internal clocks)
   int timesocket=-1;
@@ -355,7 +355,6 @@ int main(int argc, char **argv)
     unsigned char msg_out[LINK_MTU];
 
     radio_read_bytes(serialfd,monitor_mode);
-
     load_rhizome_db_async(servald_server,
 			  credential, token);
 
@@ -367,7 +366,7 @@ int main(int argc, char **argv)
       fprintf(stderr,"ERROR: Connected to unknown radio type.\n");
       exit(-1);
     }
-    
+
     // Deal gracefully with clocks that run backwards from time to time.
     if (last_message_update_time>gettime_ms())
       last_message_update_time=gettime_ms();
@@ -419,7 +418,7 @@ int main(int argc, char **argv)
 	  }
 	  // printf("--- Sent %d time announcement packets.\n",i);
 	}
-	  
+
 	// Check for time packet
 	if (timesocket!=-1)
 	  {
@@ -460,7 +459,7 @@ int main(int argc, char **argv)
 
 	if ((!monitor_mode)&&(radio_ready())) {
 	  update_my_message(serialfd,
-			    my_sid,
+			    my_sid,my_sid_hex,
 			    LINK_MTU,msg_out,
 			    servald_server,credential);
 	
@@ -475,7 +474,7 @@ int main(int argc, char **argv)
 	  last_status_time=time(0)+3;
 	  status_dump();
 	}
-    }
+  }
     if ((serial_errors>20)&&reboot_when_stuck) {
       // If we are unable to write to the serial port repeatedly for a while,
       // we could be facing funny serial port behaviour bugs that we see on the MR3020.
@@ -488,6 +487,6 @@ int main(int argc, char **argv)
     if (time(0)>last_summary_time) {
       last_summary_time=time(0);
       show_progress(stderr,0);
-    }    
+   }
   }
 }

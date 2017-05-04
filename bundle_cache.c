@@ -54,6 +54,14 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
 		       char *servald_server, char *credential)
 {
   if (bundle_number<0) return -1;
+
+  for(int i=0;i<6;i++) {
+    if (sid_prefix_hex[i]<'0'||sid_prefix_hex[i]>'f') {
+      fprintf(stderr,"Saw illegal character 0x%02x in sid_prefix_hex[%d]\n",
+	      (unsigned char)sid_prefix_hex[i],i);
+      exit(-1);
+    }
+  }
   
   if ((!bid_of_cached_bundle)
       ||strcasecmp(bundles[bundle_number].bid_hex,bid_of_cached_bundle)

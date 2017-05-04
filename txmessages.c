@@ -122,7 +122,8 @@ int my_time_stratum=0xff00;
 
 int message_counter=0;
 int update_my_message(int serialfd,
-		      unsigned char *my_sid, int mtu,unsigned char *msg_out,
+		      unsigned char *my_sid, char *my_sid_hex,
+		      int mtu,unsigned char *msg_out,
 		      char *servald_server,char *credential)
 {
 #ifdef SYNC_BY_BAR
@@ -216,7 +217,7 @@ int update_my_message(int serialfd,
     msg_out[offset++]='G';
     for(int i=0;i<4;i++) msg_out[offset++]=(my_instance_id>>(i*8))&0xff;
   }
-
+  
 #ifdef SYNC_BY_BAR
   // Put one or more BARs
   int bar_number=find_highest_priority_bar();
@@ -246,7 +247,7 @@ int update_my_message(int serialfd,
      We also need the sequence numbers to be recipient specific.
   */
   sync_by_tree_stuff_packet(&offset,mtu,msg_out,
-			    prefix,servald_server,credential);
+			    my_sid_hex,servald_server,credential);
 #endif
 
   // Increment message counter

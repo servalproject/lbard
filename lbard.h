@@ -153,6 +153,9 @@ extern char message_buffer[];
 extern int message_buffer_size;
 extern int message_buffer_length;
 
+extern char *my_sid_hex;
+
+
 struct bundle_record {
   int index; // position in array of bundles
   
@@ -308,7 +311,8 @@ int announce_bundle_piece(int bundle_number,int *offset,int mtu,unsigned char *m
 			  char *prefix,char *servald_server, char *credential,
 			  int target_peer);
 int update_my_message(int serialfd,
-		      unsigned char *my_sid, int mtu,unsigned char *msg_out,
+		      unsigned char *my_sid, char *my_sid_hex,
+		      int mtu,unsigned char *msg_out,
 		      char *servald_server,char *credential);
 size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
 int radio_send_message(int serialfd, unsigned char *msg_out,int offset);
@@ -401,7 +405,7 @@ int http_post_meshms(char *server_and_port, char *auth_token,
 		     int timeout_ms);
 int sync_setup(void);
 int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
-			      char *sid_prefix_bin,
+			      char *sid_prefix_hex,
 			      char *servald_server,char *credential);
 int sync_tell_peer_we_have_this_bundle(int peer, int bundle);
 int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial);

@@ -256,7 +256,7 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   if (debug_announce) {
     printf("T+%lldms : Announcing for %s* ",gettime_ms()-start_time,
 	    peer_records[target_peer]->sid_prefix);
-    for(int i=0;i<8;i++) fprintf(stderr,"%c",bundles[bundle_number].bid_hex[i]);
+    for(int i=0;i<8;i++) printf("%c",bundles[bundle_number].bid_hex[i]);
     printf("* (priority=0x%llx) version %lld %s segment [%d,%d)\n",
 	    bundles[bundle_number].last_priority,
 	    bundles[bundle_number].version,
@@ -287,7 +287,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
   int bundle_number=peer_records[peer]->tx_bundle;
   if (bundle_number<0) return -1;
   
-  if (prime_bundle_cache(bundle_number,
+      if (prime_bundle_cache(bundle_number,
 			 sid_prefix_hex,servald_server,credential)) {
     peer_records[peer]->tx_cache_errors++;
     if (peer_records[peer]->tx_cache_errors>MAX_CACHE_ERRORS)
@@ -382,7 +382,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 }
 
 int sync_tree_send_data(int *offset,int mtu, unsigned char *msg_out,int peer,
-			char *sid_prefix_bin,char *servald_server,char *credential)
+			char *sid_prefix_hex,char *servald_server,char *credential)
 {
   /*
     Send a piece of the bundle (manifest or body) to this peer, for the highest
@@ -394,10 +394,9 @@ int sync_tree_send_data(int *offset,int mtu, unsigned char *msg_out,int peer,
   if (peer_records[peer]->tx_bundle>-1)
     {
       // Try to also send a piece of body, even if we have already stuffed some
-      // manifest in, because we might still have space.
-      
+      // manifest in, because we might still have space.      
       sync_announce_bundle_piece(peer,offset,mtu,msg_out,
-				 sid_prefix_bin,servald_server,credential);
+				 sid_prefix_hex,servald_server,credential);
     }
   return 0;
 }
@@ -412,7 +411,7 @@ int report_queue_partials[REPORT_QUEUE_LEN];
 char *report_queue_message[REPORT_QUEUE_LEN];
 
 int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
-			      char *sid_prefix_bin,
+			      char *sid_prefix_hex,
 			      char *servald_server,char *credential)
 {
   // Stuff packet as full as we can with data for as many peers as we can.
@@ -458,7 +457,7 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
     int space=mtu-(*offset);
     if (space>10) {
       sync_tree_send_data(offset,mtu,msg_out,peer,
-			  sid_prefix_bin,servald_server,credential);
+			  sid_prefix_hex,servald_server,credential);
     } else {
       // No space -- can't do anything
     }
@@ -1059,7 +1058,7 @@ void peer_has_this_key(void *context, void *peer_context, const sync_key_t *key)
   struct peer_state *p=(struct peer_state *)peer_context;
 
   // Peer has something that we want.
-  if (0) printf(">>> Peer %s* is HAS some bundle that we don't have.\n",
+  if (1) printf(">>> Peer %s* is HAS some bundle that we don't have.\n",
 		p->sid_prefix);
 
 }
@@ -1073,7 +1072,7 @@ void peer_now_has_this_key(void *context, void *peer_context,void *key_context,
   struct peer_state *p=(struct peer_state *)peer_context;
   struct bundle_record *b=(struct bundle_record*)key_context;
 
-  if (0)
+  if (1)
     printf(">>> Peer %s* is now has bundle %s*\n"
 	   "    service=%s, version=%lld\n"
 	   "    sender=%s,\n"
@@ -1094,7 +1093,7 @@ void peer_does_not_have_this_key(void *context, void *peer_context,void *key_con
   struct peer_state *p=(struct peer_state *)peer_context;
   struct bundle_record *b=(struct bundle_record*)key_context;
 
-  if (0)
+  if (1)
     printf(">>> Peer %s* is missing bundle %s*\n"
 	   "    service=%s, version=%lld\n"
 	   "    sender=%s,\n"

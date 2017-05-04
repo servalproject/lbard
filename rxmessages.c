@@ -203,6 +203,7 @@ int saw_piece(char *peer_prefix,int for_me,
     // This is a bundle that for which we already have a previous version, and
     // for which we as yet have no body segments.  So fetch from Rhizome the content
     // that we do have, and prepopulate the body segment.
+    fprintf(stderr,"%s:%d:My SID as hex is %s\n",__FILE__,__LINE__,my_sid_hex);
     if (!prime_bundle_cache(bundle_number,my_sid_hex,servald_server,credential)) {
       struct segment_list *s=calloc(1,sizeof(struct segment_list));
       assert(s);
@@ -380,7 +381,11 @@ int saw_piece(char *peer_prefix,int for_me,
       if (!manifest_binary_to_text
 	  (peer_records[peer]->partials[i].manifest_segments->data,
 	   peer_records[peer]->partials[i].manifest_length,
-	   manifest,&manifest_len)) {      
+	   manifest,&manifest_len)) {
+
+	// Display decompressed manifest
+	dump_bytes("Decompressed Manifest",manifest,manifest_len);
+	
 	insert_result=
 	  rhizome_update_bundle(manifest,manifest_len,
 				peer_records[peer]->partials[i].body_segments->data,
@@ -420,12 +425,20 @@ int saw_piece(char *peer_prefix,int for_me,
 	sync_remember_recently_received_bundle
 	  (peer_records[peer]->partials[i].bid_prefix,
 	   peer_records[peer]->partials[i].bundle_version);
-					       
-	
+      } else {
+	printf(">>> Could not decompress binary manifest.  Not inserting\n");
       }
       if (insert_result) {
 	// Failed to insert, so mark this bundle for deprioritisation, so that we
 	// don't just keep asking for it.
+	fprintf(stderr,"Failed to insert bundle %s*/%lld (result=%d)\n",
+		peer_records[peer]->partials[i].bid_prefix,
+		peer_records[peer]->partials[i].bundle_version,insert_result);
+	dump_bytes("manifest",manifest,manifest_len);
+	dump_bytes("payload",
+		   peer_records[peer]->partials[i].body_segments->data,
+		   peer_records[peer]->partials[i].body_length);
+
 	char bid[32*2+1];
 	if (!manifest_extract_bid(peer_records[peer]->partials[i].manifest_segments->data,
 				  bid)) {
@@ -837,7 +850,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
 	    
 	    snprintf(monitor_log_buf,sizeof(monitor_log_buf),
 		     "S field with zero length at radio packet offset %d",
-		     msg[offset],offset);
+		     offset);
 	    
 	    monitor_log(sender_prefix,NULL,monitor_log_buf);
 	  }      
