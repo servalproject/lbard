@@ -660,7 +660,7 @@ int main(int argc,char **argv)
 	for(int j=0;j<count;j++) {
 	  switch(clients[i].radio_type) {
 	  case RADIO_RFD900: rfd900_read_byte(i,buffer[j]); break;
-	  case RADIO_HFCODAN: break;
+	  case RADIO_HFCODAN: hfcodan_read_byte(i,buffer[j]); break;
 	  case RADIO_HFBARRETT: break;
 	  }
 	  activity++;

@@ -17,6 +17,7 @@ int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_tim
 					 uint8_t *packet_in,int packet_len);
 long long gettime_ms();
 int rfd900_read_byte(int client,unsigned char byte);
+int hfcodan_read_byte(int client,unsigned char c);
 
 #include "fec-3.0.1/fixed.h"
 void encode_rs_8(data_t *data, data_t *parity,int pad);

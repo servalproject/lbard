@@ -37,6 +37,7 @@ echotest:	Makefile echotest.c
 
 FAKERADIOSRCS=	fakecsmaradio.c \
 		fake_rfd900.c \
+		fake_hfcodan.c \
 		fec-3.0.1/ccsds_tables.c \
 		fec-3.0.1/encode_rs_8.c \
 		fec-3.0.1/init_rs_char.c \
