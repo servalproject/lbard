@@ -44,7 +44,7 @@ setup() {
    get_servald_restful_http_server_port PORTC +C
    get_servald_restful_http_server_port PORTD +D
    # Start the fake radio daemon.
-   fork %fakeradio fakecsmaradio 4 ttys.txt "$1"
+   fork %fakeradio fakecsmaradio rfd900,rfd900,rfd900,rfd900 ttys.txt "$1"
    wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
    tty1=$(sed -n 1p ttys.txt)
    tty2=$(sed -n 2p ttys.txt)
@@ -368,10 +368,10 @@ test_MessageDelivery() {
        set_instance +B
        executeOk_servald meshms list messages $SIDB $SIDA
        tfw_cat --stdout
-       if ! egrep "^0:[0-9]+:[0-9]+:<:How are you\$" $_tfw_tmp/stdout; then
+       if ! egrep "^0:[0-9]+:[0-9]+:[0-9]+:<:How are you\$" $_tfw_tmp/stdout; then
 	   return 1
        fi
-       if ! egrep "^1:[0-9]+:[0-9]+:<:Hi\$"; then
+       if ! egrep "^1:[0-9]+:[0-9]+:[0-9]+:<:Hi\$" $_tfw_tmp/stdout; then
 	   return 1;
        fi
    }
@@ -388,27 +388,26 @@ test_MessageDelivery() {
    check_meshms_bundles
    executeOk_servald meshms list messages $SIDB $SIDA
    assertStdoutGrep --stdout --matches=1 ":<:How are you\$"
-#   assertStdoutGrep --stdout --matches=1 ":5:MARK:read\$"
+   assertStdoutEgrep --stdout --matches=1 ":5:[0-9]+:[0-9]+:MARK:read\$"
    assertStdoutGrep --stdout --matches=1 ":<:Hi\$"
-#   assertStdoutLineCount '==' 5
-   assertStdoutLineCount '==' 4
+   assertStdoutLineCount '==' 5
    
    # 6. mark all messages as read
    set_instance +B
    executeOk_servald meshms read messages $SIDB
    check_meshms_bundles
    executeOk_servald meshms list messages $SIDB $SIDA
-   assertStdoutGrep --stdout --matches=1 "^0:25:[0-9]+:MARK:read\$"
-   assertStdoutGrep --stdout --matches=1 "^1:25:[0-9]+:<:How are you\$"
-   assertStdoutGrep --stdout --matches=1 "^2:5:[0-9]+:<:Hi\$"
+   assertStdoutEgrep --stdout --matches=1 "^0:25:[0-9]+:[0-9]+:MARK:read\$"
+   assertStdoutEgrep --stdout --matches=1 "^1:[0-9]+:25:[0-9]+:<:How are you\$"
+   assertStdoutEgrep --stdout --matches=1 "^2:[0-9]+:5:[0-9]+:<:Hi\$"
    assertStdoutLineCount '==' 5
    
    # 7. list messages from the senders point of view after they have been delivered
    set_instance +A
    executeOk_servald meshms list messages $SIDA $SIDB
-   assertStdoutGrep --stdout --matches=1 "^0:3:[0-9]+:ACK:delivered\$"
-   assertStdoutGrep --stdout --matches=1 "^1:25:[0-9]+:>:How are you\$"
-   assertStdoutGrep --stdout --matches=1 "^2:5:[0-9]+:>:Hi\$"
+   assertStdoutEgrep --stdout --matches=1 "^0:3:[0-9]+:[0-9]+:ACK:delivered\$"
+   assertStdoutEgrep --stdout --matches=1 "^1:25:[0-9]+:[0-9]+:>:How are you\$"
+   assertStdoutEgrep --stdout --matches=1 "^2:5:[0-9]+:[0-9]+:>:Hi\$"
    assertStdoutLineCount '==' 5
 }
    

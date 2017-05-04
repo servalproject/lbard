@@ -26,8 +26,13 @@ int decode_rs_8(data_t *data, int *eras_pos, int no_eras, int pad);
 
 extern long long start_time;
 
+#define RADIO_RFD900 1
+#define RADIO_HFCODAN 2
+#define RADIO_HFBARRETT 3
+
 struct client {
   int socket;
+  int radio_type;
 
   int rx_state;
 #define STATE_NORMAL 0

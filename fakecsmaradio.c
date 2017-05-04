@@ -31,7 +31,7 @@ long long gettime_ms()
   return nowtv.tv_sec * 1000LL + nowtv.tv_usec / 1000;
 }
 
-int register_client(int client_socket)
+int register_client(int client_socket, int radio_type)
 {
   if (client_count>=MAX_CLIENTS) {
     fprintf(stderr,"Too many clients: Increase MAX_CLIENTS?\n");
@@ -40,6 +40,7 @@ int register_client(int client_socket)
 
   bzero(&clients[client_count],sizeof(struct client));
   clients[client_count].socket = client_socket;
+  clients[client_count].radio_type = radio_type;
   client_count++;
 
   set_nonblocking(client_socket);
@@ -573,11 +574,17 @@ int main(int argc,char **argv)
   FILE *tty_file=NULL;
 
   start_time=gettime_ms();
+
+  char *radio_types="rfd900,rfd900";
   
-  if (argv&&argv[1]) radio_count=atoi(argv[1]);
+  if (argv&&argv[1]) radio_types=argv[1];
+  radio_count=1;
+  for(int i=0;radio_types[i];i++) if (radio_types[i]==',') radio_count++;
+  fprintf(stderr,"radio_count=%d\n",radio_count);
+  
   if (argc>2) tty_file=fopen(argv[2],"w");
   if ((argc<3)||(argc>4)||(!tty_file)||(radio_count<2)||(radio_count>=MAX_CLIENTS)) {
-    fprintf(stderr,"usage: fakecsmaradio <number of radios> <tty file> [packet drop probability|filter rules]\n");
+    fprintf(stderr,"usage: fakecsmaradio <radio_type,...> <tty file> [packet drop probability|filter rules]\n");
     fprintf(stderr,"\nNumber of radios must be between 2 and %d.\n",MAX_CLIENTS-1);
     fprintf(stderr,"The name of each tty will be written to <tty file>\n");
     fprintf(stderr,"The optional packet drop probability allows the simulation of packet loss.\n");
@@ -605,7 +612,17 @@ int main(int argc,char **argv)
     }
   srandom(time(0));
 
+  char *r=radio_types;
+  
   for(int i=0;i<radio_count;i++) {
+    char radio_type[1024];
+    int rt_len=0;
+    for(int i=0;r[i]!=','&&r[i];i++)
+      radio_type[rt_len++]=r[i];
+    radio_type[rt_len]=0;
+    r+=rt_len+1;
+    fprintf(stderr,"Radio #%d is a '%s'\n",i,radio_type);
+    
     int fd=posix_openpt(O_RDWR|O_NOCTTY);
     if (fd<0) {
       perror("posix_openpt");
@@ -616,7 +633,15 @@ int main(int argc,char **argv)
     fcntl(fd,F_SETFL,fcntl(fd, F_GETFL, NULL)|O_NONBLOCK);
     fprintf(tty_file,"%s\n",ptsname(fd));
     printf("Radio #%d is available at %s\n",client_count,ptsname(fd));
-    clients[client_count++].socket=fd;       
+    int radio_type_id=-1;
+    if (!strcasecmp(radio_type,"rfd900")) radio_type_id=RADIO_RFD900;
+    if (!strcasecmp(radio_type,"hfcodan")) radio_type_id=RADIO_HFCODAN;
+    if (!strcasecmp(radio_type,"hfbarrett")) radio_type_id=RADIO_HFBARRETT;
+    if (radio_type_id==-1) {
+      fprintf(stderr,"Unknown radio type '%s'\n",radio_type);
+      exit(-1);
+    }
+    register_client(fd,radio_type_id);
   }
   fclose(tty_file);
   
@@ -632,8 +657,14 @@ int main(int argc,char **argv)
       unsigned char buffer[8192];
       int count = read(clients[i].socket,buffer,8192);
       if (count>0) {
-	for(int j=0;j<count;j++) rfd900_read_byte(i,buffer[j]);
-	activity++;
+	for(int j=0;j<count;j++) {
+	  switch(clients[i].radio_type) {
+	  case RADIO_RFD900: rfd900_read_byte(i,buffer[j]); break;
+	  case RADIO_HFCODAN: break;
+	  case RADIO_HFBARRETT: break;
+	  }
+	  activity++;
+	}
       }
       
       // Release any queued packet once we pass the embargo time
