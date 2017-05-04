@@ -92,10 +92,19 @@ int register_client(int client_socket)
   return 0;
 }
 
-int dump_bytes(char *msg,unsigned char *bytes,int length)
+void print_spaces(FILE *f,int col)
 {
+  for(int i=0;i<col;i++)
+    fprintf(f," ");  
+}
+
+
+int dump_bytes(int col, char *msg,unsigned char *bytes,int length)
+{
+  print_spaces(stderr,col);
   fprintf(stderr,"%s:\n",msg);
   for(int i=0;i<length;i+=16) {
+    print_spaces(stderr,col);
     fprintf(stderr,"%04X: ",i);
     for(int j=0;j<16;j++) if (i+j<length) fprintf(stderr," %02X",bytes[i+j]);
     fprintf(stderr,"\n");
@@ -134,6 +143,7 @@ struct filterable {
   uint32_t body_length;
   uint8_t body_log_length;
   uint16_t piece_length;
+  uint16_t piece_packet_offset;  // where in packet the bytes of the piece start
 
   uint8_t stratum;
   uint64_t timestamp_sec;
@@ -243,6 +253,7 @@ void filterable_parse_offset_compound(struct filterable *f,const uint8_t *packet
     f->is_body_piece=1;
   }
   f->piece_length=piece_bytes;
+  f->piece_packet_offset=*offset;
   (*offset)+=piece_bytes;
   
 }
@@ -296,6 +307,18 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
 
     fprintf(stderr,"          Fragment type '%c' : %s\n",
 	    f->type,fragment_name(f->type));
+
+    if ((f->type!='G')&&(f->type!='T')) {
+      fprintf(stderr,"          bid=%02X%02X%02X%02X%02X%02X%02X%02X*, version=%llx\n",
+	      f->bid_prefix[0],f->bid_prefix[1],f->bid_prefix[2],f->bid_prefix[3],
+	      f->bid_prefix[4],f->bid_prefix[5],f->bid_prefix[6],f->bid_prefix[7],
+	      f->version);
+      if (f->body_log_length)
+	fprintf(stderr,"          manifest length=%d, body length=%d (or 2^%d)\n",
+		f->manifest_length,f->body_length,f->body_log_length
+		);
+    }
+
     switch(f->type) {
     case 'P': case 'p':
       if (f->is_manifest_piece)
@@ -312,6 +335,9 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
 	fprintf(stderr,"          body bytes [%d..%d] (%d bytes) @ T+%lldms\n",
 		f->body_offset,f->body_offset+f->piece_length-1,f->piece_length,
 		gettime_ms()-start_time);
+      // Display the actual bytes included
+      dump_bytes(12,"Bytes of piece",
+		 &packet_in[f->piece_packet_offset],f->piece_length);
       break;
     case 'A': case 'a':
       fprintf(stderr,"          Acknowledging to manifest offset %d, body offset %d\n",
@@ -320,15 +346,6 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
       break;
     }
   
-    if ((f->type!='G')&&(f->type!='T')) {
-      fprintf(stderr,"          bid=%02X%02X%02X%02X%02X%02X%02X%02X*, version=%016llx\n",
-	      f->bid_prefix[0],f->bid_prefix[1],f->bid_prefix[2],f->bid_prefix[3],
-	      f->bid_prefix[4],f->bid_prefix[5],f->bid_prefix[6],f->bid_prefix[7],
-	      f->version);
-      fprintf(stderr,"          manifest length=%d, body length=%d (or 2^%d)\n",
-	      f->manifest_length,f->body_length,f->body_log_length
-	      );
-    }
   }
 
   int match=0;
@@ -474,7 +491,7 @@ int filter_process_packet(int from,int to,
     default:
       fprintf(stderr,"WARNING: Saw unknown fragment type 0x%02x @ %d -- Ignoring packet\n",
 	      packet[offset],offset);
-      dump_bytes("Packet",packet,*packet_len);
+      dump_bytes(2,"Packet",packet,*packet_len);
       return -1;
     }
   }
@@ -483,8 +500,8 @@ int filter_process_packet(int from,int to,
   if ((out_len!=len)||memcmp(packet,packet_out,out_len)) {
     fprintf(stderr,"Filtered packet contains %d/%d bytes.\n",
 	    out_len,len);
-    dump_bytes("Filtered",packet_out,out_len);
-    dump_bytes("Original",packet,len);
+    dump_bytes(2,"Filtered",packet_out,out_len);
+    dump_bytes(2,"Original",packet,len);
   }
 #endif
 
@@ -495,7 +512,7 @@ int filter_process_packet(int from,int to,
   out_len+=FEC_LENGTH;
 
 #if 0
-  if (out_len!=len) dump_bytes("With FEC",packet_out,out_len);
+  if (out_len!=len) dump_bytes(0,"With FEC",packet_out,out_len);
 #endif
   
   // Now update packet
