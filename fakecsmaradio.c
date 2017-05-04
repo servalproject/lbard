@@ -3,26 +3,7 @@
 // which in turn was sourced from:
 // 
 
-#include <stdio.h>
-#include <stdint.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <time.h>
-#include <sys/time.h>
-#include <unistd.h>
-
-#include "fec-3.0.1/fixed.h"
-void encode_rs_8(data_t *data, data_t *parity,int pad);
-int decode_rs_8(data_t *data, int *eras_pos, int no_eras, int pad);
-#define FEC_LENGTH 32
-#define FEC_MAX_BYTES 223
+#include "fakecsmaradio.h"
 
 int filter_verbose=1;
 
@@ -30,34 +11,8 @@ int packet_drop_threshold=0;
 
 char *socketname="/tmp/fakecsmaradio.socket";
 
-struct client {
-  int socket;
-
-  int rx_state;
-#define STATE_NORMAL 0
-#define STATE_BANG 1
-
-#define CLIENT_BUFFER_SIZE 4096
-  unsigned char buffer[CLIENT_BUFFER_SIZE];
-  int buffer_count;
-
-  // Buffer holding received packet ready for sending when transmission
-  // time actually expires.
-  unsigned char rx_queue[CLIENT_BUFFER_SIZE];
-  int rx_queue_len;
-  long long rx_embargo;
-  int rx_colission;
-  
-};
-
-#define MAX_CLIENTS 1024
 struct client clients[MAX_CLIENTS];
 int client_count=0;
-
-// Emulate this bitrate on the radios
-// (emulate some (but not all) collission modes for
-// simultaneous transmission).
-int emulated_bitrate = 128000;
 
 long long start_time;
 
@@ -561,99 +516,6 @@ int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_tim
   return 0;
 }
 
-int client_read_byte(int client,unsigned char byte)
-{
-  switch(clients[client].rx_state) {
-  case STATE_BANG:
-    clients[client].rx_state=STATE_NORMAL;
-    switch(byte) {
-    case '!': // TX now
-      {
-	unsigned char packet[10000];
-	int packet_len=0;
-	int send_bytes=clients[client].buffer_count;
-	if (send_bytes>255) send_bytes=255;
-
-	// First the packet body, upto 255 bytes
-	bcopy(&clients[client].buffer[0],
-	      &packet[packet_len],
-	      send_bytes);
-	packet_len+=send_bytes;
-	bcopy(&clients[client].buffer[send_bytes],
-	      &clients[client].buffer[0],
-	      clients[client].buffer_count-send_bytes);
-	clients[client].buffer_count-=send_bytes;
-	
-	// Work out when the packet should be delivered
-	// (include 8 bytes time for the preamble)
-	// Calculate first in usec, then divide down to ms
-	int transmission_time = 1000000*8*(8+send_bytes)/emulated_bitrate;
-	transmission_time/=1000;
-	long long delivery_time = gettime_ms()+transmission_time;
-	
-	// Queue bytes for RX by remote side.
-	// Set delay according to length of packet and chosen bit rate.
-	// Note that this approach means that colliding packets will cause them to
-	// fail to be delivered, which is probably a good thing
-	printf("Radio #%d sends a packet of %d bytes at T+%lldms (TX will take %dms)\n",
-	       client,packet_len,gettime_ms()-start_time,transmission_time);
-
-	// dump_bytes("packet",packet,packet_len);
-	
-	for(int j=0;j<client_count;j++) {
-	  if (j!=client) {
-	    filter_and_enqueue_packet_for_client(client,j,delivery_time,
-						 packet,packet_len);
-	  }
-	}
-      }
-      break;
-    case 'C':
-      clients[client].buffer_count=0;
-      break;
-    case 'F': // Report flash version
-      // Not required
-      break;
-    case 'H': // set TX power high
-      // Not required
-      printf("Setting radio #%d to high TX power\n",client);
-      break;
-    case 'L': // set TX power high
-      // Not required
-      printf("Setting radio #%d to low TX power\n",client);
-      break;
-    case 'R': // Reset radio paramegers
-      // Not required
-      break;
-    case 'Z': // Reset radio
-      clients[client].buffer_count=0;
-      break;
-    case 'V': // version
-      write(clients[client].socket,"1",1);
-      break;
-    case '.': // escaped !
-      if (clients[client].buffer_count<CLIENT_BUFFER_SIZE)
-	clients[client].buffer[clients[client].buffer_count++]='!';
-      break;
-    default: // unknown escape
-      write(clients[client].socket,"E",1);
-      break;
-    }
-    
-    break;
-  case STATE_NORMAL:
-    if (byte!='!') {
-      if (clients[client].buffer_count<CLIENT_BUFFER_SIZE)
-	clients[client].buffer[clients[client].buffer_count++]=byte;
-    } else {
-      clients[client].rx_state=STATE_BANG;
-    }
-    break;
-  }
-
-  return 0;
-}
-
 int filter_rule_add(char *rule)
 {
   if (filter_rule_count>=MAX_FILTER_RULES) {
@@ -770,7 +632,7 @@ int main(int argc,char **argv)
       unsigned char buffer[8192];
       int count = read(clients[i].socket,buffer,8192);
       if (count>0) {
-	for(int j=0;j<count;j++) client_read_byte(i,buffer[j]);
+	for(int j=0;j<count;j++) rfd900_read_byte(i,buffer[j]);
 	activity++;
       }
       

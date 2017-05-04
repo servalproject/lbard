@@ -36,11 +36,12 @@ echotest:	Makefile echotest.c
 	$(CC) $(CFLAGS) -o echotest echotest.c
 
 FAKERADIOSRCS=	fakecsmaradio.c \
+		fake_rfd900.c \
 		fec-3.0.1/ccsds_tables.c \
 		fec-3.0.1/encode_rs_8.c \
 		fec-3.0.1/init_rs_char.c \
 		fec-3.0.1/decode_rs_8.c
-fakecsmaradio:	Makefile $(FAKERADIOSRCS)
+fakecsmaradio:	Makefile $(FAKERADIOSRCS) fakecsmaradio.h
 	$(CC) $(CFLAGS) -o fakecsmaradio $(FAKERADIOSRCS)
 
 manifesttest:	Makefile manifests.c
