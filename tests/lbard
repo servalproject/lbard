@@ -88,7 +88,7 @@ setup20() {
    get_servald_restful_http_server_port PORTS +S
    get_servald_restful_http_server_port PORTT +T
    # Start the fake radio daemon.
-   fork %fakeradio fakecsmaradio 20 ttys.txt "$1"
+   fork %fakeradio fakecsmaradio rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900,rfd900 ttys.txt "$1"
    wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 20 ]
    tty1=$(sed -n 1p ttys.txt)
    tty2=$(sed -n 2p ttys.txt)
