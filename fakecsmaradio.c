@@ -329,6 +329,17 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
 	fprintf(stderr,"          body bytes [%d..%d] (%d bytes) @ T+%lldms\n",
 		f->body_offset,f->body_offset+f->piece_length-1,f->piece_length,
 		gettime_ms()-start_time);
+      if (log_pieces)
+	fprintf(stderr,">>> %s %02X%02X%02X%02X*/%lld %s %d..%d (packet #%d offset %d)\n",
+		timestamp_str(f->sender_sid_prefix),
+		f->bid_prefix[0],f->bid_prefix[1],f->bid_prefix[2],f->bid_prefix[3],
+		f->version,
+		f->is_manifest_piece?"manifest":(f->is_body_piece?"body":"unknown"),
+		f->is_manifest_piece?f->manifest_offset:f->body_offset,
+		f->is_manifest_piece?(f->manifest_offset+f->piece_length-1)
+		:(f->body_offset+f->piece_length-1),
+		packet_count,f->packet_start
+		);
       // Display the actual bytes included
       dump_bytes(12,"Bytes of piece",
 		 &packet_in[f->piece_packet_offset],f->piece_length);
