@@ -42,13 +42,17 @@ int rfd900_read_byte(int client,unsigned char byte)
 	printf("Radio #%d sends a packet of %d bytes at T+%lldms (TX will take %dms)\n",
 	       client,packet_len,gettime_ms()-start_time,transmission_time);
 
-	// dump_bytes("packet",packet,packet_len);
+	// Client == -1 tells filter process to log packet details for statistics
+	// for post-analysis.
+	filter_and_enqueue_packet_for_client(client,-1,delivery_time,packet,packet_len);
 	
+	// dump_bytes("packet",packet,packet_len);
+
 	for(int j=0;j<client_count;j++) {
 	  if (j!=client) {
 	    filter_and_enqueue_packet_for_client(client,j,delivery_time,
 						 packet,packet_len);
-	  }
+	  }	  
 	}
       }
       break;

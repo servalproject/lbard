@@ -44,6 +44,20 @@ extern char *my_sid_hex;
 #include "lbard.h"
 #include "sha1.h"
 
+char timestamp_str_out[1024];
+char *timestamp_str(void)
+{
+  struct tm tm;
+  time_t now=time(0);
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  localtime_r(&now,&tm);
+  snprintf(timestamp_str_out,1024,"[%02d:%02d.%02d.%03d %c%c%c%c*]",
+	   tm.tm_hour,tm.tm_min,tm.tm_sec,tv.tv_usec/1000,
+	   my_sid_hex[0],my_sid_hex[1],my_sid_hex[2],my_sid_hex[3]);
+  return timestamp_str_out;
+}
+
 int bundle_calculate_tree_key(sync_key_t *bundle_tree_key,
 			      uint8_t sync_tree_salt[SYNC_SALT_LEN],
 			      char *bid,
@@ -1058,8 +1072,8 @@ void peer_has_this_key(void *context, void *peer_context, const sync_key_t *key)
   struct peer_state *p=(struct peer_state *)peer_context;
 
   // Peer has something that we want.
-  if (1) printf(">>> Peer %s* is HAS some bundle that we don't have.\n",
-		p->sid_prefix);
+  if (1) printf(">>> %s Peer %s* HAS some bundle that we don't have.\n",
+		timestamp_str(),p->sid_prefix);
 
 }
 
@@ -1073,10 +1087,11 @@ void peer_now_has_this_key(void *context, void *peer_context,void *key_context,
   struct bundle_record *b=(struct bundle_record*)key_context;
 
   if (1)
-    printf(">>> Peer %s* is now has bundle %s*\n"
-	   "    service=%s, version=%lld\n"
+    printf(">>> %s Peer %s* now has bundle %s*,"
+	   " service=%s, version=%lld\n"
 	   "    sender=%s,\n"
 	   "    recipient=%s\n",
+	   timestamp_str(),
 	   p->sid_prefix,
 	   b->bid_hex,b->service,b->version,b->sender,b->recipient);
 
@@ -1094,10 +1109,11 @@ void peer_does_not_have_this_key(void *context, void *peer_context,void *key_con
   struct bundle_record *b=(struct bundle_record*)key_context;
 
   if (1)
-    printf(">>> Peer %s* is missing bundle %s*\n"
-	   "    service=%s, version=%lld\n"
+    printf(">>> %s Peer %s* is missing bundle %s*, "
+	   "service=%s, version=%lld\n"
 	   "    sender=%s,\n"
 	   "    recipient=%s\n",
+	   timestamp_str(),
 	   p->sid_prefix,
 	   b->bid_hex,b->service,b->version,b->sender,b->recipient);
 

@@ -198,7 +198,7 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 #ifdef NOT_DEFINED
   char filename[1024];
   snprintf(filename,1024,"%08lx.manifest",time(0));
-  printf(">>> Writing manifest to %s\n",filename);
+  printf(">>> %s Writing manifest to %s\n",timestamp_str(),filename);
   FILE *f=fopen(filename,"w");
   fwrite(manifest_data,manifest_length,1,f);
   fclose(f);

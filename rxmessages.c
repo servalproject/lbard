@@ -363,8 +363,8 @@ int saw_piece(char *peer_prefix,int for_me,
     {
       // We have a single segment for body and manifest that span the complete
       // size.
-      printf(">>> We have the entire bundle %s*/%lld now.\n",
-	     bid_prefix,version);
+      printf(">>> %s We have the entire bundle %s*/%lld now.\n",
+	     timestamp_str(),bid_prefix,version);
 
       // First, reconstitute the manifest from the binary encoded format
       unsigned char manifest[1024];
@@ -426,7 +426,8 @@ int saw_piece(char *peer_prefix,int for_me,
 	  (peer_records[peer]->partials[i].bid_prefix,
 	   peer_records[peer]->partials[i].bundle_version);
       } else {
-	printf(">>> Could not decompress binary manifest.  Not inserting\n");
+	printf(">>> %s Could not decompress binary manifest.  Not inserting\n",
+	       timestamp_str());
       }
       if (insert_result) {
 	// Failed to insert, so mark this bundle for deprioritisation, so that we

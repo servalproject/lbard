@@ -16,6 +16,12 @@ int client_count=0;
 
 long long start_time;
 
+long long tx_log_manifest_bytes=0;
+long long tx_log_payload_bytes=0;
+long long tx_log_sync_bytes=0;
+long long tx_log_transmitted_bytes=0;
+long long tx_log_transmitted_packets=0;
+
 int set_nonblocking(int fd)
 {
   fcntl(fd,F_SETFL,fcntl(fd, F_GETFL, NULL)|O_NONBLOCK);
@@ -330,7 +336,7 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
 
   if (match) {
     fprintf(stderr,"         *** Fragment dropped due to filter rule #%d\n",r);
-    return 0;
+    return 1;
   }
   
   memcpy(&packet_out[*out_len],&packet_in[f->packet_start],f->fragment_length);
@@ -416,8 +422,14 @@ int filter_process_packet(int from,int to,
       filterable_parse_bid_prefix(&f,packet,&offset);
       filterable_parse_version(&f,packet,&offset);
       filterable_parse_offset_compound(&f,packet,&offset);
-      f.fragment_length=offset-f.packet_start;
-      filter_fragment(packet,packet_out,&out_len,&f);
+      f.fragment_length=offset-f.packet_start;      
+      if (!filter_fragment(packet,packet_out,&out_len,&f)) {
+	if (to==-1) {
+	  // Log rhizome bytes actually sent
+	  if (f.is_manifest_piece) tx_log_manifest_bytes+=f.fragment_length;
+	  if (f.is_body_piece) tx_log_payload_bytes+=f.fragment_length;
+	}
+      }
       break;
     case 'R': // segment request
       // 2 bytes target SID
@@ -435,6 +447,10 @@ int filter_process_packet(int from,int to,
       // We don't filter these, just copy the bytes
       memcpy(&packet_out[out_len],&packet[offset],packet[offset+1]);
       out_len+=packet[offset+1];
+      if (to==-1) {
+	// Log rhizome bytes actually sent
+	tx_log_sync_bytes+=packet[offset+1];	
+      }
       offset+=packet[offset+1];
       break;
     case 'T': // time stamp
@@ -485,8 +501,26 @@ int filter_process_packet(int from,int to,
   packet[(*packet_len)++]=0xff;  // 16-bit RX buffer space (always claim 4095 bytes)
   packet[(*packet_len)++]=0x0f;
   packet[(*packet_len)++]=0x55;	
+
+  if ((to==-1)&&out_len) {
+    tx_log_transmitted_bytes+=out_len;
+    tx_log_transmitted_packets++;
+  }
   
   return 0;
+}
+
+char timestamp_str_out[1024];
+char *timestamp_str(void)
+{
+  struct tm tm;
+  time_t now=time(0);
+  localtime_r(&now,&tm);
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  snprintf(timestamp_str_out,1024,"[%02d:%02d.%02d.%03d RADIO]",
+	   tm.tm_hour,tm.tm_min,tm.tm_sec,tv.tv_usec/1000);
+  return timestamp_str_out;
 }
 
 int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_time,
@@ -499,6 +533,24 @@ int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_tim
   memcpy(packet,packet_in,packet_len);
   
   filter_process_packet(from,to,packet,&packet_len);
+
+  if (to==-1)
+    fprintf(stderr,">>> %s TX statistics: %lld bytes, %lld packets, %lld sync bytes, %lld manifest bytes, %lld body bytes.\n",
+	    timestamp_str(),
+	    tx_log_transmitted_bytes,
+	    tx_log_transmitted_packets,
+	    tx_log_sync_bytes,
+	    tx_log_manifest_bytes,
+	    tx_log_payload_bytes);
+  
+  if (to==-1) {
+    // Collect statistics only for this packet.
+    // (We pass through the filters because we want to keep note of how many bytes
+    // are sent of bundle manifests and payloads for working out our various
+    // efficiency meansures.
+    
+    return 0;
+  }
 
   if (!packet_len) {
     // Entire packet was filtered, so do nothing
