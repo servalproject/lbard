@@ -715,7 +715,8 @@ int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
   if (slot>=report_queue_length) report_queue_length=slot+1;
 
   fprintf(stderr,
-	  "T+%lldms : Redirecting %s to an area we have not yet received of %s*. m_first=%d, b_first=%d\n",
+	  ">>> %s T+%lldms : Redirecting %s to an area we have not yet received of %s*. m_first=%d, b_first=%d\n",
+	  timestamp_str(),
 	  gettime_ms()-start_time,
 	  peer_records[peer]->sid_prefix,
 	  peer_records[peer]->partials[partial].bid_prefix,
@@ -934,6 +935,8 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     // Not already sending to another peer, so just pick a random point and start
     p->tx_bundle=bundle;
     p->tx_bundle_body_offset=random()%bundles[bundle].length;
+    // ... but start from the beginning if it will take only one packet
+    if (bundles[bundle].length<150) p->tx_bundle_body_offset=0;
     p->tx_bundle_manifest_offset=0;
     p->tx_bundle_priority=priority;
     fprintf(stderr,"Beginning transmission from random offset (= %d)\n",
