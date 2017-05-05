@@ -321,6 +321,7 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
 		:(f->body_offset+f->piece_length-1),
 		packet_count,f->packet_start
 		);
+      break;
     case 'q': case 'Q':
       if (f->is_manifest_piece)
 	fprintf(stderr,"          manifest bytes [%d..%d]\n",
@@ -476,8 +477,8 @@ int filter_process_packet(int from,int to,
       if (!filter_fragment(packet,packet_out,&out_len,&f,to==-1)) {
 	if (to==-1) {
 	  // Log rhizome bytes actually sent
-	  if (f.is_manifest_piece) tx_log_manifest_bytes+=f.fragment_length;
-	  if (f.is_body_piece) tx_log_payload_bytes+=f.fragment_length;
+	  if (f.is_manifest_piece) tx_log_manifest_bytes+=f.piece_length;
+	  if (f.is_body_piece) tx_log_payload_bytes+=f.piece_length;
 	}
       }
       break;
