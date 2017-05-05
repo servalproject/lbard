@@ -427,12 +427,23 @@ test_MessageDelivery() {
    assertStdoutLineCount '==' 5
    
    # 7. list messages from the senders point of view after they have been delivered
-   set_instance +A
-   executeOk_servald meshms list messages $SIDA $SIDB
-   assertStdoutEgrep --stdout --matches=1 "^0:3:[0-9]+:[0-9]+:ACK:delivered\$"
-   assertStdoutEgrep --stdout --matches=1 "^1:25:[0-9]+:[0-9]+:>:How are you\$"
-   assertStdoutEgrep --stdout --matches=1 "^2:5:[0-9]+:[0-9]+:>:Hi\$"
-   assertStdoutLineCount '==' 5
+   a_receives_ACK_message() {
+       set_instance +A
+       executeOk_servald meshms list messages $SIDA $SIDB
+
+       tfw_cat --stdout
+       if ! egrep "^0:25:[0-9]+:[0-9]+:ACK:delivered\$" $_tfw_tmp/stdout; then
+	   return 1;
+       fi
+       if ! egrep "^1:25:0:[0-9]+:>:How are you\$" $_tfw_tmp/stdout; then
+	   return 1
+       fi
+       if ! egrep "^2:5:0:[0-9]+:>:Hi\$" $_tfw_tmp/stdout; then
+	   return 1;
+       fi
+       assertStdoutLineCount '==' 5
+   }
+   wait_until a_receives_ACK_message
 }
    
 runTests "$@"

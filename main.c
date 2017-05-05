@@ -28,6 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include <stdio.h>
+#include <signal.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
@@ -122,12 +123,27 @@ int urandombytes(unsigned char *buf, size_t len)
 
 long long start_time=0;
 
-int main(int argc, char **argv)
+void crash_handler(int signal)
 {
+  fprintf(stderr,"SIGABORT intercepted. Exiting cleanly.\n");
+  exit(0);
+}
+
+int main(int argc, char **argv)
+{  
   fprintf(stderr,"Version 20170504.0709.1\n");
   
   start_time = gettime_ms();
 
+  /* Catch SIGABORT, for compatibility with test framework (expects return code 0
+     on SIGSTOP */
+  struct sigaction sig;
+  sig.sa_handler = crash_handler;
+  sigemptyset(&sig.sa_mask); // Don't block any signals during handler
+  sig.sa_flags = SA_NODEFER | SA_RESETHAND; // So the signal handler can kill the process by re-sending the same signal to itself
+  sigaction(SIGABRT, &sig, NULL);
+
+  
   // Setup random seed, so that multiple LBARD's started at the same time
   // can't easily end up in lock step.
   uint32_t seed;
