@@ -144,6 +144,10 @@ int register_bundle(char *service,
     bundles[bundle_number].sender=NULL;
     free(bundles[bundle_number].recipient);
     bundles[bundle_number].recipient=NULL;
+
+    fprintf(stderr,">>> %s We have updated bundle %s/%lld\n",
+	    timestamp_str(),bid,versionll);
+
   } else {    
     // New bundle
     bundles[bundle_number].bid_hex=strdup(bid);
@@ -158,6 +162,9 @@ int register_bundle(char *service,
     bundles[bundle_number].last_version_of_manifest_announced=0;
     bundles[bundle_number].last_announced_time=0;
     bundle_count++;
+    fprintf(stderr,">>> %s We have new bundle %s/%lld\n",
+	    timestamp_str(),bid,versionll);
+
     // printf("There are now %d bundles.\n",bundle_count);
   }
 
