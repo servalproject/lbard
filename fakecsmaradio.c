@@ -9,6 +9,8 @@ int filter_verbose=1;
 
 int packet_drop_threshold=0;
 
+int packet_count=0;
+
 char *socketname="/tmp/fakecsmaradio.socket";
 
 struct client clients[MAX_CLIENTS];
@@ -21,6 +23,25 @@ long long tx_log_payload_bytes=0;
 long long tx_log_sync_bytes=0;
 long long tx_log_transmitted_bytes=0;
 long long tx_log_transmitted_packets=0;
+
+char timestamp_str_out[1024];
+char *timestamp_str(unsigned char *s)
+{
+  struct tm tm;
+  time_t now=time(0);
+  localtime_r(&now,&tm);
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  if (!s)
+    snprintf(timestamp_str_out,1024,"[%02d:%02d.%02d.%03d RADIO]",
+	     tm.tm_hour,tm.tm_min,tm.tm_sec,tv.tv_usec/1000);
+  else
+    snprintf(timestamp_str_out,1024,"[%02d:%02d.%02d.%03d %02X%02X*]",
+	     tm.tm_hour,tm.tm_min,tm.tm_sec,tv.tv_usec/1000,
+	     s[0],s[1]);
+    
+  return timestamp_str_out;
+}
 
 int set_nonblocking(int fd)
 {
@@ -257,7 +278,7 @@ char *fragment_name(int type)
   If the fragment is not dropped, it should be appended to packet out
 */
 int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
-		    struct filterable *f)
+		    struct filterable *f, int log_pieces)
 {  
   if (filter_verbose) {
     fprintf(stderr,"T+%lldms : from sid:%02X%02X%02X%02X%02X%02X* to sid:%02X%02X[%02X%02X]*\n",
@@ -289,6 +310,17 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
       if (f->is_body_piece)
 	fprintf(stderr,"          body length = %d\n",
 		f->body_offset+f->piece_length-1);
+      if (log_pieces)
+	fprintf(stderr,">>> %s %02X%02X%02X%02X*/%lld %s %d..%d (packet #%d offset %d)\n",
+		timestamp_str(f->sender_sid_prefix),
+		f->bid_prefix[0],f->bid_prefix[1],f->bid_prefix[2],f->bid_prefix[3],
+		f->version,
+		f->is_manifest_piece?"manifest":(f->is_body_piece?"body":"unknown"),
+		f->is_manifest_piece?f->manifest_offset:f->body_offset,
+		f->is_manifest_piece?(f->manifest_offset+f->piece_length-1)
+		:(f->body_offset+f->piece_length-1),
+		packet_count,f->packet_start
+		);
     case 'q': case 'Q':
       if (f->is_manifest_piece)
 	fprintf(stderr,"          manifest bytes [%d..%d]\n",
@@ -366,6 +398,13 @@ int filter_process_packet(int from,int to,
   // Extract SID prefix of sender
   memcpy(f.sender_sid_prefix,&packet[offset],6); offset+=6;
 
+  if (to==-1) {
+    packet_count++;
+    fprintf(stderr,">>> %s Packet #%d : length=%d bytes\n",
+	    timestamp_str(f.sender_sid_prefix),
+	    packet_count,*packet_len);
+  }  
+  
   // Ignore msg number and is_retransmission flag bytes
   offset+=2;
 
@@ -385,7 +424,7 @@ int filter_process_packet(int from,int to,
       filterable_parse_manifest_offset(&f,packet,&offset);
       filterable_parse_body_offset(&f,packet,&offset);
       f.fragment_length=offset-f.packet_start;
-      filter_fragment(packet,packet_out,&out_len,&f);
+      filter_fragment(packet,packet_out,&out_len,&f,to==-1);
       break;
     case 'B':
       // BAR announcement
@@ -396,14 +435,14 @@ int filter_process_packet(int from,int to,
       filterable_parse_recipient_prefix_4(&f,packet,&offset);
       filterable_parse_bundle_log_length(&f,packet,&offset);
       f.fragment_length=offset-f.packet_start;
-      filter_fragment(packet,packet_out,&out_len,&f);
+      filter_fragment(packet,packet_out,&out_len,&f,to==-1);
       break;
     case 'G':  // 32-bit instance ID of peer
       filterable_erase_fragment(&f,offset);
       f.type=packet[offset++];
       filterable_parse_instance_id(&f,packet,&offset);
       f.fragment_length=offset-f.packet_start;
-      filter_fragment(packet,packet_out,&out_len,&f);
+      filter_fragment(packet,packet_out,&out_len,&f,to==-1);
       break;
     case 'L': // Length of bundle
       filterable_erase_fragment(&f,offset);
@@ -412,7 +451,7 @@ int filter_process_packet(int from,int to,
       filterable_parse_version(&f,packet,&offset);
       filterable_parse_offset_compound(&f,packet,&offset);
       f.fragment_length=offset-f.packet_start;
-      filter_fragment(packet,packet_out,&out_len,&f);
+      filter_fragment(packet,packet_out,&out_len,&f,to==-1);
       break;
     case 'P': case 'p': case 'q': case 'Q':
       // Piece of body or manifest
@@ -423,7 +462,7 @@ int filter_process_packet(int from,int to,
       filterable_parse_version(&f,packet,&offset);
       filterable_parse_offset_compound(&f,packet,&offset);
       f.fragment_length=offset-f.packet_start;      
-      if (!filter_fragment(packet,packet_out,&out_len,&f)) {
+      if (!filter_fragment(packet,packet_out,&out_len,&f,to==-1)) {
 	if (to==-1) {
 	  // Log rhizome bytes actually sent
 	  if (f.is_manifest_piece) tx_log_manifest_bytes+=f.fragment_length;
@@ -441,7 +480,7 @@ int filter_process_packet(int from,int to,
       filterable_parse_bid_prefix(&f,packet,&offset);
       filterable_parse_segment_offset(&f,packet,&offset);
       f.fragment_length=offset-f.packet_start;
-      filter_fragment(packet,packet_out,&out_len,&f);
+      filter_fragment(packet,packet_out,&out_len,&f,to==-1);
       break;
     case 'S': // sync-tree message
       // We don't filter these, just copy the bytes
@@ -458,7 +497,7 @@ int filter_process_packet(int from,int to,
       f.type=packet[offset++];
       filterable_parse_timestamp(&f,packet,&offset);
       f.fragment_length=offset-f.packet_start;
-      filter_fragment(packet,packet_out,&out_len,&f);
+      filter_fragment(packet,packet_out,&out_len,&f,to==-1);
       break;
     default:
       fprintf(stderr,"WARNING: Saw unknown fragment type 0x%02x @ %d -- Ignoring packet\n",
@@ -510,19 +549,6 @@ int filter_process_packet(int from,int to,
   return 0;
 }
 
-char timestamp_str_out[1024];
-char *timestamp_str(void)
-{
-  struct tm tm;
-  time_t now=time(0);
-  localtime_r(&now,&tm);
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  snprintf(timestamp_str_out,1024,"[%02d:%02d.%02d.%03d RADIO]",
-	   tm.tm_hour,tm.tm_min,tm.tm_sec,tv.tv_usec/1000);
-  return timestamp_str_out;
-}
-
 int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_time,
 					 uint8_t *packet_in,int packet_len)
 {
@@ -535,8 +561,9 @@ int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_tim
   filter_process_packet(from,to,packet,&packet_len);
 
   if (to==-1)
-    fprintf(stderr,">>> %s TX statistics: %lld bytes, %lld packets, %lld sync bytes, %lld manifest bytes, %lld body bytes.\n",
-	    timestamp_str(),
+    fprintf(stderr,">>> %s @ T+%lldms: %lld bytes, %lld packets, %lld sync bytes, %lld manifest bytes, %lld body bytes.\n",	    
+	    timestamp_str(NULL),
+	    gettime_ms()-start_time,
 	    tx_log_transmitted_bytes,
 	    tx_log_transmitted_packets,
 	    tx_log_sync_bytes,
