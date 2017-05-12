@@ -769,7 +769,8 @@ int main(int argc,char **argv)
 	      printf("Radio #%d receives a packet of %d bytes\n",
 		     i,clients[i].rx_queue_len);
 	    } else
-	      printf("Radio #%d misses a packet of %d bytes due to simulated packet loss\n",
+	      printf(">>> %s Radio #%d misses a packet of %d bytes due to simulated packet loss\n",
+		     timestamp_str(NULL),
 		     i,clients[i].rx_queue_len);
 	      
 	  }

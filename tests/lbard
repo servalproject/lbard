@@ -409,7 +409,6 @@ test_MessageDelivery() {
    set_instance +B
    executeOk_servald meshms read messages $SIDB $SIDA 5
    tfw_cat --stderr
-   check_meshms_bundles
    executeOk_servald meshms list messages $SIDB $SIDA
    assertStdoutGrep --stdout --matches=1 ":<:How are you\$"
    assertStdoutEgrep --stdout --matches=1 ":5:[0-9]+:[0-9]+:MARK:read\$"
@@ -419,7 +418,6 @@ test_MessageDelivery() {
    # 6. mark all messages as read
    set_instance +B
    executeOk_servald meshms read messages $SIDB
-   check_meshms_bundles
    executeOk_servald meshms list messages $SIDB $SIDA
    assertStdoutEgrep --stdout --matches=1 "^0:25:[0-9]+:[0-9]+:MARK:read\$"
    assertStdoutEgrep --stdout --matches=1 "^1:[0-9]+:25:[0-9]+:<:How are you\$"
@@ -445,5 +443,13 @@ test_MessageDelivery() {
    }
    wait_until a_receives_ACK_message
 }
-   
+
+doc_MessageDeliveryLoss="Two party MeshMS conversation via UHF with 75% packet loss"
+setup_MessageDeliveryLoss() {
+   setup "0.75"
+}
+test_MessageDeliveryLoss() {
+    test_MessageDelivery
+}
+
 runTests "$@"
