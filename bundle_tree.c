@@ -564,8 +564,8 @@ int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial)
 {
 
   return sync_tell_peer_we_have_bundle_by_id
-    (peer,bid_prefix_hex_to_bin(peer_records[peer]->partials[partial].bid_prefix),
-     peer_records[peer]->partials[partial].bundle_version);  
+    (peer,bid_prefix_hex_to_bin(partials[partial].bid_prefix),
+     partials[partial].bundle_version);  
 }
 
 
@@ -644,8 +644,8 @@ int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
   // BID prefix
   for(int i=0;i<8;i++) {
     int hex_value=0;
-    char hex_string[3]={peer_records[peer]->partials[partial].bid_prefix[i*2+0],
-			peer_records[peer]->partials[partial].bid_prefix[i*2+1],
+    char hex_string[3]={partials[partial].bid_prefix[i*2+0],
+			partials[partial].bid_prefix[i*2+1],
 			0};
     hex_value=strtoll(hex_string,NULL,16);
     report_queue[slot][ofs++]=hex_value;
@@ -664,14 +664,12 @@ int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
   
   // manifest and body offset
   int first_required_manifest_offset
-    =partial_first_missing_byte(peer_records[peer]
-				->partials[partial].manifest_segments);
+    =partial_first_missing_byte(partials[partial].manifest_segments);
   int first_required_body_offset
-    =partial_first_missing_byte(peer_records[peer]
-				->partials[partial].body_segments);  
+    =partial_first_missing_byte(partials[partial].body_segments);  
   int body_segments=0;
   int add_zero=1;
-  struct segment_list *s=peer_records[peer]->partials[partial].body_segments;
+  struct segment_list *s=partials[partial].body_segments;
   while(s) {
     if (!s->start_offset) add_zero=0;
     body_segments++;
@@ -679,7 +677,7 @@ int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
   }
   int segment_num=random()%(body_segments+add_zero);
   if (segment_num==body_segments) first_required_body_offset=0;
-  s=peer_records[peer]->partials[partial].body_segments;
+  s=partials[partial].body_segments;
   while(s) {
     segment_num--;
     if (!segment_num) {
@@ -719,7 +717,7 @@ int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
 	  timestamp_str(),
 	  gettime_ms()-start_time,
 	  peer_records[peer]->sid_prefix,
-	  peer_records[peer]->partials[partial].bid_prefix,
+	  partials[partial].bid_prefix,
 	  first_required_manifest_offset,
 	  first_required_body_offset);    
   
@@ -761,8 +759,8 @@ int sync_schedule_progress_report(int peer, int partial, int randomJump)
   // BID prefix
   for(int i=0;i<8;i++) {
     int hex_value=0;
-    char hex_string[3]={peer_records[peer]->partials[partial].bid_prefix[i*2+0],
-			peer_records[peer]->partials[partial].bid_prefix[i*2+1],
+    char hex_string[3]={partials[partial].bid_prefix[i*2+0],
+			partials[partial].bid_prefix[i*2+1],
 			0};
     hex_value=strtoll(hex_string,NULL,16);
     report_queue[slot][ofs++]=hex_value;
@@ -770,11 +768,9 @@ int sync_schedule_progress_report(int peer, int partial, int randomJump)
   
   // manifest and body offset
   int first_required_manifest_offset
-    =partial_first_missing_byte(peer_records[peer]
-				->partials[partial].manifest_segments);
+    =partial_first_missing_byte(partials[partial].manifest_segments);
   int first_required_body_offset
-    =partial_first_missing_byte(peer_records[peer]
-				->partials[partial].body_segments);
+    =partial_first_missing_byte(partials[partial].body_segments);
   report_queue[slot][ofs++]=first_required_manifest_offset&0xff;
   report_queue[slot][ofs++]=(first_required_manifest_offset>>8)&0xff;
   report_queue[slot][ofs++]=first_required_body_offset&0xff;
@@ -791,14 +787,14 @@ int sync_schedule_progress_report(int peer, int partial, int randomJump)
 	    "T+%lldms : Redirecting %s to an area we have not yet received of %s*, i.e., somewhere not before m_first=%d, b_first=%d\n",
 	    gettime_ms()-start_time,
 	    peer_records[peer]->sid_prefix,
-	    peer_records[peer]->partials[partial].bid_prefix,
+	    partials[partial].bid_prefix,
 	    first_required_manifest_offset,
 	    first_required_body_offset);    
   else
     fprintf(stderr,
 	    "T+%lldms : ACKing progress on transfer of %s* from %s. m_first=%d, b_first=%d\n",
 	    gettime_ms()-start_time,
-	    peer_records[peer]->partials[partial].bid_prefix,
+	    partials[partial].bid_prefix,
 	    peer_records[peer]->sid_prefix,
 	    first_required_manifest_offset,
 	    first_required_body_offset);    

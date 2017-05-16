@@ -115,18 +115,19 @@ struct peer_state {
   unsigned int tx_queue_priorities[MAX_TXQUEUE_LEN];
   int tx_queue_overflow;
 #endif
-  // Bundles this peer is transferring.
-  // The bundle prioritisation algorithm means that the peer may announce pieces
-  // of several bundles interspersed, e.g., a large bundle may be temporarily
-  // deferred due to the arrival of a smaller bundle, or the arrival of a peer
-  // for whom that peer has bundles with the new peer as the recipient.
-  // So we need to carry state for some plurality of bundles being announced.
-  // Note that we don't (currently) build bundles from announcements by multiple
-  // peers, as a small protection against malicious nodes offering fake bundle
-  // pieces that will result in the crypto checksums failing at the end.
-#define MAX_BUNDLES_IN_FLIGHT 16
-  struct partial_bundle partials[MAX_BUNDLES_IN_FLIGHT];  
 };
+
+// Bundles this peer is transferring.
+// The bundle prioritisation algorithm means that the peer may announce pieces
+// of several bundles interspersed, e.g., a large bundle may be temporarily
+// deferred due to the arrival of a smaller bundle, or the arrival of a peer
+// for whom that peer has bundles with the new peer as the recipient.
+// So we need to carry state for some plurality of bundles being announced.
+// Note that we don't (currently) build bundles from announcements by multiple
+// peers, as a small protection against malicious nodes offering fake bundle
+// pieces that will result in the crypto checksums failing at the end.
+#define MAX_BUNDLES_IN_FLIGHT 256
+struct partial_bundle partials[MAX_BUNDLES_IN_FLIGHT];  
 
 struct recent_bundle {
   char *bid_prefix;

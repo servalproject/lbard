@@ -54,13 +54,13 @@ int saw_length(char *peer_prefix,char *bid_prefix,long long version,
   int i;
   int spare_record=random()%MAX_BUNDLES_IN_FLIGHT;
   for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
-    if (!peer_records[peer]->partials[i].bid_prefix) {
+    if (!partials[i].bid_prefix) {
       if (spare_record==-1) spare_record=i;
     } else {
-      if (!strcasecmp(peer_records[peer]->partials[i].bid_prefix,bid_prefix))
-	if (peer_records[peer]->partials[i].bundle_version==version)
+      if (!strcasecmp(partials[i].bid_prefix,bid_prefix))
+	if (partials[i].bundle_version==version)
 	  {
-	    peer_records[peer]->partials[i].body_length=body_length;
+	    partials[i].body_length=body_length;
 	    return 0;
 	  }
     }
@@ -132,10 +132,10 @@ int saw_piece(char *peer_prefix,int for_me,
   int i;
   int spare_record=random()%MAX_BUNDLES_IN_FLIGHT;
   for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
-    if (!peer_records[peer]->partials[i].bid_prefix) {
+    if (!partials[i].bid_prefix) {
       if (spare_record==-1) spare_record=i;
     } else {
-      if (!strcasecmp(peer_records[peer]->partials[i].bid_prefix,bid_prefix))
+      if (!strcasecmp(partials[i].bid_prefix,bid_prefix))
 	{
 	  if (debug_pieces) printf("Saw another piece for BID=%s* from SID=%s: ",
 			 bid_prefix,peer_prefix);
@@ -148,8 +148,8 @@ int saw_piece(char *peer_prefix,int for_me,
 	if (debug_pieces) {
 	  printf("  this isn't the partial we are looking for.\n");
 	  printf("  piece is of %s*, but slot #%d has %s*\n",
-		  bid_prefix,i,
-		  peer_records[peer]->partials[i].bid_prefix);
+		 bid_prefix,i,
+		 partials[i].bid_prefix);
 	}
       }
     }
@@ -168,20 +168,20 @@ int saw_piece(char *peer_prefix,int for_me,
     // a spare record slot to use.
     if (spare_record==-1) {
       i=random()%MAX_BUNDLES_IN_FLIGHT;
-      clear_partial(&peer_records[peer]->partials[i]);
+      clear_partial(&partials[i]);
     } else {
       i=spare_record;
       // Clear it just to make sure.
-      clear_partial(&peer_records[peer]->partials[i]);
+      clear_partial(&partials[i]);
     }
     if (debug_pieces)
       printf("@@@   Using slot %d\n",i);
 
     // Now prepare the partial record
-    peer_records[peer]->partials[i].bid_prefix=strdup(bid_prefix);
-    peer_records[peer]->partials[i].bundle_version=version;
-    peer_records[peer]->partials[i].manifest_length=-1;
-    peer_records[peer]->partials[i].body_length=-1;
+    partials[i].bid_prefix=strdup(bid_prefix);
+    partials[i].bundle_version=version;
+    partials[i].manifest_length=-1;
+    partials[i].body_length=-1;
   }
 
   int piece_end=piece_offset+piece_bytes;
@@ -189,17 +189,17 @@ int saw_piece(char *peer_prefix,int for_me,
   // Note stream length if this is an end piece or journal bundle
   if (is_end_piece) {
     if (is_manifest_piece)
-      peer_records[peer]->partials[i].manifest_length=piece_end;
+      partials[i].manifest_length=piece_end;
     else
-      peer_records[peer]->partials[i].body_length=piece_end;
+      partials[i].body_length=piece_end;
   }
   if (version<0x100000000LL) {
     // Journal bundle, so body_length = version
-    peer_records[peer]->partials[i].body_length=version;
+    partials[i].body_length=version;
   }
 
   if ((bundle_number>-1)
-      &&(!peer_records[peer]->partials[i].body_segments)) {
+      &&(!partials[i].body_segments)) {
     // This is a bundle that for which we already have a previous version, and
     // for which we as yet have no body segments.  So fetch from Rhizome the content
     // that we do have, and prepopulate the body segment.
@@ -212,7 +212,7 @@ int saw_piece(char *peer_prefix,int for_me,
       bcopy(cached_body,s->data,cached_body_len);
       s->start_offset=0;
       s->length=cached_body_len;
-      peer_records[peer]->partials[i].body_segments=s;
+      partials[i].body_segments=s;
       if (debug_pieces)
 	printf("Preloaded %d bytes from old version of journal bundle.\n",
 		cached_body_len);
@@ -226,8 +226,8 @@ int saw_piece(char *peer_prefix,int for_me,
   // Now we have the right partial, we need to look for the right segment to add this
   // piece to, if any.
   struct segment_list **s;
-  if (is_manifest_piece) s=&peer_records[peer]->partials[i].manifest_segments;
-  else s=&peer_records[peer]->partials[i].body_segments;
+  if (is_manifest_piece) s=&partials[i].manifest_segments;
+  else s=&partials[i].body_segments;
 
   /*
     The segment lists are maintained in reverse order, since pieces will generally
@@ -343,23 +343,23 @@ int saw_piece(char *peer_prefix,int for_me,
     } 
   }
 
-  merge_segments(&peer_records[peer]->partials[i].manifest_segments);
-  merge_segments(&peer_records[peer]->partials[i].body_segments);
+  merge_segments(&partials[i].manifest_segments);
+  merge_segments(&partials[i].body_segments);
 
-  peer_records[peer]->partials[i].recent_bytes += piece_bytes;
+  partials[i].recent_bytes += piece_bytes;
   
   // Check if we have the whole bundle now
   // XXX - this breaks when we have nothing about the bundle, because then we think the length is zero, so we think we have it all, when really we have none.
-  if (peer_records[peer]->partials[i].manifest_segments
-      &&peer_records[peer]->partials[i].body_segments
-      &&(!peer_records[peer]->partials[i].manifest_segments->next)
-      &&(!peer_records[peer]->partials[i].body_segments->next)
-      &&(peer_records[peer]->partials[i].manifest_segments->start_offset==0)
-      &&(peer_records[peer]->partials[i].body_segments->start_offset==0)
-      &&(peer_records[peer]->partials[i].manifest_segments->length
-	 ==peer_records[peer]->partials[i].manifest_length)
-      &&(peer_records[peer]->partials[i].body_segments->length
-	 ==peer_records[peer]->partials[i].body_length))
+  if (partials[i].manifest_segments
+      &&partials[i].body_segments
+      &&(!partials[i].manifest_segments->next)
+      &&(!partials[i].body_segments->next)
+      &&(partials[i].manifest_segments->start_offset==0)
+      &&(partials[i].body_segments->start_offset==0)
+      &&(partials[i].manifest_segments->length
+	 ==partials[i].manifest_length)
+      &&(partials[i].body_segments->length
+	 ==partials[i].body_length))
     {
       // We have a single segment for body and manifest that span the complete
       // size.
@@ -379,8 +379,8 @@ int saw_piece(char *peer_prefix,int for_me,
       sync_tell_peer_we_have_the_bundle_of_this_partial(peer,i);
       
       if (!manifest_binary_to_text
-	  (peer_records[peer]->partials[i].manifest_segments->data,
-	   peer_records[peer]->partials[i].manifest_length,
+	  (partials[i].manifest_segments->data,
+	   partials[i].manifest_length,
 	   manifest,&manifest_len)) {
 
 	// Display decompressed manifest
@@ -388,8 +388,8 @@ int saw_piece(char *peer_prefix,int for_me,
 	
 	insert_result=
 	  rhizome_update_bundle(manifest,manifest_len,
-				peer_records[peer]->partials[i].body_segments->data,
-				peer_records[peer]->partials[i].body_length,
+				partials[i].body_segments->data,
+				partials[i].body_length,
 				servald_server,credential);
 
 	if (debug_bundlelog) {
@@ -423,8 +423,8 @@ int saw_piece(char *peer_prefix,int for_me,
 	// process periodically, we will catch any straglers. It still isn't perfect,
 	// but it's a start.
 	sync_remember_recently_received_bundle
-	  (peer_records[peer]->partials[i].bid_prefix,
-	   peer_records[peer]->partials[i].bundle_version);
+	  (partials[i].bid_prefix,
+	   partials[i].bundle_version);
       } else {
 	printf(">>> %s Could not decompress binary manifest.  Not inserting\n",
 	       timestamp_str());
@@ -433,15 +433,15 @@ int saw_piece(char *peer_prefix,int for_me,
 	// Failed to insert, so mark this bundle for deprioritisation, so that we
 	// don't just keep asking for it.
 	fprintf(stderr,"Failed to insert bundle %s*/%lld (result=%d)\n",
-		peer_records[peer]->partials[i].bid_prefix,
-		peer_records[peer]->partials[i].bundle_version,insert_result);
+		partials[i].bid_prefix,
+		partials[i].bundle_version,insert_result);
 	dump_bytes("manifest",manifest,manifest_len);
 	dump_bytes("payload",
-		   peer_records[peer]->partials[i].body_segments->data,
-		   peer_records[peer]->partials[i].body_length);
+		   partials[i].body_segments->data,
+		   partials[i].body_length);
 
 	char bid[32*2+1];
-	if (!manifest_extract_bid(peer_records[peer]->partials[i].manifest_segments->data,
+	if (!manifest_extract_bid(partials[i].manifest_segments->data,
 				  bid)) {
 #ifdef SYNC_BY_BAR
 	  int bundle=bid_to_peer_bundle_index(peer,bid);
@@ -453,18 +453,18 @@ int saw_piece(char *peer_prefix,int for_me,
 	// Insert succeeded, so clear any failure deprioritisation (although it
 	// shouldn't matter).
 	char bid[32*2+1];
-	if (!manifest_extract_bid(peer_records[peer]->partials[i].manifest_segments->data,
+	if (!manifest_extract_bid(partials[i].manifest_segments->data,
 				  bid)) {
 #ifdef SYNC_BY_BAR
 	  int bundle=bid_to_peer_bundle_index(peer,bid);
 	  peer_records[peer]->insert_failures[bundle]=0;
 #endif
 	}
-	progress_log_bundle_receipt(peer_records[peer]->partials[i].bid_prefix,
-				    peer_records[peer]->partials[i].bundle_version);
+	progress_log_bundle_receipt(partials[i].bid_prefix,
+				    partials[i].bundle_version);
       }
       // Now release this partial.
-      clear_partial(&peer_records[peer]->partials[i]);
+      clear_partial(&partials[i]);
     }
   else {
     // To deal with multiple senders that are providing us with pieces in lock-step,

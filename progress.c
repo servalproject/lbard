@@ -132,7 +132,7 @@ int generate_progress_string(struct partial_bundle *partial,
 
 int show_progress(FILE *f, int verbose)
 {
-  int peer,i;
+  int i;
 
   fprintf(f,"%s",message_buffer);
   message_buffer_length=0; message_buffer[0]=0;
@@ -140,38 +140,32 @@ int show_progress(FILE *f, int verbose)
   int count=0;
   int progress_has_occurred=verbose;
 
-  for(peer=0;peer<peer_count;peer++) {
-    for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
-      if (progress_has_occurred) break;
-      if (peer_records[peer]->partials[i].bid_prefix)
-	if (peer_records[peer]->partials[i].recent_bytes)
-	  progress_has_occurred=1;
-    }
+  for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
+    if (progress_has_occurred) break;
+    if (partials[i].bid_prefix)
+      if (partials[i].recent_bytes)
+	progress_has_occurred=1;
   }
       
   if (progress_has_occurred) {
-    for(peer=0;peer<peer_count;peer++) {
-      char *peer_prefix=peer_records[peer]->sid_prefix;
-      for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
-	if (peer_records[peer]->partials[i].bid_prefix) {
-	  // Here is a bundle in flight
-	  char *bid_prefix=peer_records[peer]->partials[i].bid_prefix;
-	  long long version=peer_records[peer]->partials[i].bundle_version;
-	  char progress_string[80];
-	  if (!count) {
-	    fprintf(f,
-		    ">> List of bundles currently being received"
-		    " (%d in rhizome store)\n",
-		    bundle_count);
-	  }
-	  count++;
-	  generate_progress_string(&peer_records[peer]->partials[i],
-				   progress_string,sizeof(progress_string));
-	  fprintf(f,"   PEER:%s* %s* version %-18lld: [%s]\n",
-		  peer_prefix,bid_prefix,version,
-		  progress_string);
+    for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
+      if (partials[i].bid_prefix) {
+	// Here is a bundle in flight
+	char *bid_prefix=partials[i].bid_prefix;
+	long long version=partials[i].bundle_version;
+	char progress_string[80];
+	if (!count) {
+	  fprintf(f,
+		  ">> List of bundles currently being received"
+		  " (%d in rhizome store)\n",
+		  bundle_count);
 	}
-      }
+	count++;
+	generate_progress_string(&partials[i],
+				 progress_string,sizeof(progress_string));
+	fprintf(f,"   %s* version %-18lld: [%s]\n",
+		bid_prefix,version,progress_string);
+	}
     }
     if (count) fprintf(f,"<< end of bundle transfer list.\n");
   }

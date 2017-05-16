@@ -115,8 +115,6 @@ int status_dump()
   fprintf(f,"</table>\n");
   fflush(f);
 
-  int peer;
-
   fprintf(f,"<h2>Bundles held by peers</h2>\n<table border=1 padding=2 spacing=2><tr><th>Peer</th><th>Bundle prefix</th><th>Bundle version</th></tr>\n");
 
 #ifdef SYNC_BY_BAR
@@ -141,22 +139,19 @@ int status_dump()
   fprintf(f,"</table>\n");
   fflush(f);
 
-  fprintf(f,"<h2>Bundles in flight</h2>\n<table border=1 padding=2 spacing=2><tr><th>Peer</th><th>Bundle prefix</th><th>Bundle version</th><th>Progress<th></tr>\n");
+  fprintf(f,"<h2>Bundles in flight</h2>\n<table border=1 padding=2 spacing=2><tr><th>Bundle prefix</th><th>Bundle version</th><th>Progress<th></tr>\n");
 
-  for(peer=0;peer<peer_count;peer++) {
-    char *peer_prefix=peer_records[peer]->sid_prefix;
-    for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
-      if (peer_records[peer]->partials[i].bid_prefix) {
-	// Here is a bundle in flight
-	char *bid_prefix=peer_records[peer]->partials[i].bid_prefix;
-	long long version=peer_records[peer]->partials[i].bundle_version;
-	char progress_string[80];
-	generate_progress_string(&peer_records[peer]->partials[i],
-				 progress_string,sizeof(progress_string));
-	fprintf(f,"<tr><td>%s*</td><td>%s*</td><td>%-18lld</td><td>[%s]</td></tr>\n",
-		peer_prefix,bid_prefix,version,
-		progress_string);
-      }
+  for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
+    if (partials[i].bid_prefix) {
+      // Here is a bundle in flight
+      char *bid_prefix=partials[i].bid_prefix;
+      long long version=partials[i].bundle_version;
+      char progress_string[80];
+      generate_progress_string(&partials[i],
+			       progress_string,sizeof(progress_string));
+      fprintf(f,"<tr><td>%s*</td><td>%-18lld</td><td>[%s]</td></tr>\n",
+	      bid_prefix,version,
+	      progress_string);
     }
   }
   fprintf(f,"</table>\n");

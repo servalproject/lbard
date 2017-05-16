@@ -58,7 +58,7 @@ int register_bundle(char *service,
 		    char *sender,
 		    char *recipient)
 {
-  int i,peer;
+  int i;
 
   // Calculate the key required for the bundle tree used to efficiently determine which
   // bundles a pair of peers have in common, and thus also the bundles each needs to
@@ -94,21 +94,19 @@ int register_bundle(char *service,
   // Remove bundle from partial lists of all peers if we have other transmissions
   // to us in progress of this bundle
   // XXX - Linear searches! Replace with hash table etc
-  for(peer=0;peer<peer_count;peer++) {
-    for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
-      if (peer_records[peer]->partials[i].bid_prefix) {
-	// Here is a bundle in flight
-	char *bid_prefix=peer_records[peer]->partials[i].bid_prefix;
-	long long bid_version=peer_records[peer]->partials[i].bundle_version;
-
-	if (versionll>=bid_version)
-	  if (!strncasecmp(bid,bid_prefix,strlen(bid_prefix)))
-	    {
-	      fprintf(stderr,"--- Culling in-progress transfer for bundle that has shown up in Rhizome.\n");
-	      clear_partial(&peer_records[peer]->partials[i]);
-	      break;
-	    }
-      }
+  for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
+    if (partials[i].bid_prefix) {
+      // Here is a bundle in flight
+      char *bid_prefix=partials[i].bid_prefix;
+      long long bid_version=partials[i].bundle_version;
+      
+      if (versionll>=bid_version)
+	if (!strncasecmp(bid,bid_prefix,strlen(bid_prefix)))
+	  {
+	    fprintf(stderr,"--- Culling in-progress transfer for bundle that has shown up in Rhizome.\n");
+	    clear_partial(&partials[i]);
+	    break;
+	  }
     }
   }
   
