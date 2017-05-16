@@ -282,20 +282,41 @@ test_TwoSenders() {
    wait_until all_bundles_received
 }
 
+rhizome_add_file_to_many() {
+    local name="$1"
+    shift
+    local size="$1"
+    shift
+    local first_instance="$1"
+    shift
+    set_instance "+$first_instance"
+    rhizome_add_file "$name" "$size"
+    # BID is in $BID from the above
+
+    # Now insert on each
+    replicate_bundle $BID $*
+
+    }
+
+replicate_bundle() {
+    local BID=$1
+    shift
+    executeOk_servald rhizome export bundle $BID file1e.manifest file1e
+    extract_manifest_version VERSION file1e.manifest
+    while [ x"$1" != "x" ]; do	
+	set_instance +$1
+	executeOk_servald rhizome import bundle file1e file1e.manifest
+	shift
+    done
+}
+
 
 doc_TwoSendersCombined="A bundle can be received by combining pieces from different senders"
 setup_TwoSendersCombined() {
    setup "drop manifest from 0; drop body from 1;"
-   # Insert a file to server A
-   set_instance +A
-   echo "Clear Text" >file1
-   echo -e "service=File\nsender=$SIDA\nrecipient=$SIDB" >file1.manifest
-   executeOk_servald rhizome add file $SIDA file1 file1.manifest
-   extract_manifest_id BID file1.manifest
-   extract_manifest_version VERSION file1.manifest
-   executeOk_servald rhizome export bundle $BID file1e.manifest file1e
-   set_instance +B
-   executeOk_servald rhizome import bundle file1e file1e.manifest
+   # Insert a file on server A and B
+   rhizome_add_file_to_many "test" 50 A B
+   BID=`echo $BID | cut -f1 -d:`
 }
 test_TwoSendersCombined() {
    # Test that the bundle arrives at servers B, C and D
