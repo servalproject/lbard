@@ -327,6 +327,24 @@ test_TwoSendersCombined() {
    wait_until all_bundles_received
 }
 
+doc_TenSendersCombined="A bundle can be received by combining pieces from 10 senders"
+setup_TenSendersCombined() {
+   setup20
+   # Insert a file on server A - J
+   # Make file too big to be sent in 60 seconds by only one server
+   # 60 sec * 200 bytes / sec = 12000 bytes
+   rhizome_add_file_to_many "test" 12000 A B C D E F G H I J 
+   BID=`echo $BID | cut -f1 -d:`
+}
+test_TenSendersCombined() {
+   # Test that the bundle arrives at server K
+   all_bundles_received() {
+         bundle_received_by $BID:$VERSION +K
+   }
+   wait_until all_bundles_received
+}
+
+
 
 doc_All="All peers receive bundles from all other peers"
 setup_All() {
