@@ -366,6 +366,9 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
       }
     {
       // Send some of the body
+      fprintf(stderr,"  body_offset=%d, body_len=%d\n",
+	      peer_records[peer]->tx_bundle_body_offset,
+	      cached_body_len);
       int start_offset=peer_records[peer]->tx_bundle_body_offset;
       int bytes =
 	sync_append_some_bundle_bytes(bundle_number,start_offset,cached_body_len,
