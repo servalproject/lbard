@@ -38,18 +38,52 @@ setup() {
    setup_servald
    assert_no_servald_processes
    foreach_instance +A +B +C +D create_single_identity
+
+   # Create files in each servald instance if requested
+   if [ "x$2" != "x" ]; then
+       common_files=$2
+       for ((n = 0; n < $files_per_instance; ++n)); do
+	   set_instance +A
+           create_file file-common-${n} 10000
+	   echo -e "service=File\nsender=$SIDA\nrecipient=$SIDB" >file$n.manifest
+	   executeOk_servald rhizome add file $SIDA file-common-${n} file${n}.manifest
+	   extract_manifest_id BID file${n}.manifest
+	   extract_manifest_version VERSION file${n}.manifest
+	   executeOk_servald rhizome export bundle $BID file${n}e.manifest file${n}e
+	   for i in B C D
+	   do
+	       set_instance +B
+	       executeOk_servald rhizome import bundle file1e file1e.manifest	       
+	   done
+       done
+       
+   fi
+   if [ "x$3" != "x" ]; then
+       files_per_instance=$3       
+       for i in A B C D
+       do
+	   set_instance +$i
+	   local sidvar="SID$instance_name"
+	   for ((n = 0; n < $files_per_instance; ++n)); do
+               create_file file-$i-$n 10000
+               tfw_quietly executeOk_servald rhizome add file "${!sidvar}" file-$i-$n file-$i-$n.manifest	   
+	   done
+       done
+   fi
+   
    foreach_instance +A +B +C +D start_servald_server
    get_servald_restful_http_server_port PORTA +A
    get_servald_restful_http_server_port PORTB +B
    get_servald_restful_http_server_port PORTC +C
    get_servald_restful_http_server_port PORTD +D
    # Start the fake radio daemon.
-   fork %fakeradio fakecsmaradio rfd900,rfd900,rfd900,rfd900 ttys.txt "$1"
+   fork %fakeradio fakecsmaradio rfd900,rfd900,rfd900,rfd900 ttys.txt $1
    wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
    tty1=$(sed -n 1p ttys.txt)
    tty2=$(sed -n 2p ttys.txt)
    tty3=$(sed -n 3p ttys.txt)
    tty4=$(sed -n 4p ttys.txt)
+   
    # Start four lbard daemons.
    set_instance +A
    fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$tty1" announce pull
@@ -60,6 +94,7 @@ setup() {
    set_instance +D
    fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$tty4" pull
 }
+
 setup20() {
    # Configure four servald daemons without any interfaces connecting them, and
    # start them running.
@@ -488,6 +523,15 @@ setup_MessageDeliveryLoss() {
    setup "0.75"
 }
 test_MessageDeliveryLoss() {
+    test_MessageDelivery
+}
+
+doc_MessageDeliveryWithTraffic="MeshMS conversation via UHF with other bundles in flight"
+setup_MessageDeliveryWithTraffic() {
+    # 1500 files in common, 0 unique files per instance, 25% packet loss
+   setup "0.25" 1500 0
+}
+test_MessageDeliveryWithTraffic() {
     test_MessageDelivery
 }
 
