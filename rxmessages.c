@@ -371,12 +371,6 @@ int saw_piece(char *peer_prefix,int for_me,
       int manifest_len;
 
       int insert_result=-999;
-
-      // Tell peer we have the whole thing now.
-      // (next_byte_would_be_useful is asserted so that we don't send two
-      // reports).
-      next_byte_would_be_useful=1;
-      sync_tell_peer_we_have_the_bundle_of_this_partial(peer,i);
       
       if (!manifest_binary_to_text
 	  (partials[i].manifest_segments->data,
@@ -413,7 +407,7 @@ int saw_piece(char *peer_prefix,int for_me,
 	    fclose(bundlelogfile);
 	  }
 	}
-	
+
 	// Take note of the bundle, so that we can tell any peer who is trying to
 	// send it to us, that we have recently received it.  This is irrespective
 	// of whether it inserted correctly. The reasoning behind this, is that we
@@ -428,6 +422,10 @@ int saw_piece(char *peer_prefix,int for_me,
       } else {
 	printf(">>> %s Could not decompress binary manifest.  Not inserting\n",
 	       timestamp_str());
+	// This will cause us to try to receive the entire bundle again, not just the
+	// manifest.
+	// XXX - Decompress manifest as soon as we have it to catch this problem
+	// earlier. 
       }
       if (insert_result) {
 	// Failed to insert, so mark this bundle for deprioritisation, so that we
@@ -463,6 +461,13 @@ int saw_piece(char *peer_prefix,int for_me,
 	progress_log_bundle_receipt(partials[i].bid_prefix,
 				    partials[i].bundle_version);
       }
+
+      // Tell peer we have the whole thing now.
+      // (next_byte_would_be_useful is asserted so that we don't send two
+      // reports).
+      next_byte_would_be_useful=1;
+      sync_tell_peer_we_have_the_bundle_of_this_partial(peer,i);
+      
       // Now release this partial.
       clear_partial(&partials[i]);
     }
