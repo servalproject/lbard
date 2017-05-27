@@ -144,6 +144,10 @@ int main(int argc, char **argv)
   sigemptyset(&sig.sa_mask); // Don't block any signals during handler
   sig.sa_flags = SA_NODEFER | SA_RESETHAND; // So the signal handler can kill the process by re-sending the same signal to itself
   sigaction(SIGABRT, &sig, NULL);
+  sig.sa_handler = crash_handler;
+  sigemptyset(&sig.sa_mask); // Don't block any signals during handler
+  sig.sa_flags = SA_NODEFER | SA_RESETHAND; // So the signal handler can kill the pro
+  sigaction(SIGSTOP, &sig, NULL);
 
   
   // Setup random seed, so that multiple LBARD's started at the same time
