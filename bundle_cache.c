@@ -37,9 +37,26 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <assert.h>
+#include <sys/stat.h>
 
 #include "sync.h"
 #include "lbard.h"
+
+int _report_file(const char *filename,const char *file,
+		 const int line,const char *function)
+{
+  if (!filename) return 0;
+  
+  struct stat s;
+  int r=stat(filename,&s);
+
+  fprintf(stderr,"%s:%d:%s() : File '%s' length=%lld, result=%d\n",
+	  file,line,function,filename,s.st_size,r);
+  char cmd[1024];
+  snprintf(cmd,1024,"ls -lad %s 1>&2",filename);
+  system(cmd);
+  return 0;
+}
 
 char *bid_of_cached_bundle=NULL;
 long long cached_version=0;
@@ -83,8 +100,11 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
 	     bundles[bundle_number].bid_hex);
 
     long long t1=gettime_ms();
-    
-    snprintf(filename,1024,"%smanifest",sid_prefix_hex);
+
+    char pathbuf[1024];
+    snprintf(filename,1024,"%s/%d.%s.manifest",getcwd(pathbuf,1024),getpid(),
+	     sid_prefix_hex);
+      
     unlink(filename);
     FILE *f=fopen(filename,"w");
     if (!f) {
@@ -100,7 +120,6 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
       return -1;
     }
     long long t2=gettime_ms();
-
     f=fopen(filename,"r");
     if (!f) {
       fprintf(stderr,"ERROR: Could not open '%s' to read bundle manifest in prime_bundle_cache() call for bundle #%d\n",
@@ -140,7 +159,7 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     
     snprintf(path,8192,"/restful/rhizome/%s/raw.bin",
 	     bundles[bundle_number].bid_hex);
-    snprintf(filename,1024,"%sraw",sid_prefix_hex);
+    snprintf(filename,1024,"%d.%s.raw",getpid(),sid_prefix_hex);
     unlink(filename);
     f=fopen(filename,"w");
     if (!f) {
@@ -164,7 +183,11 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     // XXX - This transport only allows bundles upto 5MB!
     // (and that is probably pushing it a bit for a mesh extender with only 32MB RAM
     // for everything!)
-    f=fopen(filename,"r");
+    if (!f) {
+      fprintf(stderr,"could read file '%s'.\n",filename);
+      perror("fopen");
+      return -1;
+    }
     if (cached_body) free(cached_body);
     cached_body=malloc(5*1024*1024);
     assert(cached_body);
