@@ -7,6 +7,7 @@
 #include <netdb.h>
 #include <time.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <errno.h>
 
 #include "sync.h"
@@ -318,6 +319,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
 	line[len+1]=0;
 	if (sscanf(line,"Content-Length: %d",&content_length)==1) {
 	  // got content length
+	  fprintf(stderr,"HTTP Content-Length = %d\n",content_length);
 	}
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
@@ -335,7 +337,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
   }
 
   // Got headers, read body and write to file
-  // printf("  reading body...\n");
+  fprintf(stderr,"  reading body...\n");
 
   int rxlen=0;
   r=0;
@@ -343,9 +345,15 @@ int http_get_simple(char *server_and_port, char *auth_token,
     errno=0;
     r=read_nonblock(sock,line,LINE_BYTES);
     if (r>0) {
-      printf("read %d body bytes @ T%lld\n",r,timeout_time-gettime_ms());
+      fprintf(stderr,"read %d body bytes @ T%lld\n",r,timeout_time-gettime_ms());
       if (last_read_time) *last_read_time=gettime_ms();
-      fwrite(line,r,1,outfile);
+      int written=fwrite(line,1,r,outfile);      
+      if (written!=r) {
+	fprintf(stderr,"Short write: %d of %d bytes\n",written,r);
+	close(sock);
+	return -1;
+      }
+      fflush(outfile);
       rxlen+=r;
       if (content_length>-1) {
 	if (rxlen>=content_length) break;
@@ -358,13 +366,26 @@ int http_get_simple(char *server_and_port, char *auth_token,
     }
 
     if (gettime_ms()>timeout_time) {
+      fprintf(stderr,"HTTP read timeout (read %d of %d bytes)\n",
+	      rxlen,content_length);
       close(sock);
-      return http_response;
+      return -1;
     }
     
   }
   
   close(sock);
+  {
+    struct stat s;
+    int r=fstat(fileno(outfile),&s);
+    fprintf(stderr,"  HTTP download file: length=%lld, stat result=%d\n",
+	    s.st_size,r);
+    perror("fstat");
+    if (s.st_size<content_length) {
+      fprintf(stderr,"  HTTP download file is too short. Returning error.\n");
+      return -1;
+    }
+  }
   
   return http_response;
 }
