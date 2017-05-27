@@ -169,7 +169,7 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     }
     result_code=http_get_simple(servald_server,
 				credential,path,f,5000,NULL);
-    fclose(f);
+    fclose(f); f=NULL;
     if(result_code!=200) {
       fprintf(stderr,"http request failed (%d). URLPATH:%s\n",result_code,path);
       return -1;
@@ -183,6 +183,7 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     // XXX - This transport only allows bundles upto 5MB!
     // (and that is probably pushing it a bit for a mesh extender with only 32MB RAM
     // for everything!)
+    f=fopen(filename,"r");
     if (!f) {
       fprintf(stderr,"could read file '%s'.\n",filename);
       perror("fopen");
@@ -192,13 +193,14 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     cached_body=malloc(5*1024*1024);
     assert(cached_body);
     // XXX - Should check that we read all the bytes
-    cached_body_len=fread(cached_body,1,5*1024*1024,f);
+    cached_body_len=fread(cached_body,1,5*1024*1024,f);    
     cached_body=realloc(cached_body,cached_body_len);
     assert(cached_body);
     fclose(f);
     unlink(filename);
-    if (0)
-      fprintf(stderr,"  body is %d bytes long.\n",cached_body_len);
+    if (1)
+      fprintf(stderr,"  body is %d bytes long. result_code=%d\n",
+	      cached_body_len,result_code);
 
     bid_of_cached_bundle=strdup(bundles[bundle_number].bid_hex);
 
