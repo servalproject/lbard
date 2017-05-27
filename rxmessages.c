@@ -84,7 +84,7 @@ int saw_piece(char *peer_prefix,int for_me,
 
   if (debug_pieces) printf("Saw a piece of BID=%s* from SID=%s*\n",
 			    bid_prefix,peer_prefix);
-
+  
   int bundle_number=-1;
 
   // Send an ack immediately if we already have this bundle (or newer), so that the
@@ -94,15 +94,16 @@ int saw_piece(char *peer_prefix,int for_me,
   // an adversary could purposely refuse to acknowledge bundles (that it might have
   // introduced for this special purpose) addressed to itself, so that the priority
   // scheme gets stuck trying to send these bundles to them forever.
-  if (sync_is_bundle_recently_received(bid_prefix,version)) {
-    // We have this version already: mark it for announcement to sender,
-    // and then return immediately.
-    fprintf(stderr,
-	    "We recently received %s* version %lld - ignoring piece.\n",
-	    bid_prefix,version);
-    sync_tell_peer_we_have_bundle_by_id(peer,bid_prefix_bin,version);
-    return 0;
-    
+  if (for_me) {
+    if (sync_is_bundle_recently_received(bid_prefix,version)) {
+      // We have this version already: mark it for announcement to sender,
+      // and then return immediately.
+      fprintf(stderr,
+	      "We recently received %s* version %lld - ignoring piece.\n",
+	      bid_prefix,version);
+      sync_tell_peer_we_have_bundle_by_id(peer,bid_prefix_bin,version);
+      return 0;      
+    }
   }
   for(int i=0;i<bundle_count;i++) {
     if (!strncasecmp(bid_prefix,bundles[i].bid_hex,strlen(bid_prefix))) {
@@ -114,9 +115,11 @@ int saw_piece(char *peer_prefix,int for_me,
 #ifdef SYNC_BY_BAR
 	bundles[i].announce_bar_now=1;
 #endif
-	fprintf(stderr,"We already have %s* version %lld - ignoring piece.\n",
-		bid_prefix,version);
-	sync_tell_peer_we_have_this_bundle(peer,i);
+	if (for_me) {
+	  fprintf(stderr,"We already have %s* version %lld - ignoring piece.\n",
+		  bid_prefix,version);
+	  sync_tell_peer_we_have_this_bundle(peer,i);
+	}
 	return 0;
       } else {
 	// We have an older version.
@@ -521,7 +524,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   int piece_is_manifest;
   int above_1mb;
   int is_end_piece;
-  int for_me;
+  int for_me=0;
 
   int peer_index=-1;
   
