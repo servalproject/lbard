@@ -102,6 +102,12 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     long long t2=gettime_ms();
 
     f=fopen(filename,"r");
+    if (!f) {
+      fprintf(stderr,"ERROR: Could not open '%s' to read bundle manifest in prime_bundle_cache() call for bundle #%d\n",
+	      filename,bundle_number);
+      perror("fopen");
+      return -1;
+    }
     if (cached_manifest) free(cached_manifest);
     cached_manifest=malloc(8192);
     assert(cached_manifest);
