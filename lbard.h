@@ -155,7 +155,7 @@ extern int message_buffer_size;
 extern int message_buffer_length;
 
 extern char *my_sid_hex;
-
+extern unsigned char my_sid[32];
 
 struct bundle_record {
   int index; // position in array of bundles

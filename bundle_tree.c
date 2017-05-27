@@ -713,6 +713,10 @@ int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
   report_queue[slot][ofs++]=(first_required_body_offset>>16)&0xff;
   report_queue[slot][ofs++]=(first_required_body_offset>>24)&0xff;
 
+  // Indicate recipient
+  report_queue[slot][ofs++]=peer_records[peer]->sid_prefix_bin[0];
+  report_queue[slot][ofs++]=peer_records[peer]->sid_prefix_bin[1];
+  
   report_lengths[slot]=ofs;
   assert(ofs<MAX_REPORT_LEN);
   if (slot>=report_queue_length) report_queue_length=slot+1;
@@ -928,8 +932,8 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
 	p->tx_bundle_body_offset=peer_records[i]->tx_bundle_body_offset;
 	p->tx_bundle_manifest_offset=peer_records[i]->tx_bundle_manifest_offset;
 	p->tx_bundle_priority=priority;
-	fprintf(stderr,"Beginning transmission from same offset as for another peer (= %d)\n",
-	    p->tx_bundle_body_offset);
+	fprintf(stderr,"Beginning transmission from same offset as for another peer (m=%d, b= %d)\n",
+		p->tx_bundle_manifest_offset,p->tx_bundle_body_offset);
 	return 0;
       }
 
@@ -945,8 +949,8 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     if (option_flags&FLAG_NO_RANDOMIZE_START_OFFSET)
       p->tx_bundle_manifest_offset=0;
     p->tx_bundle_priority=priority;
-    fprintf(stderr,"Beginning transmission from random offset (= %d)\n",
-	    p->tx_bundle_body_offset);
+    fprintf(stderr,"Beginning transmission from random offset (m=%d, p=%d)\n",
+	    p->tx_bundle_manifest_offset,p->tx_bundle_body_offset);
   }
 
   // peer_queue_list_dump(p);
@@ -1023,8 +1027,12 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
 {
   // Get fields
   int manifest_offset=msg[9]|(msg[10]<<8);
-  int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[14]<<24);
 
+  int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[14]<<24);
+  int for_me=0;
+
+  if ((msg[15]==my_sid[0])&&(msg[16]==my_sid[1])) for_me=1;
+  
   // Does the ACK tell us to jump exactly here, or to a random place somewhere
   // after it?  If it indicates a random jump, only do the jump 1/2 the time.
   int randomJump=0;
@@ -1034,14 +1042,18 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
 
   int bundle=lookup_bundle_by_prefix(bid_prefix,8);
 
-  fprintf(stderr,"T+%lldms : SYNC ACK: '%c' %s* is asking for us to send from m=%d, p=%d of"
+  fprintf(stderr,"T+%lldms : SYNC ACK: '%c' %s* is asking for %s to send from m=%d, p=%d of"
 	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d/%d)\n",
 	  gettime_ms()-start_time,
 	  msg[0],
-	  p?p->sid_prefix:"<null>",manifest_offset,body_offset,
+	  p?p->sid_prefix:"<null>",
+	  for_me?"us":"someone else",
+	  manifest_offset,body_offset,
 	  msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8],
 	  bundle,bundle_count);
 
+  if (!for_me) return 0;
+  
   // Sanity check inputs, so that we don't mishandle memory.
   if (manifest_offset<0) manifest_offset=0;
   if (body_offset<0) body_offset=0;  

@@ -569,7 +569,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       /* Acknowledgement of progress of bundle transfer */
       sync_parse_ack(p,&msg[offset],
 		     prefix,servald_server,credential);
-      offset+=15;
+      offset+=17;
       break;
     case 'B':
       offset++;
