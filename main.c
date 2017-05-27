@@ -129,6 +129,8 @@ void crash_handler(int signal)
   exit(0);
 }
 
+unsigned int option_flags=0;
+
 int main(int argc, char **argv)
 {  
   fprintf(stderr,"Version 20170504.0709.1\n");
@@ -311,6 +313,8 @@ int main(int argc, char **argv)
       else if (!strcasecmp("bundlelog",argv[n])) debug_bundlelog=1;
       else if (!strcasecmp("nopriority",argv[n])) debug_noprioritisation=1;
       else if (!strcasecmp("nohttpd",argv[n])) http_server=0;
+      else if (!strncasecmp("flags=",argv[n],5))
+	option_flags=atoi(&argv[n][5]);
       else {
 	fprintf(stderr,"Illegal mode '%s'\n",argv[n]);
 	exit(-3);

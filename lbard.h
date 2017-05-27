@@ -257,6 +257,10 @@ extern unsigned char *cached_manifest_encoded;
 extern int cached_body_len;
 extern unsigned char *cached_body;
 
+extern unsigned int option_flags;
+#define FLAG_NO_RANDOMIZE_REDIRECT_OFFSET 1
+#define FLAG_NO_RANDOMIZE_START_OFFSET 2
+#define FLAG_NO_MERGE_PARTIAL_TRANSFERS 4
 extern FILE *debug_file;
 extern int debug_radio;
 extern int debug_pieces;
@@ -276,6 +280,11 @@ extern int meshms_only;
 extern long long min_version;
 extern int time_slave;
 extern long long start_time;
+
+// Details of the servald server we are communicating with
+extern char *servald_server;
+extern char *credential;
+extern char *prefix;
 
 int saw_piece(char *peer_prefix,int for_me,
 	      char *bid_prefix, unsigned char *bid_prefix_bin,

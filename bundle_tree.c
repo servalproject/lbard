@@ -606,7 +606,8 @@ int partial_first_missing_byte(struct segment_list *s)
   // incase it signals the end of the bundle (we don't necessarily know the
   // payload length during reception).  Thus only ask for the end point if
   // there are no other alternatives.
-  if (candidate_count>1)
+  if ((!(option_flags&FLAG_NO_RANDOMIZE_REDIRECT_OFFSET))
+      &&(candidate_count>1))
     return candidates[1+random()%(candidate_count-1)];
   else return candidates[0];
 }
@@ -679,6 +680,7 @@ int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
     s=s->next;
   }
   int segment_num=random()%(body_segments+add_zero);
+  if (option_flags&FLAG_NO_RANDOMIZE_REDIRECT_OFFSET) segment_num=0;
   if (segment_num==body_segments) first_required_body_offset=0;
   s=partials[partial].body_segments;
   while(s) {
@@ -934,9 +936,14 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     // Not already sending to another peer, so just pick a random point and start
     p->tx_bundle=bundle;
     p->tx_bundle_body_offset=random()%bundles[bundle].length;
+    if (option_flags&FLAG_NO_RANDOMIZE_START_OFFSET)
+      p->tx_bundle_body_offset=0;
     // ... but start from the beginning if it will take only one packet
     if (bundles[bundle].length<150) p->tx_bundle_body_offset=0;
-    p->tx_bundle_manifest_offset=0;
+    prime_bundle_cache(bundle,p->sid_prefix,servald_server,credential);
+      p->tx_bundle_manifest_offset=random()%cached_manifest_encoded_len;
+    if (option_flags&FLAG_NO_RANDOMIZE_START_OFFSET)
+      p->tx_bundle_manifest_offset=0;
     p->tx_bundle_priority=priority;
     fprintf(stderr,"Beginning transmission from random offset (= %d)\n",
 	    p->tx_bundle_body_offset);
