@@ -189,7 +189,7 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   int max_bytes=mtu-(*offset)-21;
   int bytes_available=len-start_offset;
   int actual_bytes=0;
-  int end_of_item=0;
+  int not_end_of_item=0;
 
   // If we can't announce even one byte, we should just give up.
   if (start_offset>0xfffff) {
@@ -200,11 +200,21 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   // Work out number of bytes to include in announcement
   if (bytes_available<max_bytes) {
     actual_bytes=bytes_available;
-    end_of_item=0;
+    not_end_of_item=0;
   } else {
     actual_bytes=max_bytes;
-    end_of_item=1;
+    not_end_of_item=1;
   }
+
+  // If not sending last piece, limit to 64 byte segment boundary.
+  // This is partly to aid debugging, but also avoids wasting bytes when we are
+  // using the request bitmap for transfers, where accounting is in 64 byte units.
+  if (not_end_of_item) {
+    int end_point=start_offset+actual_bytes;
+    if (end_point&63) actual_bytes-=end_point&63;
+    if (actual_bytes<1) return 0;
+  }
+  
   // Make sure byte count fits in 11 bits.
   if (actual_bytes>0x7ff) actual_bytes=0x7ff;
 
@@ -220,9 +230,9 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   // Now write the 23/25 byte header and actual bytes into output message
   // BID prefix (8 bytes)
   if (start_offset>0xfffff)
-    msg[(*offset)++]='P'+end_of_item;
+    msg[(*offset)++]='P'+not_end_of_item;
   else 
-    msg[(*offset)++]='p'+end_of_item;
+    msg[(*offset)++]='p'+not_end_of_item;
 
   // Intended recipient
   msg[(*offset)++]=peer_records[target_peer]->sid_prefix_bin[0];
