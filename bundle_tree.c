@@ -637,11 +637,12 @@ int sync_schedule_progress_report_bitmap(int peer, int partial)
   int slot=report_queue_length;
 
   for(int i=0;i<report_queue_length;i++) {
-    if (report_queue_peers[i]==peer_records[peer]) {
+    // BITMAP reports are broadcast, so not per-peer
+    //    if (report_queue_peers[i]==peer_records[peer]) {
       // We already want to tell this peer something.
       // We should only need to tell a peer one thing at a time.
       slot=i; break;
-    }
+      //    }
   }
   
   if (slot>=REPORT_QUEUE_LEN) slot=random()%REPORT_QUEUE_LEN;

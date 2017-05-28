@@ -570,7 +570,35 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 {
   for(int i=0;i<MAX_PEERS;i++)
     {
-      if (peer_records[i]&&peer_records[i]->request_bitmap_bundle==bundle_number) {
+      if (!peer_records[i]) continue;
+      if (
+	  // We have no bitmap, so start accumulating
+	  (peer_records[i]->request_bitmap_bundle==-1)
+	  ||
+	  // We have a bitmap, but for a different bundle to the one we are sending
+	  ((peer_records[i]->tx_bundle==bundle_number
+	    &&peer_records[i]->request_bitmap_bundle!=peer_records[i]->tx_bundle))
+	  )
+	{
+	  // Reset bitmap and start accumulating
+	  bzero(peer_records[i]->request_bitmap,32);
+	  peer_records[i]->request_bitmap_bundle=bundle_number;
+	  // The only tricky part is working out the start offset for the bitmap.
+	  // If the offset of the piece is near the start, we will assume we have
+	  // joined the conversation recently, and that the bitmap start is still
+	  // at zero.
+	  // XXX - We could lookup the bundle size to work out the size, and clamp
+	  // the offset on the basis of that.
+	  // XXX - If we are not currently transmitting anything to this peer, we
+	  // could begin speculative transmission, since the bundle is apparently
+	  // interesting to SOMEONE.  This would help to slightly reduce latency
+	  // when the network is otherwise quiescent.
+	  if (start_offset>16384)
+	    peer_records[i]->request_bitmap_offset=start_offset;
+	  else
+	    peer_records[i]->request_bitmap_offset=0;
+	}
+      if (peer_records[i]->request_bitmap_bundle==bundle_number) {
 	if (start_offset>=peer_records[i]->request_bitmap_offset)
 	  {
 	    int offset=start_offset-peer_records[i]->request_bitmap_offset;
@@ -579,12 +607,25 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	    int bit=offset/64;
 	    if (bit>=0)
 	      while((bytes>=64)&&(bit<(32*8*64))) {
+		printf(">>> %s Marking [%d,%d) sent due to transmitted piece.\n",
+		       timestamp_str(),start_offset,start_offset+bytes);
 		fprintf(stderr,
 			"BITMAP: Setting bit %d due to transmitted piece.\n",bit);
 		peer_records[i]->request_bitmap[bit>>3]|=(1<<(bit&7));
 		bit++; bytes-=64;
 	      }
 	  }
+      } else {
+	if (peer_records[i]) {
+	  printf(">>> %s NOT Marking [%d,%d) sent (no matching bitmap: %d vs %d).\n",
+		 timestamp_str(),start_offset,start_offset+bytes,
+		 peer_records[i]->request_bitmap_bundle,bundle_number);
+	  if (peer_records[i]->tx_bundle==bundle_number)
+	    printf(">>> %s ... but I should care, because it matches the bundle I am sending.\n",timestamp_str());
+	  if (peer_records[i]->tx_bundle==-1)
+	    // In fact, if we see someone sending a bundle to someone, and we don't yet know if we can send it yet, we should probably start on a speculative basis
+	    printf(">>> %s ... but I could care, because I am not sending a bundle to them yet.\n",timestamp_str());
+	}
       }
     }
   return 0;
