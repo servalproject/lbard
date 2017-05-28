@@ -460,8 +460,9 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 	      report_queue_peers[report_queue_length]->sid_prefix);
       report_queue_length++;
     } else {
-      fprintf(stderr,"T+%lldms : Flushing report from queue, %d remaining.\n",
-	      gettime_ms()-start_time,	    
+      fprintf(stderr,"T+%lldms : Flushing %d byte report from queue, %d remaining.\n",
+	      gettime_ms()-start_time,
+	      report_lengths[report_queue_length],
 	      report_queue_length);
       fprintf(stderr,"Sent report_queue message '%s' to %s*\n",
 	      report_queue_message[report_queue_length],
@@ -1000,7 +1001,7 @@ int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg_in,int *o
   int bundle=lookup_bundle_by_prefix(bid_prefix,8);
 
   fprintf(stderr,"T+%lldms : SYNC BITMAP ACK: %s* is informing everyone to send from m=%d, p=%d of"
-	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d/%d)\n",
+	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d/%d)\n    ",
 	  gettime_ms()-start_time,
 	  p?p->sid_prefix:"<null>",
 	  manifest_offset,body_offset,
