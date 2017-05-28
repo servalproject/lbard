@@ -945,7 +945,7 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     // ... but start from the beginning if it will take only one packet
     if (bundles[bundle].length<150) p->tx_bundle_body_offset=0;
     prime_bundle_cache(bundle,p->sid_prefix,servald_server,credential);
-      p->tx_bundle_manifest_offset=random()%cached_manifest_encoded_len;
+    p->tx_bundle_manifest_offset=(random()%cached_manifest_encoded_len)&0xffffff80;
     if (option_flags&FLAG_NO_RANDOMIZE_START_OFFSET)
       p->tx_bundle_manifest_offset=0;
     p->tx_bundle_priority=priority;
@@ -1065,10 +1065,18 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
       if (!prime_bundle_cache(bundle,
 			      sid_prefix_hex,servald_server,credential))
 	{
-	  if (manifest_offset<cached_manifest_encoded_len)
-	    manifest_offset+=random()%(cached_manifest_encoded_len-manifest_offset);
-	  if (body_offset<cached_body_len)
-	    body_offset+=random()%(cached_body_len-body_offset);
+	  if (manifest_offset<cached_manifest_encoded_len) {
+	    if (!(option_flags&FLAG_NO_RANDOMIZE_REDIRECT_OFFSET)) {
+	      manifest_offset+=random()%(cached_manifest_encoded_len-manifest_offset);
+	      manifest_offset&=0xffffff00;
+	    }
+	  }
+	  if (body_offset<cached_body_len) {
+	    if (!(option_flags&FLAG_NO_RANDOMIZE_REDIRECT_OFFSET)) {
+	      body_offset+=random()%(cached_body_len-body_offset);
+	      body_offset&=0xffffff00;
+	    }
+	  }
 	  fprintf(stderr,"SYNC ACK: %s* is redirected us to a random location. Sending from m=%d, p=%d\n",
 		  p->sid_prefix,manifest_offset,body_offset);
 	}
