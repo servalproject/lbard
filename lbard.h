@@ -53,6 +53,16 @@ struct segment_list {
   struct segment_list *prev,*next;
 };
 
+struct recent_sender {
+  unsigned char sid_prefix[2];
+  time_t last_time;
+};
+
+#define MAX_RECENT_SENDERS 16
+struct recent_senders {
+  struct recent_sender r[MAX_RECENT_SENDERS];
+};
+
 struct partial_bundle {
   // Data from the piece headers for keeping track
   char *bid_prefix;
@@ -65,6 +75,8 @@ struct partial_bundle {
 
   struct segment_list *body_segments;
   int body_length;
+
+  struct recent_senders senders;
 };
 
 struct peer_state {
