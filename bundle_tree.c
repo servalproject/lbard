@@ -608,7 +608,7 @@ int partial_first_missing_byte(struct segment_list *s)
   // there are no other alternatives.
   if ((!(option_flags&FLAG_NO_RANDOMIZE_REDIRECT_OFFSET))
       &&(candidate_count>1))
-    return candidates[1+random()%(candidate_count-1)];
+    return candidates[1+random()%(candidate_count-1)]&0xffffff00;
   else return candidates[0];
 }
 
@@ -939,7 +939,7 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
 
     // Not already sending to another peer, so just pick a random point and start
     p->tx_bundle=bundle;
-    p->tx_bundle_body_offset=random()%bundles[bundle].length;
+    p->tx_bundle_body_offset=(random()%bundles[bundle].length)&0xffffff00;
     if (option_flags&FLAG_NO_RANDOMIZE_START_OFFSET)
       p->tx_bundle_body_offset=0;
     // ... but start from the beginning if it will take only one packet
