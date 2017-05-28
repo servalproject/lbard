@@ -187,6 +187,8 @@ int saw_piece(char *peer_prefix,int for_me,
     partials[i].body_length=-1;
   }
 
+  partial_update_recent_senders(&partials[i],peer_prefix);
+  
   int piece_end=piece_offset+piece_bytes;
 
   // Note stream length if this is an end piece or journal bundle

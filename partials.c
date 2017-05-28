@@ -41,6 +41,31 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+int partial_update_recent_senders(struct partial_bundle *p,char *sender_prefix_hex)
+{
+  // Get peer SID prefix as HEX
+  unsigned char sender_prefix_bin[2];
+  for(int i=0;i<2;i++)
+    sender_prefix_bin[i]=hex_to_val(sender_prefix_hex[i*2+1])
+      +hex_to_val(sender_prefix_hex[i*2+0])*16;
+
+  int index=0;
+  for(index=0;index<MAX_RECENT_SENDERS;index++)
+    {
+      if ((sender_prefix_bin[0]==p->senders.r[index].sid_prefix[0])
+	  &&(sender_prefix_bin[1]==p->senders.r[index].sid_prefix[1])) {
+	break;
+      }
+    }
+  if (index==MAX_RECENT_SENDERS) index=random()%MAX_RECENT_SENDERS;
+
+  // Update record
+  p->senders.r[index].sid_prefix[0]=sender_prefix_bin[0];
+  p->senders.r[index].sid_prefix[1]=sender_prefix_bin[1];
+  p->senders.r[index].last_time=time(0);
+  
+  return -1;
+}
 
 int clear_partial(struct partial_bundle *p)
 {

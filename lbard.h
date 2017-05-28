@@ -496,3 +496,5 @@ char *timestamp_str(void);
 int _report_file(const char *filename,const char *file,
 		 const int line,const char *function);
 #define report_file(X) _report_file(X,__FILE__,__LINE__,__FUNCTION__)
+int partial_update_recent_senders(struct partial_bundle *p,char *sender_prefix_hex);
+int hex_to_val(int c);
