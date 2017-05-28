@@ -273,6 +273,7 @@ char *fragment_name(int type)
   case 'Q': return "Bundle piece (offset >= 1MB)";
   case 'G': return "LBARD instance identifier";
   case 'T': return "Time stamp";
+  case 'M': return "Bundle transfer progress bitmap";
   case 'A': return "Bundle transfer progress acknowledgement";
   case 'a': return "Bundle transfer redirect and acknowledgement";
   default: return "unknown";
