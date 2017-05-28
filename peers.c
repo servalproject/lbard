@@ -524,3 +524,59 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
   }
 }
 
+/*
+  Update the point we intend to send from in the current bundle based on the
+  request bitmap.
+ */
+int peer_update_send_point(int peer)
+{
+  // Only update if the bundle ID of the bitmap and the bundle being sent match
+  if (peer_records[peer]->request_bitmap_bundle!=peer_records[peer]->tx_bundle)
+    return 0;
+
+  // Pick random piece that has yet to be received, and send that
+  int candidates[256];
+  int candidate_count=0;
+  for(int i=0;i<256;i++)
+    if (!peer_records[peer]->request_bitmap[i>>3]&(1<<(i&7)))
+      candidates[candidate_count++]=i;
+  if (!candidate_count) {
+    // No candidates, so keep sending from end of region
+    if (peer_records[peer]->tx_bundle_body_offset
+	<=(peer_records[peer]->request_bitmap_offset+(32*8*64)))
+      peer_records[peer]->tx_bundle_body_offset
+	=(peer_records[peer]->request_bitmap_offset+(32*8*64));
+  } else {
+    int selection=candidates[random()%candidate_count];
+    peer_records[peer]->tx_bundle_body_offset
+      =(peer_records[peer]->request_bitmap_offset+(selection*64));
+    fprintf(stderr,"BITMAP based send point = %d\n",
+	    peer_records[peer]->tx_bundle_body_offset);
+    
+  }
+  return 0;
+}
+
+int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
+							 int start_offset,
+							 int bytes)
+{
+  for(int i=0;i<MAX_PEERS;i++)
+    {
+      if (peer_records[i]&&peer_records[i]->request_bitmap_bundle==bundle_number) {
+	if (start_offset>=peer_records[i]->request_bitmap_offset)
+	  {
+	    int offset=start_offset-peer_records[i]->request_bitmap_offset;
+	    int trim=offset&64;
+	    if (trim) { offset+=64-trim; bytes-=trim; }
+	    int bit=offset/64;
+	    while((bytes>=64)&&(bit<(32*8*64))) {
+	      fprintf(stderr,"BITMAP: Setting bit %d due to transmitted piece.\n",bit);
+	      peer_records[i]->request_bitmap[bit>>3]|=(1<<(bit&7));
+	      bit++; bytes-=64;
+	    }
+	  }
+      }
+    }
+  return 0;
+}

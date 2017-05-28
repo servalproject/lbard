@@ -132,6 +132,13 @@ int saw_piece(char *peer_prefix,int for_me,
     }
   }
 
+  // Update progress bitmaps for all peers whenver we see a piece received that we
+  // think that they might want.  This stops us from resending the same piece later.
+  if (!is_manifest_piece)
+    peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,
+							 piece_offset,piece_bytes);
+						       
+  
   int i;
   int spare_record=random()%MAX_BUNDLES_IN_FLIGHT;
   for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
@@ -551,6 +558,7 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
     p->sid_prefix=strdup(peer_prefix);
     p->last_message_number=-1;
     p->tx_bundle=-1;
+    p->request_bitmap_bundle=-1;
     printf("Registering peer %s*\n",p->sid_prefix);
     if (peer_count<MAX_PEERS) {
       peer_records[peer_count++]=p;      

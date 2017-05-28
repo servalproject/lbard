@@ -219,6 +219,9 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   if (actual_bytes>0x7ff) actual_bytes=0x7ff;
 
   if (actual_bytes<0) return -1;
+
+  peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,
+						       start_offset,actual_bytes);
   
   // Generate 4 byte offset block (and option 2-byte extension for big bundles)
   long long offset_compound=0;
@@ -323,7 +326,9 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
   else
     peer_records[peer]->tx_cache_errors=0;
 
-
+  // Update send point based on the bundle progress bitmap for this peer, if we
+  // have one.
+  peer_update_send_point(peer);
   
   // Mark manifest all sent once we get to the end
   if (peer_records[peer]->tx_bundle_manifest_offset>=cached_manifest_encoded_len)
@@ -682,6 +687,10 @@ int sync_schedule_progress_report_bitmap(int peer, int partial)
   // 32 bytes of bitmap
   for(int i=0;i<32;i++)
     report_queue[slot][ofs++]=partials[partial].request_bitmap[i];
+
+  report_lengths[slot]=ofs;
+  assert(ofs<MAX_REPORT_LEN);
+  if (slot>=report_queue_length) report_queue_length=slot+1;
 
   return 0;
 }
