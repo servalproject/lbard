@@ -41,6 +41,21 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+int partial_recent_sender_report(struct partial_bundle *p)
+{
+  fprintf(stderr,"Recent senders for bundle %c%c%c%c*/%lld:\n",
+	  p->bid_prefix[0],p->bid_prefix[1],p->bid_prefix[2],p->bid_prefix[3],
+	  p->bundle_version);
+  int i;
+  time_t t=time(0);
+  for(i=0;i<MAX_RECENT_SENDERS;i++)
+    if ((t-p->senders.r[i].last_time)<10)
+      fprintf(stderr,"  #%02d : %02X%02X* (T-%d sec)\n",
+	      i,p->senders.r[i].sid_prefix[0],p->senders.r[i].sid_prefix[1],
+	      (int)(t-p->senders.r[i].last_time));
+  return 0;
+}
+
 int partial_update_recent_senders(struct partial_bundle *p,char *sender_prefix_hex)
 {
   // Get peer SID prefix as HEX
@@ -49,20 +64,25 @@ int partial_update_recent_senders(struct partial_bundle *p,char *sender_prefix_h
     sender_prefix_bin[i]=hex_to_val(sender_prefix_hex[i*2+1])
       +hex_to_val(sender_prefix_hex[i*2+0])*16;
 
+  int free_slot=random()%MAX_RECENT_SENDERS;
   int index=0;
+  time_t t = time(0);
   for(index=0;index<MAX_RECENT_SENDERS;index++)
     {
       if ((sender_prefix_bin[0]==p->senders.r[index].sid_prefix[0])
 	  &&(sender_prefix_bin[1]==p->senders.r[index].sid_prefix[1])) {
 	break;
       }
+      if ((t-p->senders.r[index].last_time)>=30) free_slot=index;
     }
-  if (index==MAX_RECENT_SENDERS) index=random()%MAX_RECENT_SENDERS;
+  if (index==MAX_RECENT_SENDERS) index=free_slot;
 
   // Update record
   p->senders.r[index].sid_prefix[0]=sender_prefix_bin[0];
   p->senders.r[index].sid_prefix[1]=sender_prefix_bin[1];
   p->senders.r[index].last_time=time(0);
+
+  partial_recent_sender_report(p);
   
   return -1;
 }
