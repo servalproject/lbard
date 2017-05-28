@@ -131,6 +131,10 @@ struct peer_state {
   unsigned int tx_queue_priorities[MAX_TXQUEUE_LEN];
   int tx_queue_overflow;
 #endif
+
+  int request_bitmap_bundle;
+  int request_bitmap_offset;
+  unsigned char request_bitmap[32];
 };
 
 // Bundles this peer is transferring.
@@ -506,3 +510,4 @@ int partial_update_recent_senders(struct partial_bundle *p,char *sender_prefix_h
 int partial_update_request_bitmap(struct partial_bundle *p);
 int hex_to_val(int c);
 int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg,int *offset);
+int dump_progress_bitmap(unsigned char *b);
