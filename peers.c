@@ -537,8 +537,13 @@ int peer_update_send_point(int peer)
   // Pick random piece that has yet to be received, and send that
   int candidates[256];
   int candidate_count=0;
-  for(int i=0;i<256;i++)
-    if (!peer_records[peer]->request_bitmap[i>>3]&(1<<(i&7)))
+
+  // But limit send point to the valid range of the bundle
+  int max_bit=(cached_body_len-peer_records[peer]->request_bitmap_offset)>>6; // = /64
+  if (max_bit>=32*8*64) max_bit=32*8*64-1; 
+  
+  for(int i=0;i<max_bit;i++)
+    if (!(peer_records[peer]->request_bitmap[i>>3]&(1<<(i&7))))
       candidates[candidate_count++]=i;
   if (!candidate_count) {
     // No candidates, so keep sending from end of region
@@ -547,11 +552,13 @@ int peer_update_send_point(int peer)
       peer_records[peer]->tx_bundle_body_offset
 	=(peer_records[peer]->request_bitmap_offset+(32*8*64));
   } else {
-    int selection=candidates[random()%candidate_count];
+    int candidate=random()%candidate_count;
+    int selection=candidates[candidate];
     peer_records[peer]->tx_bundle_body_offset
       =(peer_records[peer]->request_bitmap_offset+(selection*64));
-    fprintf(stderr,"BITMAP based send point = %d\n",
-	    peer_records[peer]->tx_bundle_body_offset);
+    fprintf(stderr,"BITMAP based send point = %d (candidate %d/%d = block %d)\n",
+	    peer_records[peer]->tx_bundle_body_offset,
+	    candidate,candidate_count,selection);
     
   }
   return 0;
@@ -570,11 +577,13 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	    int trim=offset&64;
 	    if (trim) { offset+=64-trim; bytes-=trim; }
 	    int bit=offset/64;
-	    while((bytes>=64)&&(bit<(32*8*64))) {
-	      fprintf(stderr,"BITMAP: Setting bit %d due to transmitted piece.\n",bit);
-	      peer_records[i]->request_bitmap[bit>>3]|=(1<<(bit&7));
-	      bit++; bytes-=64;
-	    }
+	    if (bit>=0)
+	      while((bytes>=64)&&(bit<(32*8*64))) {
+		fprintf(stderr,
+			"BITMAP: Setting bit %d due to transmitted piece.\n",bit);
+		peer_records[i]->request_bitmap[bit>>3]|=(1<<(bit&7));
+		bit++; bytes-=64;
+	      }
 	  }
       }
     }
