@@ -277,6 +277,7 @@ extern unsigned int option_flags;
 #define FLAG_NO_RANDOMIZE_REDIRECT_OFFSET 1
 #define FLAG_NO_RANDOMIZE_START_OFFSET 2
 #define FLAG_NO_MERGE_PARTIAL_TRANSFERS 4
+#define FLAG_NO_BITMAP_PROGRESS 8
 extern FILE *debug_file;
 extern int debug_radio;
 extern int debug_pieces;
@@ -436,6 +437,7 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 int sync_tell_peer_we_have_this_bundle(int peer, int bundle);
 int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial);
 int sync_schedule_progress_report(int peer, int partial, int randomJump);
+int sync_schedule_progress_report_bitmap(int peer, int partial);
 int bundle_calculate_tree_key(sync_key_t *sync_key,
 			      uint8_t sync_tree_salt[SYNC_SALT_LEN],
 			      char *bid,
@@ -503,3 +505,4 @@ int _report_file(const char *filename,const char *file,
 int partial_update_recent_senders(struct partial_bundle *p,char *sender_prefix_hex);
 int partial_update_request_bitmap(struct partial_bundle *p);
 int hex_to_val(int c);
+int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg,int *offset);

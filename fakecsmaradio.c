@@ -150,6 +150,13 @@ void filterable_erase_fragment(struct filterable *f,int offset)
   f->packet_start=offset;
 }
 
+void filterable_parse_progress_bitmap(struct filterable *f,
+				 const uint8_t *packet,int *offset)
+{
+  // For now, just skip over the progress bitmap
+  (*offset)+=32;
+}
+
 void filterable_parse_timestamp(struct filterable *f,
 				 const uint8_t *packet,int *offset)
 {
@@ -463,6 +470,14 @@ int filter_process_packet(int from,int to,
       filterable_parse_bid_prefix(&f,packet,&offset);
       filterable_parse_version(&f,packet,&offset);
       filterable_parse_offset_compound(&f,packet,&offset);
+      f.fragment_length=offset-f.packet_start;
+      filter_fragment(packet,packet_out,&out_len,&f,to==-1);
+      break;
+    case 'M': // Progress bitmap
+      filterable_parse_bid_prefix(&f,packet,&offset);
+      filterable_parse_manifest_offset(&f,packet,&offset);
+      filterable_parse_body_offset(&f,packet,&offset);
+      filterable_parse_progress_bitmap(&f,packet,&offset);
       f.fragment_length=offset-f.packet_start;
       filter_fragment(packet,packet_out,&out_len,&f,to==-1);
       break;

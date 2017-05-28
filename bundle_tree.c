@@ -279,13 +279,13 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   
   if (debug_announce) {
     printf("T+%lldms : Announcing for %s* ",gettime_ms()-start_time,
-	    peer_records[target_peer]->sid_prefix);
+	   peer_records[target_peer]->sid_prefix);
     for(int i=0;i<8;i++) printf("%c",bundles[bundle_number].bid_hex[i]);
     printf("* (priority=0x%llx) version %lld %s segment [%d,%d)\n",
-	    bundles[bundle_number].last_priority,
-	    bundles[bundle_number].version,
-	    is_manifest?"manifest":"payload",
-	    start_offset,start_offset+actual_bytes);
+	   bundles[bundle_number].last_priority,
+	   bundles[bundle_number].version,
+	   is_manifest?"manifest":"payload",
+	   start_offset,start_offset+actual_bytes);
   }
 
   char status_msg[1024];
@@ -311,7 +311,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
   int bundle_number=peer_records[peer]->tx_bundle;
   if (bundle_number<0) return -1;
   
-      if (prime_bundle_cache(bundle_number,
+  if (prime_bundle_cache(bundle_number,
 			 sid_prefix_hex,servald_server,credential)) {
     peer_records[peer]->tx_cache_errors++;
     if (peer_records[peer]->tx_cache_errors>MAX_CACHE_ERRORS)
@@ -455,14 +455,14 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 	      report_queue_peers[report_queue_length]->sid_prefix);
       report_queue_length++;
     } else {
-    fprintf(stderr,"T+%lldms : Flushing report from queue, %d remaining.\n",
-	    gettime_ms()-start_time,	    
-	    report_queue_length);
-    fprintf(stderr,"Sent report_queue message '%s' to %s*\n",
-	    report_queue_message[report_queue_length],
-	    report_queue_peers[report_queue_length]->sid_prefix);
-    free(report_queue_message[report_queue_length]);
-    report_queue_message[report_queue_length]=NULL;
+      fprintf(stderr,"T+%lldms : Flushing report from queue, %d remaining.\n",
+	      gettime_ms()-start_time,	    
+	      report_queue_length);
+      fprintf(stderr,"Sent report_queue message '%s' to %s*\n",
+	      report_queue_message[report_queue_length],
+	      report_queue_peers[report_queue_length]->sid_prefix);
+      free(report_queue_message[report_queue_length]);
+      report_queue_message[report_queue_length]=NULL;
     }
   }
   
@@ -622,9 +622,13 @@ int partial_first_missing_byte(struct segment_list *s)
   else return candidates[0];
 }
 
-int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
+int sync_schedule_progress_report_bitmap(int peer, int partial)
 {
-   int slot=report_queue_length;
+  // manifest and body offset
+  int first_required_manifest_offset
+    =partial_first_missing_byte(partials[partial].manifest_segments);
+
+  int slot=report_queue_length;
 
   for(int i=0;i<report_queue_length;i++) {
     if (report_queue_peers[i]==peer_records[peer]) {
@@ -641,20 +645,21 @@ int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
   report_queue_peers[slot]=peer_records[peer];
 
   int ofs=0;
-  // lower-case A tells the receiver to add a random offset to the position
-  // provided in the message.
-  report_queue[slot][ofs++]='a';
 
   if (report_queue_message[slot]) {
-    fprintf(stderr,"Replacing report_queue message '%s' with 'progress report'\n",
+    fprintf(stderr,"Replacing report_queue message '%s' with 'progress report' (BITMAP)\n",
 	    report_queue_message[slot]);
     free(report_queue_message[slot]);
     report_queue_message[slot]=NULL;
   } else {
-    fprintf(stderr,"Setting report_queue message to 'progress report'\n");
+    fprintf(stderr,"Setting report_queue message to 'progress report' (BITMAP)\n");
   }
   report_queue_message[slot]=strdup("progress report");
-
+  
+  // Announce progress bitmap to all recipients.
+  partial_update_request_bitmap(&partials[partial]);
+  report_queue[slot][ofs++]='M';
+  
   // BID prefix
   for(int i=0;i<8;i++) {
     int hex_value=0;
@@ -665,82 +670,20 @@ int sync_tell_peer_to_send_from_somewhere_useful(int peer, int partial)
     report_queue[slot][ofs++]=hex_value;
   }
   
-  // Providing the first unseen manifest or body byte is fine for 'A' definite
-  // redirection.  However, for random redirection, this is not ideal, as the remote
-  // party has no way to know how long the unseen region is, and when it picks a random
-  // offset to it, it may well pick an offset that has already been seen.
-  // Thus we should pick the end of a randomly selected segment, and send an 'A'
-  // instead of an 'a', provided that we have enough segments, or if the gaps are
-  // smaller than the ranges received.  The problem is if we have more senders than we
-  // have segments, as we still want some means for random reception.  This requires
-  // some thought. For now, we can pick the end of a random segment, and have the
-  // sender only add a random offset half the time when seeing an 'a'.
-  
-  // manifest and body offset
-  int first_required_manifest_offset
-    =partial_first_missing_byte(partials[partial].manifest_segments);
-  int first_required_body_offset
-    =partial_first_missing_byte(partials[partial].body_segments);  
-  int body_segments=0;
-  int add_zero=1;
-  struct segment_list *s=partials[partial].body_segments;
-  while(s) {
-    if (!s->start_offset) add_zero=0;
-    body_segments++;
-    s=s->next;
-  }
-  int segment_num=random()%(body_segments+add_zero);
-  if (option_flags&FLAG_NO_RANDOMIZE_REDIRECT_OFFSET) segment_num=0;
-  if (segment_num==body_segments) first_required_body_offset=0;
-  s=partials[partial].body_segments;
-  while(s) {
-    segment_num--;
-    if (!segment_num) {
-      first_required_body_offset=s->start_offset+s->length;
-      fprintf(stderr,"This gap @ %d, prev segment @ %d+%d, next segment @ %d+%d\n",
-	      first_required_body_offset,
-	      s->prev?s->prev->start_offset:-1,
-	      s->prev?s->prev->length:-1,
-	      s->next?s->next->start_offset:-1,
-	      s->next?s->next->length:-1);
-      if (s->prev
-	  &&((s->prev->start_offset-first_required_body_offset)<200)) {
-	fprintf(stderr,"Demoting 'a' back to 'A' due to short inter-segment gap"
-		" [%d,%d] of %d bytes.\n",
-		first_required_body_offset,s->prev->start_offset,
-		s->prev->start_offset-first_required_body_offset);
-	report_queue[slot][ofs++]='A';
-      }
-      break;
-    }
-    s=s->next;
-  }
-  
+  // First byte required of manifest
   report_queue[slot][ofs++]=first_required_manifest_offset&0xff;
   report_queue[slot][ofs++]=(first_required_manifest_offset>>8)&0xff;
-  report_queue[slot][ofs++]=first_required_body_offset&0xff;
-  report_queue[slot][ofs++]=(first_required_body_offset>>8)&0xff;
-  report_queue[slot][ofs++]=(first_required_body_offset>>16)&0xff;
-  report_queue[slot][ofs++]=(first_required_body_offset>>24)&0xff;
-
-  // Indicate recipient
-  report_queue[slot][ofs++]=peer_records[peer]->sid_prefix_bin[0];
-  report_queue[slot][ofs++]=peer_records[peer]->sid_prefix_bin[1];
   
-  report_lengths[slot]=ofs;
-  assert(ofs<MAX_REPORT_LEN);
-  if (slot>=report_queue_length) report_queue_length=slot+1;
-
-  fprintf(stderr,
-	  ">>> %s T+%lldms : Redirecting %s to an area we have not yet received of %s*. m_first=%d, b_first=%d\n",
-	  timestamp_str(),
-	  gettime_ms()-start_time,
-	  peer_records[peer]->sid_prefix,
-	  partials[partial].bid_prefix,
-	  first_required_manifest_offset,
-	  first_required_body_offset);    
+  // Start of region of interest
+  for(int i=0;i<4;i++)
+    report_queue[slot][ofs++]
+      =(partials[partial].request_bitmap_start>>(i*8))&0xff;
   
-  return 0; 
+  // 32 bytes of bitmap
+  for(int i=0;i<32;i++)
+    report_queue[slot][ofs++]=partials[partial].request_bitmap[i];
+
+  return 0;
 }
 
 int sync_schedule_progress_report(int peer, int partial, int randomJump)
@@ -766,12 +709,12 @@ int sync_schedule_progress_report(int peer, int partial, int randomJump)
   else report_queue[slot][ofs++]='A';
 
   if (report_queue_message[slot]) {
-    fprintf(stderr,"Replacing report_queue message '%s' with 'progress report'\n",
+    fprintf(stderr,"Replacing report_queue message '%s' with 'progress report' (ACK)\n",
 	    report_queue_message[slot]);
     free(report_queue_message[slot]);
     report_queue_message[slot]=NULL;
   } else {
-    fprintf(stderr,"Setting report_queue message to 'progress report'\n");
+    fprintf(stderr,"Setting report_queue message to 'progress report' (ACK)\n");
   }
   report_queue_message[slot]=strdup("progress report");
 
@@ -1030,6 +973,16 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
   return 0;
 }
 
+int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg,int *offset)
+{
+  fprintf(stderr,"Saw BITMAP @ %d\n",*offset);
+  (*offset)+=1; // Skip 'M'
+  (*offset)+=8; // Skip BID prefix
+  (*offset)+=2; // Skip manifest starting point
+  (*offset)+=4; // Skip start of region of interest
+  (*offset)+=32; // Skip progress bitmap
+  return 0;
+}
 
 int sync_parse_ack(struct peer_state *p,unsigned char *msg,
 		   char *sid_prefix_hex,

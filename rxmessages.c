@@ -351,6 +351,7 @@ int saw_piece(char *peer_prefix,int for_me,
   merge_segments(&partials[i].manifest_segments);
   merge_segments(&partials[i].body_segments);
   partial_update_request_bitmap(&partials[i]);
+  fprintf(stderr,"(Piece was [%lld,%lld)\n",piece_offset,piece_offset+piece_bytes);
 
   partials[i].recent_bytes += piece_bytes;
   
@@ -481,10 +482,15 @@ int saw_piece(char *peer_prefix,int for_me,
     // To deal with multiple senders that are providing us with pieces in lock-step,
     // we want to be able to redirect them to send from different positions in the bundle.
     // XXX - Does this mean that we will never have to deal with next_byte_would_be_useful==0 ?
-    if (!new_bytes_in_piece)
-      sync_schedule_progress_report(peer,i,1 /* random jump */);
-    else if (!next_byte_would_be_useful)
-      sync_schedule_progress_report(peer,i,0 /* send from first required byte */);
+    if (!option_flags&FLAG_NO_BITMAP_PROGRESS) {
+      if (!new_bytes_in_piece)
+	sync_schedule_progress_report(peer,i,1 /* random jump */);
+      else if (!next_byte_would_be_useful)
+	sync_schedule_progress_report(peer,i,0 /* send from first required byte */);
+    } else {
+      fprintf(stderr,"Sending BITMAP\n");
+      sync_schedule_progress_report_bitmap(peer,i);
+    }
   }
   
   return 0;
@@ -701,6 +707,10 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
       }
 
       saw_length(peer_prefix,bid_prefix,version,offset_compound);
+      break;
+    case 'M':
+      /* Acknowledgement of progress of bundle transfer */
+      sync_parse_progress_bitmap(p,msg,&offset);
       break;
     case 'P': case 'p': case 'Q': case 'q':
       // Skip header character
