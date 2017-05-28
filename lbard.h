@@ -77,6 +77,10 @@ struct partial_bundle {
   int body_length;
 
   struct recent_senders senders;
+
+  // Request bitmap
+  int request_bitmap_start;
+  unsigned char request_bitmap[32];
 };
 
 struct peer_state {
@@ -497,4 +501,5 @@ int _report_file(const char *filename,const char *file,
 		 const int line,const char *function);
 #define report_file(X) _report_file(X,__FILE__,__LINE__,__FUNCTION__)
 int partial_update_recent_senders(struct partial_bundle *p,char *sender_prefix_hex);
+int partial_update_request_bitmap(struct partial_bundle *p);
 int hex_to_val(int c);

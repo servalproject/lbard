@@ -53,6 +53,65 @@ int partial_recent_sender_report(struct partial_bundle *p)
       fprintf(stderr,"  #%02d : %02X%02X* (T-%d sec)\n",
 	      i,p->senders.r[i].sid_prefix[0],p->senders.r[i].sid_prefix[1],
 	      (int)(t-p->senders.r[i].last_time));
+  dump_partial(p);
+  return 0;
+}
+
+/*
+  Generate the starting offset and bitmap of 64 byte segments that we need
+  relative to that point in the payload stream.  The purpose is to provide a list
+  with enough pending 64 byte segments so that all our current senders know where they
+  should next send from.
+
+  The bitmap is based on the absolute first hole in the stream that we are missing.
+
+  The segment list is arranged in reverse order, so we start by getting the last
+  piece in the segment list. If it starts at 0, then our starting point is the end
+  of the first segment. If not, then our starting point is 0. We then mark the bitmap
+  as requiring all pieces.  Then the segment list is retraversed, and any 64 byte
+  region that we have in its entirety is marked as already held.
+*/
+int partial_update_request_bitmap(struct partial_bundle *p)
+{
+  // Get starting point
+  int starting_position=0;
+  // 32*8*64= 16KiB of data, enough for several seconds, even with 16 senders.
+  unsigned char bitmap[32];
+  bzero(&bitmap[0],32);
+  struct segment_list *l=p->body_segments;
+  while(l&&l->next) l=l->next;
+  if (l) {
+    if (!l->start_offset) starting_position=l->length;
+  }
+
+  l=p->body_segments;
+  while(l) {
+    if ((l->start_offset>=starting_position)
+	&&(l->start_offset<=(starting_position+32*8*64))) {
+      int start=l->start_offset;
+      int length=l->length;
+      // Ignore any first partial 
+      if (start&63) {
+	int trim=64-(start&63);
+	start+=trim;
+	length-=trim;
+      }
+      // Work out first block number
+      int block=(start-starting_position)>>6; //  divide by 64
+      // Then mark as received all those we already have
+      while (length>=64) {
+	bitmap[block>>3]|=(1<<(block&7));
+	block++; length-=64;
+      }
+    }
+
+    l=l->next;
+  }
+
+  // Save request bitmap
+  p->request_bitmap_start=starting_position;
+  memcpy(p->request_bitmap,bitmap,32);
+  
   return 0;
 }
 
@@ -128,6 +187,14 @@ int dump_partial(struct partial_bundle *p)
   dump_segment_list(p->manifest_segments);
   fprintf(stderr,"  Body pieces received:\n");
   dump_segment_list(p->body_segments);
+  fprintf(stderr,"  Request bitmap: start=%d, bits=\n    ",
+	  p->request_bitmap_start);
+  for(int i=0;i<(32*8);i++) {
+    if (p->request_bitmap[i>>3]&(1<<(i&7)))
+      fprintf(stderr,"."); else fprintf(stderr,"Y");
+    if (((i&63)==63)&&(i!=255)) fprintf(stderr,"\n    ");
+  }
+  fprintf(stderr,"\n");
   return 0;
 }
 

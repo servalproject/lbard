@@ -350,6 +350,7 @@ int saw_piece(char *peer_prefix,int for_me,
 
   merge_segments(&partials[i].manifest_segments);
   merge_segments(&partials[i].body_segments);
+  partial_update_request_bitmap(&partials[i]);
 
   partials[i].recent_bytes += piece_bytes;
   
