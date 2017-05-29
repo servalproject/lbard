@@ -220,6 +220,9 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 
   if (actual_bytes<0) return -1;
 
+  printf(">>> %s I just sent piece [%d,%d) for %s*.\n",
+	 timestamp_str(),start_offset,start_offset+actual_bytes,
+	 peer_records[target_peer]->sid_prefix);
   peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,
 						       start_offset,actual_bytes);
   
@@ -460,6 +463,10 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 	      report_queue_peers[report_queue_length]->sid_prefix);
       report_queue_length++;
     } else {
+      fprintf(stderr,">>> %s Flushing %d byte report from queue, %d remaining.\n",
+	      timestamp_str(),
+	      report_lengths[report_queue_length],
+	      report_queue_length);
       fprintf(stderr,"T+%lldms : Flushing %d byte report from queue, %d remaining.\n",
 	      gettime_ms()-start_time,
 	      report_lengths[report_queue_length],
@@ -630,6 +637,8 @@ int partial_first_missing_byte(struct segment_list *s)
 
 int sync_schedule_progress_report_bitmap(int peer, int partial)
 {
+  printf(">>> %s Scheduling bitmap report.\n",timestamp_str());
+
   // manifest and body offset
   int first_required_manifest_offset
     =partial_first_missing_byte(partials[partial].manifest_segments);
