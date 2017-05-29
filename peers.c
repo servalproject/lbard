@@ -541,10 +541,19 @@ int peer_update_send_point(int peer)
   // But limit send point to the valid range of the bundle
   int max_bit=(cached_body_len-peer_records[peer]->request_bitmap_offset)>>6; // = /64
   if (max_bit>=32*8*64) max_bit=32*8*64-1; 
-  
-  for(int i=0;i<max_bit;i++)
+
+  // Search on even boundaries first
+  int i=0; if (peer_records[peer]->request_bitmap_offset&0x40) i=1;
+  for(;i<max_bit;i+=2)
     if (!(peer_records[peer]->request_bitmap[i>>3]&(1<<(i&7))))
       candidates[candidate_count++]=i;
+  if (!candidate_count) {
+    // No evenly aligned candidates, so include all
+    for(i=0;i<max_bit;i++)
+      if (!(peer_records[peer]->request_bitmap[i>>3]&(1<<(i&7))))
+	candidates[candidate_count++]=i;
+  }
+  
   if (!candidate_count) {
     // No candidates, so keep sending from end of region
     if (peer_records[peer]->tx_bundle_body_offset
@@ -568,6 +577,9 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 							 int start_offset,
 							 int bytes)
 {
+  printf(">>> %s Saw body piece [%d,%d)\n",
+	 timestamp_str(),start_offset,start_offset+bytes);
+  
   for(int i=0;i<MAX_PEERS;i++)
     {
       if (!peer_records[i]) continue;
@@ -614,7 +626,10 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 		peer_records[i]->request_bitmap[bit>>3]|=(1<<(bit&7));
 		bit++; bytes-=64;
 	      }
-	  }
+	  } else {
+	  printf(">>> %s NOT Marking [%d,%d) sent (start_offset<bitmap offset).\n",
+		 timestamp_str(),start_offset,start_offset+bytes);
+	}
       } else {
 	if (peer_records[i]) {
 	  printf(">>> %s NOT Marking [%d,%d) sent (no matching bitmap: %d vs %d).\n",
