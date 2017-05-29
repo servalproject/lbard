@@ -362,23 +362,50 @@ test_TwoSendersCombined() {
    wait_until all_bundles_received
 }
 
-doc_TenSendersCombined="A bundle can be received by combining pieces from 10 senders"
+doc_TenSendersCombined="Ten receivers receive 9KB bundle from 10 senders in <1 minute"
 setup_TenSendersCombined() {
    setup20
    # Insert a file on server A - J
    # Make file too big to be sent in 60 seconds by only one server
    # 60 sec * 200 bytes / sec = 12000 bytes
-   rhizome_add_file_to_many "test" 12000 A B C D E F G H I J 
+   # (reduce to 75% since we have ten receivers)
+   rhizome_add_file_to_many "test" 9000 A B C D E F G H I J 
    BID=`echo $BID | cut -f1 -d:`
 }
 test_TenSendersCombined() {
    # Test that the bundle arrives at server K
    all_bundles_received() {
-         bundle_received_by $BID:$VERSION +K
+         bundle_received_by $BID:$VERSION +K &&
+         bundle_received_by $BID:$VERSION +L &&
+         bundle_received_by $BID:$VERSION +M &&
+         bundle_received_by $BID:$VERSION +N &&
+         bundle_received_by $BID:$VERSION +O &&
+         bundle_received_by $BID:$VERSION +P &&
+         bundle_received_by $BID:$VERSION +Q &&
+         bundle_received_by $BID:$VERSION +R &&
+         bundle_received_by $BID:$VERSION +S &&
+         bundle_received_by $BID:$VERSION +T
    }
    wait_until all_bundles_received
 }
 
+doc_NTenSendersCombined="One receiver receives a 16KB bundle from 19 senders in <1 minute"
+setup_NTenSendersCombined() {
+   setup20
+   # Insert a file on server A - J
+   # Make file too big to be sent in 60 seconds by only one server
+   # 60 sec * 200 bytes / sec = 12000 bytes
+   # (reduce to 75% since we have ten receivers)
+   rhizome_add_file_to_many "test" 16384 A B C D E F G H I J K L M N O P Q R S
+   BID=`echo $BID | cut -f1 -d:`
+}
+test_NTenSendersCombined() {
+   # Test that the bundle arrives at server T
+   all_bundles_received() {
+         bundle_received_by $BID:$VERSION +T
+   }
+   wait_until all_bundles_received
+}
 
 
 doc_All="All peers receive bundles from all other peers"
