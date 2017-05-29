@@ -17,6 +17,7 @@ struct client clients[MAX_CLIENTS];
 int client_count=0;
 
 long long start_time;
+long long total_transmission_time=0;
 
 long long tx_log_manifest_bytes=0;
 long long tx_log_payload_bytes=0;
@@ -592,14 +593,15 @@ int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_tim
   filter_process_packet(from,to,packet,&packet_len);
 
   if (to==-1)
-    fprintf(stderr,">>> %s @ T+%lldms: %lld bytes, %lld packets, %lld sync bytes, %lld manifest bytes, %lld body bytes.\n",	    
+    fprintf(stderr,">>> %s @ T+%lldms: %lld bytes, %lld packets, %lld sync bytes, %lld manifest bytes, %lld body bytes, %02.1f%% channel utilisation.\n",	    
 	    timestamp_str(NULL),
 	    gettime_ms()-start_time,
 	    tx_log_transmitted_bytes,
 	    tx_log_transmitted_packets,
 	    tx_log_sync_bytes,
 	    tx_log_manifest_bytes,
-	    tx_log_payload_bytes);
+	    tx_log_payload_bytes,
+	    total_transmission_time*100.0/(gettime_ms()-start_time));
   
   if (to==-1) {
     // Collect statistics only for this packet.

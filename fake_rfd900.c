@@ -33,6 +33,7 @@ int rfd900_read_byte(int client,unsigned char byte)
 	// Calculate first in usec, then divide down to ms
 	int transmission_time = 1000000*8*(8+send_bytes)/emulated_bitrate;
 	transmission_time/=1000;
+	total_transmission_time+=transmission_time;
 	long long delivery_time = gettime_ms()+transmission_time;
 	
 	// Queue bytes for RX by remote side.
