@@ -27,6 +27,7 @@ int decode_rs_8(data_t *data, int *eras_pos, int no_eras, int pad);
 
 extern long long start_time;
 extern long long total_transmission_time;
+extern long long first_transmission_time;
 
 #define RADIO_RFD900 1
 #define RADIO_HFCODAN 2
