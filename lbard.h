@@ -35,9 +35,10 @@ extern struct sync_state *sync_state;
    4. We don't want to suck too much power.
 
    So we will aim to keep channel utilisation down around 10%.
-   64 * 10% * 4 seconds = 204 packets per 4 seconds.
+   64 * 10% * 4 seconds = 26 packets per 4 seconds.
  */
-#define TARGET_TRANSMISSIONS_PER_4SECONDS 26
+// 52 = target 20% channel utilisation
+#define TARGET_TRANSMISSIONS_PER_4SECONDS 52
 
 // BAR consists of:
 // 8 bytes : BID prefix
