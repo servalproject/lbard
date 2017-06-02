@@ -217,7 +217,7 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 				   body_data,body_length,
 				   15000);  
   
-  if(result_code<200|| result_code>202) {
+  if(result_code<200||result_code>202) {
     printf("POST bundle to rhizome failed: http result = %d\n",result_code);
 
     if (debug_insert) {
@@ -235,7 +235,7 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 	fclose(f);
       }
     }
-    return -1;
+    return result_code;
   }
   else
     printf("http result code = %d\n",result_code);

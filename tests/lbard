@@ -571,5 +571,15 @@ test_MessageDeliveryWithTraffic() {
     test_MessageDelivery
 }
 
+doc_MessageDeliveryThreeHops="MeshMS conversation via UHF, via two intermediate UHF hops"
+setup_MessageDeliveryThreeHops() {
+    # For simplicity the conversation is still from A->B, i.e., 0 to 1. Thus we route A->C->D->B and vice versa
+    # We want to allow 0->3->2->1 only
+   setup "allow between 0,3; allow between 3,2; allow between 2,1; deny all;"
+}
+test_MessageDeliveryThreeHops() {
+    test_MessageDelivery
+}
+
 
 runTests "$@"

@@ -100,8 +100,17 @@ int dump_bytes(int col, char *msg,unsigned char *bytes,int length)
 struct filter_rule {
   int src;
   int dst;
-  int manifestP;
-  int bodyP;
+  
+  int manifestP;       // rule applies to manifest pieces
+  int bodyP;           // rule applies to body pieces
+  int packetP;         // rule applies to whole packet
+  int bidirectionalP;  // src and dst should be evaluated in both directions
+  int allowP;          // If true, matching the rule allows rather than denies item
+
+  // For group association rules, we allow all parties to be listed in a single rule
+#define MAX_PARTIES 256
+  int parties[MAX_PARTIES];
+  int party_count;
 };
 
 #define MAX_FILTER_RULES 1024
@@ -139,6 +148,9 @@ struct filterable {
   int packet_start;
   int fragment_length;
 };
+
+int filter_rule_party_match(struct filter_rule *r,int from,int to);
+
 
 void filterable_erase_fragment(struct filterable *f,int offset)
 {
@@ -368,23 +380,36 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
   int r;
   fprintf(stderr,"There are %d filter rules.\n",filter_rule_count);
   for(r=0;r<filter_rule_count;r++) {
+
+    // Ignore packet-level filters
+    if (filter_rules[r]->packetP) continue;
+
+    int party_match = filter_rule_party_match(filter_rules[r],f->src_radio,f->dst_radio);
+
     match=1;
-#if 0
-    if ((f->type=='p')||(f->type=='P')||(f->type=='q')||(f->type=='Q')) {
-      fprintf(stderr,"FILTER: rule: src=%d, dst=%d, mP=%d, pP=%d  -- fragment: src=%d, dst=%d, mP=%d, pP=%d\n",
+#if 1
+    //    if ((f->type=='p')||(f->type=='P')||(f->type=='q')||(f->type=='Q')) {
+      fprintf(stderr,"FILTER: rule: src=%d, dst=%d, mP=%d, pP=%d  -- fragment: src=%d, dst=%d, mP=%d, pP=%d, party_match=%d\n",
 	      filter_rules[r]->src,filter_rules[r]->dst,
 	      filter_rules[r]->manifestP,filter_rules[r]->bodyP,
 	      f->src_radio,f->dst_radio,
-	      f->is_manifest_piece,f->is_body_piece);
-    }
+	      f->is_manifest_piece,f->is_body_piece,
+	      party_match);
+      //    }
 #endif
-    if ((filter_rules[r]->src!=-1)&&(filter_rules[r]->src!=f->src_radio)) match=2;
-    if ((filter_rules[r]->dst!=-1)&&(filter_rules[r]->dst!=f->dst_radio)) match=3;
+    if (!party_match) match=2;
     if (filter_rules[r]->manifestP&&(!f->is_manifest_piece)) match=4;
     if (filter_rules[r]->bodyP&&(!f->is_body_piece)) match=5;
+
+    
     if (match>1) {
       if (0) fprintf(stderr,"  rule not matched due to criterion #%d\n",match);
       match=0; }
+
+    // Allow inverted rules, i.e., to force immediate acceptance
+    if (filter_rules[r]->allowP&&match)
+      return 0;
+
     if (match) break;
   }
 
@@ -399,6 +424,44 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
   return 0;
 }
 
+int filter_rule_party_match(struct filter_rule *r,int from,int to)
+{
+  int p;
+  int src_match=0;
+  int dst_match=0;
+  int party_match=0;
+  if (r->src==from) src_match=1;
+  if (r->dst==to) dst_match=1;
+  if (r->src==-1) src_match=1;
+  if (r->dst==-1) dst_match=1;
+
+  if (src_match&&dst_match) party_match=1;
+  src_match=0; dst_match=0;
+  
+  if (r->bidirectionalP) {
+    if (r->dst==from) src_match=1;
+    if (r->src==to) dst_match=1;
+    if (r->dst==-1) src_match=1;
+    if (r->src==-1) dst_match=1;
+  }
+  
+  if (src_match&&dst_match) party_match=1;
+  src_match=0; dst_match=0;    
+  
+  for(p=0;p<r->party_count;p++)
+    {
+      if (r->parties[p]==from) {
+	src_match=1;
+      }
+      if (r->parties[p]==to) {
+	dst_match=1;
+      }
+    }     
+  if (src_match&&dst_match) party_match=1;
+
+  return party_match;
+}
+  
 int filter_process_packet(int from,int to,
 			  uint8_t *packet,int *packet_len)
 {
@@ -414,6 +477,30 @@ int filter_process_packet(int from,int to,
 
   int offset=0;
 
+  // Check packet-level rules
+  if (to!=-1) {
+    int r;
+    for(r=0;r<filter_rule_count;r++) {    
+      // Ignore fragment-level filters
+      if (!filter_rules[r]->packetP) continue;
+      
+      int party_match = filter_rule_party_match(filter_rules[r],from,to);
+      
+      if (party_match) {
+	if (!filter_rules[r]->allowP) {
+	  fprintf(stderr,"Dropped packet due to rule #%d\n",r);
+	  *packet_len=0;
+	  return 0;
+	}
+	else {
+	  // Keeping packet due to positive match rule
+	  fprintf(stderr,"Keeping packet due to rule #%d\n",r);
+	  break;
+	}
+      }
+    }
+  }
+  
   memset(&f,0,sizeof(f));
   f.src_radio=from; f.dst_radio=to;
 
@@ -630,6 +717,17 @@ int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_tim
   return 0;
 }
 
+int parse_allow_deny(char *s)
+{
+  if (!strcmp(s,"allow")) return 1;
+  if (!strcmp(s,"pass")) return 1;
+  if (!strcmp(s,"deny")) return 0;
+  if (!strcmp(s,"drop")) return 0;
+
+  fprintf(stderr,"Expected 'allow' or 'deny', but saw '%s'\n",s);
+  exit(-1);
+}
+
 int filter_rule_add(char *rule)
 {
   if (filter_rule_count>=MAX_FILTER_RULES) {
@@ -640,9 +738,45 @@ int filter_rule_add(char *rule)
   while(rule[0]==' ') rule++;
   
   char thing[1024];
+  char allow_deny[1024];
   int src_radio;
-  int offset;
-  if (sscanf(rule,"drop %s from %d%n",thing,&src_radio,&offset)==2) {
+  int offset=0;
+  fprintf(stderr,"RULE: '%s'\n",rule);
+  if ((sscanf(rule,"%s all%n",allow_deny,&offset)==1)
+      &&(offset==(strlen(allow_deny)+4))) {
+    struct filter_rule *r=calloc(sizeof(struct filter_rule),1);
+    r->src=-1;
+    r->dst=-1;
+    r->packetP=1;
+    r->allowP=parse_allow_deny(allow_deny);
+    filter_rules[filter_rule_count++]=r;
+    fprintf(stderr,"Added catch-all filter rule '%s'\n",rule);
+    return 0;
+  } else if ((sscanf(rule,"%s between %n",allow_deny,&offset)==1)
+	     &&(offset==(strlen(allow_deny)+9))) {    
+    struct filter_rule *r=calloc(sizeof(struct filter_rule),1);
+    r->src=999;
+    r->dst=999;
+    r->bidirectionalP=1;
+    r->packetP=1;    
+    r->allowP=parse_allow_deny(allow_deny);
+    char *token, *brk;
+    for(token=strtok_r(&rule[offset]," ,",&brk);
+	token;
+	token=strtok_r(NULL," ,",&brk)) {
+      int party=atoi(token);
+      if (r->party_count==0) r->src=party;
+      if (r->party_count==1) r->dst=party;
+      r->parties[r->party_count++]=party;
+    }
+    if (r->party_count<2) {
+      fprintf(stderr,"<allow|deny> between rule requires at least two arguments.\n");
+      exit(-1);
+    }
+    filter_rules[filter_rule_count++]=r;
+    fprintf(stderr,"Added filter rule '%s'\n",rule);    
+    return 0;
+  } else if (sscanf(rule,"drop %s from %d%n",thing,&src_radio,&offset)==2) {
     if (offset<strlen(rule)) {
       fprintf(stderr,"Could not parse filter rule '%s': Extraneous material at character %d\n",rule,offset);
     }
@@ -706,7 +840,7 @@ int main(int argc,char **argv)
   }
   if (argc>3) 
     {
-      if (argv[3][0]=='d') {
+      if (argv[3][0]=='d'||argv[3][0]=='a') {
 	// Filter rules
 	if (filter_rules_parse(argv[3])) {
 	  fprintf(stderr,"Invalid filter rules.\n");
