@@ -711,7 +711,7 @@ static int recv_key(struct sync_state *state, struct sync_peer_state *peer_state
     return 0;
   }
 
-  if (message->prexix_len == KEY_LEN_BITS+1) {
+  if (message->prefix_len == KEY_LEN_BITS+1) {
     // peer has no node of their own, they don't have anything that we have.
     peer_missing_leaf_nodes(state, peer_state, state->root, NODE_CHILDREN, 0);
     return 0;
