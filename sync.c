@@ -157,10 +157,11 @@ static int cmp_message(const key_message_t *first, const key_message_t *second)
 // XOR all existing children of *node, into this destination key.
 static void xor_children(struct node *node, key_message_t *dest)
 {
+  unsigned i;
   if (node->message.prefix_len == KEY_LEN_BITS){
     sync_xor(&node->message.key, dest);
   }else{
-    for (unsigned i=0;i<NODE_CHILDREN;i++){
+    for (i=0;i<NODE_CHILDREN;i++){
       if (node->children[i])
 	xor_children(node->children[i], dest);
     }
@@ -401,6 +402,7 @@ void sync_free_peer_state(struct sync_state *state, void *peer_context){
       free(free_peer);
       return;
     }
+    peer_state= &(*peer_state)->next;
   }
 }
 
@@ -445,6 +447,7 @@ static void copy_message(uint8_t *buff, const key_message_t *message)
   }else{
     bzero(buff, MESSAGE_BYTES);
     buff[0] = 0x80;
+    buff[1] = KEY_LEN_BITS+1;
   }
 }
 
@@ -680,7 +683,7 @@ static struct node * remove_differences(struct sync_peer_state *peer_state, key_
 static int recv_key(struct sync_state *state, struct sync_peer_state *peer_state, const key_message_t *message)
 {
   // sanity check on two header bytes.
-  if (message->min_prefix_len > message->prefix_len || message->prefix_len > KEY_LEN_BITS)
+  if (message->min_prefix_len > message->prefix_len || message->prefix_len > (KEY_LEN_BITS + 1))
     return -1;
   
   state->received_record_count++;
@@ -708,6 +711,12 @@ static int recv_key(struct sync_state *state, struct sync_peer_state *peer_state
     return 0;
   }
 
+  if (message->prexix_len == KEY_LEN_BITS+1) {
+    // peer has no node of their own, they don't have anything that we have.
+    peer_missing_leaf_nodes(state, peer_state, state->root, NODE_CHILDREN, 0);
+    return 0;
+  }
+  
   key_message_t peer_message = *message;
   
   // first, remove information from peer_message that we have already learnt about this peer
