@@ -68,7 +68,15 @@ int register_bundle(char *service,
   
   bundle_calculate_tree_key(&bundle_sync_key,bundle_tree_salt,
 			    bid,strtoll(version,NULL,10),length,filehash);   
-    
+
+  if (1)
+    printf(">>> %s We now have bundle %s*,"
+	   " service=%s, version=%s\n"
+	   "    sender=%s,\n"
+	   "    recipient=%s\n",
+	   timestamp_str(),
+	   bid,service,version,sender,recipient);
+  
   // Ignore non-meshms bundles when in meshms-only mode.
   if (meshms_only) {
     if (strncasecmp("meshms",service,6)) {
@@ -181,7 +189,8 @@ int register_bundle(char *service,
   bundles[bundle_number].filehash=strdup(filehash);
   bundles[bundle_number].sender=strdup(sender);
   bundles[bundle_number].recipient=strdup(recipient);
-
+  bundles[bundle_number].sync_key=bundle_sync_key;
+  
   bundles[bundle_number].index=bundle_number;
   
   // Add bundle to the sync tree 

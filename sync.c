@@ -370,6 +370,10 @@ static struct node * add_key_if_missing(struct node **root, const key_message_t 
 
 void sync_add_key(struct sync_state *state, const sync_key_t *key, void *context)
 {
+
+  printf("sync_add_key() insterting %02X%02X*\n",
+	 ((unsigned char *)key)[0],((unsigned char *)key)[1]);
+  
   key_message_t message = MESSAGE_FROM_KEY(key);
   struct node *node = (struct node *)find_message(state->root, &message);
   if (node){
