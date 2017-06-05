@@ -362,7 +362,7 @@ test_TwoSendersCombined() {
    wait_until all_bundles_received
 }
 
-doc_TenSendersCombined="Ten receivers receive 6KB bundle from 10 senders in <1 minute"
+doc_TenSendersCombined="Ten receivers receive 6KB bundle from 10 senders in <2 minutes"
 setup_TenSendersCombined() {
    setup20
    # Insert a file on server A - J
@@ -386,10 +386,10 @@ test_TenSendersCombined() {
          bundle_received_by $BID:$VERSION +S &&
          bundle_received_by $BID:$VERSION +T
    }
-   wait_until all_bundles_received
+   wait_until --timeout=120 all_bundles_received
 }
 
-doc_NTenSendersCombined="One receiver receives a 16KB bundle from 19 senders in <1 minute"
+doc_NTenSendersCombined="One receiver receives a 16KB bundle from 19 senders in <2 minutes"
 setup_NTenSendersCombined() {
    setup20
    # Insert a file on server A - J
@@ -404,7 +404,7 @@ test_NTenSendersCombined() {
    all_bundles_received() {
          bundle_received_by $BID:$VERSION +T
    }
-   wait_until all_bundles_received
+   wait_until --timeout=120 all_bundles_received
 }
 
 
@@ -459,6 +459,13 @@ setup_MessageDelivery() {
    setup "0"
 }
 test_MessageDelivery() {
+
+    if [ "x$1" != "x" ]; then
+	maxwait=$1
+    else
+	maxwait=120
+    fi
+    
    # 1. empty list
    set_instance +A
    executeOk_servald meshms list messages $SIDA $SIDB
@@ -477,7 +484,7 @@ test_MessageDelivery() {
 	   return 1
        fi
    }   
-   wait_until b_receives_first_message
+   wait_until --timeout=$maxwait b_receives_first_message
    
    # 3. append a second message and list them both
    set_instance +A
@@ -500,7 +507,7 @@ test_MessageDelivery() {
 	   return 1;
        fi
    }
-   wait_until b_receives_second_message
+   wait_until --timeout=$maxwait b_receives_second_message
    
    CONV_BID=$(replayStderr | sed -n -e '/MESHMS CONVERSATION BUNDLE/s/.*bid=\([0-9A-F]*\).*/\1/p')
    CONV_SECRET=$(replayStderr | sed -n -e '/MESHMS CONVERSATION BUNDLE/s/.*secret=\([0-9A-F]*\).*/\1/p')
@@ -542,7 +549,7 @@ test_MessageDelivery() {
        fi
        assertStdoutLineCount '==' 5
    }
-   wait_until a_receives_ACK_message
+   wait_until  --timeout=$maxwait a_receives_ACK_message
 }
 
 doc_MessageDeliveryLoss="Two party MeshMS conversation via UHF with 75% packet loss"
@@ -550,7 +557,7 @@ setup_MessageDeliveryLoss() {
    setup "0.75"
 }
 test_MessageDeliveryLoss() {
-    test_MessageDelivery
+    test_MessageDelivery 180
 }
 
 doc_MessageDeliveryWithOthers="MeshMS conversation via UHF with other bundles held and 25% packet loss"
@@ -559,7 +566,7 @@ setup_MessageDeliveryWithOthers() {
    setup "0.25" 1500 0
 }
 test_MessageDeliveryWithOthers() {
-    test_MessageDelivery
+    test_MessageDelivery 120
 }
 
 doc_MessageDeliveryWithTraffic="MeshMS conversation via UHF with other bundles in flight and 25% packet loss"
@@ -568,7 +575,7 @@ setup_MessageDeliveryWithTraffic() {
    setup "0.25" 1500 100
 }
 test_MessageDeliveryWithTraffic() {
-    test_MessageDelivery
+    test_MessageDelivery 120
 }
 
 doc_MessageDeliveryThreeHops="MeshMS conversation via UHF, via two intermediate UHF hops"
@@ -578,7 +585,7 @@ setup_MessageDeliveryThreeHops() {
    setup "allow between 0,3; allow between 3,2; allow between 2,1; deny all;"
 }
 test_MessageDeliveryThreeHops() {
-    test_MessageDelivery
+    test_MessageDelivery 180
 }
 
 
