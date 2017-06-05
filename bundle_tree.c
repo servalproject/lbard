@@ -137,8 +137,13 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
     fclose(f);
   }
 
+  printf(">>> %s Calling sync_recv_message(len=%d)\n",
+	 timestamp_str(),sync_bytes);
+  dump_bytes("Sync message",&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
   
   sync_recv_message(sync_state,(void *)p,&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
+  printf(">>> %s sync_recv_message() returned.\n",	 
+	 timestamp_str());
   
   return 0;
 }
@@ -1111,8 +1116,9 @@ void peer_has_this_key(void *context, void *peer_context, const sync_key_t *key)
   struct peer_state *p=(struct peer_state *)peer_context;
 
   // Peer has something that we want.
-  if (1) printf(">>> %s Peer %s* HAS some bundle that we don't have.\n",
-		timestamp_str(),p->sid_prefix);
+  if (1) printf(">>> %s Peer %s* HAS some bundle that we don't have (key prefix=%02X%02X*).\n",
+		timestamp_str(),p->sid_prefix,
+		((unsigned char *)key)[0],((unsigned char *)key)[1]);
 
 }
 
@@ -1125,15 +1131,28 @@ void peer_now_has_this_key(void *context, void *peer_context,void *key_context,
   struct peer_state *p=(struct peer_state *)peer_context;
   struct bundle_record *b=(struct bundle_record*)key_context;
 
+  // Verify that the bundle we are pointing to is still the correct bundle, and
+  // that it's version hasn't changed.
+  if (memcmp(&b->sync_key,key,sizeof(sync_key_t))) {
+    printf(">>> %s Peer %s* now has older version of bundle %s* (key prefix=%02X%02x*)\n",
+	   timestamp_str(),
+	   p->sid_prefix,
+	   b->bid_hex,
+	   ((unsigned char *)key)[0],((unsigned char *)key)[1]);
+    return;
+  }
+  
   if (1)
-    printf(">>> %s Peer %s* now has bundle %s*,"
+    printf(">>> %s Peer %s* now has bundle %s* (key prefix=%02X%02x*),"
 	   " service=%s, version=%lld\n"
 	   "    sender=%s,\n"
 	   "    recipient=%s\n",
 	   timestamp_str(),
 	   p->sid_prefix,
-	   b->bid_hex,b->service,b->version,b->sender,b->recipient);
-
+	   b->bid_hex,
+	   ((unsigned char *)key)[0],((unsigned char *)key)[1],
+	   b->service,b->version,b->sender,b->recipient);
+  
   sync_dequeue_bundle(p,b->index);
 
 }
@@ -1148,13 +1167,15 @@ void peer_does_not_have_this_key(void *context, void *peer_context,void *key_con
   struct bundle_record *b=(struct bundle_record*)key_context;
 
   if (1)
-    printf(">>> %s Peer %s* is missing bundle %s*, "
+    printf(">>> %s Peer %s* is missing bundle %s* (key prefix=%02X%02X*), "
 	   "service=%s, version=%lld\n"
 	   "    sender=%s,\n"
 	   "    recipient=%s\n",
 	   timestamp_str(),
 	   p->sid_prefix,
-	   b->bid_hex,b->service,b->version,b->sender,b->recipient);
+	   b->bid_hex,
+	   ((unsigned char *)key)[0],((unsigned char *)key)[1],
+	   b->service,b->version,b->sender,b->recipient);
 
   if (debug_sync_keys) {
     char filename[1024];
