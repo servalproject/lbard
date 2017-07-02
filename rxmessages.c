@@ -80,10 +80,16 @@ int saw_piece(char *peer_prefix,int for_me,
   int new_bytes_in_piece=0;
   
   int peer=find_peer_by_prefix(peer_prefix);
-  if (peer<0) return -1;
+  if (peer<0) {
+    printf(">>> %s Saw a piece from unknown SID=%s* -- ignoring.\n",
+	 timestamp_str(),peer_prefix);
+    return -1;
+  }
 
   if (debug_pieces) printf("Saw a piece of BID=%s* from SID=%s*\n",
 			    bid_prefix,peer_prefix);
+  printf(">>> %s Saw a piece of BID=%s* from SID=%s*\n",
+	 timestamp_str(),bid_prefix,peer_prefix);
   
   int bundle_number=-1;
 
@@ -120,6 +126,16 @@ int saw_piece(char *peer_prefix,int for_me,
 		  bid_prefix,version);
 	  sync_tell_peer_we_have_this_bundle(peer,i);
 	}
+
+	// Update progress bitmaps for all peers whenver we see a piece received that we
+	// think that they might want.  This stops us from resending the same piece later.
+	if (!is_manifest_piece) {
+	  printf(">>> %s Examining transmitted piece for bitmap updates.\n",
+		 timestamp_str());
+	  peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,
+							       piece_offset,piece_bytes);
+	}
+	
 	return 0;
       } else {
 	// We have an older version.
