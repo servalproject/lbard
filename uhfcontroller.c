@@ -62,6 +62,8 @@ extern char *servald_server;
 extern char *credential;
 extern char *prefix;
 
+int target_transmissions_per_4seconds=TARGET_TRANSMISSIONS_PER_4SECONDS;
+
 int uhf_serviceloop(int serialfd)
 {
   // Deal with clocks running backwards sometimes
@@ -77,7 +79,7 @@ int uhf_serviceloop(int serialfd)
     */
     
     double ratio = (radio_transmissions_seen+radio_transmissions_byus)
-      *1.0/TARGET_TRANSMISSIONS_PER_4SECONDS;
+      *1.0/target_transmissions_per_4seconds;
     // printf("--- Congestion ratio = %.3f\n",ratio);
     if (ratio<0.95) {
       // Speed up: If we are way too slow, then double our rate
