@@ -57,3 +57,6 @@ struct client {
 #define MAX_CLIENTS 1024
 extern struct client clients[MAX_CLIENTS];
 extern int client_count;
+
+int rfd900_setbitrate(char *b);
+int release_pending_packets(int i);

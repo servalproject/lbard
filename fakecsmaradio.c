@@ -26,6 +26,8 @@ long long tx_log_sync_bytes=0;
 long long tx_log_transmitted_bytes=0;
 long long tx_log_transmitted_packets=0;
 
+long long tx_colissions=0;
+
 char timestamp_str_out[1024];
 char *timestamp_str(unsigned char *s)
 {
@@ -681,7 +683,7 @@ int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_tim
   filter_process_packet(from,to,packet,&packet_len);
 
   if (to==-1)
-    fprintf(stderr,">>> %s @ T+%lldms: %lld bytes, %lld packets, %lld sync bytes, %lld manifest bytes, %lld body bytes, %02.1f%% channel utilisation.\n",	    
+    fprintf(stderr,">>> %s @ T+%lldms: %lld bytes, %lld packets, %lld sync bytes, %lld manifest bytes, %lld body bytes, %lld colissions, %02.1f%% channel utilisation.\n",	    
 	    timestamp_str(NULL),
 	    gettime_ms()-start_time,
 	    tx_log_transmitted_bytes,
@@ -689,6 +691,7 @@ int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_tim
 	    tx_log_sync_bytes,
 	    tx_log_manifest_bytes,
 	    tx_log_payload_bytes,
+	    tx_colissions,
 	    total_transmission_time*100.0/(gettime_ms()-first_transmission_time));
   
   if (to==-1) {
@@ -711,6 +714,7 @@ int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_tim
     printf("WARNING: RX colission for radio #%d (embargo time = T%+lldms, last packet = %d bytes)\n",
 	   to,clients[to].rx_embargo-now,clients[to].rx_queue_len);
     clients[to].rx_colission=1;
+    tx_colissions++;
   } else clients[to].rx_colission=0;
   clients[to].rx_queue_len=packet_len;
   clients[to].rx_embargo=delivery_time;
@@ -815,6 +819,38 @@ int filter_rules_parse(char *text)
   return 0;
 }
 
+int release_pending_packets(int i)
+{
+  long long now = gettime_ms();
+  if (clients[i].rx_queue_len&&(clients[i].rx_embargo<=now))
+    {
+      if (!clients[i].rx_colission) {
+	if ((random()&0x7fffffff)>=packet_drop_threshold) {
+	  write(clients[i].socket,
+		clients[i].rx_queue,
+		clients[i].rx_queue_len);
+	  printf("Radio #%d receives a packet of %d bytes\n",
+		 i,clients[i].rx_queue_len);
+	} else
+	  printf(">>> %s Radio #%d misses a packet of %d bytes due to simulated packet loss\n",
+		 timestamp_str(NULL),
+		 i,clients[i].rx_queue_len);
+	
+      }
+      printf("Radio #%d ready to receive.\n",i);
+      clients[i].rx_queue_len=0;
+      clients[i].rx_colission=0;
+      return 1;
+    } else {
+    if (clients[i].rx_embargo&&clients[i].rx_queue_len)
+      printf("Radio #%d WAITING until T+%lldms for a packet of %d bytes\n",
+	     i,clients[i].rx_embargo-now,clients[i].rx_queue_len);
+    
+  }
+  return 0;
+}
+
+
 int main(int argc,char **argv)
 {
   int radio_count=2;
@@ -846,7 +882,9 @@ int main(int argc,char **argv)
 	  fprintf(stderr,"Invalid filter rules.\n");
 	  exit(-1);
 	}
-      } else {
+      } else if (!strcmp(argv[3],"infinitespeed"))
+	rfd900_setbitrate("1000000000");
+      else {
 	float p=atof(argv[3]);
 	if (p<0||p>1) {
 	  fprintf(stderr,"Packet drop probability must be in range [0..1]\n");
@@ -897,9 +935,12 @@ int main(int argc,char **argv)
   // look for new clients, and for traffic from each client.
   while(1) {
     int activity=0;
+      
+    for(int i=0;i<client_count;i++)
+      // Release any queued packet once we pass the embargo time
+      activity+=release_pending_packets(i);
     
-    // Read from each client, and see if we have a packet to release
-    long long now = gettime_ms();
+    // Read input from each client.  This may cause packet transmission.
     for(int i=0;i<client_count;i++) {
       unsigned char buffer[8192];
       int count = read(clients[i].socket,buffer,8192);
@@ -913,35 +954,9 @@ int main(int argc,char **argv)
 	  activity++;
 	}
       }
-      
-      // Release any queued packet once we pass the embargo time
-      if (clients[i].rx_queue_len&&(clients[i].rx_embargo<now))
-	{
-	  if (!clients[i].rx_colission) {
-	    if ((random()&0x7fffffff)>=packet_drop_threshold) {
-	      write(clients[i].socket,
-		    clients[i].rx_queue,
-		    clients[i].rx_queue_len);
-	      printf("Radio #%d receives a packet of %d bytes\n",
-		     i,clients[i].rx_queue_len);
-	    } else
-	      printf(">>> %s Radio #%d misses a packet of %d bytes due to simulated packet loss\n",
-		     timestamp_str(NULL),
-		     i,clients[i].rx_queue_len);
-	      
-	  }
-	  printf("Radio #%d ready to receive.\n",i);
-	  clients[i].rx_queue_len=0;
-	  clients[i].rx_colission=0;
-	  activity++;
-	} else {
-	if (clients[i].rx_embargo&&clients[i].rx_queue_len)
-	  printf("Radio #%d WAITING until T+%lldms for a packet of %d bytes\n",
-		 i,clients[i].rx_embargo-now,clients[i].rx_queue_len);
-
-      }
     }
 
+    long long now = gettime_ms();
     if (last_heartbeat_time<(now-500)) {
       // Pretend to be reporting GPIO status so that lbard thinks the radio is alive.
       unsigned char heartbeat[9]={0xce,0xec,0xff,0xff,0xff,0xff,0xff,0xff,0xdd};
@@ -952,7 +967,7 @@ int main(int argc,char **argv)
     }
 
     // Sleep for 10ms if there has been no activity, else look for more activity
-    if (!activity) usleep(10000);      
+    if (!activity) usleep(1000);      
   }
   
 }

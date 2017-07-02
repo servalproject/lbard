@@ -5,6 +5,21 @@
 // simultaneous transmission).
 int emulated_bitrate = 128000;
 
+int rfd900_setbitrate(char *b)
+{
+  int bits= atoi(b);
+  if (bits>0) {
+    emulated_bitrate=bits;
+    fprintf(stderr,"RFD900 bitrate set to %dbps.\n",bits);
+    return 0;
+  } else {
+    fprintf(stderr,"Illegal RFD900 bitrate requested '%s' -- must be >0 \n",
+	    b);
+    exit(-1);
+  }
+  
+}
+
 int rfd900_read_byte(int client,unsigned char byte)
 {
   switch(clients[client].rx_state) {
@@ -32,6 +47,8 @@ int rfd900_read_byte(int client,unsigned char byte)
 	// (include 8 bytes time for the preamble)
 	// Calculate first in usec, then divide down to ms
 	int transmission_time = 1000000*8*(8+send_bytes)/emulated_bitrate;
+	// >1gbit/sec we compute as simply taking 0 ms
+	if (emulated_bitrate>999999999) transmission_time=0;
 	transmission_time/=1000;
 	total_transmission_time+=transmission_time;
 	if (!first_transmission_time) first_transmission_time=gettime_ms();
@@ -54,6 +71,7 @@ int rfd900_read_byte(int client,unsigned char byte)
 	  if (j!=client) {
 	    filter_and_enqueue_packet_for_client(client,j,delivery_time,
 						 packet,packet_len);
+	    if (!transmission_time) release_pending_packets(j);
 	  }	  
 	}
       }
