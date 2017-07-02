@@ -39,6 +39,7 @@ extern struct sync_state *sync_state;
  */
 // 52 = target 20% channel utilisation
 #define TARGET_TRANSMISSIONS_PER_4SECONDS 52
+extern int target_transmissions_per_4seconds;
 
 // BAR consists of:
 // 8 bytes : BID prefix

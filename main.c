@@ -319,6 +319,8 @@ int main(int argc, char **argv)
       else if (!strcasecmp("nohttpd",argv[n])) http_server=0;
       else if (!strncasecmp("flags=",argv[n],5))
 	option_flags=atoi(&argv[n][5]);
+      else if (!strncasecmp("packetrate=",argv[n],11))
+	target_transmissions_per_4seconds=atoi(&argv[n][11]);
       else {
 	fprintf(stderr,"Illegal mode '%s'\n",argv[n]);
 	exit(-3);
