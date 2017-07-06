@@ -133,7 +133,7 @@ unsigned int option_flags=0;
 
 int main(int argc, char **argv)
 {  
-  fprintf(stderr,"Version 20170504.0709.1\n");
+  fprintf(stderr,"Version 20170707.0349.1\n");
   
   start_time = gettime_ms();
 
@@ -317,9 +317,11 @@ int main(int argc, char **argv)
       else if (!strcasecmp("bundlelog",argv[n])) debug_bundlelog=1;
       else if (!strcasecmp("nopriority",argv[n])) debug_noprioritisation=1;
       else if (!strcasecmp("nohttpd",argv[n])) http_server=0;
-      else if (!strncasecmp("flags=",argv[n],5))
-	option_flags=atoi(&argv[n][5]);
-      else if (!strncasecmp("packetrate=",argv[n],11))
+      else if (!strncasecmp("flags=",argv[n],6)) {
+	option_flags=atoi(&argv[n][6]);
+	fprintf(stderr,"Option flags = %d (from '%s')\n",option_flags,
+		&argv[n][6]);
+      } else if (!strncasecmp("packetrate=",argv[n],11))
 	target_transmissions_per_4seconds=atoi(&argv[n][11]);
       else {
 	fprintf(stderr,"Illegal mode '%s'\n",argv[n]);

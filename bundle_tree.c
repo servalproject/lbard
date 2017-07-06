@@ -216,7 +216,7 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   // using the request bitmap for transfers, where accounting is in 64 byte units.
   if (not_end_of_item) {
     int end_point=start_offset+actual_bytes;
-    if (!option_flags&FLAG_NO_BITMAP_PROGRESS) {
+    if (!(option_flags&FLAG_NO_BITMAP_PROGRESS)) {
       if (end_point&63) actual_bytes-=end_point&63;
     }
     if (actual_bytes<1) return 0;
@@ -338,7 +338,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 
   // Update send point based on the bundle progress bitmap for this peer, if we
   // have one.
-  if (!option_flags&FLAG_NO_BITMAP_PROGRESS) peer_update_send_point(peer);
+  if (!(option_flags&FLAG_NO_BITMAP_PROGRESS)) peer_update_send_point(peer);
   
   // Mark manifest all sent once we get to the end
   if (peer_records[peer]->tx_bundle_manifest_offset>=cached_manifest_encoded_len)
@@ -929,8 +929,9 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     if (option_flags&FLAG_NO_RANDOMIZE_START_OFFSET)
       p->tx_bundle_manifest_offset=0;
     p->tx_bundle_priority=priority;
-    fprintf(stderr,"Beginning transmission from random offset (m=%d, p=%d)\n",
-	    p->tx_bundle_manifest_offset,p->tx_bundle_body_offset);
+    fprintf(stderr,"Beginning transmission from random offset (m=%d, p=%d), flags=%d\n",
+	    p->tx_bundle_manifest_offset,p->tx_bundle_body_offset,
+	    option_flags);
   }
 
   // peer_queue_list_dump(p);

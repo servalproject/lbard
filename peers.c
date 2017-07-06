@@ -635,11 +635,11 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	}
       } else {
 	if (peer_records[i]) {
-	  printf(">>> %s NOT Marking [%d,%d) sent (no matching bitmap: %d vs %d).\n",
-		 timestamp_str(),start_offset,start_offset+bytes,
-		 peer_records[i]->request_bitmap_bundle,bundle_number);
+	  if (0) printf(">>> %s NOT Marking [%d,%d) sent (no matching bitmap: %d vs %d).\n",
+			timestamp_str(),start_offset,start_offset+bytes,
+			peer_records[i]->request_bitmap_bundle,bundle_number);
 	  if (peer_records[i]->tx_bundle==bundle_number)
-	    printf(">>> %s ... but I should care, because it matches the bundle I am sending.\n",timestamp_str());
+	    if (0) printf(">>> %s ... but I should care, because it matches the bundle I am sending.\n",timestamp_str());
 	  if (peer_records[i]->tx_bundle==-1)
 	    // In fact, if we see someone sending a bundle to someone, and we don't yet know if we can send it yet, we should probably start on a speculative basis
 	    printf(">>> %s ... but I could care, because I am not sending a bundle to them yet.\n",timestamp_str());
