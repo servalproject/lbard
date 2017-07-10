@@ -133,7 +133,7 @@ unsigned int option_flags=0;
 
 int main(int argc, char **argv)
 {  
-  fprintf(stderr,"Version 20170710.1401.1\n");
+  fprintf(stderr,"Version 20170711.0912.1\n");
   
   start_time = gettime_ms();
 
@@ -174,6 +174,9 @@ int main(int argc, char **argv)
   if ((argc>1)&&!strcasecmp(argv[1],"meshms")) {
     return(meshms_parse_command(argc,argv));
   }
+  if ((argc>1)&&!strcasecmp(argv[1],"meshmb")) {
+    return(meshmb_parse_command(argc,argv));
+  }
   
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==5)&&(!strcasecmp(argv[1],"energysamplemaster"))) {
@@ -209,6 +212,7 @@ int main(int argc, char **argv)
       fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <serial port> [options ...]\n");
       fprintf(stderr,"usage: lbard monitor <serial port>\n");
       fprintf(stderr,"usage: lbard meshms <meshms command>\n");
+      fprintf(stderr,"usage: lbard meshmb <meshmb command>\n");
       fprintf(stderr,"usage: energysamplecalibrate <args>\n");
       fprintf(stderr,"usage: energysamplemaster <broadcast addr> <backchannel addr> <gapusec=n,holdusec=n,packetbytes=n>\n");
       fprintf(stderr,"usage: energysample <port> <interface> <broadcast address>\n");

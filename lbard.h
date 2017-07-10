@@ -457,6 +457,7 @@ int urandombytes(unsigned char *buf, size_t len);
 int active_peer_count(void);
 int sync_dequeue_bundle(struct peer_state *p,int bundle);
 int meshms_parse_command(int argc,char **argv);
+int meshmb_parse_command(int argc,char **argv);
 int http_list_meshms_conversations(char *server_and_port, char *auth_token,
 				   char *participant,int timeout_ms);
 int http_list_meshms_messages(char *server_and_port, char *auth_token,
