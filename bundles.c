@@ -220,6 +220,12 @@ int register_bundle(char *service,
   
   rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
 	      "Bundle registered");
+
+  // Now work out if the bundle is our over-the-air update bundle.
+  // If so, then download the bundle to disk, and mark it for update
+  
+
+  
   return 0;
 }
 

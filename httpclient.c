@@ -836,6 +836,127 @@ int http_list_meshms_messages(char *server_and_port, char *auth_token,
   
 }
 
+int http_post_meshmb(char *server_and_port, char *auth_token,
+		     char *message,char *sender,
+		    int timeout_ms)
+{
+
+  char server_name[1024];
+  int server_port=-1;
+
+  int message_length=strlen(message);
+  
+  if (sscanf(server_and_port,"%[^:]:%d",server_name,&server_port)!=2) return -1;
+
+  long long timeout_time=gettime_ms()+timeout_ms;
+  
+  if (strlen(auth_token)>500) return -1;
+  
+  char request[8192+message_length];
+  char authdigest[1024];
+  int zero=0;
+
+  bzero(authdigest,1024);
+  base64_append(authdigest,&zero,(unsigned char *)auth_token,strlen(auth_token));
+
+  // Generate random content dividor token
+  unsigned long long unique;
+  unique=random(); unique=unique<<32; unique|=random();
+  
+  char message_header[1024];
+  snprintf(message_header,1024,
+	   "Content-Disposition: form-data; name=\"message\"\r\n"
+	   "Content-Length: %d\r\n"
+	   "Content-Type: rhizome/manifest\r\n"
+	   "\r\n", message_length);
+
+  char boundary_string[1024];
+  snprintf(boundary_string,1024,"------------------------%016llx",unique);
+  int boundary_len=strlen(boundary_string);
+
+  // Calculate content length
+  int content_length=0
+    +2+boundary_len+2
+    +strlen(message_header)
+    +message_length+2
+    +2+boundary_len+2
+    +2;   // not sure where we have missed this last 2, but it is needed to reconcile
+  
+  // Build request
+  int total_len = snprintf(request,8192,
+			   "POST /restful/meshmb/%s/sendmessage HTTP/1.1\r\n"
+			   "Authorization: Basic %s\r\n"
+			   "Host: %s:%d\r\n"
+			   "Content-Length: %d\r\n"
+			   "Accept: */*\r\n"
+			   "Content-Type: multipart/form-data; boundary=%s\r\n"
+			   "\r\n"
+			   "--%s\r\n"
+			   "%s",
+			   sender,
+			   authdigest,
+			   server_name,server_port,
+			   content_length,
+			   boundary_string,
+			   boundary_string,
+			   message_header);
+  bcopy(message,&request[total_len],message_length);
+
+  int subtotal_len=total_len;
+  total_len=total_len+message_length;
+  total_len+=snprintf(&request[total_len],8192-total_len,
+	   "\r\n"
+	   "--%s--\r\n",
+	   boundary_string);
+
+  fprintf(stderr,"  content_length was calculated at %d bytes, total_len=%d\n",
+	  content_length,total_len);
+  int present_len=2+boundary_len+2+strlen(message_header);
+  fprintf(stderr,
+	  "    subtotal_len=%d, difference+present=%d (should match content_length)\n",
+	  subtotal_len,total_len-subtotal_len+present_len);
+
+  fprintf(stderr,"Request:\n%s\n",request);
+  
+  int sock=connect_to_port(server_name,server_port);
+  if (sock<0) return -1;
+
+  // Write request
+  write_all(sock,request,total_len);
+
+  // Read reply, streaming output to file after we have skipped the header
+  int http_response=-1;
+  char line[1024];
+  int len=0;
+  int empty_count=0;
+  set_nonblock(sock);
+  int r;
+  while(len<1024) {
+    r=read_nonblock(sock,&line[len],1);
+    if (r==1) {
+      if ((line[len]=='\n')||(line[len]=='\r')) {
+	if (len) empty_count=0; else empty_count++;
+	line[len+1]=0;
+	// if (len) printf("Line of response: %s\n",line);
+	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
+	  // got http response
+	  fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
+	}
+	len=0;
+	// Have we found end of headers?
+	if (empty_count==3) break;
+      } else len++;
+    } else usleep(1000);
+    if (gettime_ms()>timeout_time) {
+      // If still in header, just quit on timeout
+      close(sock);
+      return -1;
+    }
+  }
+  close(sock);
+  return http_response;
+  
+}
 
 
 int http_get_async(char *server_and_port, char *auth_token,

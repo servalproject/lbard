@@ -91,7 +91,8 @@ int meshms_list_messages(char *sender_sid_hex, char *recipient_sid_hex)
 int meshms_send_message(char *sender_sid_hex, char *recipient_sid_hex,
 			char *message)
 {
-  return 0;
+  return http_post_meshms(server_and_port,auth_token,message,
+			  sender_sid_hex,recipient_sid_hex,30000);
 }
 
 
@@ -135,5 +136,37 @@ int meshms_parse_command(int argc,char **argv)
     }
   }
   exit(meshms_usage());
+}
+
+int meshmb_usage()
+{
+  fprintf(stderr,"lbard meshmb commands:\n"
+	  "  lbard meshmb post <sender> <message>\n");
+  exit(-1);
+}
+
+int meshmb_post_message(char *sender_id_hex,char *message)
+{
+  return http_post_meshmb(server_and_port,auth_token,message,
+			  sender_id_hex,30000);
+}
+
+
+int meshmb_parse_command(int argc,char **argv)
+{
+  meshms_parse_serval_conf();
+  if (argc<3) exit(meshmb_usage());
+  if (argc<=7) {
+    if (!strcasecmp(argv[2],"post")) {
+      if (!argv[3]) exit(meshmb_usage());
+      if (!argv[4]) exit(meshmb_usage());
+      if (argc!=5) exit(meshmb_usage());
+      exit(meshmb_post_message(argv[3],argv[4]));
+    } else {
+      fprintf(stderr,"Unsupported lbard meshmb operation.\n");
+      exit(meshmb_usage());
+    }
+  }
+  exit(meshmb_usage());
 }
 

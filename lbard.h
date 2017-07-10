@@ -436,6 +436,8 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
 int http_post_meshms(char *server_and_port, char *auth_token,
 		     char *message,char *sender,char *recipient,
 		     int timeout_ms);
+int http_post_meshmb(char *server_and_port, char *auth_token,
+		     char *message, char *sender, int timeout_ms);
 int sync_setup(void);
 int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 			      char *sid_prefix_hex,
