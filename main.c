@@ -133,7 +133,7 @@ unsigned int option_flags=0;
 
 int main(int argc, char **argv)
 {  
-  fprintf(stderr,"Version 20170707.0349.1\n");
+  fprintf(stderr,"Version 20170710.1401.1\n");
   
   start_time = gettime_ms();
 
