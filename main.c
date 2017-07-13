@@ -496,7 +496,10 @@ int main(int argc, char **argv)
 			    servald_server,credential);
 	
 	  // Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
-	  last_message_update_time=gettime_ms()+(random()%message_update_interval_randomness);
+	  if (message_update_interval_randomness)
+	    last_message_update_time=gettime_ms()+(random()%message_update_interval_randomness);
+	  else
+	    last_message_update_time=gettime_ms();
 	}
 	
 	// Update the state file to help debug things

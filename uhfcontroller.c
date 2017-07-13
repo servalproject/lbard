@@ -78,8 +78,13 @@ int uhf_serviceloop(int serialfd)
        on channel, then we should back-off.
     */
     
-    double ratio = (radio_transmissions_seen+radio_transmissions_byus)
-      *1.0/target_transmissions_per_4seconds;
+    double ratio = 1.00;
+    if (target_transmissions_per_4seconds)
+      ratio = (radio_transmissions_seen+radio_transmissions_byus)
+	*1.0/target_transmissions_per_4seconds;
+    else {
+      fprintf(stderr,"WARNING: target_transmissions_per_4seconds = 0\n");
+    }
     // printf("--- Congestion ratio = %.3f\n",ratio);
     if (ratio<0.95) {
       // Speed up: If we are way too slow, then double our rate

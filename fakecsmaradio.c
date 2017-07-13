@@ -682,6 +682,7 @@ int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_tim
   
   filter_process_packet(from,to,packet,&packet_len);
 
+  if (first_transmission_time==gettime_ms()) first_transmission_time--; // avoid divide by zero
   if (to==-1)
     fprintf(stderr,">>> %s @ T+%lldms: %lld bytes, %lld packets, %lld sync bytes, %lld manifest bytes, %lld body bytes, %lld colissions, %02.1f%% channel utilisation.\n",	    
 	    timestamp_str(NULL),

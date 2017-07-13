@@ -919,13 +919,16 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
 
     // Not already sending to another peer, so just pick a random point and start
     p->tx_bundle=bundle;
-    p->tx_bundle_body_offset=(random()%bundles[bundle].length)&0xffffff00;
+    if (bundles[bundle].length)
+      p->tx_bundle_body_offset=(random()%bundles[bundle].length)&0xffffff00;
+    else p->tx_bundle_body_offset;
     if (option_flags&FLAG_NO_RANDOMIZE_START_OFFSET)
       p->tx_bundle_body_offset=0;
     // ... but start from the beginning if it will take only one packet
     if (bundles[bundle].length<150) p->tx_bundle_body_offset=0;
     prime_bundle_cache(bundle,p->sid_prefix,servald_server,credential);
-    p->tx_bundle_manifest_offset=(random()%cached_manifest_encoded_len)&0xffffff80;
+    if (cached_manifest_encoded_len)
+      p->tx_bundle_manifest_offset=(random()%cached_manifest_encoded_len)&0xffffff80;
     if (option_flags&FLAG_NO_RANDOMIZE_START_OFFSET)
       p->tx_bundle_manifest_offset=0;
     p->tx_bundle_priority=priority;
@@ -1085,13 +1088,15 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
 	{
 	  if (manifest_offset<cached_manifest_encoded_len) {
 	    if (!(option_flags&FLAG_NO_RANDOMIZE_REDIRECT_OFFSET)) {
-	      manifest_offset+=random()%(cached_manifest_encoded_len-manifest_offset);
+	      if (cached_manifest_encoded_len-manifest_offset)
+		manifest_offset+=random()%(cached_manifest_encoded_len-manifest_offset);
 	      manifest_offset&=0xffffff00;
 	    }
 	  }
 	  if (body_offset<cached_body_len) {
 	    if (!(option_flags&FLAG_NO_RANDOMIZE_REDIRECT_OFFSET)) {
-	      body_offset+=random()%(cached_body_len-body_offset);
+	      if (cached_body_len-body_offset)
+		body_offset+=random()%(cached_body_len-body_offset);
 	      body_offset&=0xffffff00;
 	    }
 	  }

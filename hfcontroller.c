@@ -125,7 +125,7 @@ int hf_next_station_to_call()
   for(i=0;i<hf_station_count;i++) {
     if (time(0)>hf_stations[i].next_link_time) return i;
   }
-  return random()%hf_station_count;
+  if (hf_station_count) return random()%hf_station_count; else return -1;
 }
 
 
