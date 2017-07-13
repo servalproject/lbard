@@ -84,8 +84,9 @@ int register_bundle(char *service,
   }
   
   // Ignore non-meshms bundles when in meshms-only mode.
+  // (actually, accepts both meshms (SMS-like service) and meshmb (micro-blogging service)
   if (meshms_only) {
-    if (strncasecmp("meshms",service,6)) {
+    if (strncasecmp("meshm",service,5)) {
       rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
 		  "Rejected non-meshms bundle seen while meshms_only=1");
       ignored_bundles++;
