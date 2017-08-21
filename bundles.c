@@ -76,6 +76,12 @@ int register_bundle(char *service,
 	   "    recipient=%s\n",
 	   timestamp_str(),
 	   bid,service,version,sender,recipient);
+
+  // Is it the OTA bundle?
+  if (otabid&&(!strcasecmp(bid,otabid))) {
+    printf(">>>>>> OTA bundle spotted.\n");
+    process_ota_bundle(bid,version);
+  }
   
   // Ignore non-meshms bundles when in meshms-only mode.
   if (meshms_only) {

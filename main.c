@@ -60,6 +60,7 @@ int debug_bundlelog=0;
 int debug_noprioritisation=0;
 
 char *otabid=NULL;
+char *otadir=NULL;
 
 int radio_silence_count=0;
 
@@ -333,6 +334,11 @@ int main(int argc, char **argv)
 	// BID of Over The Air Update Rhizome bundle
 	otabid=strdup(&argv[n][7]);
 	fprintf(stderr,"OTA BID is '%s'\n",otabid);
+      }
+      else if (!strncasecmp("otadir=",argv[n],7)) {
+	// Where to put OTA update file
+	otadir=strdup(&argv[n][7]);
+	fprintf(stderr,"OTA directory is '%s'\n",otadir);
       }
       else {
 	fprintf(stderr,"Illegal mode '%s'\n",argv[n]);

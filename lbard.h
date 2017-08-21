@@ -159,6 +159,7 @@ struct recent_bundle {
 
 extern int radio_temperature;
 extern char *otabid;
+extern char *otadir;
 
 extern long long start_time;
 extern int my_time_stratum;
@@ -521,3 +522,4 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 							 int start_offset,
 							 int bytes);
 int peer_update_send_point(int peer);
+int process_ota_bundle(char *bid,char *version);
