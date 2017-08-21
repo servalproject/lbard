@@ -46,6 +46,7 @@ int process_ota_bundle(char *bid,char *version)
 {
   char path[8192];
   char filename[1024];
+  char versionfile[1024];
   char otaname[1024];
   FILE *f;
 
@@ -68,9 +69,18 @@ int process_ota_bundle(char *bid,char *version)
     return -1;
   }
 
-  // Rename into place
+  // Rename into place (and update version file)
   snprintf(otaname,1024,"%s/otaupdate.bin",otadir?otadir:"/serval");
+  snprintf(versionfile,1024,"%s/otaupdate.version",otadir?otadir:"/serval");
+  unlink(versionfile);
   unlink(otaname);
   rename(filename,otaname);
-  return 0;
+  f=fopen(versionfile,"w");
+  if (f) {
+    fprintf(f,"%s\n",version);
+    fclose(f);
+    return 0;
+  }
+  
+  return -1;
 }
