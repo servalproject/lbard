@@ -180,9 +180,7 @@ int update_my_message(int serialfd,
   bzero(msg_out,mtu);
 
   // Put prefix of our SID in first 6 bytes.
-  char prefix[7];
-  for(int i=0;i<6;i++) { msg_out[i]=my_sid[i]; prefix[i]=my_sid[i]; }
-  prefix[6]=0;
+  for(int i=0;i<6;i++) { msg_out[i]=my_sid[i]; }
 
   // Put 2-byte message counter.
   // lower 15 bits is message counter.

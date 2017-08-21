@@ -541,7 +541,7 @@ int peer_update_send_point(int peer)
   // But limit send point to the valid range of the bundle
   int max_bit=(cached_body_len-peer_records[peer]->request_bitmap_offset)>>6; // = /64
   // (make sure we don't leave out the last piece at the tail)
-  if (cached_body_len-peer_records[peer]->request_bitmap_offset&63) max_bit++;
+  if ((cached_body_len-peer_records[peer]->request_bitmap_offset)&63) max_bit++;
   if (max_bit>=32*8*64) max_bit=32*8*64-1; 
 
   // Search on even boundaries first

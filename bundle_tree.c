@@ -53,7 +53,7 @@ char *timestamp_str(void)
   gettimeofday(&tv, NULL);
   localtime_r(&now,&tm);
   snprintf(timestamp_str_out,1024,"[%02d:%02d.%02d.%03d %c%c%c%c*]",
-	   tm.tm_hour,tm.tm_min,tm.tm_sec,tv.tv_usec/1000,
+	   tm.tm_hour,tm.tm_min,tm.tm_sec,(int)tv.tv_usec/1000,
 	   my_sid_hex[0],my_sid_hex[1],my_sid_hex[2],my_sid_hex[3]);
   return timestamp_str_out;
 }
@@ -921,7 +921,8 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     p->tx_bundle=bundle;
     if (bundles[bundle].length)
       p->tx_bundle_body_offset=(random()%bundles[bundle].length)&0xffffff00;
-    else p->tx_bundle_body_offset;
+    else
+      p->tx_bundle_body_offset=0;
     if (option_flags&FLAG_NO_RANDOMIZE_START_OFFSET)
       p->tx_bundle_body_offset=0;
     // ... but start from the beginning if it will take only one packet

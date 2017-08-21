@@ -51,7 +51,7 @@ int _report_file(const char *filename,const char *file,
   int r=stat(filename,&s);
 
   fprintf(stderr,"%s:%d:%s() : File '%s' length=%lld, result=%d\n",
-	  file,line,function,filename,s.st_size,r);
+	  file,line,function,filename,(long long)s.st_size,r);
   char cmd[1024];
   snprintf(cmd,1024,"ls -lad %s 1>&2",filename);
   system(cmd);

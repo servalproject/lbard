@@ -8,10 +8,7 @@
 
 // Radio parameters we get from the EEPROM
 char regulatory_information[16384]="No regulatory information provided.";
-unsigned long regulatory_information_length=
-  strlen("No regulatory information provided.");
 char configuration_directives[16384]="nodirectives=true\n";
-unsigned long configuration_directives_length=strlen("nodirectives=true\n");
 
 // Use public domain libz-compatible library
 #define MINIZ_NO_ARCHIVE_APIS
@@ -84,7 +81,7 @@ int eeprom_decode_data(char *msg,unsigned char *datablock,FILE *f)
   if (i==16) {
     fprintf(f,
 	    "Radio regulatory information text checksum is valid.\n");
-    regulatory_information_length=sizeof(regulatory_information);
+    unsigned long regulatory_information_length=sizeof(regulatory_information);
     int result=mz_uncompress((unsigned char *)regulatory_information,
 			     &regulatory_information_length,
 			     &datablock[0x400], 0x7B0-0x400);
@@ -115,7 +112,7 @@ int eeprom_decode_data(char *msg,unsigned char *datablock,FILE *f)
     fprintf(f,
 	    "Mesh-Extender configuration directive text checksum is valid.\n"
 	    "The information text is as follows:\n  > ");
-    configuration_directives_length=sizeof(configuration_directives);
+    unsigned long configuration_directives_length=sizeof(configuration_directives);
     int result=mz_uncompress((unsigned char *)configuration_directives,
 			     &configuration_directives_length,
 			     &datablock[0x0], 0x3F0);

@@ -281,7 +281,7 @@ int find_highest_priority_bundle()
   long long highest_bundle_priority=0;
   int i;
   int highest_priority_bundle=-1;
-  int highest_priority_bundle_peers_dont_have_it=0;
+  //  int highest_priority_bundle_peers_dont_have_it=0;
 
   for(i=0;i<bundle_count;i++) {
 
@@ -299,7 +299,7 @@ int find_highest_priority_bundle()
 		       this_bundle_priority,highest_bundle_priority);
 	highest_bundle_priority=this_bundle_priority;
 	highest_priority_bundle=i;
-	highest_priority_bundle_peers_dont_have_it=bundles[i].num_peers_that_dont_have_it;
+	// highest_priority_bundle_peers_dont_have_it=bundles[i].num_peers_that_dont_have_it;
       }
     }    
   }

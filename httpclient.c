@@ -379,7 +379,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
     struct stat s;
     int r=fstat(fileno(outfile),&s);
     fprintf(stderr,"  HTTP download file: length=%lld, stat result=%d\n",
-	    s.st_size,r);
+	    (long long)s.st_size,r);
     perror("fstat");
     if (s.st_size<content_length) {
       fprintf(stderr,"  HTTP download file is too short. Returning error.\n");
