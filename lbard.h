@@ -158,6 +158,7 @@ struct recent_bundle {
 };
 
 extern int radio_temperature;
+extern char *otabid;
 
 extern long long start_time;
 extern int my_time_stratum;

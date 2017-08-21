@@ -59,6 +59,8 @@ int debug_sync_keys=0;
 int debug_bundlelog=0;
 int debug_noprioritisation=0;
 
+char *otabid=NULL;
+
 int radio_silence_count=0;
 
 int http_server=1;
@@ -133,7 +135,7 @@ unsigned int option_flags=0;
 
 int main(int argc, char **argv)
 {  
-  fprintf(stderr,"Version 20170711.0912.1\n");
+  fprintf(stderr,"Version 20170822.0336.1\n");
   
   start_time = gettime_ms();
 
@@ -327,6 +329,11 @@ int main(int argc, char **argv)
 		&argv[n][6]);
       } else if (!strncasecmp("packetrate=",argv[n],11))
 	target_transmissions_per_4seconds=atoi(&argv[n][11]);
+      else if (!strncasecmp("otabid=",argv[n],7)) {
+	// BID of Over The Air Update Rhizome bundle
+	otabid=strdup(&argv[n][7]);
+	fprintf(stderr,"OTA BID is '%s'\n",otabid);
+      }
       else {
 	fprintf(stderr,"Illegal mode '%s'\n",argv[n]);
 	exit(-3);
