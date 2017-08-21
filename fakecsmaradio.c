@@ -38,10 +38,10 @@ char *timestamp_str(unsigned char *s)
   gettimeofday(&tv, NULL);
   if (!s)
     snprintf(timestamp_str_out,1024,"[%02d:%02d.%02d.%03d RADIO]",
-	     tm.tm_hour,tm.tm_min,tm.tm_sec,tv.tv_usec/1000);
+	     tm.tm_hour,tm.tm_min,tm.tm_sec,(int)tv.tv_usec/1000);
   else
     snprintf(timestamp_str_out,1024,"[%02d:%02d.%02d.%03d %02X%02X*]",
-	     tm.tm_hour,tm.tm_min,tm.tm_sec,tv.tv_usec/1000,
+	     tm.tm_hour,tm.tm_min,tm.tm_sec,(int)tv.tv_usec/1000,
 	     s[0],s[1]);
     
   return timestamp_str_out;
@@ -319,7 +319,7 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
       fprintf(stderr,"          bid=%02X%02X%02X%02X%02X%02X%02X%02X*, version=%llx\n",
 	      f->bid_prefix[0],f->bid_prefix[1],f->bid_prefix[2],f->bid_prefix[3],
 	      f->bid_prefix[4],f->bid_prefix[5],f->bid_prefix[6],f->bid_prefix[7],
-	      f->version);
+	      (long long)f->version);
       if (f->body_log_length)
 	fprintf(stderr,"          manifest length=%d, body length=%d (or 2^%d)\n",
 		f->manifest_length,f->body_length,f->body_log_length
@@ -338,7 +338,7 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
 	fprintf(stderr,">>> %s %02X%02X%02X%02X*/%lld %s %d..%d (packet #%d offset %d)\n",
 		timestamp_str(f->sender_sid_prefix),
 		f->bid_prefix[0],f->bid_prefix[1],f->bid_prefix[2],f->bid_prefix[3],
-		f->version,
+		(long long)f->version,
 		f->is_manifest_piece?"manifest":(f->is_body_piece?"body":"unknown"),
 		f->is_manifest_piece?f->manifest_offset:f->body_offset,
 		f->is_manifest_piece?(f->manifest_offset+f->piece_length-1)
@@ -358,7 +358,7 @@ int filter_fragment(uint8_t *packet_in,uint8_t *packet_out,int *out_len,
 	fprintf(stderr,">>> %s %02X%02X%02X%02X*/%lld %s %d..%d (packet #%d offset %d)\n",
 		timestamp_str(f->sender_sid_prefix),
 		f->bid_prefix[0],f->bid_prefix[1],f->bid_prefix[2],f->bid_prefix[3],
-		f->version,
+		(long long)f->version,
 		f->is_manifest_piece?"manifest":(f->is_body_piece?"body":"unknown"),
 		f->is_manifest_piece?f->manifest_offset:f->body_offset,
 		f->is_manifest_piece?(f->manifest_offset+f->piece_length-1)
