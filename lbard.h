@@ -438,8 +438,27 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
 int http_post_meshms(char *server_and_port, char *auth_token,
 		     char *message,char *sender,char *recipient,
 		     int timeout_ms);
-int http_post_meshmb(char *server_and_port, char *auth_token,
+int http_meshmb_post(char *server_and_port, char *auth_token,
 		     char *message, char *sender, int timeout_ms);
+int http_meshmb_activity(char *server_and_port, char *auth_token,
+			 char *id_hex,int timeout_ms);
+int http_meshmb_activity_since(char *server_and_port,
+			       char *auth_token,
+			       char *id_hex,char *token,
+			       int timeout_ms);
+int http_meshmb_follow(char *server_and_port, char *auth_token,
+		       char *me_hex,char *you_hex,int timeout_ms);
+int http_meshmb_ignore(char *server_and_port, char *auth_token,
+		       char *me_hex,char *you_hex,int timeout_ms);
+int http_meshmb_block(char *server_and_port, char *auth_token,
+		       char *me_hex,char *you_hex,int timeout_ms);
+int http_meshmb_list_following(char *server_and_port,
+			       char *auth_token,
+			       char *id_hex,int timeout_ms);
+int http_meshmb_read(char *server_and_port,
+		     char *auth_token,
+		     char *id_hex,int timeout_ms);
+
 int sync_setup(void);
 int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 			      char *sid_prefix_hex,

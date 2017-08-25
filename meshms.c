@@ -141,27 +141,63 @@ int meshms_parse_command(int argc,char **argv)
 int meshmb_usage()
 {
   fprintf(stderr,"lbard meshmb commands:\n"
-	  "  lbard meshmb post <sender> <message>\n");
+	  "  lbard meshmb activity <id>\n"
+	  "  lbard meshmb find [search term]\n"
+	  "  lbard meshmb follow <myid> <peerid>\n"
+	  "  lbard meshmb ignore <myid> <peerid>\n"
+	  "  lbard meshmb block <myid> <peerid>\n"
+	  "  lbard meshmb list following <myid>\n"
+	  "  lbard meshmb read <id>\n"
+	  "  lbard meshmb send <myid> <message>\n"
+	  );
   exit(-1);
 }
-
-int meshmb_post_message(char *sender_id_hex,char *message)
-{
-  return http_post_meshmb(server_and_port,auth_token,message,
-			  sender_id_hex,30000);
-}
-
 
 int meshmb_parse_command(int argc,char **argv)
 {
   meshms_parse_serval_conf();
   if (argc<3) exit(meshmb_usage());
   if (argc<=7) {
-    if (!strcasecmp(argv[2],"post")) {
+    if (!strcasecmp(argv[2],"activity")) {
+      if (!argv[3]) exit(meshmb_usage());
+      exit(http_meshmb_activity(server_and_port,auth_token,argv[3],30000));
+    } else if (!strcasecmp(argv[2],"find")) {
+      if (!argv[3]) exit(meshmb_usage());
+      // exit(http_meshmb_find(argv[3]));
+      fprintf(stderr,"meshmb find restful API not implemented.\n");
+      exit(-3);
+    } else if (!strcasecmp(argv[2],"follow")) {
       if (!argv[3]) exit(meshmb_usage());
       if (!argv[4]) exit(meshmb_usage());
       if (argc!=5) exit(meshmb_usage());
-      exit(meshmb_post_message(argv[3],argv[4]));
+      exit(http_meshmb_follow(server_and_port,auth_token,argv[3],argv[4],30000));
+    }
+    else if (!strcasecmp(argv[2],"ignore")) {
+      if (!argv[3]) exit(meshmb_usage());
+      if (!argv[4]) exit(meshmb_usage());
+      if (argc!=5) exit(meshmb_usage());
+      exit(http_meshmb_follow(server_and_port,auth_token,argv[3],argv[4],30000));
+    }
+    else if (!strcasecmp(argv[2],"block")) {
+      if (!argv[3]) exit(meshmb_usage());
+      if (!argv[4]) exit(meshmb_usage());
+      if (argc!=5) exit(meshmb_usage());
+      exit(http_meshmb_follow(server_and_port,auth_token,argv[3],argv[4],30000));
+    }
+    else if (!strcasecmp(argv[2],"list")) {
+      if (!argv[3]) exit(meshmb_usage());
+      if (!argv[4]) exit(meshmb_usage());
+      if (!strcmp("following",argv[3]))
+	exit(http_meshmb_list_following(server_and_port,auth_token,argv[4],30000));
+      exit(meshmb_usage());
+    } else if (!strcasecmp(argv[2],"read")) {
+      if (!argv[3]) exit(meshmb_usage());
+      exit(http_meshmb_read(server_and_port,auth_token,argv[3],30000));
+    } else if (!strcasecmp(argv[2],"send")) {
+      if (!argv[3]) exit(meshmb_usage());
+      if (!argv[4]) exit(meshmb_usage());
+      if (argc!=5) exit(meshmb_usage());
+      exit(http_meshmb_post(server_and_port,auth_token,argv[3],argv[4],30000));
     } else {
       fprintf(stderr,"Unsupported lbard meshmb operation.\n");
       exit(meshmb_usage());
