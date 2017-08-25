@@ -743,12 +743,14 @@ int http_json_request(char *server_and_port, char *auth_token,
 			   "Host: %s:%d\r\n"
 			   "Content-Length: 0\r\n"
 			   "Accept: */*\r\n"
-			   "Content-Type: text/plain\r\n"
+			   "%s"
 			   "\r\n",
 			   request_type,
 			   url,
 			   authdigest,
-			   server_name,server_port);
+			   server_name,server_port,
+			   !strcmp(request_type,"POST")?"Content-Type: text/plain\r\n":""
+			   );
 
   // fprintf(stderr,"Request:\n%s\n",request);
   
