@@ -136,8 +136,6 @@ unsigned int option_flags=0;
 
 int main(int argc, char **argv)
 {  
-  fprintf(stderr,"Version 20170822.0336.1\n");
-  
   start_time = gettime_ms();
 
   /* Catch SIGABORT, for compatibility with test framework (expects return code 0
@@ -180,7 +178,9 @@ int main(int argc, char **argv)
   if ((argc>1)&&!strcasecmp(argv[1],"meshmb")) {
     return(meshmb_parse_command(argc,argv));
   }
-  
+
+  fprintf(stderr,"Version 20170822.0336.1\n");
+    
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==5)&&(!strcasecmp(argv[1],"energysamplemaster"))) {
     return energy_experiment_master(argv[2],argv[3],argv[4]);
