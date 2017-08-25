@@ -778,10 +778,14 @@ int http_json_request(char *server_and_port, char *auth_token,
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
 	  // fprintf(stderr,"  HTTP response from servald is: %d\n",http_response);
+	  if (http_response<200 || http_response > 209)
+	    fprintf(stderr,"HTTP Error: %s\n",line);
 	}
 	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
 	  // got http response
 	  // fprintf(stderr,"  HTTP response from servald is: %d\n",http_response);
+	  if (http_response<200 || http_response > 209)
+	    fprintf(stderr,"HTTP Error: %s\n",line);
 	}
 	len=0;
 	// Have we found end of headers?
@@ -796,11 +800,10 @@ int http_json_request(char *server_and_port, char *auth_token,
     }
   }
 
-  json_body(sock,timeout_time);  
+  if (http_response>=200 && http_response <= 209)
+    json_body(sock,timeout_time);  
 
-  fprintf(stderr,"http_response = %d\n",http_response);
-  return http_response;
-  
+  return http_response;  
 }
 
 
