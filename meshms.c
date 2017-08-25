@@ -55,16 +55,22 @@ int meshms_parse_serval_conf()
   char auth_name[1024]="username";
   char auth_key[1024]="password";
   int port=4110;
+
+  int got_port=0;
+  int got_auth=0;
+
+  char *instance_path="/usr/local/etc/serval";
+  if (getenv("SERVALINSTANCE_PATH")) instance_path=getenv("SERVALINSTANCE_PATH");
   
-  snprintf(serval_conf_file,1024,"%s/serval.conf",getenv("SERVALINSTANCE_PATH"));
+  snprintf(serval_conf_file,1024,"%s/serval.conf",instance_path);
   FILE *f=fopen(serval_conf_file,"r");
   char line[1024];
   if (f) {
     line[0]=0; fgets(line,1024,f);
     while(line[0]) {
-      sscanf(line,"api.restful.users.%[^.].password=%s",
-	     auth_name,auth_key);
-      sscanf(line,"rhizome.http.port=%d",&port);
+      if (sscanf(line,"api.restful.users.%[^.].password=%s",
+		 auth_name,auth_key)==2) got_auth=1;
+      if (sscanf(line,"rhizome.http.port=%d",&port)==1) got_port=1;
       line[0]=0; fgets(line,1024,f);
     }
     fclose(f);
@@ -72,6 +78,11 @@ int meshms_parse_serval_conf()
 
   snprintf(server_and_port,1024,"127.0.0.1:%d",port);
   snprintf(auth_token,1024,"%s:%s",auth_name,auth_key);
+
+  if (!got_auth) fprintf(stderr,"WARNING: Could not find api.restful.users.XXX.password=YYY entry in %s\n",
+			 serval_conf_file);
+  if (!got_port) fprintf(stderr,"WARNING: Could not find rhizome.http.port=XXX entry in %s\n",
+			 serval_conf_file);
   return 0;
 }
 

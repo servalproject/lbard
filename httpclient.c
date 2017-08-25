@@ -535,7 +535,11 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 	// if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
-	  // fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
+	  fprintf(stderr,"  HTTP response is: %d\n",http_response);
+	}
+	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
+	  // got http response
+	  fprintf(stderr,"  HTTP response is: %d\n",http_response);
 	}
 	len=0;
 	// Have we found end of headers?
@@ -659,7 +663,11 @@ int http_post_meshms_common(char *server_and_port, char *auth_token,
 	// if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
-	  fprintf(stderr,"  HTTP response from Rhizome for new message post: %d\n",http_response);
+	  fprintf(stderr,"  HTTP response from servald for new message post: %d\n",http_response);
+	}
+	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
+	  // got http response
+	  fprintf(stderr,"  HTTP response from servald for new message post: %d\n",http_response);
 	}
 	len=0;
 	// Have we found end of headers?
@@ -703,11 +711,19 @@ int http_json_request(char *server_and_port, char *auth_token,
   char server_name[1024];
   int server_port=-1;
   
-  if (sscanf(server_and_port,"%[^:]:%d",server_name,&server_port)!=2) return -1;
+  if (sscanf(server_and_port,"%[^:]:%d",server_name,&server_port)!=2)
+    {
+      fprintf(stderr,"Could not parse server_and_port\n");
+      return -1;
+    }
 
   long long timeout_time=gettime_ms()+timeout_ms;
   
-  if (strlen(auth_token)>500) return -1;
+  if (strlen(auth_token)>500)
+    {
+      fprintf(stderr,"Auth token too long\n");
+      return -1;
+    }
   
   char request[8192];
   char authdigest[1024];
@@ -737,13 +753,16 @@ int http_json_request(char *server_and_port, char *auth_token,
   // fprintf(stderr,"Request:\n%s\n",request);
   
   int sock=connect_to_port(server_name,server_port);
-  if (sock<0) return -1;
+  if (sock<0) {
+    fprintf(stderr,"Could not open socket to servald\n");
+    return -1;
+  }
 
   // Write request
   write_all(sock,request,total_len);
 
   // Read reply, streaming output to file after we have skipped the header
-  int http_response=-1;
+  int http_response=-999;
   char line[1024];
   int len=0;
   int empty_count=0;
@@ -752,14 +771,17 @@ int http_json_request(char *server_and_port, char *auth_token,
   while(len<1024) {
     r=read_nonblock(sock,&line[len],1);
     if (r==1) {
-      
       if ((line[len]=='\n')||(line[len]=='\r')) {
 	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;
 	// if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
-	  // fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
+	  // fprintf(stderr,"  HTTP response from servald is: %d\n",http_response);
+	}
+	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
+	  // got http response
+	  // fprintf(stderr,"  HTTP response from servald is: %d\n",http_response);
 	}
 	len=0;
 	// Have we found end of headers?
@@ -769,12 +791,14 @@ int http_json_request(char *server_and_port, char *auth_token,
     if (gettime_ms()>timeout_time) {
       // If still in header, just quit on timeout
       close(sock);
+      fprintf(stderr,"Premature end of data while reading HTTP headers\n");
       return -1;
     }
   }
 
   json_body(sock,timeout_time);  
-  
+
+  fprintf(stderr,"http_response = %d\n",http_response);
   return http_response;
   
 }
@@ -786,8 +810,10 @@ int http_list_meshms_conversations(char *server_and_port, char *auth_token,
   char url[8192];
   snprintf(url,8192,"/restful/meshms/%s/conversationlist.json",
 	   participant);
-  return http_json_request(server_and_port,auth_token,
-			   timeout_ms,url,"GET");  
+  int result=http_json_request(server_and_port,auth_token,
+			       timeout_ms,url,"GET");  
+  if (result<200||result>204) fprintf(stderr,"ERROR: HTTP Response was %d\n",result);
+  return result;
 }
 
 int http_list_meshms_messages(char *server_and_port, char *auth_token,
@@ -796,8 +822,10 @@ int http_list_meshms_messages(char *server_and_port, char *auth_token,
   char url[8192];
   snprintf(url,8192,"/restful/meshms/%s/%s/messagelist.json",
 	   sender,recipient);
-  return http_json_request(server_and_port,auth_token,
-			   timeout_ms,url,"GET");    
+  int result=http_json_request(server_and_port,auth_token,
+			       timeout_ms,url,"GET");    
+  if (result<200||result>204) fprintf(stderr,"ERROR: HTTP Response was %d\n",result);
+  return result;
 }
 
 int http_meshmb_activity(char *server_and_port, char *auth_token,
@@ -806,8 +834,10 @@ int http_meshmb_activity(char *server_and_port, char *auth_token,
   char url[8192];
   snprintf(url,8192,"/restful/meshmb/%s/activity.json",id_hex);
 
-  return http_json_request(server_and_port,auth_token,
-			   timeout_ms,url,"GET");
+  int result=http_json_request(server_and_port,auth_token,
+			       timeout_ms,url,"GET");
+  if (result<200||result>204) fprintf(stderr,"ERROR: HTTP Response was %d\n",result);
+  return result;
 }
 
 int http_meshmb_activity_since(char *server_and_port,
@@ -819,8 +849,10 @@ int http_meshmb_activity_since(char *server_and_port,
   snprintf(url,8192,"/restful/meshmb/%s/activity/%s/activity.json",
 	   id_hex,token);
 
-  return http_json_request(server_and_port,auth_token,
-			   timeout_ms,url,"GET");
+  int result=http_json_request(server_and_port,auth_token,
+			       timeout_ms,url,"GET");
+  if (result<200||result>204) fprintf(stderr,"ERROR: HTTP Response was %d\n",result);
+  return result;
 }
 
 int http_meshmb_follow(char *server_and_port, char *auth_token,
@@ -830,8 +862,10 @@ int http_meshmb_follow(char *server_and_port, char *auth_token,
   snprintf(url,8192,"/restful/meshmb/%s/follow/%s",
 	   me_hex,you_hex);
 
-  return http_json_request(server_and_port,auth_token,
-			   timeout_ms,url,"POST");
+  int result=http_json_request(server_and_port,auth_token,
+			       timeout_ms,url,"POST");
+  if (result<200||result>204) fprintf(stderr,"ERROR: HTTP Response was %d\n",result);
+  return result;
 }
 
 int http_meshmb_ignore(char *server_and_port, char *auth_token,
@@ -841,8 +875,10 @@ int http_meshmb_ignore(char *server_and_port, char *auth_token,
   snprintf(url,8192,"/restful/meshmb/%s/ignore/%s",
 	   me_hex,you_hex);
 
-  return http_json_request(server_and_port,auth_token,
+  int result=http_json_request(server_and_port,auth_token,
 			   timeout_ms,url,"POST");
+  if (result<200||result>204) fprintf(stderr,"ERROR: HTTP Response was %d\n",result);
+  return result;
 }
 
 int http_meshmb_block(char *server_and_port, char *auth_token,
@@ -852,8 +888,10 @@ int http_meshmb_block(char *server_and_port, char *auth_token,
   snprintf(url,8192,"/restful/meshmb/%s/block/%s",
 	   me_hex,you_hex);
 
-  return http_json_request(server_and_port,auth_token,
-			   timeout_ms,url,"POST");
+  int result=http_json_request(server_and_port,auth_token,
+			       timeout_ms,url,"POST");
+  if (result<200||result>204) fprintf(stderr,"ERROR: HTTP Response was %d\n",result);
+  return result;
 }
 
 int http_meshmb_list_following(char *server_and_port,
@@ -864,8 +902,10 @@ int http_meshmb_list_following(char *server_and_port,
   snprintf(url,8192,"/restful/meshmb/%s/feedlist.json",
 	   id_hex);
 
-  return http_json_request(server_and_port,auth_token,
-			   timeout_ms,url,"GET");
+  int result=http_json_request(server_and_port,auth_token,
+			       timeout_ms,url,"GET");
+  if (result<200||result>204) fprintf(stderr,"ERROR: HTTP Response was %d\n",result);
+  return result;
 }
 
 int http_meshmb_read(char *server_and_port,
@@ -876,8 +916,10 @@ int http_meshmb_read(char *server_and_port,
   snprintf(url,8192,"/restful/meshmb/%s/messagelist.json",
 	   id_hex);
 
-  return http_json_request(server_and_port,auth_token,
-			   timeout_ms,url,"GET");
+  int result=http_json_request(server_and_port,auth_token,
+			       timeout_ms,url,"GET");
+  if (result<200||result>204) fprintf(stderr,"ERROR: HTTP Response was %d\n",result);
+  return result;
 }
 
 int http_get_async(char *server_and_port, char *auth_token,
