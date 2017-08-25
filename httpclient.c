@@ -607,7 +607,7 @@ int http_post_meshms_common(char *server_and_port, char *auth_token,
   // Build request
   char url[8192];
   snprintf(url,8192,"/restful/meshm%c/%s%s%s/sendmessage",
-	   meshmsP?'c':'b',
+	   meshmsP?'s':'b',
 	   sender,
 	   meshmsP?"/":"",
 	   meshmsP?recipient:"");
