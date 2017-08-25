@@ -535,11 +535,13 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 	// if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
-	  fprintf(stderr,"  HTTP response is: %d\n",http_response);
+	  if (http_response<200 || http_response > 209)
+	    fprintf(stderr,"HTTP Error: %s\n     (URL: '%s')\n",line,path);
 	}
 	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
 	  // got http response
-	  fprintf(stderr,"  HTTP response is: %d\n",http_response);
+	  if (http_response<200 || http_response > 209)
+	    fprintf(stderr,"HTTP Error: %s\n     (URL: '%s')\n",line,path);
 	}
 	len=0;
 	// Have we found end of headers?
@@ -587,7 +589,7 @@ int http_post_meshms_common(char *server_and_port, char *auth_token,
   snprintf(message_header,1024,
 	   "Content-Disposition: form-data; name=\"message\"\r\n"
 	   "Content-Length: %d\r\n"
-	   "Content-Type: text/plain\r\n"
+	   "Content-Type: text/plain; charset=utf-8\r\n"
 	   "\r\n", message_length);
 
   char boundary_string[1024];
@@ -603,8 +605,16 @@ int http_post_meshms_common(char *server_and_port, char *auth_token,
     +2;   // not sure where we have missed this last 2, but it is needed to reconcile
   
   // Build request
+  char url[8192];
+  snprintf(url,8192,"/restful/meshm%c/%s%s%s/sendmessage",
+	   meshmsP?'c':'b',
+	   sender,
+	   meshmsP?"/":"",
+	   meshmsP?recipient:"");
+	   
+  
   int total_len = snprintf(request,8192,
-			   "POST /restful/meshm%c/%s%s%s/sendmessage HTTP/1.1\r\n"
+			   "POST %s HTTP/1.1\r\n"
 			   "Authorization: Basic %s\r\n"
 			   "Host: %s:%d\r\n"
 			   "Content-Length: %d\r\n"
@@ -613,10 +623,7 @@ int http_post_meshms_common(char *server_and_port, char *auth_token,
 			   "\r\n"
 			   "--%s\r\n"
 			   "%s",
-			   meshmsP?'c':'b',
-			   sender,
-			   meshmsP?"/":"",
-			   meshmsP?recipient:"",
+			   url,
 			   authdigest,
 			   server_name,server_port,
 			   content_length,
@@ -632,14 +639,14 @@ int http_post_meshms_common(char *server_and_port, char *auth_token,
 	   "--%s--\r\n",
 	   boundary_string);
 
-  fprintf(stderr,"  content_length was calculated at %d bytes, total_len=%d\n",
-	  content_length,total_len);
+  if (0) fprintf(stderr,"  content_length was calculated at %d bytes, total_len=%d\n",
+		 content_length,total_len);
   int present_len=2+boundary_len+2+strlen(message_header);
-  fprintf(stderr,
-	  "    subtotal_len=%d, difference+present=%d (should match content_length)\n",
-	  subtotal_len,total_len-subtotal_len+present_len);
+  if (0) fprintf(stderr,
+		 "    subtotal_len=%d, difference+present=%d (should match content_length)\n",
+		 subtotal_len,total_len-subtotal_len+present_len);
 
-  fprintf(stderr,"Request:\n%s\n",request);
+  //  fprintf(stderr,"Request:\n%s\n",request);
   
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
@@ -663,11 +670,14 @@ int http_post_meshms_common(char *server_and_port, char *auth_token,
 	// if (len) printf("Line of response: %s\n",line);
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
-	  fprintf(stderr,"  HTTP response from servald for new message post: %d\n",http_response);
+	  if (http_response<200 || http_response > 209)
+	    fprintf(stderr,"HTTP Error: %s\n     (URL: '%s')\n",line,url);
+	  
 	}
 	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
 	  // got http response
-	  fprintf(stderr,"  HTTP response from servald for new message post: %d\n",http_response);
+	  if (http_response<200 || http_response > 209)
+	    fprintf(stderr,"HTTP Error: %s\n     (URL: '%s')\n",line,url);
 	}
 	len=0;
 	// Have we found end of headers?
@@ -686,7 +696,7 @@ int http_post_meshms_common(char *server_and_port, char *auth_token,
 }
 
 int http_meshmb_post(char *server_and_port, char *auth_token,
-		     char *message,char *sender,
+		     char *sender,char *message,
 		     int timeout_ms)
 {
   return http_post_meshms_common(server_and_port,auth_token,
@@ -749,7 +759,7 @@ int http_json_request(char *server_and_port, char *auth_token,
 			   url,
 			   authdigest,
 			   server_name,server_port,
-			   !strcmp(request_type,"POST")?"Content-Type: text/plain\r\n":""
+			   !strcmp(request_type,"POST")?"Content-Type: text/plain; charset=UTF-8\r\n":""
 			   );
 
   // fprintf(stderr,"Request:\n%s\n",request);
@@ -781,13 +791,13 @@ int http_json_request(char *server_and_port, char *auth_token,
 	  // got http response
 	  // fprintf(stderr,"  HTTP response from servald is: %d\n",http_response);
 	  if (http_response<200 || http_response > 209)
-	    fprintf(stderr,"HTTP Error: %s\n",line);
+	    fprintf(stderr,"HTTP Error: %s\n     (URL: '%s')\n",line,url);
 	}
 	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
 	  // got http response
 	  // fprintf(stderr,"  HTTP response from servald is: %d\n",http_response);
 	  if (http_response<200 || http_response > 209)
-	    fprintf(stderr,"HTTP Error: %s\n",line);
+	    fprintf(stderr,"HTTP Error: %s\n     (URL: '%s')\n",line,url);
 	}
 	len=0;
 	// Have we found end of headers?

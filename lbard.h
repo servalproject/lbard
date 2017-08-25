@@ -439,7 +439,7 @@ int http_post_meshms(char *server_and_port, char *auth_token,
 		     char *message,char *sender,char *recipient,
 		     int timeout_ms);
 int http_meshmb_post(char *server_and_port, char *auth_token,
-		     char *message, char *sender, int timeout_ms);
+		     char *sender, char *message, int timeout_ms);
 int http_meshmb_activity(char *server_and_port, char *auth_token,
 			 char *id_hex,int timeout_ms);
 int http_meshmb_activity_since(char *server_and_port,
