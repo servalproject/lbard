@@ -303,7 +303,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
   write_all(sock,request,strlen(request));
 
   // Read reply, streaming output to file after we have skipped the header
-  int http_response=-1;
+  int http_response=-999;
   #define LINE_BYTES 65536
   char line[LINE_BYTES];
   int len=0;
@@ -323,6 +323,11 @@ int http_get_simple(char *server_and_port, char *auth_token,
 	}
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
+	  fprintf(stderr,"HTTP Response = %d\n",http_response);
+	}
+	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
+	  // got http response
+	  fprintf(stderr,"HTTP Response = %d\n",http_response);
 	}
 	len=0;
 	// Have we found end of headers?
@@ -385,6 +390,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
       fprintf(stderr,"  HTTP download file is too short. Returning error.\n");
       return -1;
     }
+
   }
   
   return http_response;
@@ -997,6 +1003,9 @@ int http_get_async(char *server_and_port, char *auth_token,
 	  // got content length
 	}
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
+	  // got http response
+	}
+	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
 	  // got http response
 	}
 	len=0;
