@@ -178,6 +178,7 @@ extern char message_buffer[];
 extern int message_buffer_size;
 extern int message_buffer_length;
 
+extern char *my_signingid_hex;
 extern char *my_sid_hex;
 extern unsigned char my_sid[32];
 

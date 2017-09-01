@@ -217,3 +217,112 @@ int meshmb_parse_command(int argc,char **argv)
   exit(meshmb_usage());
 }
 
+
+#define MAX_PERIODIC_REQUESTS 64
+int periodic_request_count=0;
+char *periodic_request_urls[MAX_PERIODIC_REQUESTS];
+char *periodic_request_files[MAX_PERIODIC_REQUESTS];
+char periodic_request_output_directory[1024]="/tmp";
+int periodic_request_interval=5000; // milliseconds
+
+int register_periodic_request(char *outputfile,char *url)
+{
+  if (periodic_request_count>=MAX_PERIODIC_REQUESTS) {
+    fprintf(stderr,"%s:%d: Too many URLS in periodic request "
+	    "configuration. Reduce number or increase "
+	    "MAX_PERIODIC_REQUESTS.\n",
+	    __FILE__,__LINE__);
+    exit(-2);    
+  }
+
+  periodic_request_files[periodic_request_count]
+    =strdup(outputfile);
+  periodic_request_urls[periodic_request_count++]
+    =strdup(url);
+  
+  return 0;
+}
+
+int make_periodic_requests(void)
+{
+  int i;
+  meshms_parse_serval_conf();
+  for(i=0;i<periodic_request_count;i++)
+    {
+      int len=0;
+      char url[8192];
+      int j;
+      for(j=0;periodic_request_urls[i];j++) {
+	if (periodic_request_urls[i][j]=='$') {
+	  // Variable to substitute
+	  if (!strncmp("${SID}",&periodic_request_urls[i][j],
+		       6)) {
+	    strcpy(&url[len],my_sid_hex);
+	    len+=strlen(my_sid_hex);
+	  } else if (!strncmp("${ID}",&periodic_request_urls[i][j],
+			      5)) {
+	    strcpy(&url[len],my_signingid_hex);
+	    len+=strlen(my_signingid_hex);
+	  } else
+	    url[len++]=periodic_request_urls[i][j];
+	} else
+	  url[len++]=periodic_request_urls[i][j];
+      }
+      url[len]=0;
+      fprintf(stderr,"Resolved request URL to '%s'\n",
+	      url);
+      FILE *outfile=fopen(periodic_request_files[i],"w");
+      if (outfile) {
+	long long last_read_time=0;
+	int result=http_get_simple(server_and_port,auth_token,
+				   url,outfile,3000, // 3 sec timeout
+				   &last_read_time);
+	if (result<200||result>209)
+	  fprintf(stderr,"%s:%d: HTTP Result of %03d during fetch of '%s'\n",
+		  __FILE__,__LINE__,result,periodic_request_urls[i]);
+	fclose(outfile);
+      } else {
+	perror("Could not write to periodic request output file");
+	fprintf(stderr,"%s:%d: Filename was '%s'\n",
+		__FILE__,__LINE__,periodic_request_files[i]);
+      }
+    }
+  
+  return 0;
+}
+
+int setup_periodic_requests(char *filename)
+{
+  FILE *f=fopen(filename,"r");
+  if (!f) {
+    perror("Could not open periodic RESTful request configuration file.\n");
+    exit(-3);
+  }
+
+  char line[1024];
+  char request[1024];
+  char outputfile[1024];  
+  line[0]=0; fgets(line,1024,f);
+  while(line[0]) {
+    if (sscanf(line,"output_directory=%[^\n]",
+	       periodic_request_output_directory)==1) {
+      ;
+    } else if (sscanf(line,"interval=%d",
+		      &periodic_request_interval)==1) {
+      ;
+    } else if (sscanf(line,"request=%[^=]=%[^\n]",
+		      outputfile,request)==2) {
+      register_periodic_request(outputfile,request);
+    } else {
+      fprintf(stderr,"%s:%d: Unknown directive in periodic"
+	      " RESTful request configuration file: %s\n",
+	      __FILE__,__LINE__,line);
+      exit(-2);
+    }
+    line[0]=0; fgets(line,1024,f);
+  }
+
+  fclose(f);
+  
+  return 0;
+}
