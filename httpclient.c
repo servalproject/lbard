@@ -1059,9 +1059,21 @@ int http_read_next_line(int sock, char *line, int *len, int maxlen)
 #define MAX_PERIODIC_REQUESTS 64
 int periodic_request_count=0;
 char *periodic_request_urls[MAX_PERIODIC_REQUESTS];
+char periodic_request_output_directory[1024]="/tmp";
+int periodic_request_interval=5000; // milliseconds
 
-int register_periodic_request(void)
+int register_periodic_request(char *url)
 {
+  if (periodic_request_count>=MAX_PERIODIC_REQUESTS) {
+    fprintf(stderr,"%s:%d: Too many URLS in periodic request "
+	    "configuration. Reduce number or increase "
+	    "MAX_PERIODIC_REQUESTS.\n",
+	    __FILE__,__LINE__);
+    exit(-2);    
+  }
+  periodic_request_urls[periodic_request_count++]
+    =strdup(url);
+  
   return 0;
 }
 
@@ -1072,5 +1084,34 @@ int make_periodic_requests(void)
 
 int setup_periodic_requests(char *filename)
 {
+  FILE *f=fopen(filename,"r");
+  if (!f) {
+    perror("Could not open periodic RESTful request configuration file.\n");
+    exit(-3);
+  }
+
+  char line[1024];
+  char request[1024];
+  line[0]=0; fgets(line,1024,f);
+  while(line[0]) {
+    if (sscanf(line,"output_directory=%[^\n]",
+	       periodic_request_output_directory)==1) {
+      ;
+    } else if (sscanf(line,"interval=%d",
+		      &periodic_request_interval)==1) {
+      ;
+    } else if (sscanf(line,"request=%[^\n]",request)==1) {
+      register_periodic_request(request);
+    } else {
+      fprintf(stderr,"%s:%d: Unknown directive in periodic"
+	      " RESTful request configuration file: %s\n",
+	      __FILE__,__LINE__,line);
+      exit(-2);
+    }
+    line[0]=0; fgets(line,1024,f);
+  }
+
+  fclose(f);
+  
   return 0;
 }
