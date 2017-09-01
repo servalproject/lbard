@@ -74,7 +74,9 @@ int reboot_when_stuck=0;
 extern int serial_errors;
 
 unsigned char my_sid[32];
+unsigned char my_signingid[32];
 char *my_sid_hex=NULL;
+char *my_signingid_hex=NULL;
 unsigned int my_instance_id;
 
 
@@ -179,7 +181,7 @@ int main(int argc, char **argv)
     return(meshmb_parse_command(argc,argv));
   }
 
-  fprintf(stderr,"Version 20170828.1239.1\n");
+  fprintf(stderr,"Version 20170901.1239.1\n");
     
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==5)&&(!strcasecmp(argv[1],"energysamplemaster"))) {
@@ -212,7 +214,7 @@ int main(int argc, char **argv)
       serial_port=argv[2];
     } else {  
     if (argc<5) {
-      fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <serial port> [options ...]\n");
+      fprintf(stderr,"usage: lbard <servald hostname:port> <servald credential> <my sid> <my signing id> <serial port> [options ...]\n");
       fprintf(stderr,"usage: lbard monitor <serial port>\n");
       fprintf(stderr,"usage: lbard meshms <meshms command>\n");
       fprintf(stderr,"usage: lbard meshmb <meshmb command>\n");
@@ -221,7 +223,7 @@ int main(int argc, char **argv)
       fprintf(stderr,"usage: energysample <port> <interface> <broadcast address>\n");
       exit(-1);
     }
-    serial_port = argv[4];
+    serial_port = argv[5];
   }
 
   if (message_update_interval<0) message_update_interval=0;
@@ -229,11 +231,12 @@ int main(int argc, char **argv)
   last_message_update_time=0;
   congestion_update_time=0;
   
-  my_sid_hex="00000000000000000000000000000000";
+  my_sid_hex="000000000000000000000000000000000";
   prefix="000000";
+  my_signingid_hex="0000000000000000000000000000000";
   if (!monitor_mode) {
     prefix=strdup(argv[3]);
-    if (strlen(prefix)<32) {
+    if (strlen(prefix)!=64) {
       fprintf(stderr,"You must provide a valid SID for the ID of the local node.\n");
       exit(-1);
     }
@@ -249,8 +252,24 @@ int main(int argc, char **argv)
       }
       my_sid_hex=strdup(argv[3]);
     }
+    if (strlen(argv[4])!=64) {
+      fprintf(stderr,"You must provide a valid signing ID for the ID of the local node.\n");
+      exit(-1);
+    }
+    if (argc>4) {
+      // set my_signingid from argv[4]
+      for(int i=0;i<32;i++) {
+	char hex[3];
+	hex[0]=argv[4][i*2];
+	hex[1]=argv[4][i*2+1];
+	hex[2]=0;
+	my_signingid[i]=strtoll(hex,NULL,16);
+      }
+      my_signingid_hex=strdup(argv[4]);
+    }
   }
 
+  fprintf(stderr,"%d:My SigningID as hex is %s\n",__LINE__,my_signingid_hex);
   fprintf(stderr,"%d:My SID as hex is %s\n",__LINE__,my_sid_hex);
   fprintf(stderr,"My SID prefix is %02X%02X%02X%02X%02X%02X\n",
 	 my_sid[0],my_sid[1],my_sid[2],my_sid[3],my_sid[4],my_sid[5]);
@@ -271,7 +290,7 @@ int main(int argc, char **argv)
     }
   fprintf(stderr,"Serial port open as fd %d\n",serialfd);
       
-  int n=5;
+  int n=6;
   while (n<argc) {
     if (argv[n]) {
       if (!strcasecmp("monitor",argv[n])) monitor_mode=1;
