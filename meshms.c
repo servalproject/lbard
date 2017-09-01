@@ -243,8 +243,18 @@ int register_periodic_request(char *outputfile,char *url)
   return 0;
 }
 
+long long last_periodic_time=0;
+
 int make_periodic_requests(void)
 {
+
+  // Abort if nothing to do (or nothing to do yet)
+  if (!periodic_request_count) return 0;
+  long long now = gettime_ms();
+  if (now<(last_periodic_time+periodic_request_interval))
+    return 0;
+  last_periodic_time=now;
+  
   int i;
   meshms_parse_serval_conf();
   for(i=0;i<periodic_request_count;i++)

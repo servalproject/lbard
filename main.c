@@ -427,6 +427,8 @@ int main(int argc, char **argv)
     load_rhizome_db_async(servald_server,
 			  credential, token);
 
+    make_periodic_requests();
+    
     switch (radio_get_type()) {
     case RADIO_RFD900: uhf_serviceloop(serialfd); break;
     case RADIO_BARRETT_HF: hf_serviceloop(serialfd); break;
