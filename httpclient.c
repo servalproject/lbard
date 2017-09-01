@@ -1055,3 +1055,22 @@ int http_read_next_line(int sock, char *line, int *len, int maxlen)
   line[maxlen-1]=0;
   return 0;
 }
+
+#define MAX_PERIODIC_REQUESTS 64
+int periodic_request_count=0;
+char *periodic_request_urls[MAX_PERIODIC_REQUESTS];
+
+int register_periodic_request(void)
+{
+  return 0;
+}
+
+int make_periodic_requests(void)
+{
+  return 0;
+}
+
+int setup_periodic_requests(char *filename)
+{
+  return 0;
+}

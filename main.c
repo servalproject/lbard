@@ -353,13 +353,18 @@ int main(int argc, char **argv)
 	// BID of Over The Air Update Rhizome bundle
 	otabid=strdup(&argv[n][7]);
 	fprintf(stderr,"OTA BID is '%s'\n",otabid);
-      }
-      else if (!strncasecmp("otadir=",argv[n],7)) {
+      } else if (!strncasecmp("otadir=",argv[n],7)) {
 	// Where to put OTA update file
 	otadir=strdup(&argv[n][7]);
 	fprintf(stderr,"OTA directory is '%s'\n",otadir);
-      }
-      else {
+      } else if (!strncasecmp("periodicrequests=",argv[n],16)) {
+	// Setup periodic RESTful API requests to create a static
+	// proxy of RESTful content requests that can be accessed
+	// by web clients of a mesh extender
+	fprintf(stderr,"Periodic RESTful request configuration file is '%s'\n",
+		&argv[n][16]);
+	setup_periodic_requests(&argv[n][16]);
+      } else {
 	fprintf(stderr,"Illegal mode '%s'\n",argv[n]);
 	exit(-3);
       }
