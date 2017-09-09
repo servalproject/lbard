@@ -181,7 +181,7 @@ int main(int argc, char **argv)
     return(meshmb_parse_command(argc,argv));
   }
 
-  fprintf(stderr,"Version 20170901.1239.1\n");
+  fprintf(stderr,"Version 20170909.1649.1\n");
     
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==5)&&(!strcasecmp(argv[1],"energysamplemaster"))) {
@@ -363,7 +363,7 @@ int main(int argc, char **argv)
 	// by web clients of a mesh extender
 	fprintf(stderr,"Periodic RESTful request configuration file is '%s'\n",
 		&argv[n][16]);
-	setup_periodic_requests(&argv[n][16]);
+	setup_periodic_requests(&argv[n][17]);
       } else {
 	fprintf(stderr,"Illegal mode '%s'\n",argv[n]);
 	exit(-3);
