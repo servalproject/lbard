@@ -78,6 +78,7 @@ unsigned char my_signingid[32];
 char *my_sid_hex=NULL;
 char *my_signingid_hex=NULL;
 unsigned int my_instance_id;
+time_t last_instance_time=0;
 
 
 char *servald_server="";
@@ -171,6 +172,7 @@ int main(int argc, char **argv)
   my_instance_id=0;
   while(my_instance_id==0)
     urandombytes((unsigned char *)&my_instance_id,sizeof(unsigned int));
+  last_instance_time=time(0);
 
   // MeshMS operations via HTTP, so that we can avoid direct database modification
   // by scripts on the mesh extender devices, and thus avoid database lock problems.
@@ -181,7 +183,7 @@ int main(int argc, char **argv)
     return(meshmb_parse_command(argc,argv));
   }
 
-  fprintf(stderr,"Version 20170909.1649.1\n");
+  fprintf(stderr,"Version 20170910.1436.1\n");
     
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==5)&&(!strcasecmp(argv[1],"energysamplemaster"))) {
@@ -423,6 +425,15 @@ int main(int argc, char **argv)
 
     unsigned char msg_out[LINK_MTU];
 
+    // Refresh our instance ID every four minutes, so that any bundle list sync bugs
+    // can only block transmission for a few minutes.
+    if ((time(0)-last_instance_time)>240) {
+      my_instance_id=0;
+      while(my_instance_id==0)
+	urandombytes((unsigned char *)&my_instance_id,sizeof(unsigned int));
+      last_instance_time=time(0);
+    }
+    
     radio_read_bytes(serialfd,monitor_mode);
     load_rhizome_db_async(servald_server,
 			  credential, token);
