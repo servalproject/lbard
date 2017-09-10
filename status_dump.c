@@ -268,11 +268,11 @@ int http_report_network_status_json(int socket)
 	  count++;
 	}
       }
-      fprintf(f,"   ]\n}\n\n");
+      fprintf(f,"   ],\n\n\n");
       
       
       // Show current transfer progress bars
-      fprintf(f,"{\n\"transfers\": [\n     ");
+      fprintf(f,"\n\"transfers\": [\n     ");
       show_progress_json(f,1);
       fprintf(f,"   ]\n}\n\n");      
       
