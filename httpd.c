@@ -179,6 +179,11 @@ int http_process(struct sockaddr *cliaddr,
 	http_report_network_status(socket);
 	close(socket);
 	return 0;	
+      } else if (!strcasecmp(uri,"/status.json")) {
+	// Report on current peer status
+	http_report_network_status_json(socket);
+	close(socket);
+	return 0;	
       }
     }
   char *m="HTTP/1.0 400 Couldn't parse message\nServer: Serval LBARD\n\n";

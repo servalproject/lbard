@@ -174,6 +174,44 @@ int show_progress(FILE *f, int verbose)
   return 0;
 }
 
+int show_progress_json(FILE *f, int verbose)
+{
+  int i;
+
+  int count=0;
+  int progress_has_occurred=verbose;
+
+  for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
+    if (progress_has_occurred) break;
+    if (partials[i].bid_prefix)
+      if (partials[i].recent_bytes)
+	progress_has_occurred=1;
+  }
+      
+  if (progress_has_occurred) {
+    for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
+      if (partials[i].bid_prefix) {
+	// Here is a bundle in flight
+	char *bid_prefix=partials[i].bid_prefix;
+	long long version=partials[i].bundle_version;
+	char progress_string[80];
+	generate_progress_string(&partials[i],
+				 progress_string,sizeof(progress_string));
+	fprintf(f,"%s{ \"id\": \"%s\", \"version\": %lld,"
+		" \"progress\": \"%s\" }",
+		count?",\n":"\n",
+		bid_prefix,version,progress_string);
+	count++;
+	}
+    }
+    if (count) fprintf(f,"\n");
+  }
+  // progress_report_bundle_receipts(f);
+  
+  return 0;
+}
+
+
 #define MAX_RECEIVED_BUNDLES 10
 
 struct received_bundle {

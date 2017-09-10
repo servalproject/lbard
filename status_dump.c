@@ -239,3 +239,45 @@ int http_report_network_status(int socket)
     }
   return http_send_file(socket,"/tmp/networkstatus.html");     
 }
+
+time_t last_json_network_status_call=0;
+int http_report_network_status_json(int socket)
+{
+  if ((time(0)-last_json_network_status_call)>1)
+    {
+      last_network_status_call=time(0);
+      FILE *f=fopen("/tmp/networkstatus.json","w");
+      if (!f) {
+	char *m="HTTP/1.0 500 Couldn't create temporary file\nServer: Serval LBARD\n\nCould not create temporariy file";
+	write_all(socket,m,strlen(m));
+	
+	return -1;
+      }
+
+      // List peers
+      fprintf(f,"{\n\"neighbours\": [\n     ");
+      
+      int i;
+      int count=0;
+      for (i=0;i<peer_count;i++) {
+	long long age=(time(0)-peer_records[i]->last_message_time);
+	if (age<20) {
+	  if (count) fprintf(f,",");
+	  fprintf(f,"{ \"id\": \"%s\", \"time-since-last\": %lld }\n",
+		  peer_records[i]->sid_prefix,age);
+	  count++;
+	}
+      }
+      fprintf(f,"   ]\n}\n\n");
+      
+      
+      // Show current transfer progress bars
+      fprintf(f,"{\n\"transfers\": [\n     ");
+      show_progress_json(f,1);
+      fprintf(f,"   ]\n}\n\n");      
+      
+      fclose(f);
+    }
+  return http_send_file(socket,"/tmp/networkstatus.json");
+}
+

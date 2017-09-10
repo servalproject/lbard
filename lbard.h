@@ -370,6 +370,7 @@ long long gettime_us(void);
 int generate_progress_string(struct partial_bundle *partial,
 			     char *progress,int progress_size);
 int show_progress(FILE *f,int verbose);
+int show_progress_json(FILE *f,int verbose);
 int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_out);
 int dump_segment_list(struct segment_list *s);
 
@@ -528,6 +529,7 @@ int hf_radio_pause_for_turnaround(void);
 int hf_radio_send_now(void);
 int eeprom_read(int fd);
 int http_report_network_status(int socket);
+int http_report_network_status_json(int socket);
 int http_send_file(int socket,char *filename);
 char *timestamp_str(void);
 int _report_file(const char *filename,const char *file,
