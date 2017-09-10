@@ -247,8 +247,6 @@ long long last_periodic_time=0;
 
 int make_periodic_requests(void)
 {
-  fprintf(stderr,"Entering make_periodic_requests()\n");
-  
   // Abort if nothing to do (or nothing to do yet)
   if (!periodic_request_count) return 0;
   long long now = gettime_ms();
