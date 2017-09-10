@@ -230,8 +230,9 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   printf(">>> %s I just sent piece [%d,%d) for %s*.\n",
 	 timestamp_str(),start_offset,start_offset+actual_bytes,
 	 peer_records[target_peer]->sid_prefix);
-  peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,
-						       start_offset,actual_bytes);
+  if (!is_manifest)
+    peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,
+							 start_offset,actual_bytes);
   
   // Generate 4 byte offset block (and option 2-byte extension for big bundles)
   long long offset_compound=0;
