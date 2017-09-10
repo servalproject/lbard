@@ -192,7 +192,7 @@ int http_process(struct sockaddr *cliaddr,
   return 0;
 }
 
-int http_send_file(int socket,char *filename)
+int http_send_file(int socket,char *filename,char *mime_type)
 {
   char m[1024];
   FILE *f=fopen(filename,"r");
@@ -210,7 +210,14 @@ int http_send_file(int socket,char *filename)
 
   int len=s.st_size;
   
-  snprintf(m,1024,"HTTP/1.0 200 OK\nServer: Serval LBARD\nContent-Type: text/html\nContent-length: %d\n\n",
+  snprintf(m,1024,
+	   "HTTP/1.0 200 OK\n"
+	   "Server: Serval LBARD\n"
+	   "Content-Type: %s\n"
+	   "Access-Control-Allow-Origin: *\n"
+	   "Access-Control-Allow-Methods: GET\n"
+	   "Content-length: %d\n\n",
+	   mime_type,
 	   len);
   write_all(socket,m,strlen(m));
 

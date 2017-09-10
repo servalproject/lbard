@@ -530,7 +530,7 @@ int hf_radio_send_now(void);
 int eeprom_read(int fd);
 int http_report_network_status(int socket);
 int http_report_network_status_json(int socket);
-int http_send_file(int socket,char *filename);
+int http_send_file(int socket,char *filename,char *mime_type);
 char *timestamp_str(void);
 int _report_file(const char *filename,const char *file,
 		 const int line,const char *function);

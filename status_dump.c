@@ -237,7 +237,7 @@ int http_report_network_status(int socket)
       
       fclose(f);
     }
-  return http_send_file(socket,"/tmp/networkstatus.html");     
+  return http_send_file(socket,"/tmp/networkstatus.html","text/html");
 }
 
 time_t last_json_network_status_call=0;
@@ -278,6 +278,6 @@ int http_report_network_status_json(int socket)
       
       fclose(f);
     }
-  return http_send_file(socket,"/tmp/networkstatus.json");
+  return http_send_file(socket,"/tmp/networkstatus.json","application/json");
 }
 
