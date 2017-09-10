@@ -247,7 +247,8 @@ long long last_periodic_time=0;
 
 int make_periodic_requests(void)
 {
-
+  fprintf(stderr,"Entering make_periodic_requests()\n");
+  
   // Abort if nothing to do (or nothing to do yet)
   if (!periodic_request_count) return 0;
   long long now = gettime_ms();
@@ -257,46 +258,61 @@ int make_periodic_requests(void)
   
   int i;
   meshms_parse_serval_conf();
+  fprintf(stderr,"  About to iterate through %d periodic request URLs\n",
+	  periodic_request_count);
   for(i=0;i<periodic_request_count;i++)
-    {
-      int len=0;
-      char url[8192];
-      int j;
-      for(j=0;periodic_request_urls[i];j++) {
-	if (periodic_request_urls[i][j]=='$') {
-	  // Variable to substitute
-	  if (!strncmp("${SID}",&periodic_request_urls[i][j],
-		       6)) {
-	    strcpy(&url[len],my_sid_hex);
-	    len+=strlen(my_sid_hex);
-	  } else if (!strncmp("${ID}",&periodic_request_urls[i][j],
-			      5)) {
-	    strcpy(&url[len],my_signingid_hex);
-	    len+=strlen(my_signingid_hex);
+    if (periodic_request_urls[i])
+      {
+	int len=0;
+	char url[8192];
+	int j;
+	fprintf(stderr,"   URL #%d is '%s'\n",i,periodic_request_urls[i]);
+	for(j=0;periodic_request_urls[i];j++) {
+	  if (periodic_request_urls[i][j]=='$') {
+	    // Variable to substitute
+	    if (!strncmp("${SID}",&periodic_request_urls[i][j],
+			 6)) {
+	      fprintf(stderr,"    Substituting ${SID}\n");
+	      if (my_sid_hex) {
+		strcpy(&url[len],my_sid_hex);
+		len+=strlen(my_sid_hex);
+	      }
+	    } else if (!strncmp("${ID}",&periodic_request_urls[i][j],
+				5)) {
+	      fprintf(stderr,"    Substituting ${ID}\n");
+	      if (my_signingid_hex) {
+		strcpy(&url[len],my_signingid_hex);
+		len+=strlen(my_signingid_hex);
+	      }
+	    } else
+	      url[len++]=periodic_request_urls[i][j];
 	  } else
 	    url[len++]=periodic_request_urls[i][j];
-	} else
-	  url[len++]=periodic_request_urls[i][j];
+	}
+	url[len]=0;
+	fprintf(stderr,"   Substituted request URL is '%s'\n",
+		url);
+	if (periodic_request_files[i]) {
+	  fprintf(stderr,"   Output filename is '%s'\n",periodic_request_files[i]);
+	  FILE *outfile=fopen(periodic_request_files[i],"w");
+	  if (outfile) {
+	    long long last_read_time=0;
+	    fprintf(stderr,"   Making HTTP request\n");
+	    int result=http_get_simple(server_and_port,auth_token,
+				       url,outfile,3000, // 3 sec timeout
+				       &last_read_time);
+	    fprintf(stderr,"   HTTP result code is %d\n",result);
+	    if (result<200||result>209)
+	      fprintf(stderr,"%s:%d: HTTP Result of %03d during fetch of '%s'\n",
+		      __FILE__,__LINE__,result,periodic_request_urls[i]);
+	    fclose(outfile);
+	  } else {
+	    perror("Could not write to periodic request output file");
+	    fprintf(stderr,"%s:%d: Filename was '%s'\n",
+		    __FILE__,__LINE__,periodic_request_files[i]);
+	  }
+	}
       }
-      url[len]=0;
-      fprintf(stderr,"Resolved request URL to '%s'\n",
-	      url);
-      FILE *outfile=fopen(periodic_request_files[i],"w");
-      if (outfile) {
-	long long last_read_time=0;
-	int result=http_get_simple(server_and_port,auth_token,
-				   url,outfile,3000, // 3 sec timeout
-				   &last_read_time);
-	if (result<200||result>209)
-	  fprintf(stderr,"%s:%d: HTTP Result of %03d during fetch of '%s'\n",
-		  __FILE__,__LINE__,result,periodic_request_urls[i]);
-	fclose(outfile);
-      } else {
-	perror("Could not write to periodic request output file");
-	fprintf(stderr,"%s:%d: Filename was '%s'\n",
-		__FILE__,__LINE__,periodic_request_files[i]);
-      }
-    }
   
   return 0;
 }
