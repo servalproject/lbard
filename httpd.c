@@ -179,6 +179,48 @@ int http_process(struct sockaddr *cliaddr,
 	http_report_network_status(socket);
 	close(socket);
 	return 0;	
+      } else if (!strcasecmp(uri,"/avacado/testmode1")) {
+	system("/sbin/ifconfig adhoc0 down");
+	system("rm /serval-var/rhizome.db");
+	system("servald stop");
+	char m[1024];
+	snprintf(m,1024,
+		 "HTTP/1.0 200 OK\n"
+		 "Server: Serval LBARD\n"
+		 "Content-length: 22\n"
+		 "\n"
+		 "Test Mode #1 selected\n"
+		 );
+	write_all(socket,m,strlen(m));
+	close(socket);
+	return 0;	
+      } else if (!strncasecmp(uri,"/avacado/renamessid/",20)) {
+	char cmd[1024];
+	char newssid[32];
+	int i,o=0;
+	for(i=0;uri[20+i];i++)
+	  if ((uri[20+i]>='a'&&uri[20+i]<='z')
+	      ||(uri[20+i]>='0'&&uri[20+i]<='9')
+	      ||uri[20+i]=='.')
+	    if (o<31)
+	      newssid[o++]=uri[20+i];
+	newssid[o]=0;
+	if (o>1) {
+	  snprintf(cmd,1024,"sed -e 's/public.servalproject.org/%s/g' < /etc/config/wireless.template > /tmp/wt",newssid);
+	  system(cmd);
+	  system("mv /tmp/wt /etc/config/wireless.template");
+	}
+	char m[1024];
+	snprintf(m,1024,
+		 "HTTP/1.0 200 OK\n"
+		 "Server: Serval LBARD\n"
+		 "Content-length: 13\n"
+		 "\n"
+		 "SSID Renamed\n"
+		 );
+	write_all(socket,m,strlen(m));
+	close(socket);
+	return 0;	
       } else if (!strcasecmp(uri,"/status.json")) {
 	// Report on current peer status
 	http_report_network_status_json(socket);
