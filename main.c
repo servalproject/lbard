@@ -62,6 +62,8 @@ int debug_noprioritisation=0;
 char *otabid=NULL;
 char *otadir=NULL;
 
+char *onepeer=NULL;
+
 int radio_silence_count=0;
 
 int http_server=1;
@@ -183,7 +185,7 @@ int main(int argc, char **argv)
     return(meshmb_parse_command(argc,argv));
   }
 
-  fprintf(stderr,"Version 20170911.1458.1\n");
+  fprintf(stderr,"Version 20170912.0811.1\n");
     
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==5)&&(!strcasecmp(argv[1],"energysamplemaster"))) {
@@ -346,6 +348,8 @@ int main(int argc, char **argv)
       else if (!strcasecmp("nopriority",argv[n])) debug_noprioritisation=1;
       else if (!strcasecmp("nohttpd",argv[n])) http_server=0;
       else if (!strncasecmp("flags=",argv[n],6)) {
+	
+      } else if (!strncasecmp("flags=",argv[n],6)) {
 	option_flags=atoi(&argv[n][6]);
 	fprintf(stderr,"Option flags = %d (from '%s')\n",option_flags,
 		&argv[n][6]);
@@ -359,6 +363,11 @@ int main(int argc, char **argv)
 	// Where to put OTA update file
 	otadir=strdup(&argv[n][7]);
 	fprintf(stderr,"OTA directory is '%s'\n",otadir);
+      } else if (!strncasecmp("onepeer=",argv[n],8)) {
+	// SID of the single UHF peer we are allowed to talk to
+	// (this is a debug capability)
+	onepeer=strdup(&argv[n][8]);
+	fprintf(stderr,"Radio peering restricted to %s*\n",onepeer);
       } else if (!strncasecmp("periodicrequests=",argv[n],16)) {
 	// Setup periodic RESTful API requests to create a static
 	// proxy of RESTful content requests that can be accessed

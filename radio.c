@@ -45,6 +45,7 @@ extern char *my_sid_hex;
 extern char *servald_server;
 extern char *credential;
 extern char *prefix;
+extern char *onepeer;
 
 int serial_errors=0;
 
@@ -303,6 +304,15 @@ int saw_packet(unsigned char *packet_data,int packet_bytes,
 				   FEC_MAX_BYTES-packet_bytes+FEC_LENGTH);
   
   if (debug_radio) dump_bytes("received packet",packet_data,packet_bytes);
+
+  char sender_prefix[128];
+  bytes_to_prefix(&packet_data[0],sender_prefix);
+
+  if (onepeer&&strncasecmp(sender_prefix,onepeer,strlen(sender_prefix))) {
+    printf("Ignoring packet from SID %s* due to onepeer=%s\n",
+	   sender_prefix,onepeer);
+    return -1;
+  }
   
   if (rs_error_count>=0&&rs_error_count<8) {
     if (0) printf("CHECKPOINT: %s:%d %s() error counts = %d for packet of %d bytes.\n",
@@ -325,9 +335,7 @@ int saw_packet(unsigned char *packet_data,int packet_bytes,
     
     if (monitor_mode)
       {
-	char sender_prefix[128];
 	char monitor_log_buf[1024];
-	bytes_to_prefix(&packet_data[0],sender_prefix);
 	snprintf(monitor_log_buf,sizeof(monitor_log_buf),
 		 "CSMA Data frame: frame len=%d, FEC OK",		 
 		 packet_bytes);	
