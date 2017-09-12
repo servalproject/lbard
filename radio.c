@@ -205,7 +205,7 @@ int radio_send_message_rfd900(int serialfd,unsigned char *out, int offset)
   // accidentally doing !!, which will send a packet.
   usleep(1000);
   write(serialfd,"C!C",3);
-  usleep(1000);
+  usleep(10000);
 
   // Then stuff the escaped bytes to send
   for(i=0;i<offset;i++) {
