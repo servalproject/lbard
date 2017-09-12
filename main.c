@@ -52,6 +52,7 @@ int debug_announce=0;
 int debug_pull=0;
 int debug_insert=0;
 int debug_radio_rx=0;
+int debug_radio_tx=0;
 int debug_gpio=0;
 int debug_message_pieces=0;
 int debug_sync=0;
@@ -339,6 +340,7 @@ int main(int argc, char **argv)
       else if (!strcasecmp("announce",argv[n])) debug_announce=1;
       else if (!strcasecmp("insert",argv[n])) debug_insert=1;
       else if (!strcasecmp("radio_rx",argv[n])) debug_radio_rx=1;      
+      else if (!strcasecmp("radio_tx",argv[n])) debug_radio_tx=1;      
       else if (!strcasecmp("gpio",argv[n])) debug_gpio=1;
       else if (!strcasecmp("message_pieces",argv[n])) debug_message_pieces=1;
       else if (!strcasecmp("sync",argv[n])) debug_sync=1;

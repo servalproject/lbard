@@ -212,6 +212,10 @@ int radio_send_message_rfd900(int serialfd,unsigned char *out, int offset)
   escaped[elen++]='!'; escaped[elen++]='!';
   
   radio_set_tx_power(serialfd);
+
+  if (debug_radio_tx) {
+    dump_bytes("sending packet",escaped,elen);    
+  }  
   
   if (write_all(serialfd,escaped,elen)==-1) {
     serial_errors++;
@@ -247,7 +251,9 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   bcopy(parity,&out[offset],FEC_LENGTH);
   offset+=FEC_LENGTH;
 
-  // dump_bytes("sending packet",buffer,offset);
+  if (debug_radio_tx) {
+    dump_bytes("sending packet",buffer,offset);
+  }
 
   
   assert( offset <= (FEC_MAX_BYTES+FEC_LENGTH) );

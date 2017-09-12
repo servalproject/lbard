@@ -294,6 +294,7 @@ extern int debug_announce;
 extern int debug_pull;
 extern int debug_insert;
 extern int debug_radio_rx;
+extern int debug_radio_tx;
 extern int debug_gpio;
 extern int debug_insert;
 extern int debug_message_pieces;
