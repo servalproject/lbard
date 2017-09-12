@@ -158,13 +158,15 @@ int radio_set_tx_power(int serialfd)
 #endif
   }
 
+  // XXX - We work around a bug in our SiK firmware where !H and !C don't clear !-mode
+  // So we issue a command to clear the buffer after
   if (hipower_switch_set&&hipower_en) {
     printf("Setting radio to hipower\n");
-    if (write_all(serialfd,"!H",2)==-1) serial_errors++; else serial_errors=0;
+    if (write_all(serialfd,"!HC",3)==-1) serial_errors++; else serial_errors=0;
   } else {
     printf("Setting radio to lowpower mode (flags %d:%d) -- probably ok under Australian LIPD class license, but you should check.\n",
 		   hipower_switch_set,hipower_en);
-    if (write_all(serialfd,"!L",2)==-1) serial_errors++; else serial_errors=0;
+    if (write_all(serialfd,"!LC",3)==-1) serial_errors++; else serial_errors=0;
   }
 
   return 0;
@@ -199,13 +201,13 @@ int radio_send_message_rfd900(int serialfd,unsigned char *out, int offset)
   int elen=0;
   int i;
 
+  radio_set_tx_power(serialfd);
+
   // Sometimes the ! gets eaten here. Solution is to
   // send a non-! character first, so that even if !-mode
   // is set, all works properly.  this will also stop us
   // accidentally doing !!, which will send a packet.
-  usleep(1000);
   write(serialfd,"C!C",3);
-  usleep(10000);
 
   // Then stuff the escaped bytes to send
   for(i=0;i<offset;i++) {
@@ -216,8 +218,6 @@ int radio_send_message_rfd900(int serialfd,unsigned char *out, int offset)
   // Finally include TX packet command
   escaped[elen++]='!'; escaped[elen++]='!';
   
-  radio_set_tx_power(serialfd);
-
   if (debug_radio_tx) {
     dump_bytes("sending packet",escaped,elen);    
   }  
