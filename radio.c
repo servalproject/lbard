@@ -124,20 +124,20 @@ long long hi_power_timeout=3000; // 3 seconds between checks
 long long next_check_time=0;
 int radio_set_tx_power(int serialfd)
 {
-  char *safety_file="/dos/hipower.en";
+  char *safety_file="/dos/lowpower";
 #if 0
   char *gpio_file="/sys/kernel/debug/gpio";
   char *gpio_string=" gpio-18  (sw1                 ) in  lo";
 #endif
 
   if (next_check_time<gettime_ms()) {
-    hipower_en=0;
+    hipower_en=1;
     hipower_switch_set=0;
     next_check_time=gettime_ms()+hi_power_timeout;
 
     FILE *f=fopen(safety_file,"r");
     if (f) {
-      hipower_en=1;
+      hipower_en=0;
       fclose(f);
     }
 #if 1
@@ -159,10 +159,10 @@ int radio_set_tx_power(int serialfd)
   }
 
   if (hipower_switch_set&&hipower_en) {
-    printf("Setting radio to hipower -- you need a special spectrum license to do this!\n");
+    printf("Setting radio to hipower\n");
     if (write_all(serialfd,"!H",2)==-1) serial_errors++; else serial_errors=0;
   } else {
-    if (0) printf("Setting radio to lowpower mode (flags %d:%d) -- probably ok under Australian LIPD class license, but you should check.\n",
+    printf("Setting radio to lowpower mode (flags %d:%d) -- probably ok under Australian LIPD class license, but you should check.\n",
 		   hipower_switch_set,hipower_en);
     if (write_all(serialfd,"!L",2)==-1) serial_errors++; else serial_errors=0;
   }
