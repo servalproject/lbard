@@ -38,7 +38,7 @@ extern struct sync_state *sync_state;
    64 * 10% * 4 seconds = 26 packets per 4 seconds.
  */
 // 52 = target 20% channel utilisation
-#define TARGET_TRANSMISSIONS_PER_4SECONDS 52
+#define TARGET_TRANSMISSIONS_PER_4SECONDS 26
 extern int target_transmissions_per_4seconds;
 
 // BAR consists of:
