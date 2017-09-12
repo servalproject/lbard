@@ -199,6 +199,12 @@ int radio_send_message_rfd900(int serialfd,unsigned char *out, int offset)
   int elen=0;
   int i;
 
+  // Sometimes the ! gets eaten here. Solution is to
+  // send a non-! character first, so that even if !-mode
+  // is set, all works properly.  this will also stop us
+  // accidentally doing !!, which will send a packet.
+  escaped[elen++]='C'; // clears buffer if !-mode set
+  
   // Begin with clear TX buffer command
   escaped[elen++]='!'; escaped[elen++]='C';
 
