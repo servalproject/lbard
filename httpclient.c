@@ -432,7 +432,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   snprintf(manifest_header,1024,
 	   "Content-Disposition: form-data; name=\"manifest\"\r\n"
 	   "Content-Length: %d\r\n"
-	   "Content-Type: rhizome/manifest\r\n"
+	   "Content-Type: rhizome/manifest; format=text+binarysig\r\n"
 	   "\r\n", manifest_length);
   char body_header[1024];
   snprintf(body_header,1024,
