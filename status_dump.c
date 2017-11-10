@@ -196,19 +196,27 @@ int http_report_network_status(int socket)
       int i;
       for (i=0;i<peer_count;i++) {
 	long long age=(time(0)-peer_records[i]->last_message_time);
-	if (age<2) {
-	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"#00ff00\">%lld sec</td></tr>\n",
-		  peer_records[i]->sid_prefix,age);
-	} else if (age<3) {
-	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"#ffffff\">%lld sec</td></tr>\n",
-		  peer_records[i]->sid_prefix,age);
-	} else if (age<10) {
-	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"#ffff00\">%lld sec</td></tr>\n",
-		  peer_records[i]->sid_prefix,age);
-	} else if (age<20) {
-	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"#ff4f00\">%lld sec</td></tr>\n",
-		  peer_records[i]->sid_prefix,age);
+	float mean_rssi=-1;
+	if (peer_records[i]->rssi_counter) mean_rssi=peer_records[i]->rssi_accumulator*1.0/peer_records[i]->rssi_counter;
+	int missed_packets=peer_records[i]->missed_packet_count;
+	int received_packets=peer_records[i]->rssi_counter;
+	float percent_received=0;
+	if (received_packets+missed_packets) {
+	  percent_received=received_packets*100.0/(received_packets+missed_packets);
 	}
+	char *colour="#00ff00";
+	if (percent_received<10) colour="#ff4f00";
+	else if (percent_received<50) colour="#ffff00";
+	else if (percent_received<80) colour="#c0c0c0";
+	
+	fprintf(f,"<tr><td>%s*</td><td bgcolor=\"%s\">%lld sec, %d/%d received (%2.1f%% loss), mean RSSI = %.0f</td></tr>\n",
+		peer_records[i]->sid_prefix,colour,
+		age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
+
+	// Reset packet RX stats for next round
+	peer_records[i]->missed_packet_count=0;
+	peer_records[i]->rssi_counter=0;
+	peer_records[i]->rssi_accumulator=0;	
       }
       fprintf(f,"</table>\n");
       
