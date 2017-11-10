@@ -346,19 +346,26 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
     peer_records[peer]->tx_bundle_manifest_offset=1024;
 
   // Send piece of manifest, if required
-  if (peer_records[peer]->tx_bundle_manifest_offset<cached_manifest_encoded_len) {
-    fprintf(stderr,"  manifest_offset=%d, manifest_len=%d\n",
-	    peer_records[peer]->tx_bundle_manifest_offset,
-	    cached_manifest_encoded_len);
-    int start_offset=peer_records[peer]->tx_bundle_manifest_offset;
-    int bytes =
-      sync_append_some_bundle_bytes(bundle_number,start_offset,
-				    cached_manifest_encoded_len,
-				    &cached_manifest_encoded[start_offset],1,
-				    offset,mtu,msg,peer);
-    if (bytes>0)
-      peer_records[peer]->tx_bundle_manifest_offset+=bytes;
-
+  // (but never from an offset before the hard lower bound communicated in an ACK('A') message
+  if (peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound<cached_manifest_encoded_len) {
+    if (peer_records[peer]->tx_bundle_manifest_offset
+	<peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound)
+      peer_records[peer]->tx_bundle_manifest_offset
+	=peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound;
+      
+    if (peer_records[peer]->tx_bundle_manifest_offset<cached_manifest_encoded_len) {
+      fprintf(stderr,"  manifest_offset=%d, manifest_len=%d\n",
+	      peer_records[peer]->tx_bundle_manifest_offset,
+	      cached_manifest_encoded_len);
+      int start_offset=peer_records[peer]->tx_bundle_manifest_offset;
+      int bytes =
+	sync_append_some_bundle_bytes(bundle_number,start_offset,
+				      cached_manifest_encoded_len,
+				      &cached_manifest_encoded[start_offset],1,
+				      offset,mtu,msg,peer);
+      if (bytes>0)
+	peer_records[peer]->tx_bundle_manifest_offset+=bytes;
+    }
   }
 
   // Announce the length of the body if we have finished sending the manifest,
@@ -367,7 +374,10 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
   // detect the end of the bundle when the last piece is received.
   if (peer_records[peer]->tx_bundle_manifest_offset>=cached_manifest_encoded_len) {
     // Send length of body?
-    if ((!peer_records[peer]->tx_bundle_body_offset)
+    if (((!peer_records[peer]->tx_bundle_body_offset)
+	 ||(peer_records[peer]->tx_bundle_body_offset
+	    ==peer_records[peer]->tx_bundle_body_offset_hard_lower_bound)
+	 )
 	||(peer_records[peer]->tx_bundle_body_offset>=cached_body_len))
       {
 	fprintf(stderr,"T+%lldms : Sending length of bundle %s (bundle #%d, version %lld, cached_version %lld)\n",
@@ -392,10 +402,17 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
       }
     {
       // Send some of the body
+      // (but never from an offset before the hard lower bound communicated in an ACK('A') message
+      if (peer_records[peer]->tx_bundle_body_offset
+	  <peer_records[peer]->tx_bundle_body_offset_hard_lower_bound)
+	peer_records[peer]->tx_bundle_body_offset
+	  =peer_records[peer]->tx_bundle_body_offset_hard_lower_bound;
+    
       fprintf(stderr,"  body_offset=%d, body_len=%d\n",
 	      peer_records[peer]->tx_bundle_body_offset,
 	      cached_body_len);
       int start_offset=peer_records[peer]->tx_bundle_body_offset;
+
       int bytes =
 	sync_append_some_bundle_bytes(bundle_number,start_offset,cached_body_len,
 				      &cached_body[start_offset],0,
@@ -410,6 +427,9 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
   // If we have sent to the end of the bundle, then start again from the beginning,
   // until the peer acknowledges that they have received it all (or tells us to
   // start sending again from a different part of the bundle).
+  // (the _hard_lower_bound values are used to advance the loop-back point from the
+  // beginning of the bundle to the appropriate place, if partial reception has been
+  // acknowledged.
   if ((peer_records[peer]->tx_bundle_body_offset>=bundles[bundle_number].length)
       &&(peer_records[peer]->tx_bundle_manifest_offset>=cached_manifest_encoded_len))
     {
@@ -731,7 +751,7 @@ int sync_schedule_progress_report(int peer, int partial, int randomJump)
   // Mark utilisation of slot, so that we can flush out stale messages
   report_queue_partials[slot]=partial;
   report_queue_peers[slot]=peer_records[peer];
-
+  
   int ofs=0;
   if (randomJump) report_queue[slot][ofs++]='a';
   else report_queue[slot][ofs++]='A';
@@ -920,6 +940,8 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
 
     // Not already sending to another peer, so just pick a random point and start
     p->tx_bundle=bundle;
+    p->tx_bundle_manifest_offset_hard_lower_bound=0;
+    p->tx_bundle_body_offset_hard_lower_bound=0;
     if (bundles[bundle].length)
       p->tx_bundle_body_offset=(random()%bundles[bundle].length)&0xffffff00;
     else
@@ -957,6 +979,8 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
       p->tx_bundle_priority=p->tx_queue_priorities[0];
       p->tx_bundle_manifest_offset=0;
       p->tx_bundle_body_offset=0;      
+      p->tx_bundle_manifest_offset_hard_lower_bound=0;
+      p->tx_bundle_body_offset_hard_lower_bound=0;
       bcopy(&p->tx_queue_bundles[1],
 	    &p->tx_queue_bundles[0],
 	    sizeof(int)*p->tx_queue_len-1);
@@ -1083,6 +1107,8 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
 
   if (bundle<0) return -1;  
   if (bundle==p->tx_bundle) {
+    p->tx_bundle_manifest_offset_hard_lower_bound=manifest_offset;
+    p->tx_bundle_body_offset_hard_lower_bound=body_offset;
     if (randomJump) {
       // Jump to a random position somewhere after the provided points.
       if (!prime_bundle_cache(bundle,

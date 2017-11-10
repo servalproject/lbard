@@ -123,6 +123,15 @@ struct peer_state {
   int tx_bundle_priority;
   int tx_bundle_manifest_offset;
   int tx_bundle_body_offset;
+
+  // These get set to offsets provided in an ACK('A') packet,
+  // so that we avoid resending stuff that has been definitively acknowledged by
+  // the recipient.  The values from the ACK are written directly in here, so that
+  // if a problem does arise, the recipient can move the ACK point backwards if
+  // required
+  int tx_bundle_manifest_offset_hard_lower_bound;
+  int tx_bundle_body_offset_hard_lower_bound;
+
   // number of http fetch errors for a manifest/payload we tolerate, before
   // discarding this bundle and trying to send the next.
 #define MAX_CACHE_ERRORS 5
