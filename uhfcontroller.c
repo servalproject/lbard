@@ -364,6 +364,12 @@ int rfd900_set_tx_power(int serialfd)
     if (write_all(serialfd,"!L",3)==-1) serial_errors++; else serial_errors=0;
   }
 
+  // Also allow setting of TX frequency
+  if (txfreq!=-1) {
+    char cmd[16];
+    snprintf(cmd,16,"%x!f",txfreq/1000);
+    if (write_all(serialfd,cmd,strlen(cmd))==-1) serial_errors++; else serial_errors=0;    
+  }
 
   return 0;
 }
