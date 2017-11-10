@@ -160,6 +160,8 @@ struct recent_bundle {
 extern int txpower;
 extern int txfreq;
 
+extern int serial_errors;
+
 extern int radio_temperature;
 extern char *otabid;
 extern char *otadir;
@@ -514,16 +516,20 @@ int lookup_bundle_by_prefix_bin_and_version_or_newer(unsigned char *prefix, long
 
 int radio_set_type(int radio_type);
 int radio_set_feature(int bitmask);
-int hf_read_configuration(char *filename);
-int hf_serviceloop(int fd);
+int radio_get_type(void);
+
 int uhf_rfd900_setup(int fd);
 int uhf_serviceloop(int fd);
-int radio_get_type(void);
+int radio_send_message_rfd900(int serialfd,unsigned char *out, int offset);
 int uhf_receive_bytes(unsigned char *bytes,int count);
+
+int hf_read_configuration(char *filename);
+int hf_serviceloop(int fd);
 int hf_codan_receive_bytes(unsigned char *bytes,int count);
-int hf_barrett_receive_bytes(unsigned char *bytes,int count);
 int radio_send_message_codanhf(int serialfd,unsigned char *out, int len);
+int hf_barrett_receive_bytes(unsigned char *bytes,int count);
 int radio_send_message_barretthf(int serialfd,unsigned char *out, int len);
+
 int saw_packet(unsigned char *packet_data,int packet_bytes,
 	       char *my_sid_hex,char *prefix,
 	       char *servald_server,char *credential);

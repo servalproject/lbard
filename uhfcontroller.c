@@ -292,3 +292,137 @@ int uhf_rfd900_setup(int fd)
 
   return 0;
 }
+
+/* 
+   On the MR3020 hardware, there is a 3-position slider switch.
+   If the switch is in the centre position, then we enable high
+   power output.
+
+   WARNING: You will need a spectrum license to be able to operate
+   in high-power mode, because the CSMA RFD900a firmware is normally
+   only legal at an EIRP of 3dBm or less, which allowing for a +3dB
+   antanna means that 1dBm is the highest TX power that is realistically
+   safe.
+
+   Because of the above, we require that /dos/hipower.en exist on the file
+   system as well as the switch being in the correct position.  The Mesh
+   Extender default image does not include the /dos/hipower.en file, and it
+   must be added manually to enable hi-power mode.
+ */
+unsigned char hipower_en=0;
+unsigned char hipower_switch_set=0;
+long long hi_power_timeout=3000; // 3 seconds between checks
+long long next_check_time=0;
+int rfd900_set_tx_power(int serialfd)
+{
+  char *safety_file="/dos/lowpower";
+#if 0
+  char *gpio_file="/sys/kernel/debug/gpio";
+  char *gpio_string=" gpio-18  (sw1                 ) in  lo";
+#endif
+
+  if (next_check_time<gettime_ms()) {
+    hipower_en=1;
+    hipower_switch_set=0;
+    next_check_time=gettime_ms()+hi_power_timeout;
+
+    FILE *f=fopen(safety_file,"r");
+    if (f) {
+      hipower_en=0;
+      fclose(f);
+    }
+#if 1
+    hipower_switch_set=1;
+#else
+    f=fopen(gpio_file,"r");
+    if (f) {
+      char line[1024];
+      line[0]=0; fgets(line,2014,f);
+      while(line[0]) {
+	if (!strncmp(gpio_string,line,strlen(gpio_string)))
+	  hipower_switch_set=1;
+	
+	line[0]=0; fgets(line,2014,f);
+      }
+      fclose(f);
+    }
+#endif
+  }
+
+  if ((hipower_switch_set&&hipower_en)||txpower==24) {
+    printf("Setting radio to hipower\n");
+    if (write_all(serialfd,"!H",3)==-1) serial_errors++; else serial_errors=0;
+  } else if (txpower==30) {
+    printf("Setting radio to maximum power (30dBm)\n");
+    if (write_all(serialfd,"!M",3)==-1) serial_errors++; else serial_errors=0;
+  } else if (txpower!=1&&txpower!=-1) {
+    fprintf(stderr,"Unsupported TX power level selected: use 1, 24 or 30 dBm for RFD900/RFD868 radios.\n");
+    exit(-1);
+  }  else {
+    printf("Setting radio to lowpower mode (flags %d:%d) -- probably ok under Australian LIPD class license, but you should check.\n",
+	   hipower_switch_set,hipower_en);
+    if (write_all(serialfd,"!L",3)==-1) serial_errors++; else serial_errors=0;
+  }
+
+
+  return 0;
+}
+
+int dump_bytes(char *msg,unsigned char *bytes,int length)
+{
+  printf("%s:\n",msg);
+  for(int i=0;i<length;i+=16) {
+    printf("%04X: ",i);
+    for(int j=0;j<16;j++) if (i+j<length) printf(" %02X",bytes[i+j]);
+    printf("  ");
+    for(int j=0;j<16;j++) {
+      int c;
+      if (i+j<length) c=bytes[i+j]; else c=' ';
+      if (c<' ') c='.';
+      if (c>0x7d) c='.';
+      printf("%c",c);
+    }
+    printf("\n");
+  }
+  return 0;
+}
+
+
+int radio_send_message_rfd900(int serialfd,unsigned char *out, int offset)
+{
+  // Now escape any ! characters, and append !! to the end for the RFD900 CSMA
+  // packetised firmware.
+
+  unsigned char escaped[2+offset*2+2];
+  int elen=0;
+  int i;
+
+  rfd900_set_tx_power(serialfd);
+
+  // Sometimes the ! gets eaten here. Solution is to
+  // send a non-! character first, so that even if !-mode
+  // is set, all works properly.  this will also stop us
+  // accidentally doing !!, which will send a packet.
+  write(serialfd,"C!C",3);
+
+  // Then stuff the escaped bytes to send
+  for(i=0;i<offset;i++) {
+    if (out[i]=='!') {
+      escaped[elen++]='!'; escaped[elen++]='.';
+    } else escaped[elen++]=out[i];
+  }
+  // Finally include TX packet command
+  escaped[elen++]='!'; escaped[elen++]='!';
+  
+  if (debug_radio_tx) {
+    dump_bytes("sending packet",escaped,elen);    
+  }  
+  
+  if (write_all(serialfd,escaped,elen)==-1) {
+    serial_errors++;
+    return -1;
+  } else {
+    serial_errors=0;
+    return 0;
+  }
+}
