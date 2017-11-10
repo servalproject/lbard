@@ -523,7 +523,7 @@ int saw_piece(char *peer_prefix,int for_me,
 
 extern int my_time_stratum;
 
-int saw_message(unsigned char *msg,int len,char *my_sid,
+int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
 		char *prefix, char *servald_server,char *credential)
 {
   /*
@@ -589,8 +589,18 @@ int saw_message(unsigned char *msg,int len,char *my_sid,
   }
   
   // Update time stamp and most recent message from peer
+  if (msg_number>p->last_message_number) {
+    // We probably have missed packets.
+    // But only count if gap is <256, since more than that probably means
+    // something more profound has happened.
+    p->missed_packet_count+=msg_number-p->last_message_number-1;
+  }
   p->last_message_time=time(0);
   if (!is_retransmission) p->last_message_number=msg_number;
+
+  // Update RSSI log for this sender
+  p->rssi_accumulator+=rssi;
+  p->rssi_counter++;
   
   while(offset<len) {
     if (debug_pieces||debug_message_pieces) {

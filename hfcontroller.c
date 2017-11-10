@@ -406,7 +406,7 @@ int hf_process_fragment(char *fragment)
     // (the FEC will reject it if it is incorrectly assembled).
     fprintf(stderr,"Passing reassembled packet of %d bytes up for processing.\n",
 	    packet_offset);
-    saw_packet(accummulated_packet,packet_offset,
+    saw_packet(accummulated_packet,packet_offset,0 /* RSSI unknown */,
 	       my_sid_hex,prefix,servald_server,credential);
 
     // Now it is our turn to send

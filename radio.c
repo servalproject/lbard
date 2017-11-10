@@ -177,7 +177,7 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
   return 0;
 }
 
-int saw_packet(unsigned char *packet_data,int packet_bytes,
+int saw_packet(unsigned char *packet_data,int packet_bytes,int rssi,
 	       char *my_sid_hex,char *prefix,
 	       char *servald_server,char *credential)
 {
@@ -202,7 +202,7 @@ int saw_packet(unsigned char *packet_data,int packet_bytes,
 		  __FILE__,__LINE__,__FUNCTION__,
 		  rs_error_count,packet_bytes);
     
-    saw_message(packet_data,packet_bytes-FEC_LENGTH,
+    saw_message(packet_data,packet_bytes-FEC_LENGTH,rssi,
 		my_sid_hex,prefix,servald_server,credential);
     
     // attach presumed SID prefix

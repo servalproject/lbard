@@ -267,7 +267,8 @@ int uhf_receive_bytes(unsigned char *bytes,int count)
 		       radio_temperature, last_rx_rssi,
 		       packet_bytes);
 
-	  if (saw_packet(packet_data,packet_bytes,my_sid_hex,prefix,
+	  if (saw_packet(packet_data,packet_bytes,last_rx_rssi,
+			 my_sid_hex,prefix,
 			 servald_server,credential)) {
 	  } else {
 	  }

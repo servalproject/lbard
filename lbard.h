@@ -101,6 +101,12 @@ struct peer_state {
 #define PEER_KEEPALIVE_INTERVAL 20
   int last_message_number;
 
+  // Used to log RSSI of receipts from this sender, so that we can show in the stats display
+  int rssi_accumulator;
+  int rssi_counter;
+  // Used to show number of missed packets in the stats display
+  int missed_packet_count;
+  
 #ifdef SYNC_BY_BAR
   // BARs we have seen from them.
   int bundle_count;
@@ -327,7 +333,7 @@ int saw_piece(char *peer_prefix,int for_me,
 	      char *prefix, char *servald_server, char *credential);
 int saw_length(char *peer_prefix,char *bid_prefix,long long version,
 	       int body_length);
-int saw_message(unsigned char *msg,int len,char *my_sid,
+int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
 		char *prefix, char *servald_server,char *credential);
 int load_rhizome_db(int timeout,
 		    char *prefix, char *serval_server,
@@ -530,7 +536,7 @@ int radio_send_message_codanhf(int serialfd,unsigned char *out, int len);
 int hf_barrett_receive_bytes(unsigned char *bytes,int count);
 int radio_send_message_barretthf(int serialfd,unsigned char *out, int len);
 
-int saw_packet(unsigned char *packet_data,int packet_bytes,
+int saw_packet(unsigned char *packet_data,int packet_bytes,int rssi,
 	       char *my_sid_hex,char *prefix,
 	       char *servald_server,char *credential);
 int radio_ready(void);
