@@ -51,7 +51,7 @@ int debug_pieces=0;
 int debug_announce=0;
 int debug_pull=0;
 int debug_insert=0;
-int debug_radio_rx=0;
+int debug_radio_rx=1;
 int debug_radio_tx=0;
 int debug_gpio=0;
 int debug_message_pieces=0;
@@ -59,6 +59,11 @@ int debug_sync=0;
 int debug_sync_keys=0;
 int debug_bundlelog=0;
 int debug_noprioritisation=0;
+
+// If either of these is not -1, then we try to set them
+// for the attached radio.
+int txpower=-1;
+int txfreq=-1;
 
 char *otabid=NULL;
 char *otadir=NULL;
@@ -349,7 +354,19 @@ int main(int argc, char **argv)
       else if (!strcasecmp("bundlelog",argv[n])) debug_bundlelog=1;
       else if (!strcasecmp("nopriority",argv[n])) debug_noprioritisation=1;
       else if (!strcasecmp("nohttpd",argv[n])) http_server=0;
-      else if (!strncasecmp("flags=",argv[n],6)) {
+      else if (!strncasecmp("txpower=",argv[n],8)) {
+	txpower=atoi(&argv[n][8]);
+	if (txpower<1||txpower>90) {
+	  fprintf(stderr,"TX power must be between 1 and 90dBm (but not all radios support all power levels)\n");
+	  exit(-1);
+	}
+      } else if (!strncasecmp("txfreq=",argv[n],6)) {
+	txfreq=atoi(&argv[n][6]);
+	if (txfreq<1||txfreq>1200000000) {
+	  fprintf(stderr,"TX frequency must be between 1Hz and 1.2GHz, expressed as Hz\n");
+	  exit(-1);
+	}
+      } else if (!strncasecmp("flags=",argv[n],6)) {
 	
       } else if (!strncasecmp("flags=",argv[n],6)) {
 	option_flags=atoi(&argv[n][6]);

@@ -122,7 +122,7 @@ unsigned char hipower_en=0;
 unsigned char hipower_switch_set=0;
 long long hi_power_timeout=3000; // 3 seconds between checks
 long long next_check_time=0;
-int radio_set_tx_power(int serialfd)
+int rfd900_set_tx_power(int serialfd)
 {
   char *safety_file="/dos/lowpower";
 #if 0
@@ -158,16 +158,21 @@ int radio_set_tx_power(int serialfd)
 #endif
   }
 
-  // XXX - We work around a bug in our SiK firmware where !H and !C don't clear !-mode
-  // So we issue a command to clear the buffer after
-  if (hipower_switch_set&&hipower_en) {
+  if ((hipower_switch_set&&hipower_en)||txpower==24) {
     printf("Setting radio to hipower\n");
-    if (write_all(serialfd,"!HC",3)==-1) serial_errors++; else serial_errors=0;
-  } else {
+    if (write_all(serialfd,"!H",3)==-1) serial_errors++; else serial_errors=0;
+  } else if (txpower==30) {
+    printf("Setting radio to maximum power (30dBm)\n");
+    if (write_all(serialfd,"!M",3)==-1) serial_errors++; else serial_errors=0;
+  } else if (txpower!=1&&txpower!=-1) {
+    fprintf(stderr,"Unsupported TX power level selected: use 1, 24 or 30 dBm for RFD900/RFD868 radios.\n");
+    exit(-1);
+  }  else {
     printf("Setting radio to lowpower mode (flags %d:%d) -- probably ok under Australian LIPD class license, but you should check.\n",
-		   hipower_switch_set,hipower_en);
-    if (write_all(serialfd,"!LC",3)==-1) serial_errors++; else serial_errors=0;
+	   hipower_switch_set,hipower_en);
+    if (write_all(serialfd,"!L",3)==-1) serial_errors++; else serial_errors=0;
   }
+
 
   return 0;
 }
@@ -201,7 +206,7 @@ int radio_send_message_rfd900(int serialfd,unsigned char *out, int offset)
   int elen=0;
   int i;
 
-  radio_set_tx_power(serialfd);
+  rfd900_set_tx_power(serialfd);
 
   // Sometimes the ! gets eaten here. Solution is to
   // send a non-! character first, so that even if !-mode

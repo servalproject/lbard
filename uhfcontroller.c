@@ -285,6 +285,10 @@ int uhf_rfd900_setup(int fd)
      Here we want to reset the radio, and read out its attached I2C EEPROM, if any,
      and set our max TX rate etc based on what we read from there, so that we can
      adhere to the encoded radio regulations.
+
+     XXX - Allow txfreq and txpower options to override the stored defaults for now.
   */
-  return eeprom_read(fd);
+  eeprom_read(fd);
+
+  return 0;
 }

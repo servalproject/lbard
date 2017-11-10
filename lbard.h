@@ -157,6 +157,9 @@ struct recent_bundle {
   time_t timeout;
 };
 
+extern int txpower;
+extern int txfreq;
+
 extern int radio_temperature;
 extern char *otabid;
 extern char *otadir;
