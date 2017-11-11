@@ -1134,8 +1134,16 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
   if (manifest_offset<0) manifest_offset=0;
   if (body_offset<0) body_offset=0;  
 
-  if (bundle<0) return -1;  
+  if (bundle<0) return -1;
+
+  if (bundle==p->request_bitmap_bundle) {
+    // Reset TX bitmap, since we are being asked to send from here.
+    bzero(p->request_bitmap,32);    
+    p->request_bitmap_offset=body_offset;
+  }
+  
   if (bundle==p->tx_bundle) {
+
     if (!(option_flags&FLAG_NO_HARD_LOWER)) {
       p->tx_bundle_manifest_offset_hard_lower_bound=manifest_offset;
       p->tx_bundle_body_offset_hard_lower_bound=body_offset;
