@@ -804,8 +804,9 @@ int sync_schedule_progress_report(int peer, int partial, int randomJump)
   report_queue[slot][ofs++]=(first_required_body_offset>>16)&0xff;
   report_queue[slot][ofs++]=(first_required_body_offset>>24)&0xff;
 
-  report_queue[slot][ofs++]=peer_records[peer]->sid[0];
-  report_queue[slot][ofs++]=peer_records[peer]->sid[1];
+  // Include who we are asking
+  report_queue[slot][ofs++]=peer_records[peer]->sid_prefix_bin[0];
+  report_queue[slot][ofs++]=peer_records[peer]->sid_prefix_bin[1];
   
   report_lengths[slot]=ofs;
   assert(ofs<MAX_REPORT_LEN);
