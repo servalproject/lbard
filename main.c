@@ -191,7 +191,7 @@ int main(int argc, char **argv)
     return(meshmb_parse_command(argc,argv));
   }
 
-  fprintf(stderr,"Version 20171111.1515.1\n");
+  fprintf(stderr,"Version 20171111.1626.1\n");
     
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==5)&&(!strcasecmp(argv[1],"energysamplemaster"))) {

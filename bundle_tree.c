@@ -349,18 +349,17 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 
   // Send piece of manifest, if required
   // (but never from an offset before the hard lower bound communicated in an ACK('A') message
-  if (peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound<cached_manifest_encoded_len
-      ||(option_flags&FLAG_NO_HARD_LOWER)) {
-    if (!(option_flags&FLAG_NO_HARD_LOWER))
-      if (peer_records[peer]->tx_bundle_manifest_offset
-	  <peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound) {
-	fprintf(stderr,"HARD_LOWER: Advancing manifest tx offset from %d to %d\n",
-	       peer_records[peer]->tx_bundle_manifest_offset,
-	       peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound);
-	peer_records[peer]->tx_bundle_manifest_offset
-	  =peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound;
-      }
-      
+  if (!(option_flags&FLAG_NO_HARD_LOWER))
+    if (peer_records[peer]->tx_bundle_manifest_offset
+	<peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound) {
+      fprintf(stderr,"HARD_LOWER: Advancing manifest tx offset from %d to %d\n",
+	      peer_records[peer]->tx_bundle_manifest_offset,
+	      peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound);
+      peer_records[peer]->tx_bundle_manifest_offset
+	=peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound;
+    }
+  
+  if (peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound<cached_manifest_encoded_len) {
     if (peer_records[peer]->tx_bundle_manifest_offset<cached_manifest_encoded_len) {
       fprintf(stderr,"  manifest_offset=%d, manifest_len=%d\n",
 	      peer_records[peer]->tx_bundle_manifest_offset,
@@ -408,39 +407,38 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 	  msg[(*offset)++]=(bundles[bundle_number].length>>24)&0xff;
 	}
       }
-    {
-      // Send some of the body
-      // (but never from an offset before the hard lower bound communicated in an ACK('A') message
-      if (!(option_flags&FLAG_NO_HARD_LOWER)) {
-	if (peer_records[peer]->tx_bundle_body_offset
-	    <peer_records[peer]->tx_bundle_body_offset_hard_lower_bound)
-	  {
-	    fprintf(stderr,"HARDLOWER: Advancing tx_bundle_body_offset from %d to %d\n",
-		   peer_records[peer]->tx_bundle_body_offset,
-		   peer_records[peer]->tx_bundle_body_offset_hard_lower_bound);
-	    peer_records[peer]->tx_bundle_body_offset
-	      =peer_records[peer]->tx_bundle_body_offset_hard_lower_bound;
-	  }
-      }
-      
-      fprintf(stderr,"HARDLOWER: Sending body piece with body_offset=%d, body_len=%d (hard lower limit = %d/%d\n",
-	      peer_records[peer]->tx_bundle_body_offset,
-	      cached_body_len,
-	      peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound,
-	      peer_records[peer]->tx_bundle_body_offset_hard_lower_bound
-	      );
-      int start_offset=peer_records[peer]->tx_bundle_body_offset;
-
-      int bytes =
-	sync_append_some_bundle_bytes(bundle_number,start_offset,cached_body_len,
-				      &cached_body[start_offset],0,
-				      offset,mtu,msg,peer);
-
-      if (bytes>0)
-	peer_records[peer]->tx_bundle_body_offset+=bytes;      
-    }
   }
-
+  {
+    // Send some of the body
+    // (but never from an offset before the hard lower bound communicated in an ACK('A') message
+    if (!(option_flags&FLAG_NO_HARD_LOWER)) {
+      if (peer_records[peer]->tx_bundle_body_offset
+	  <peer_records[peer]->tx_bundle_body_offset_hard_lower_bound)
+	{
+	  fprintf(stderr,"HARDLOWER: Advancing tx_bundle_body_offset from %d to %d\n",
+		  peer_records[peer]->tx_bundle_body_offset,
+		  peer_records[peer]->tx_bundle_body_offset_hard_lower_bound);
+	  peer_records[peer]->tx_bundle_body_offset
+	    =peer_records[peer]->tx_bundle_body_offset_hard_lower_bound;
+	}
+    }
+    
+    fprintf(stderr,"HARDLOWER: Sending body piece with body_offset=%d, body_len=%d (hard lower limit = %d/%d\n",
+	    peer_records[peer]->tx_bundle_body_offset,
+	    cached_body_len,
+	    peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound,
+	    peer_records[peer]->tx_bundle_body_offset_hard_lower_bound
+	    );
+    int start_offset=peer_records[peer]->tx_bundle_body_offset;
+    
+    int bytes =
+      sync_append_some_bundle_bytes(bundle_number,start_offset,cached_body_len,
+				    &cached_body[start_offset],0,
+				    offset,mtu,msg,peer);
+    
+    if (bytes>0)
+      peer_records[peer]->tx_bundle_body_offset+=bytes;      
+  }
   
   // If we have sent to the end of the bundle, then start again from the beginning,
   // until the peer acknowledges that they have received it all (or tells us to

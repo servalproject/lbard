@@ -192,7 +192,7 @@ int http_report_network_status(int socket)
       fprintf(f,"<meta http-equiv=\"refresh\" content=\"2\" />\n</head>\n<body>\n");
       
       // Show peer reachability with indication of activity
-      fprintf(f,"<h2>Mesh Extenders Reachable via Radio</h2>\n<table border=1 padding=2 spacing=2><tr><th>Mesh Extender ID</th><th>Performance</th><th>Bundle we are sending</th></tr>\n");
+      fprintf(f,"<h2>Mesh Extenders Reachable via Radio</h2>\n<table border=1 padding=2 spacing=2><tr><th>Mesh Extender ID</th><th>Performance</th><th>Sending</th></tr>\n");
       int i;
       for (i=0;i<peer_count;i++) {
 	long long age=(time(0)-peer_records[i]->last_message_time);
@@ -215,9 +215,12 @@ int http_report_network_status(int socket)
 		  age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
 
 	if (peer_records[i]->tx_bundle!=-1) {
+	  char bid[10];
+	  int i;
+	  for(i=0;i<8;i++) bid[i]=bundles[peer_records[i]->tx_bundle].bid_hex[i];
+	  bid[8]='*'; bid[9]=0;
 	  fprintf(f,"%s/%lld (from M=%d/P=%d)",
-		  bundles[peer_records[i]->tx_bundle].bid_hex,
-		  bundles[peer_records[i]->tx_bundle].version,
+		  bid,bundles[peer_records[i]->tx_bundle].version,
 		  peer_records[i]->tx_bundle_manifest_offset_hard_lower_bound,
 		  peer_records[i]->tx_bundle_body_offset_hard_lower_bound);		  
 	}
@@ -232,7 +235,7 @@ int http_report_network_status(int socket)
       
       
       // Show current transfer progress bars
-      fprintf(f,"<h2>Current Bundle Transfers</h2>\n");
+      fprintf(f,"<h2>Current Bundles being received</h2>\n");
       fprintf(f,"<pre>\n");
       show_progress(f,1);
       fprintf(f,"</pre>\n");
