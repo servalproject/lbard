@@ -534,6 +534,7 @@ int filter_process_packet(int from,int to,
       filterable_parse_bid_prefix(&f,packet,&offset);
       filterable_parse_manifest_offset(&f,packet,&offset);
       filterable_parse_body_offset(&f,packet,&offset);
+      filterable_parse_recipient_prefix_2(&f,packet,&offset);
       f.fragment_length=offset-f.packet_start;
       filter_fragment(packet,packet_out,&out_len,&f,to==-1);
       break;
