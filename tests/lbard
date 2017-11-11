@@ -91,13 +91,13 @@ setup() {
    
    # Start four lbard daemons.
    set_instance +A
-   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$tty1" announce pull $lbardflags
+   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$IDA" "$tty1" announce pull $lbardflags
    set_instance +B
-   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$tty2" pull $lbardflags
+   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" "$tty2" pull $lbardflags
    set_instance +C
-   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$tty3" pull $lbardflags
+   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" "$tty3" pull $lbardflags
    set_instance +D
-   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$tty4" pull $lbardflags
+   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" "$tty4" pull $lbardflags
 }
 
 setup20() {
@@ -191,26 +191,26 @@ setup20() {
    tty19=$(sed -n 19p ttys.txt)
    tty20=$(sed -n 20p ttys.txt)
    # Start four lbard daemons.
-   fork %lbardA lbard "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$tty1" announce pull
-   fork %lbardB lbard "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$tty2" pull $lbardflags
-   fork %lbardC lbard "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$tty3" pull $lbardflags
-   fork %lbardD lbard "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$tty4" pull $lbardflags
-   fork %lbardE lbard "$addr_localhost:$PORTE" lbard:lbard "$SIDE" "$tty5" pull $lbardflags
-   fork %lbardF lbard "$addr_localhost:$PORTF" lbard:lbard "$SIDF" "$tty6" pull $lbardflags
-   fork %lbardG lbard "$addr_localhost:$PORTG" lbard:lbard "$SIDG" "$tty7" pull $lbardflags
-   fork %lbardH lbard "$addr_localhost:$PORTH" lbard:lbard "$SIDH" "$tty8" pull $lbardflags
-   fork %lbardI lbard "$addr_localhost:$PORTI" lbard:lbard "$SIDI" "$tty9" pull $lbardflags
-   fork %lbardJ lbard "$addr_localhost:$PORTJ" lbard:lbard "$SIDJ" "$tty10" pull $lbardflags
-   fork %lbardK lbard "$addr_localhost:$PORTK" lbard:lbard "$SIDK" "$tty11" pull $lbardflags
-   fork %lbardL lbard "$addr_localhost:$PORTL" lbard:lbard "$SIDL" "$tty12" pull $lbardflags
-   fork %lbardM lbard "$addr_localhost:$PORTM" lbard:lbard "$SIDM" "$tty13" pull $lbardflags
-   fork %lbardN lbard "$addr_localhost:$PORTN" lbard:lbard "$SIDN" "$tty14" pull $lbardflags
-   fork %lbardO lbard "$addr_localhost:$PORTO" lbard:lbard "$SIDO" "$tty15" pull $lbardflags
-   fork %lbardP lbard "$addr_localhost:$PORTP" lbard:lbard "$SIDP" "$tty16" pull $lbardflags
-   fork %lbardQ lbard "$addr_localhost:$PORTQ" lbard:lbard "$SIDQ" "$tty17" pull $lbardflags
-   fork %lbardR lbard "$addr_localhost:$PORTR" lbard:lbard "$SIDR" "$tty18" pull $lbardflags
-   fork %lbardS lbard "$addr_localhost:$PORTS" lbard:lbard "$SIDS" "$tty19" pull $lbardflags
-   fork %lbardT lbard "$addr_localhost:$PORTT" lbard:lbard "$SIDT" "$tty20" pull $lbardflags
+   fork %lbardA lbard "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$IDA" "$tty1" announce pull
+   fork %lbardB lbard "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" "$tty2" pull $lbardflags
+   fork %lbardC lbard "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" "$tty3" pull $lbardflags
+   fork %lbardD lbard "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" "$tty4" pull $lbardflags
+   fork %lbardE lbard "$addr_localhost:$PORTE" lbard:lbard "$SIDE" "$IDE" "$tty5" pull $lbardflags
+   fork %lbardF lbard "$addr_localhost:$PORTF" lbard:lbard "$SIDF" "$IDF" "$tty6" pull $lbardflags
+   fork %lbardG lbard "$addr_localhost:$PORTG" lbard:lbard "$SIDG" "$IDG" "$tty7" pull $lbardflags
+   fork %lbardH lbard "$addr_localhost:$PORTH" lbard:lbard "$SIDH" "$IDH" "$tty8" pull $lbardflags
+   fork %lbardI lbard "$addr_localhost:$PORTI" lbard:lbard "$SIDI" "$IDI" "$tty9" pull $lbardflags
+   fork %lbardJ lbard "$addr_localhost:$PORTJ" lbard:lbard "$SIDJ" "$IDJ" "$tty10" pull $lbardflags
+   fork %lbardK lbard "$addr_localhost:$PORTK" lbard:lbard "$SIDK" "$IDK" "$tty11" pull $lbardflags
+   fork %lbardL lbard "$addr_localhost:$PORTL" lbard:lbard "$SIDL" "$IDL" "$tty12" pull $lbardflags
+   fork %lbardM lbard "$addr_localhost:$PORTM" lbard:lbard "$SIDM" "$IDM" "$tty13" pull $lbardflags
+   fork %lbardN lbard "$addr_localhost:$PORTN" lbard:lbard "$SIDN" "$IDN" "$tty14" pull $lbardflags
+   fork %lbardO lbard "$addr_localhost:$PORTO" lbard:lbard "$SIDO" "$IDO" "$tty15" pull $lbardflags
+   fork %lbardP lbard "$addr_localhost:$PORTP" lbard:lbard "$SIDP" "$IDP" "$tty16" pull $lbardflags
+   fork %lbardQ lbard "$addr_localhost:$PORTQ" lbard:lbard "$SIDQ" "$IDQ" "$tty17" pull $lbardflags
+   fork %lbardR lbard "$addr_localhost:$PORTR" lbard:lbard "$SIDR" "$IDR" "$tty18" pull $lbardflags
+   fork %lbardS lbard "$addr_localhost:$PORTS" lbard:lbard "$SIDS" "$IDS" "$tty19" pull $lbardflags
+   fork %lbardT lbard "$addr_localhost:$PORTT" lbard:lbard "$SIDT" "$IDT" "$tty20" pull $lbardflags
 }
 
 configure_servald_server() {
@@ -246,13 +246,13 @@ setup_DetectRadios() {
    tty4=$(sed -n 4p ttys.txt)
    # Start four lbard daemons.
    set_instance +A
-   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$tty1" pull
+   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$IDA" "$tty1" pull
    set_instance +B
-   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$tty2" pull
+   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" "$tty2" pull
    set_instance +C
-   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$tty3" pull
+   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" "$tty3" pull
    set_instance +D
-   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$tty4" pull
+   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" "$tty4" pull
 }
 test_DetectRadios() {
    # Test that all radios are detected
