@@ -216,8 +216,8 @@ int http_report_network_status(int socket)
 
 	if (peer_records[i]->tx_bundle!=-1) {
 	  char bid[10];
-	  int i;
-	  for(i=0;i<8;i++) bid[i]=bundles[peer_records[i]->tx_bundle].bid_hex[i];
+	  int j;
+	  for(j=0;j<8;j++) bid[j]=bundles[peer_records[i]->tx_bundle].bid_hex[j];
 	  bid[8]='*'; bid[9]=0;
 	  fprintf(f,"%s/%lld (from M=%d/P=%d)",
 		  bid,bundles[peer_records[i]->tx_bundle].version,
