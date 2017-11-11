@@ -210,11 +210,18 @@ int http_report_network_status(int socket)
 	else if (percent_received<80) colour="#c0c0c0";
 
 	if (age<=30) 
-	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"%s\">%lld sec, %d/%d received (%2.1f%% loss), mean RSSI = %.0f</td><td>%s</td></tr>\n",
+	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"%s\">%lld sec, %d/%d received (%2.1f%% loss), mean RSSI = %.0f</td><td>",
 		  peer_records[i]->sid_prefix,colour,
-		  age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi,
-		  (peer_records[i]->tx_bundle==-1)?"None"
-		  :bundles[peer_records[i]->tx_bundle].bid_hex);
+		  age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
+
+	if (peer_records[i]->tx_bundle!=-1) {
+	  fprintf(f,"%s/%lld (from M=%d/P=%d)",
+		  bundles[peer_records[i]->tx_bundle].bid_hex,
+		  bundles[peer_records[i]->tx_bundle].version,
+		  peer_records[i]->tx_bundle_manifest_offset_hard_lower_bound,
+		  peer_records[i]->tx_bundle_body_offset_hard_lower_bound);		  
+	}
+	fprintf(f,"</td></tr>\n");
 
 	// Reset packet RX stats for next round
 	peer_records[i]->missed_packet_count=0;
