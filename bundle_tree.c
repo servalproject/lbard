@@ -323,6 +323,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 			       char *servald_server, char *credential)
 {
   int bundle_number=peer_records[peer]->tx_bundle;
+  fprintf(stderr,"HARDLOWER: Announcing a piece of bundle #%d\n",bundle_number);
   if (bundle_number<0) return -1;
   
   if (prime_bundle_cache(bundle_number,
@@ -332,6 +333,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
       {
 	sync_dequeue_bundle(peer_records[peer],peer_records[peer]->tx_bundle);
       }
+    fprintf(stderr,"HARDLOWER: Couldn't prime bundle cache.\n");
     return -1;
   }
   else
@@ -477,6 +479,8 @@ int sync_tree_send_data(int *offset,int mtu, unsigned char *msg_out,int peer,
       sync_announce_bundle_piece(peer,offset,mtu,msg_out,
 				 sid_prefix_hex,servald_server,credential);
     }
+  else
+    fprintf(stderr,"HARDLOWER: No bundle on TX queue, so not announcing anything.\n");
   return 0;
 }
 
@@ -996,7 +1000,7 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
     p->tx_bundle=-1;
     // Advance next in queue, if there is anything
     if (p->tx_queue_len) {
-      printf("DEQUEUING:\n     %d more bundles in the queue. Next is bundle #%d\n",
+      fprintf("HARDLOWER: DEQUEUING:\n     %d more bundles in the queue. Next is bundle #%d\n",
 	     p->tx_queue_len,p->tx_queue_bundles[0]);
       p->tx_bundle=p->tx_queue_bundles[0];
       p->tx_bundle_priority=p->tx_queue_priorities[0];
