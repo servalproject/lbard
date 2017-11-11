@@ -208,10 +208,11 @@ int http_report_network_status(int socket)
 	if (percent_received<10) colour="#ff4f00";
 	else if (percent_received<50) colour="#ffff00";
 	else if (percent_received<80) colour="#c0c0c0";
-	
-	fprintf(f,"<tr><td>%s*</td><td bgcolor=\"%s\">%lld sec, %d/%d received (%2.1f%% loss), mean RSSI = %.0f</td></tr>\n",
-		peer_records[i]->sid_prefix,colour,
-		age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
+
+	if (age<=30) 
+	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"%s\">%lld sec, %d/%d received (%2.1f%% loss), mean RSSI = %.0f</td></tr>\n",
+		  peer_records[i]->sid_prefix,colour,
+		  age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
 
 	// Reset packet RX stats for next round
 	peer_records[i]->missed_packet_count=0;
