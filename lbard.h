@@ -307,6 +307,8 @@ extern unsigned int option_flags;
 #define FLAG_NO_RANDOMIZE_START_OFFSET 2
 #define FLAG_NO_MERGE_PARTIAL_TRANSFERS 4
 #define FLAG_NO_BITMAP_PROGRESS 8
+#define FLAG_NO_HARD_LOWER 16
+
 extern FILE *debug_file;
 extern int debug_radio;
 extern int debug_pieces;

@@ -347,11 +347,17 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 
   // Send piece of manifest, if required
   // (but never from an offset before the hard lower bound communicated in an ACK('A') message
-  if (peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound<cached_manifest_encoded_len) {
-    if (peer_records[peer]->tx_bundle_manifest_offset
-	<peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound)
-      peer_records[peer]->tx_bundle_manifest_offset
-	=peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound;
+  if (peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound<cached_manifest_encoded_len
+      ||(option_flags&FLAG_NO_HARD_LOWER)) {
+    if (!(option_flags&FLAG_NO_HARD_LOWER))
+      if (peer_records[peer]->tx_bundle_manifest_offset
+	  <peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound) {
+	fprintf(stderr,"HARD_LOWER: Advancing manifest tx offset from %d to %d\n",
+	       peer_records[peer]->tx_bundle_manifest_offset,
+	       peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound);
+	peer_records[peer]->tx_bundle_manifest_offset
+	  =peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound;
+      }
       
     if (peer_records[peer]->tx_bundle_manifest_offset<cached_manifest_encoded_len) {
       fprintf(stderr,"  manifest_offset=%d, manifest_len=%d\n",
@@ -403,11 +409,18 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
     {
       // Send some of the body
       // (but never from an offset before the hard lower bound communicated in an ACK('A') message
-      if (peer_records[peer]->tx_bundle_body_offset
-	  <peer_records[peer]->tx_bundle_body_offset_hard_lower_bound)
-	peer_records[peer]->tx_bundle_body_offset
-	  =peer_records[peer]->tx_bundle_body_offset_hard_lower_bound;
-    
+      if (!(option_flags&FLAG_NO_HARD_LOWER)) {
+	if (peer_records[peer]->tx_bundle_body_offset
+	    <peer_records[peer]->tx_bundle_body_offset_hard_lower_bound)
+	  {
+	    fprintf(stderr,"HARDLOWER: Advancing tx_bundle_body_offset from %d to %d\n",
+		   peer_records[peer]->tx_bundle_body_offset,
+		   peer_records[peer]->tx_bundle_body_offset_hard_lower_bound);
+	    peer_records[peer]->tx_bundle_body_offset
+	      =peer_records[peer]->tx_bundle_body_offset_hard_lower_bound;
+	  }
+      }
+      
       fprintf(stderr,"  body_offset=%d, body_len=%d\n",
 	      peer_records[peer]->tx_bundle_body_offset,
 	      cached_body_len);
@@ -940,6 +953,9 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
 
     // Not already sending to another peer, so just pick a random point and start
     p->tx_bundle=bundle;
+    if (!(option_flags&FLAG_NO_HARD_LOWER)) {
+      fprintf(stderr,"HARDLOWER: Resetting hard lower start point to 0,0\n");
+    }
     p->tx_bundle_manifest_offset_hard_lower_bound=0;
     p->tx_bundle_body_offset_hard_lower_bound=0;
     if (bundles[bundle].length)
@@ -981,6 +997,9 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
       p->tx_bundle_body_offset=0;      
       p->tx_bundle_manifest_offset_hard_lower_bound=0;
       p->tx_bundle_body_offset_hard_lower_bound=0;
+      if (!(option_flags&FLAG_NO_HARD_LOWER)) {
+	fprintf(stderr,"HARDLOWER: Resetting hard lower start point to 0,0\n");
+      }
       bcopy(&p->tx_queue_bundles[1],
 	    &p->tx_queue_bundles[0],
 	    sizeof(int)*p->tx_queue_len-1);
@@ -1107,8 +1126,11 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
 
   if (bundle<0) return -1;  
   if (bundle==p->tx_bundle) {
-    p->tx_bundle_manifest_offset_hard_lower_bound=manifest_offset;
-    p->tx_bundle_body_offset_hard_lower_bound=body_offset;
+    if (!(option_flags&FLAG_NO_HARD_LOWER)) {
+      p->tx_bundle_manifest_offset_hard_lower_bound=manifest_offset;
+      p->tx_bundle_body_offset_hard_lower_bound=body_offset;
+      fprintf(stderr,"HARDLOWER: Setting hard lower limit to M/B = %d/%d\n",manifest_offset,body_offset);
+    }
     if (randomJump) {
       // Jump to a random position somewhere after the provided points.
       if (!prime_bundle_cache(bundle,
