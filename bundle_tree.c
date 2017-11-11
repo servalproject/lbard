@@ -421,9 +421,12 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 	  }
       }
       
-      fprintf(stderr,"  body_offset=%d, body_len=%d\n",
+      fprintf(stderr,"HARDLOWER: Sending body piece with body_offset=%d, body_len=%d (hard lower limit = %d/%d\n",
 	      peer_records[peer]->tx_bundle_body_offset,
-	      cached_body_len);
+	      cached_body_len,
+	      peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound,
+	      peer_records[peer]->tx_bundle_body_offset_hard_lower_bound
+	      );
       int start_offset=peer_records[peer]->tx_bundle_body_offset;
 
       int bytes =
@@ -1129,7 +1132,8 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
     if (!(option_flags&FLAG_NO_HARD_LOWER)) {
       p->tx_bundle_manifest_offset_hard_lower_bound=manifest_offset;
       p->tx_bundle_body_offset_hard_lower_bound=body_offset;
-      fprintf(stderr,"HARDLOWER: Setting hard lower limit to M/B = %d/%d\n",manifest_offset,body_offset);
+      fprintf(stderr,"HARDLOWER: Setting hard lower limit to M/B = %d/%d due to ACK packet\n",
+	      manifest_offset,body_offset);
     }
     if (randomJump) {
       // Jump to a random position somewhere after the provided points.
