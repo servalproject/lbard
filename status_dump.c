@@ -192,7 +192,7 @@ int http_report_network_status(int socket)
       fprintf(f,"<meta http-equiv=\"refresh\" content=\"2\" />\n</head>\n<body>\n");
       
       // Show peer reachability with indication of activity
-      fprintf(f,"<h2>Mesh Extenders Reachable via Radio</h2>\n<table border=1 padding=2 spacing=2><tr><th>Mesh Extender ID</th><th>Time since last message</th></tr>\n");
+      fprintf(f,"<h2>Mesh Extenders Reachable via Radio</h2>\n<table border=1 padding=2 spacing=2><tr><th>Mesh Extender ID</th><th>Performance</th><th>Bundle we are sending</th></tr>\n");
       int i;
       for (i=0;i<peer_count;i++) {
 	long long age=(time(0)-peer_records[i]->last_message_time);
@@ -210,9 +210,11 @@ int http_report_network_status(int socket)
 	else if (percent_received<80) colour="#c0c0c0";
 
 	if (age<=30) 
-	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"%s\">%lld sec, %d/%d received (%2.1f%% loss), mean RSSI = %.0f</td></tr>\n",
+	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"%s\">%lld sec, %d/%d received (%2.1f%% loss), mean RSSI = %.0f</td><td>%s</td></tr>\n",
 		  peer_records[i]->sid_prefix,colour,
-		  age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
+		  age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi,
+		  (peer_records[i]->tx_bundle==-1)?"None"
+		  :bundles[peer_records[i]->tx_bundle].bid_hex);
 
 	// Reset packet RX stats for next round
 	peer_records[i]->missed_packet_count=0;

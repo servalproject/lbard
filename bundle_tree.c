@@ -1000,7 +1000,7 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
     p->tx_bundle=-1;
     // Advance next in queue, if there is anything
     if (p->tx_queue_len) {
-      fprintf("HARDLOWER: DEQUEUING:\n     %d more bundles in the queue. Next is bundle #%d\n",
+      fprintf(stderr,"HARDLOWER: DEQUEUING:\n     %d more bundles in the queue. Next is bundle #%d\n",
 	     p->tx_queue_len,p->tx_queue_bundles[0]);
       p->tx_bundle=p->tx_queue_bundles[0];
       p->tx_bundle_priority=p->tx_queue_priorities[0];
