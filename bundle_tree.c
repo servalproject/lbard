@@ -1115,12 +1115,13 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
 
   int bundle=lookup_bundle_by_prefix(bid_prefix,8);
 
-  fprintf(stderr,"T+%lldms : SYNC ACK: '%c' %s* is asking for %s to send from m=%d, p=%d of"
+  fprintf(stderr,"T+%lldms : SYNC ACK: '%c' %s* is asking for %s (%02X%02X) to send from m=%d, p=%d of"
 	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d/%d)\n",
 	  gettime_ms()-start_time,
 	  msg[0],
 	  p?p->sid_prefix:"<null>",
 	  for_me?"us":"someone else",
+	  msg[15],msg[16],
 	  manifest_offset,body_offset,
 	  msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8],
 	  bundle,bundle_count);
