@@ -350,7 +350,7 @@ int rfd900_set_tx_power(int serialfd)
 #endif
   }
 
-  if ((hipower_switch_set&&hipower_en)||txpower==24) {
+  if ((hipower_switch_set&&hipower_en&&(txpower==-1))||txpower==24) {
     printf("Setting radio to hipower\n");
     if (write_all(serialfd,"!H",3)==-1) serial_errors++; else serial_errors=0;
   } else if (txpower==30) {
