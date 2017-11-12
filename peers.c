@@ -580,7 +580,7 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 							 int start_offset,
 							 int bytes)
 {
-  printf(">>> %s Saw body piece [%d,%d)\n",
+  fprintf(stderr,">>> %s Saw body piece [%d,%d)\n",
 	 timestamp_str(),start_offset,start_offset+bytes);
   
   for(int i=0;i<MAX_PEERS;i++)

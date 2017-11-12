@@ -221,6 +221,8 @@ int main(int argc, char **argv)
     {
       if (!strcasecmp(argv[1],"monitorts")) { time_server=1; udp_time=1; }
       monitor_mode=1;
+      debug_pieces=1;
+      debug_message_pieces=1;
       serial_port=argv[2];
     } else {  
     if (argc<5) {

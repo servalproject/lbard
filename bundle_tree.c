@@ -608,14 +608,16 @@ int sync_tell_peer_we_have_bundle_by_id(int peer,unsigned char *bid,long long ve
 
   sync_build_bar_in_slot(slot,bid,version);
 
-  if (report_queue_message[slot]) {
-    fprintf(stderr,"Replacing report_queue message '%s' with 'BAR'\n",
-	    report_queue_message[slot]);
-    free(report_queue_message[slot]);
-    report_queue_message[slot]=NULL;
-  } else
-    fprintf(stderr,"Setting report_queue message to 'BAR'\n");
-  report_queue_message[slot]=strdup("BAR");
+  if (!monitor_mode) {
+    if (report_queue_message[slot]) {
+      fprintf(stderr,"Replacing report_queue message '%s' with 'BAR'\n",
+	      report_queue_message[slot]);
+      free(report_queue_message[slot]);
+      report_queue_message[slot]=NULL;
+    } else
+      fprintf(stderr,"Setting report_queue message to 'BAR'\n");
+    report_queue_message[slot]=strdup("BAR");
+  }
   
   if (slot>=report_queue_length) report_queue_length=slot+1;
 
@@ -708,13 +710,15 @@ int sync_schedule_progress_report_bitmap(int peer, int partial)
 
   int ofs=0;
 
-  if (report_queue_message[slot]) {
-    fprintf(stderr,"Replacing report_queue message '%s' with 'progress report' (BITMAP)\n",
-	    report_queue_message[slot]);
-    free(report_queue_message[slot]);
-    report_queue_message[slot]=NULL;
-  } else {
-    fprintf(stderr,"Setting report_queue message to 'progress report' (BITMAP)\n");
+  if (!monitor_mode) {
+    if (report_queue_message[slot]) {
+      fprintf(stderr,"Replacing report_queue message '%s' with 'progress report' (BITMAP)\n",
+	      report_queue_message[slot]);
+      free(report_queue_message[slot]);
+      report_queue_message[slot]=NULL;
+    } else {
+      fprintf(stderr,"Setting report_queue message to 'progress report' (BITMAP)\n");
+    }
   }
   report_queue_message[slot]=strdup("progress report");
   
@@ -814,22 +818,25 @@ int sync_schedule_progress_report(int peer, int partial, int randomJump)
   assert(ofs<MAX_REPORT_LEN);
   if (slot>=report_queue_length) report_queue_length=slot+1;
 
-  if (randomJump)
-    fprintf(stderr,
-	    "T+%lldms : Redirecting %s to an area we have not yet received of %s*, i.e., somewhere not before m_first=%d, b_first=%d\n",
-	    gettime_ms()-start_time,
-	    peer_records[peer]->sid_prefix,
-	    partials[partial].bid_prefix,
-	    first_required_manifest_offset,
-	    first_required_body_offset);    
-  else
-    fprintf(stderr,
-	    "T+%lldms : ACKing progress on transfer of %s* from %s. m_first=%d, b_first=%d\n",
-	    gettime_ms()-start_time,
-	    partials[partial].bid_prefix,
-	    peer_records[peer]->sid_prefix,
-	    first_required_manifest_offset,
-	    first_required_body_offset);    
+  if (randomJump) {
+    if (!monitor_mode)
+      fprintf(stderr,
+	      "T+%lldms : Redirecting %s to an area we have not yet received of %s*/%lld, i.e., somewhere not before m_first=%d, b_first=%d\n",
+	      gettime_ms()-start_time,
+	      peer_records[peer]->sid_prefix,
+	      partials[partial].bid_prefix,
+	      partials[partial].bundle_version,
+	      first_required_manifest_offset,
+	      first_required_body_offset);    
+  } else
+      if (!monitor_mode)
+	fprintf(stderr,
+		"T+%lldms : ACKing progress on transfer of %s* from %s. m_first=%d, b_first=%d\n",
+		gettime_ms()-start_time,
+		partials[partial].bid_prefix,
+		peer_records[peer]->sid_prefix,
+		first_required_manifest_offset,
+		first_required_body_offset);    
   
   return 0;
 }
