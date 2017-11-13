@@ -193,7 +193,7 @@ int http_report_network_status(int socket)
       FILE *bundlelogfile=NULL;
       if (debug_bundlelog) {
 	if (time(0)-last_peer_log>=300) {
-	  bundlelogfile=fopen("bundles_received.log","a");
+	  bundlelogfile=fopen(bundlelog_filename,"a");
 	  if (bundlelogfile) {
 	    last_peer_log=time(0);
 	    fprintf(bundlelogfile,"T+%lldms:PEERREPORT:%s",

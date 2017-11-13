@@ -58,8 +58,9 @@ int debug_gpio=0;
 int debug_message_pieces=0;
 int debug_sync=0;
 int debug_sync_keys=0;
-int debug_bundlelog=0;
 int debug_noprioritisation=0;
+int debug_bundlelog=0;
+char *bundlelog_filename=NULL;
 
 // If either of these is not -1, then we try to set them
 // for the attached radio.
@@ -355,8 +356,12 @@ int main(int argc, char **argv)
       else if (!strcasecmp("sync",argv[n])) debug_sync=1;
       else if (!strcasecmp("sync_keys",argv[n])) debug_sync_keys=1;
       else if (!strcasecmp("udptime",argv[n])) udp_time=1;
-      else if (!strcasecmp("bundlelog",argv[n])) debug_bundlelog=1;
-      else if (!strcasecmp("nopriority",argv[n])) debug_noprioritisation=1;
+      else if (!strncasecmp("bundlelog=",argv[n],10)) {
+	bundlelog_filename=strdup(&argv[n][10]);
+	debug_bundlelog=1;
+	fprintf(stderr,"Will log bundle receipts and peer connectivity to '%s'\n",
+		 bundlelog_filename);
+      } else if (!strcasecmp("nopriority",argv[n])) debug_noprioritisation=1;
       else if (!strcasecmp("nohttpd",argv[n])) http_server=0;
       else if (!strncasecmp("txpower=",argv[n],8)) {
 	txpower=atoi(&argv[n][8]);
