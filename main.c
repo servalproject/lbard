@@ -192,8 +192,8 @@ int main(int argc, char **argv)
     return(meshmb_parse_command(argc,argv));
   }
 
-  fprintf(stderr,"Version %s [MD5: %s] @ %s\n",
-	GIT_VERSION_STRING,VERSION_STRING,BUILD_DATE);
+  fprintf(stderr,"Version commit:%s branch:%s [MD5: %s] @ %s\n",
+	GIT_VERSION_STRING,GIT_BRANCH,VERSION_STRING,BUILD_DATE);
     
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==5)&&(!strcasecmp(argv[1],"energysamplemaster"))) {

@@ -29,6 +29,7 @@ CFLAGS= -g -std=gnu99 -Wall -fno-omit-frame-pointer -D_GNU_SOURCE=1
 version.h:	$(SRCS) $(HDRS)
 	echo "#define VERSION_STRING \""`./md5 $(SRCS)`"\"" >version.h
 	echo "#define GIT_VERSION_STRING \""`git describe --always --abbrev=10 --dirty=+DIRTY`"\"" >>version.h
+	echo "#define GIT_BRANCH \""`git rev-parse --abbrev-ref HEAD`"\"" >>version.h
 	echo "#define BUILD_DATE \""`date`"\"" >>version.h
 
 lbard:	$(SRCS) $(HDRS)
