@@ -426,15 +426,24 @@ int saw_piece(char *peer_prefix,int for_me,
 	  FILE *bundlelogfile=fopen("bundles_received.log","a");
 	  if (bundlelogfile) {
 	    char bid[1024];
+	    char version[1024];
 	    char filename[1024];
 	    char message[1024];
 	    char filesize[1024];
+	    char service[1024];
+	    char sender[1024];
+	    char recipient[1024];
+	    time_t now=time(0);
 	    manifest_get_field(manifest,manifest_len,"name",filename);
 	    manifest_get_field(manifest,manifest_len,"id",bid);
+	    manifest_get_field(manifest,manifest_len,"version",version);
 	    manifest_get_field(manifest,manifest_len,"filesize",filesize);
-	    snprintf(message,1024,"T+%lldms:%s:%s:%s:%s\n",
+	    manifest_get_field(manifest,manifest_len,"service",service);	    
+	    manifest_get_field(manifest,manifest_len,"sender",sender);
+	    manifest_get_field(manifest,manifest_len,"recipient",recipient);
+	    snprintf(message,1024,"T+%lldms:%s:%s/%s:%s:%s:%s:%s:%s:%s",
 		     (long long)(gettime_ms()-start_time),
-		     my_sid_hex,bid,filename,filesize);
+		     my_sid_hex,bid,version,filename,filesize,service,sender,recipient,ctime(&now));
 	    fprintf(bundlelogfile,"%s",message);
 	    fclose(bundlelogfile);
 	  }
