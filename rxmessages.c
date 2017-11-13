@@ -441,7 +441,7 @@ int saw_piece(char *peer_prefix,int for_me,
 	    manifest_get_field(manifest,manifest_len,"service",service);	    
 	    manifest_get_field(manifest,manifest_len,"sender",sender);
 	    manifest_get_field(manifest,manifest_len,"recipient",recipient);
-	    snprintf(message,1024,"T+%lldms:%s:%s/%s:%s:%s:%s:%s:%s:%s",
+	    snprintf(message,1024,"T+%lldms:BUNDLERX:%s:%s/%s:%s:%s:%s:%s:%s:%s",
 		     (long long)(gettime_ms()-start_time),
 		     my_sid_hex,bid,version,filename,filesize,service,sender,recipient,ctime(&now));
 	    fprintf(bundlelogfile,"%s",message);
