@@ -26,8 +26,10 @@ HDRS=	lbard.h serial.h Makefile version.h sync.h sha3.h miniz.c
 LDFLAGS=
 CFLAGS= -g -std=gnu99 -Wall -fno-omit-frame-pointer -D_GNU_SOURCE=1
 
-version.h:	$(SRCS)
+version.h:	$(SRCS) $(HDRS)
 	echo "#define VERSION_STRING \""`./md5 $(SRCS)`"\"" >version.h
+	echo "#define GIT_VERSION_STRING \""`git describe --always --abbrev=10 --dirty=+DIRTY`"\"" >>version.h
+	echo "#define BUILD_DATE \""`date`"\"" >>version.h
 
 lbard:	$(SRCS) $(HDRS)
 	$(CC) $(CFLAGS) -o lbard $(SRCS) $(LDFLAGS)

@@ -45,6 +45,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 #include "serial.h"
+#include "version.h"
 
 int debug_radio=0;
 int debug_pieces=0;
@@ -191,7 +192,8 @@ int main(int argc, char **argv)
     return(meshmb_parse_command(argc,argv));
   }
 
-  fprintf(stderr,"Version 20171114.0716.1\n");
+  fprintf(stderr,"Version %s [MD5: %s] @ %s\n",
+	GIT_VERSION_STRING,VERSION_STRING,BUILD_DATE);
     
   // For Watcharachai's PhD experiments.  Everyone else can safely ignore this option
   if ((argc==5)&&(!strcasecmp(argv[1],"energysamplemaster"))) {
