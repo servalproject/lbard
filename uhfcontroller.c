@@ -77,6 +77,9 @@ int uhf_serviceloop(int serialfd)
        should be able to send packets very often. But if there are lots of stations
        on channel, then we should back-off.
     */
+
+    // Also periodically update log of connected peers
+    http_report_network_status(-1);
     
     double ratio = 1.00;
     if (target_transmissions_per_4seconds)
