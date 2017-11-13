@@ -198,6 +198,7 @@ int http_report_network_status(int socket)
 	    last_peer_log=time(0);
 	    fprintf(bundlelogfile,"T+%lldms:PEERREPORT:%s",
 		    (long long)(gettime_ms()-start_time),ctime(&last_peer_log));
+	  }
 	}
       }
       
