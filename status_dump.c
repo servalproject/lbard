@@ -194,7 +194,10 @@ int http_report_network_status(int socket)
       if (debug_bundlelog) {
 	if (time(0)-last_peer_log>=300) {
 	  bundlelogfile=fopen("bundles_received.log","a");
-	  if (bundlelogfile) last_peer_log=time(0);
+	  if (bundlelogfile) {
+	    last_peer_log=time(0);
+	    fprintf(bundlelogfile,"T+%lldms:PEERREPORT:%s",
+		    (long long)(gettime_ms()-start_time),ctime(&last_peer_log));
 	}
       }
       
@@ -225,7 +228,7 @@ int http_report_network_status(int socket)
 		  age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
 	  if (bundlelogfile) {
 	    time_t now=time(0);
-	    fprintf(f,"T+%lldms:PEERSTATUS:%s*:%lld:%d/%d:%.0f:%s",
+	    fprintf(bundlelogfile,"T+%lldms:PEERSTATUS:%s*:%lld:%d/%d:%.0f:%s",
 		    (long long)(gettime_ms()-start_time),		  
 		    peer_records[i]->sid_prefix,
 		    age,received_packets,received_packets+missed_packets,mean_rssi,
