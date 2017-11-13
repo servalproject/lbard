@@ -184,27 +184,29 @@ int http_report_network_status(int socket)
       FILE *f=fopen("/tmp/networkstatus.html","w");
       if (!f) {
 	char *m="HTTP/1.0 500 Couldn't create temporary file\nServer: Serval LBARD\n\nCould not create temporariy file";
-	write_all(socket,m,strlen(m));
+	if (socket!=-1) write_all(socket,m,strlen(m));
 	
 	return -1;
       }
 
       // Periodically record list of peers in bundle log, if we are maintaining one
       FILE *bundlelogfile=NULL;
+      fprintf(stderr,"Before bundle log checks...\");
       if (debug_bundlelog) {
 	fprintf(stderr,"%lld seconds since last bundle log report.\n",
 		(long long)(time(0)-last_peer_log));
-	if (time(0)-last_peer_log>=300) {
+	if ((time(0)-last_peer_log)>=300) {
 	  fprintf(stderr,"Trying to open UHF peer connectivity log file.\n");
 	  bundlelogfile=fopen(bundlelog_filename,"a");
 	  if (bundlelogfile) {
 	    fprintf(stderr,"Reporting UHF peer connectivity.\n");
-	    last_peer_log=time(0);
 	    fprintf(bundlelogfile,"T+%lldms:PEERREPORT:%s",
 		    (long long)(gettime_ms()-start_time),ctime(&last_peer_log));
 	  } else perror("Could not open bundle log file");
 	}
+	last_peer_log=time(0);	
       }
+      fprintf(stderr,"After bundle log checks.\");
       
       fprintf(f,"<html>\n<head>\n<title>Mesh Extender Radio Link Status</title>\n");
       fprintf(f,"<meta http-equiv=\"refresh\" content=\"2\" />\n</head>\n<body>\n");
@@ -233,11 +235,13 @@ int http_report_network_status(int socket)
 		  age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
 	  if (bundlelogfile) {
 	    time_t now=time(0);
+	    fprintf(stderr,"Writing PEERSTATUS line...\n");
 	    fprintf(bundlelogfile,"T+%lldms:PEERSTATUS:%s*:%lld:%d/%d:%.0f:%s",
 		    (long long)(gettime_ms()-start_time),		  
 		    peer_records[i]->sid_prefix,
 		    age,received_packets,received_packets+missed_packets,mean_rssi,
 		    ctime(&now));
+	    fprintf(stderr,"Wrote PEERSTATUS line.\n");
 	  }
 	}
 
@@ -259,7 +263,9 @@ int http_report_network_status(int socket)
 	peer_records[i]->rssi_accumulator=0;	
       }
       fprintf(f,"</table>\n");
-      fclose(bundlelogfile);      
+      fprintf(stderr,"Before fclose(bundlelogfile)\n");
+      if (bundlelogfile) fclose(bundlelogfile);
+      fprintf(stderr,"After fclose(bundlelogfile)\n");
       
       // Show current transfer progress bars
       fprintf(f,"<h2>Current Bundles being received</h2>\n");

@@ -423,6 +423,7 @@ int saw_piece(char *peer_prefix,int for_me,
 	  // This is used for rhizome velocity experiments.  For that purpose,
 	  // we like to know the name of the bundle we are looking for, so we include
 	  // it in the message.
+	  fprintf(stderr,"Logging new bundle...\n");
 	  FILE *bundlelogfile=fopen(bundlelog_filename,"a");
 	  if (bundlelogfile) {
 	    char bid[1024];
@@ -447,6 +448,7 @@ int saw_piece(char *peer_prefix,int for_me,
 	    fprintf(bundlelogfile,"%s",message);
 	    fclose(bundlelogfile);
 	  }
+	  fprintf(stderr,"Done logging new bundle.\n");
 	}
 
 	// Take note of the bundle, so that we can tell any peer who is trying to
