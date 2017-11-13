@@ -175,6 +175,7 @@ int status_dump()
 }
 
 time_t last_network_status_call=0;
+time_t last_peer_log=0;
 int http_report_network_status(int socket)
 {
   if ((time(0)-last_network_status_call)>1)
@@ -186,6 +187,15 @@ int http_report_network_status(int socket)
 	write_all(socket,m,strlen(m));
 	
 	return -1;
+      }
+
+      // Periodically record list of peers in bundle log, if we are maintaining one
+      FILE *bundlelogfile=NULL;
+      if (debug_bundlelog) {
+	if (time(0)-last_peer_log>=300) {
+	  bundlelogfile=fopen("bundles_received.log","a");
+	  if (bundlelogfile) last_peer_log=time(0);
+	}
       }
       
       fprintf(f,"<html>\n<head>\n<title>Mesh Extender Radio Link Status</title>\n");
@@ -209,10 +219,19 @@ int http_report_network_status(int socket)
 	else if (percent_received<50) colour="#ffff00";
 	else if (percent_received<80) colour="#c0c0c0";
 
-	if (age<=30) 
+	if (age<=30) {
 	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"%s\">%lld sec, %d/%d received (%2.1f%% loss), mean RSSI = %.0f</td><td>",
 		  peer_records[i]->sid_prefix,colour,
 		  age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
+	  if (bundlelogfile) {
+	    time_t now=time(0);
+	    fprintf(f,"T+%lldms:PEERSTATUS:%s*:%lld:%d/%d:%.0f:%s",
+		    (long long)(gettime_ms()-start_time),		  
+		    peer_records[i]->sid_prefix,
+		    age,received_packets,received_packets+missed_packets,mean_rssi,
+		    ctime(&now));
+	  }
+	}
 
 	if (peer_records[i]->tx_bundle!=-1) {
 	  char bid[10];
