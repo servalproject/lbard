@@ -191,7 +191,7 @@ int http_report_network_status(int socket)
 
       // Periodically record list of peers in bundle log, if we are maintaining one
       FILE *bundlelogfile=NULL;
-      fprintf(stderr,"Before bundle log checks...\");
+      fprintf(stderr,"Before bundle log checks...\n");
       if (debug_bundlelog) {
 	fprintf(stderr,"%lld seconds since last bundle log report.\n",
 		(long long)(time(0)-last_peer_log));
@@ -206,7 +206,7 @@ int http_report_network_status(int socket)
 	}
 	last_peer_log=time(0);	
       }
-      fprintf(stderr,"After bundle log checks.\");
+      fprintf(stderr,"After bundle log checks.\n");
       
       fprintf(f,"<html>\n<head>\n<title>Mesh Extender Radio Link Status</title>\n");
       fprintf(f,"<meta http-equiv=\"refresh\" content=\"2\" />\n</head>\n<body>\n");
