@@ -230,11 +230,11 @@ int http_report_network_status(int socket)
 	else if (percent_received<80) colour="#c0c0c0";
 
 	if (age<=30) {
+	  time_t now=time(0);
 	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"%s\">%lld sec, %d/%d received (%2.1f%% loss), mean RSSI = %.0f</td><td>",
 		  peer_records[i]->sid_prefix,colour,
 		  age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
 	  if (bundlelogfile) {
-	    time_t now=time(0);
 	    fprintf(stderr,"Writing PEERSTATUS line...\n");
 	    fprintf(bundlelogfile,"T+%lldms:PEERSTATUS:%s*:%lld:%d/%d:%.0f:%s",
 		    (long long)(gettime_ms()-start_time),		  
@@ -252,7 +252,15 @@ int http_report_network_status(int socket)
 	    fprintf(f,"%s/%lld (from M=%d/P=%d)",
 		    bid,bundles[peer_records[i]->tx_bundle].version,
 		    peer_records[i]->tx_bundle_manifest_offset_hard_lower_bound,
-		    peer_records[i]->tx_bundle_body_offset_hard_lower_bound);		  
+		    peer_records[i]->tx_bundle_body_offset_hard_lower_bound);
+	    if (bundlelogfile)
+	      fprintf(bundlelogfile,"T+%lldms:PEERXFER:%s*:%s/%lld (from M=%d/P=%d):%s",
+		      (long long)(gettime_ms()-start_time),		  
+		      peer_records[i]->sid_prefix,
+		      bid,bundles[peer_records[i]->tx_bundle].version,
+		      peer_records[i]->tx_bundle_manifest_offset_hard_lower_bound,
+		      peer_records[i]->tx_bundle_body_offset_hard_lower_bound,
+		      ctime(&now));	    
 	  }
 	fprintf(f,"</td></tr>\n");
 	}
