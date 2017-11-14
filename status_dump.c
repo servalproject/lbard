@@ -196,6 +196,7 @@ int http_report_network_status(int socket)
 	fprintf(stderr,"%lld seconds since last bundle log report.\n",
 		(long long)(time(0)-last_peer_log));
 	if ((time(0)-last_peer_log)>=300) {
+	  last_peer_log=time(0);	
 	  fprintf(stderr,"Trying to open UHF peer connectivity log file.\n");
 	  bundlelogfile=fopen(bundlelog_filename,"a");
 	  if (bundlelogfile) {
@@ -204,7 +205,6 @@ int http_report_network_status(int socket)
 		    (long long)(gettime_ms()-start_time),ctime(&last_peer_log));
 	  } else perror("Could not open bundle log file");
 	}
-	last_peer_log=time(0);	
       }
       fprintf(stderr,"After bundle log checks.\n");
       
