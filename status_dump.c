@@ -196,7 +196,7 @@ int http_report_network_status(int socket)
 	  last_peer_log=time(0);	
 	  bundlelogfile=fopen(bundlelog_filename,"a");
 	  if (bundlelogfile) {
-	    fprintf(bundlelogfile,"%lld,T+%lldms:PEERREPORT:%s",
+	    fprintf(bundlelogfile,"%lld:T+%lldms:PEERREPORT:%s",
 		    (long long)last_peer_log,
 		    (long long)(gettime_ms()-start_time),ctime(&last_peer_log));
 	  } else perror("Could not open bundle log file");
