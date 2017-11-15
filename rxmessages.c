@@ -442,8 +442,8 @@ int saw_piece(char *peer_prefix,int for_me,
 	    manifest_get_field(manifest,manifest_len,"service",service);	    
 	    manifest_get_field(manifest,manifest_len,"sender",sender);
 	    manifest_get_field(manifest,manifest_len,"recipient",recipient);
-	    snprintf(message,1024,"T+%lldms:BUNDLERX:%s:%s/%s:%s:%s:%s:%s:%s:%s",
-		     (long long)(gettime_ms()-start_time),
+	    snprintf(message,1024,"%lld:T+%lldms:BUNDLERX:%s:%s/%s:%s:%s:%s:%s:%s:%s",
+		     (long long)now,(long long)(gettime_ms()-start_time),
 		     my_sid_hex,bid,version,filename,filesize,service,sender,recipient,ctime(&now));
 	    fprintf(bundlelogfile,"%s",message);
 	    fclose(bundlelogfile);
@@ -980,7 +980,8 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
 	  if (debug_bundlelog) {
 	    bundlelogfile=fopen(bundlelog_filename,"a");
 	    if (bundlelogfile) {
-	      fprintf(bundlelogfile,"T+%lldms:PEERTIME:%s:%lld:%s",
+	      fprintf(bundlelogfile,"%lld:T+%lldms:PEERTIME:%s:%lld:%s",
+		      (long long)now,
 		      (long long)(gettime_ms()-start_time),sender_prefix,
 		      (long long)(tv.tv_sec-now),ctime(&now));
 	    } else perror("Could not open bundle log file");
