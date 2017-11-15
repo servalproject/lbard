@@ -967,6 +967,27 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
 	sprintf(sender_prefix,"%s*",p->sid_prefix);
 
 	saw_timestamp(sender_prefix,stratum,&tv);
+
+	// Also record time delta between us and this peer in the relevant peer structure.
+	// The purpose is to that the bundle/activity log can be more easily reconciled with that
+	// of other mesh extenders.  By being able to relate the claimed time of each mesh extender
+	// against each other, we can hopefully quite accurately piece together the timing of bundle
+	// transfers via UHF, for example.
+	time_t now =time(0);
+	if (now-p->last_timestamp_received>60) {
+	  p->last_timestamp_received=now;
+	  FILE *bundlelogfile=NULL;
+	  if (debug_bundlelog) {
+	    bundlelogfile=fopen(bundlelog_filename,"a");
+	    if (bundlelogfile) {
+	      fprintf(bundlelogfile,"T+%lldms:PEERTIME:%s:%lld:%s",
+		      (long long)(gettime_ms()-start_time),sender_prefix,
+		      (long long)(tv.tv_sec-now),ctime(&now));
+	    } else perror("Could not open bundle log file");
+	  }
+	}
+  
+	
       }
       break;
     default:

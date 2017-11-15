@@ -101,6 +101,8 @@ struct peer_state {
 #define PEER_KEEPALIVE_INTERVAL 20
   int last_message_number;
 
+  time_t last_timestamp_received;
+  
   // Used to log RSSI of receipts from this sender, so that we can show in the stats display
   int rssi_accumulator;
   int rssi_counter;
