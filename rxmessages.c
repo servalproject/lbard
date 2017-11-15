@@ -929,6 +929,7 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
     case 'T':
       // Time stamp
       {
+	fprintf(stderr,"Saw timestamp message.\n");
 	offset++;
 	int stratum=msg[offset++];
 	struct timeval tv;
@@ -973,9 +974,14 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
 	// of other mesh extenders.  By being able to relate the claimed time of each mesh extender
 	// against each other, we can hopefully quite accurately piece together the timing of bundle
 	// transfers via UHF, for example.
+	fprintf(stderr,"Logging timestamp message from %s.\n",sender_prefix);
 	time_t now =time(0);
-	if (p->last_timestamp_received>now) p->last_timestamp_received=0;
+	if (p->last_timestamp_received>now) {
+	  fprintf(stderr,"Correcting last timestamp report time to be in the past, not future.\n");
+	  p->last_timestamp_received=0;
+	}
 	if ((now-p->last_timestamp_received)>60) {
+	  fprintf(stderr,"Logging timestamp message, since >60 seconds since last seen from this peer.\n");	  
 	  p->last_timestamp_received=now;
 	  FILE *bundlelogfile=NULL;
 	  if (debug_bundlelog) {
@@ -985,9 +991,10 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
 		      (long long)now,
 		      (long long)(gettime_ms()-start_time),sender_prefix,
 		      (long long)(tv.tv_sec-now),ctime(&now));
+	      fprintf(stderr,"Logged timestamp message.\n");
 	    } else perror("Could not open bundle log file");
-	  }
-	}
+	  } else fprintf(stderr,"Logging timestamps disabled via debug_bundlelog.\n");
+	} else fprintf(stderr,"Not logging timestamp message, since we logged one just recently.\n");
   
 	
       }
