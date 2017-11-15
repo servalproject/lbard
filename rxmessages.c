@@ -974,13 +974,14 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
 	// of other mesh extenders.  By being able to relate the claimed time of each mesh extender
 	// against each other, we can hopefully quite accurately piece together the timing of bundle
 	// transfers via UHF, for example.
-	fprintf(stderr,"Logging timestamp message from %s.\n",sender_prefix);
 	time_t now =time(0);
-	if (p->last_timestamp_received>now) {
+	long long delta=(long long)now-(long long)p->last_timestamp_received;
+	fprintf(stderr,"Logging timestamp message from %s (delta=%lld).\n",sender_prefix,delta);
+	if (delta<0) {
 	  fprintf(stderr,"Correcting last timestamp report time to be in the past, not future.\n");
 	  p->last_timestamp_received=0;
 	}
-	if ((now-p->last_timestamp_received)>60) {
+	if (delta>60) {
 	  fprintf(stderr,"Logging timestamp message, since >60 seconds since last seen from this peer.\n");	  
 	  p->last_timestamp_received=now;
 	  FILE *bundlelogfile=NULL;
@@ -994,7 +995,9 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
 	      fprintf(stderr,"Logged timestamp message.\n");
 	    } else perror("Could not open bundle log file");
 	  } else fprintf(stderr,"Logging timestamps disabled via debug_bundlelog.\n");
-	} else fprintf(stderr,"Not logging timestamp message, since we logged one just recently.\n");
+	} else fprintf(stderr,"Not logging timestamp message, since we logged one just recently (%lld-%lld = %lld).\n",
+		       (long long)now,(long long)p->last_timestamp_received,
+		       (long long)now-(long long)p->last_timestamp_received);		       
   
 	
       }
