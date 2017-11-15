@@ -974,8 +974,8 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
 	// against each other, we can hopefully quite accurately piece together the timing of bundle
 	// transfers via UHF, for example.
 	time_t now =time(0);
-	if (p->last_timestamp_received>now) p=0;
-	if (now-p->last_timestamp_received>60) {
+	if (p->last_timestamp_received>now) p->last_timestamp_received=0;
+	if ((now-p->last_timestamp_received)>60) {
 	  p->last_timestamp_received=now;
 	  FILE *bundlelogfile=NULL;
 	  if (debug_bundlelog) {
