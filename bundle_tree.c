@@ -477,8 +477,6 @@ int sync_tree_send_data(int *offset,int mtu, unsigned char *msg_out,int peer,
       sync_announce_bundle_piece(peer,offset,mtu,msg_out,
 				 sid_prefix_hex,servald_server,credential);
     }
-  else
-    fprintf(stderr,"HARDLOWER: No bundle on TX queue, so not announcing anything.\n");
   return 0;
 }
 
