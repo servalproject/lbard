@@ -993,13 +993,13 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
 		      (long long)(gettime_ms()-start_time),sender_prefix,
 		      (long long)(tv.tv_sec-now),ctime(&now));
 	      fprintf(stderr,"Logged timestamp message.\n");
+	      fclose(bundlelogfile);
 	    } else perror("Could not open bundle log file");
 	  } else fprintf(stderr,"Logging timestamps disabled via debug_bundlelog.\n");
 	} else fprintf(stderr,"Not logging timestamp message, since we logged one just recently (%lld-%lld = %lld).\n",
 		       (long long)now,(long long)p->last_timestamp_received,
 		       (long long)now-(long long)p->last_timestamp_received);		       
-  
-	
+
       }
       break;
     default:
