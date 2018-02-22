@@ -322,6 +322,9 @@ int http_get_simple(char *server_and_port, char *auth_token,
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
 	}
+	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
+	  // got http response
+	}
 	len=0;
 	// Have we found end of headers?
 	if (empty_count==3) break;
