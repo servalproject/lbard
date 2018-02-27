@@ -519,6 +519,8 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 	  // got http response
 	  // fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
 	}
+	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
+	}
 	len=0;
 	// Have we found end of headers?
 	if (empty_count==3) break;
@@ -640,6 +642,10 @@ int http_post_meshms(char *server_and_port, char *auth_token,
 	  // got http response
 	  fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
 	}
+	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
+	  // got http response
+	  fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
+	}
 	len=0;
 	// Have we found end of headers?
 	if (empty_count==3) break;
@@ -720,6 +726,9 @@ int http_list_meshms_conversations(char *server_and_port, char *auth_token,
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
 	  // fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
+	}
+
+	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
 	}
 	len=0;
 	// Have we found end of headers?
@@ -802,6 +811,8 @@ int http_list_meshms_messages(char *server_and_port, char *auth_token,
 	  // got http response
 	  // fprintf(stderr,"  HTTP response from Rhizome for new bundle is: %d\n",http_response);
 	}
+	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
+	}
 	len=0;
 	// Have we found end of headers?
 	if (empty_count==3) break;
@@ -881,6 +892,8 @@ int http_get_async(char *server_and_port, char *auth_token,
 	}
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
+	}
+	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
 	}
 	len=0;
 	// Have we found end of headers?
