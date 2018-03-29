@@ -19,6 +19,7 @@ SRCS=	$(SRCDIR)/main.c \
 	$(SRCDIR)/bundle_cache.c \
 	$(SRCDIR)/json.c \
 	$(SRCDIR)/peers.c \
+	$(SRCDIR)/progress_bitmaps.c \
 	\
 	$(SRCDIR)/serial.c \
 	$(SRCDIR)/radio.c \
