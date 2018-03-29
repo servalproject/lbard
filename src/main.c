@@ -46,6 +46,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "lbard.h"
 #include "serial.h"
 #include "version.h"
+#include "radios.h"
 
 int debug_radio=0;
 int debug_pieces=0;
@@ -476,12 +477,10 @@ int main(int argc, char **argv)
 			  credential, token);
 
     make_periodic_requests();
-    
-    switch (radio_get_type()) {
-    case RADIO_RFD900: uhf_serviceloop(serialfd); break;
-    case RADIO_BARRETT_HF: hf_serviceloop(serialfd); break;
-    case RADIO_CODAN_HF: hf_serviceloop(serialfd); break;
-    default:
+
+    if (radio_get_type()>=0)
+      radio_types[radio_get_type()].serviceloop(serialfd);
+    else {
       fprintf(stderr,"ERROR: Connected to unknown radio type.\n");
       exit(-1);
     }

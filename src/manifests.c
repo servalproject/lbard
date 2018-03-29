@@ -40,6 +40,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "sync.h"
 #include "lbard.h"
+#include "util.h"
+
+#ifdef TEST
+// Only present to satisfy the timestamp_str() function
+char *my_sid_hex="NOT VALID";
+#endif
 
 // Table of fields and transformations
 struct manifest_field {
@@ -75,20 +81,6 @@ struct manifest_field fields[]={
   
   {0,NULL,0,0}
 };
-
-int chartohex(int c)
-{
-  if ((c>='0')&&(c<='9')) return c-'0';
-  if ((c>='A')&&(c<='F')) return c-'A'+10;
-  return -1;
-}
-
-int hextochar(int h)
-{
-  if ((h>=0)&&(h<10)) return h+'0';
-  if ((h>=10)&&(h<16)) return h+'A'-10;
-  return '?';
-}
 
 int field_encode(int field_number,unsigned char *key,unsigned char *value,
 		 unsigned char *bin_out,int *out_offset)

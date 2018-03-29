@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "sync.h"
 #include "lbard.h"
+#include "radios.h"
 
 int set_nonblock(int fd)
 {
@@ -169,72 +170,21 @@ int serial_setup_port_with_speed(int fd,int speed)
 int serial_setup_port(int fd)
 {
   /* Try to work out what type of radio we are using.
-     We support RFD900-series radios at 230400bps, and also
-     Codan and Barrett HF radios at 9600.  The HF radios use simple text commands for
-     everything, and are always in command mode, so we can first try to detect if the
-     radios are HF radios, and set our radio mode and serial speed accordingly.
   */
-  unsigned char buf[8192];
-  unsigned clr[3]={21,13,10};
-  int verhi,verlo;
 
-  unsigned char barrett_e0_string[6]={0x13,'E','0',13,10,0x11};
+  serial_setup_port_with_speed(fd,9600); 
+  
   
   fprintf(stderr,"Attempting to detect radio type.\n");
-  
-  // Set serial port for HF radios
-  serial_setup_port_with_speed(fd,9600);
-  write_all(fd,clr,3); // Clear any partial command
-  sleep(1); // give the radio the chance to respond
-  ssize_t count = read_nonblock(fd,buf,8192);  // read and ignore any stuff
-  dump_bytes("modem response to clr string",buf,count);
-  fprintf(stderr,"Autodetecting Codan/Barrett HF Radio...\n");
-  write_all(fd,"VER\r",4); // ask Codan radio for version
-  sleep(1); // give the radio the chance to respond
-  count = read_nonblock(fd,buf,8192);  // read reply
-  dump_bytes("modem response",buf,count);
-  // If we get a version string -> Codan HF
-  if (sscanf((char *)buf,"VER\r\nCICS: V%d.%d",&verhi,&verlo)==2) {
-    fprintf(stderr,"Codan HF Radio running CICS V%d.%d\n",
-	    verhi,verlo);
-    if ((verhi>3)||((verhi==3)&&(verlo>=37)))
-      // Codan radio supports ALE 3G (255 x 8-bit chars per message)
-      radio_set_feature(RADIO_ALE_2G|RADIO_ALE_3G);
-    else
-      // Codan radio supports only ALE 2G (90 x 6-bit chars per message)
-      radio_set_feature(RADIO_ALE_2G);
-    radio_set_type(RADIO_CODAN_HF);
-    return 0;
-  } else if (!memcmp(buf,barrett_e0_string,6)) {
-    fprintf(stderr,"Detected Barrett HF Radio.\n");
-    radio_set_type(RADIO_BARRETT_HF);
-    radio_set_feature(RADIO_ALE_2G);
 
-    // Tell Barrett radio we want to know when various events occur.
-    char *setup_string[7]={"ARAMDM1\r\n","ARAMDP1\r\n",
-			   "ARCALL1\r\n","ARLINK1\r\n",
-			   "ARLTBL1\r\n","ARMESS1\r\n",
-			   "ARSTAT1\r\n",
-    };
-    int i;
-    for(i=0;i<7;i++) {
-      write(fd,setup_string[i],strlen(setup_string[i]));
-      usleep(200000);
-      count = read_nonblock(fd,buf,8192);  // read reply
-      dump_bytes(setup_string[i],buf,count);
+  for(int i=0;radio_types[i].id>=0;i++)
+    {
+      if (radio_types[i].autodetect(fd)==1) {
+	return 0;
+      }
     }
 
-    
-    return 0;
-  }
+  fprintf(stderr,"Failed to detect type of connected radio.\n");
+  return -1;
   
-  // If we get a Barrett error message -> Barrett HF
-  // Anything else -> assume RFD900
-  fprintf(stderr,"No HF radio detected, assuming RFD900 series radio.\n");
-  
-  serial_setup_port_with_speed(fd,230400);
-  radio_set_type(RADIO_RFD900);
-  uhf_rfd900_setup(fd);
-  
-  return 0;
 }

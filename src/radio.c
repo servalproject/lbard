@@ -32,6 +32,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "sync.h"
 #include "lbard.h"
+#include "hf.h"
+#include "radios.h"
 
 #include "golay.h"
 #include "fec-3.0.1/fixed.h"
@@ -55,7 +57,7 @@ int serial_errors=0;
 int radio_transmissions_seen=0;
 int radio_transmissions_byus=0;
 
-int radio_mode=RADIO_RFD900;
+int radio_mode=-1;
 int radio_features=0;
 
 int radio_get_type()
@@ -131,14 +133,11 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   if (debug_radio_tx) {
     dump_bytes("sending packet",buffer,offset);
   }
-
   
   assert( offset <= (FEC_MAX_BYTES+FEC_LENGTH) );
 
-  switch(radio_mode) {
-  case RADIO_RFD900: radio_send_message_rfd900(serialfd,out,offset); break;
-  case RADIO_BARRETT_HF: radio_send_message_barretthf(serialfd,out,offset); break;
-  case RADIO_CODAN_HF: radio_send_message_codanhf(serialfd,out,offset); break;
+  if (radio_get_type()>=0) {
+    radio_types[radio_get_type()].send_packet(serialfd,out,offset);
   }
 
   // Don't forget to count our own transmissions
@@ -170,10 +169,10 @@ int radio_receive_bytes(unsigned char *bytes,int count,int monitor_mode)
     }
   }
 
-  if (radio_get_type()==RADIO_RFD900) uhf_receive_bytes(bytes,count);
-  else if (radio_get_type()==RADIO_CODAN_HF) hf_codan_receive_bytes(bytes,count);
-  else if (radio_get_type()==RADIO_BARRETT_HF) hf_barrett_receive_bytes(bytes,count);
-
+  if (radio_get_type()>=0) {
+    radio_types[radio_get_type()].receive_bytes(bytes,count);
+  }
+  
   return 0;
 }
 
@@ -239,8 +238,9 @@ int saw_packet(unsigned char *packet_data,int packet_bytes,int rssi,
 
 }
 
+// Check if radio is allowed to transmit at this point in time
 int radio_ready()
 {
-  if (radio_get_type()==RADIO_RFD900) return 1;
-  else return hf_radio_ready();
+  if (radio_get_type()<0) return 0;
+  return radio_types[radio_get_type()].is_radio_ready();
 }

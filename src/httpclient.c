@@ -27,18 +27,6 @@ struct json_parse_state {
   int row_count;
 };
 
-// From os.c in serval-dna
-long long gettime_ms()
-{
-  struct timeval nowtv;
-  // If gettimeofday() fails or returns an invalid value, all else is lost!
-  if (gettimeofday(&nowtv, NULL) == -1)
-    return -1;
-  if (nowtv.tv_sec < 0 || nowtv.tv_usec < 0 || nowtv.tv_usec >= 1000000)
-    return -1;
-  return nowtv.tv_sec * 1000LL + nowtv.tv_usec / 1000;
-}
-
 int json_render_meshms_message(struct json_parse_state *p)
 {
   char *field[10];

@@ -2,10 +2,19 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/uio.h>
+#include <sys/socket.h>
 #include <sys/time.h>
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <strings.h>
+#include <string.h>
+#include <termios.h>
+
+#include "sync.h"
+#include "lbard.h"
+#include "radios.h"
 
 #ifdef WIN32
 #include <windows.h>
@@ -68,6 +77,101 @@ int hextochar(int h)
   return '?';
 }
 
+int nybltohexchar(int v)
+{
+  if (v<10) return '0'+v;
+  return 'A'+v-10;
+}
+
+int ishex(int c)
+{
+  if (c>='0'&&c<='9') return 1;
+  if (c>='A'&&c<='F') return 1;
+  if (c>='a'&&c<='f') return 1;
+  return 0;
+}
+
+int chartohexnybl(int c)
+{
+  if (c>='0'&&c<='9') return c-'0';
+  if (c>='A'&&c<='F') return c-'A'+10;
+  if (c>='a'&&c<='f') return c-'a'+10;
+  return 0;
+}
+
+
+int hex_encode(unsigned char *in, char *out, int in_len, int radio_type)
+{
+  int out_ofs=0;
+  int i;
+  for(i=0;i<in_len;i++) {
+    out[out_ofs++]=nybltohexchar(in[i]>>4);
+    out[out_ofs++]=nybltohexchar(in[i]&0xf);
+  }
+  out[out_ofs]=0;
+  return out_ofs;
+}
+
+int hex_decode(char *in, unsigned char *out, int out_len,int radio_type)
+{
+  int i;
+  int out_count=0;
+
+  for(i=0;i<strlen(in);i+=2) {
+    int v=hextochar(in[i+0])<<4;
+    v|=hextochar(in[i+1]);
+    out[out_count++]=v;
+  }
+  out[out_count]=0;
+  return out_count;
+}
+
+int ascii64_encode(unsigned char *in, char *out, int in_len, int radio_type)
+{
+  // ASCII-64 is use by HF ALE radio links. It is just ASCII codes 0x20 - 0x5f
+  // On Barrett, nothing is escaped.
+  // On Codan, spaces must be escaped
+
+  int out_ofs=0;
+  int i,j;
+  for(i=0;i<in_len;i+=3) {
+    // Encode 3 bytes using 4
+    unsigned char ob[4];
+    ob[0]=0x20+(in[i+0]&0x3f);
+    ob[1]=0x20+((in[i+0]&0xc0)>>6)+((in[i+1]&0x0f)<<2);
+    ob[2]=0x20+((in[i+1]&0xf0)>>4)+((in[i+2]&0x03)<<4);
+    ob[3]=0x20+((in[i+2]&0xfc)>>2);
+
+    // XXX - Character escaping policy should be set in radio driver
+    // not in here!
+    for(j=0;j<4;j++) {
+      if ((ob[j]==' ')&&(radio_type==RADIOTYPE_HFCODAN)) {
+	out[out_ofs++]='\\';
+      }
+      out[out_ofs++]=ob[j];
+    }
+  }
+  out[out_ofs]=0;
+  return 0;
+}
+
+int ascii64_decode(char *in, unsigned char *out, int out_len,int radio_type)
+{
+  int i;
+  int out_ofs=0;
+  for(i=0;in[i];i+=4) {
+    unsigned char ob[3];
+    ob[0]=(in[i+0]-0x20)&0x3f;
+    ob[0]|=(((in[i+1]-0x20)&0x03)<<6);
+    ob[1]=(((in[i+1]-0x20)&0x3c)>>2);
+    ob[1]|=(((in[i+2]-0x20)&0x0f)<<4);
+    ob[2]=(((in[i+2]-0x20)&0x30)>>4);
+    ob[2]|=(((in[i+3]-0x20)&0x3f)<<2);
+    out_ofs+=3;
+  }
+
+  return out_ofs;
+}
 
 int dump_bytes(char *msg, unsigned char *bytes, int length)
 {

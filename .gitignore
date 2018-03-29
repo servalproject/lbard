@@ -5,3 +5,9 @@
 /echotest
 /*.dSYM
 /testlog
+*~
+*#
+.#*
+include/radios.h
+include/version.h
+src/radio_types.c

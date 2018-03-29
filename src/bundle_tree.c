@@ -43,20 +43,7 @@ extern char *my_sid_hex;
 #include "sync.h"
 #include "lbard.h"
 #include "sha1.h"
-
-char timestamp_str_out[1024];
-char *timestamp_str(void)
-{
-  struct tm tm;
-  time_t now=time(0);
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  localtime_r(&now,&tm);
-  snprintf(timestamp_str_out,1024,"[%02d:%02d.%02d.%03d %c%c%c%c*]",
-	   tm.tm_hour,tm.tm_min,tm.tm_sec,(int)tv.tv_usec/1000,
-	   my_sid_hex[0],my_sid_hex[1],my_sid_hex[2],my_sid_hex[3]);
-  return timestamp_str_out;
-}
+#include "util.h"
 
 int bundle_calculate_tree_key(sync_key_t *bundle_tree_key,
 			      uint8_t sync_tree_salt[SYNC_SALT_LEN],

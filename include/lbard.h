@@ -1,12 +1,5 @@
 #include <sys/time.h>
 
-#define RADIO_RFD900 1
-#define RADIO_BARRETT_HF 2
-#define RADIO_CODAN_HF 3
-
-#define RADIO_ALE_2G (1<<0)
-#define RADIO_ALE_3G (1<<1)
-
 // For now we use a fixed link MTU for all radio types for now.
 // For ALE 2G we fragment frames.  We can revise this for ALE 3G large message blocks,
 // and when we implement a better analog modem down the track.
@@ -577,3 +570,5 @@ int peer_update_send_point(int peer);
 int process_ota_bundle(char *bid,char *version);
 int setup_periodic_requests(char *filename);
 int make_periodic_requests(void);
+
+#include "util.h"

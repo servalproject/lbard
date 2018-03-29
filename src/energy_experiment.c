@@ -49,19 +49,6 @@ struct experiment_data {
 //int pulse_widths[]={43,86,173,260,520,1041,2083,4166,8333,33333,0};
 int pulse_widths[]={86,0};
 
-
-// From os.c in serval-dna
-long long gettime_us()
-{
-  struct timeval nowtv;
-  // If gettimeofday() fails or returns an invalid value, all else is lost!
-  if (gettimeofday(&nowtv, NULL) == -1)
-    return -1;
-  if (nowtv.tv_sec < 0 || nowtv.tv_usec < 0 || nowtv.tv_usec >= 1000000)
-    return -1;
-  return nowtv.tv_sec * 1000000LL + nowtv.tv_usec;
-}
-
 char *wifi_interface_name=NULL;
 int wifi_fd=-1;
 

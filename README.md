@@ -105,10 +105,46 @@ command-line argument, so that it can access [Serval DNA][]'s REST API:
 Testing
 -------
 
-TBC
+LBARD uses a test framework derived from the Serval DNA test framework.  All tests can be run
+by running the following command:
+
+    $ tests/lbard
+
+Logs from each test will be created in the testlog/ directory
+
+
+Support for different radio types
+----------------------------------
+
+At present RFD900 (and RFD868) radios from RFDesign.com.au are the primarily supported radios.
+They MUST run the custom firmware developed for them in order to work with LBARD.  That firmware
+allows the radios to operate in a true ad-hoc model, without any clock or other coordination.
+
+There is also highly experimental preliminary support for Codan and Barrett HF radios using
+ALE 2G text messages as the transport.
+
+Adding support for new radio types
+----------------------------------
+
+*** This information is very much a work in progress.
+
+There are several steps required:
+
+1. Create a simulation driver for your radio in src/drivers as fake_<radio type>.c.
+   This will be used by the fakecsmaradio program that is the heart of the test framework.
+2. Add an auto-detection test for your new radio to tests/lbard that instructs fakecsmaradio
+   to instantiate your new radio type, and then probe whether LBARD can detect the radio type.
+   This test will of course at this point fail, because you have not yet implemented the LBARD
+   driver for your radio.
+3. Create a radio driver for your radio in src/drivers as lbard_<radio type>.c.
+   This is what LBARD will use to manage radio of this new type.  This consists of several main
+   components: (1) Auto-detection of radio; (2) sending of packets, and (3) parsing of input from
+   the radio.  At present, all radios are expected to be interfaced with via a standard serial
+   UART interface.
+
 
 -----
-**Copyright 2016 Serval Project Inc.**  
+**Copyright 2016-2018 Serval Project Inc.**  
 ![CC-BY-4.0](./cc-by-4.0.png)
 This document is available under the [Creative Commons Attribution 4.0 International licence][CC BY 4.0].
 

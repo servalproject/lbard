@@ -1,4 +1,14 @@
 
+/*
+The following specially formatted comments tell the LBARD build environment about this radio.
+See radio_type for the meaning of each field.
+See radios.h target in Makefile to see how this comment is used to register support for the radio.
+
+RADIO TYPE: RFD900,"rfd900","RFDesign RFD900, RFD868 or compatible",rfd900_radio_detect,rfd900_serviceloop,rfd900_receive_bytes,rfd900_send_packet,always_ready,0
+
+*/
+
+
 
 #include <unistd.h>
 #include <errno.h>
@@ -15,6 +25,12 @@
 
 #include "sync.h"
 #include "lbard.h"
+#include "radios.h"
+
+int always_ready(void)
+{
+  return 1;
+}
 
 /*
   RFD900 has 255 byte maximum frames, but some bytes get taken in overhead.
@@ -64,7 +80,7 @@ extern char *prefix;
 
 int target_transmissions_per_4seconds=TARGET_TRANSMISSIONS_PER_4SECONDS;
 
-int uhf_serviceloop(int serialfd)
+int rfd900_serviceloop(int serialfd)
 {
   // Deal with clocks running backwards sometimes
   if ((congestion_update_time-gettime_ms())>4000)
@@ -170,7 +186,7 @@ int uhf_serviceloop(int serialfd)
   return 0;
 }
 
-int uhf_receive_bytes(unsigned char *bytes,int count)
+int rfd900_receive_bytes(unsigned char *bytes,int count)
 {
   int i;
   for(i=0;i<count;i++) {
@@ -285,7 +301,7 @@ int uhf_receive_bytes(unsigned char *bytes,int count)
   return 0;
 }
 
-int uhf_rfd900_setup(int fd)
+int rfd900_radio_detect(int fd)
 {
   /* Initialise an RFD900 radio.
      Here we want to reset the radio, and read out its attached I2C EEPROM, if any,
@@ -294,6 +310,13 @@ int uhf_rfd900_setup(int fd)
 
      XXX - Allow txfreq and txpower options to override the stored defaults for now.
   */
+
+  serial_setup_port_with_speed(fd,230400);
+
+  fprintf(stderr,"WARNING: Assuming RFD900 radio without probing.\n");
+
+  radio_set_type(RADIOTYPE_RFD900);
+  
   eeprom_read(fd);
 
   return 0;
@@ -380,27 +403,7 @@ int rfd900_set_tx_power(int serialfd)
   return 0;
 }
 
-int dump_bytes(char *msg,unsigned char *bytes,int length)
-{
-  printf("%s:\n",msg);
-  for(int i=0;i<length;i+=16) {
-    printf("%04X: ",i);
-    for(int j=0;j<16;j++) if (i+j<length) printf(" %02X",bytes[i+j]);
-    printf("  ");
-    for(int j=0;j<16;j++) {
-      int c;
-      if (i+j<length) c=bytes[i+j]; else c=' ';
-      if (c<' ') c='.';
-      if (c>0x7d) c='.';
-      printf("%c",c);
-    }
-    printf("\n");
-  }
-  return 0;
-}
-
-
-int radio_send_message_rfd900(int serialfd,unsigned char *out, int offset)
+int rfd900_send_packet(int serialfd,unsigned char *out, int offset)
 {
   // Now escape any ! characters, and append !! to the end for the RFD900 CSMA
   // packetised firmware.
