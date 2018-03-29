@@ -617,17 +617,24 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	if (start_offset>=peer_records[i]->request_bitmap_offset)
 	  {
 	    int offset=start_offset-peer_records[i]->request_bitmap_offset;
+	    int block_offset=start_offset;
 	    int trim=offset&64;
-	    if (trim) { offset+=64-trim; bytes-=trim; }
+	    int bytes_remaining=bytes;
+	    if (trim) { offset+=64-trim; bytes_remaining-=trim; }
 	    int bit=offset/64;
 	    if (bit>=0)
-	      while((bytes>=64)&&(bit<(32*8*64))) {
-		printf(">>> %s Marking [%d,%d) sent due to transmitted piece.\n",
-		       timestamp_str(),start_offset,start_offset+bytes);
-		fprintf(stderr,
-			"BITMAP: Setting bit %d due to transmitted piece.\n",bit);
+	      while((bytes_remaining>=64)&&(bit<(32*8*64))) {
+		printf(">>> %s Marking [%d,%d) sent to peer #%d(%s*) due to transmitted piece.\n",
+		       timestamp_str(),block_offset,block_offset+64,i,peer_records[i]->sid_prefix);
+		if (!(peer_records[i]->request_bitmap[bit>>3]&(1<<(bit&7))))
+		  fprintf(stderr,
+			  "BITMAP: Setting bit %d due to transmitted piece.\n",bit);
+		else
+		  fprintf(stderr,
+			  "BITMAP: Bit %d already set!\n",bit);
+		  
 		peer_records[i]->request_bitmap[bit>>3]|=(1<<(bit&7));
-		bit++; bytes-=64;
+		bit++; bytes_remaining-=64; block_offset+=64;
 	      }
 	  } else {
 	  printf(">>> %s NOT Marking [%d,%d) sent (start_offset<bitmap offset).\n",
