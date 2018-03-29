@@ -256,10 +256,10 @@ setup_DetectRFD900() {
 }
 test_DetectRFD900() {
    # Test that all radios are detected
-   wait_until --timeout=10 grep "No HF radio detected, assuming RFD900 series radio" A_LBARDERR
-   wait_until --timeout=10 grep "No HF radio detected, assuming RFD900 series radio" B_LBARDERR
-   wait_until --timeout=10 grep "No HF radio detected, assuming RFD900 series radio" C_LBARDERR
-   wait_until --timeout=10 grep "No HF radio detected, assuming RFD900 series radio" D_LBARDERR
+   wait_until --timeout=10 grep "Radio is a rfd900" A_LBARDERR
+   wait_until --timeout=10 grep "Radio is a rfd900" B_LBARDERR
+   wait_until --timeout=10 grep "Radio is a rfd900" C_LBARDERR
+   wait_until --timeout=10 grep "Radio is a rfd900" D_LBARDERR
 
    fork_terminate %lbardA %lbardB %lbardC %lbardD 
    fork_terminate_all

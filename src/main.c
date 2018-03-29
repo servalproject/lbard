@@ -478,8 +478,14 @@ int main(int argc, char **argv)
 
     make_periodic_requests();
 
-    if (radio_get_type()>=0)
+    if (radio_get_type()>=0) {
+      if (!radio_types[radio_get_type()].serviceloop) {
+	fprintf(stderr,"Radio type set to illegal value %d\n",
+		radio_get_type());
+	exit(-1);
+      }
       radio_types[radio_get_type()].serviceloop(serialfd);
+    }
     else {
       fprintf(stderr,"ERROR: Connected to unknown radio type.\n");
       exit(-1);

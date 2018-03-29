@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 #include "radios.h"
+#include "hf.h"
 
 int set_nonblock(int fd)
 {
@@ -175,11 +176,13 @@ int serial_setup_port(int fd)
   serial_setup_port_with_speed(fd,9600); 
   
   
-  fprintf(stderr,"Attempting to detect radio type.\n");
+  fprintf(stderr,"Attempting to detect radio type...\n");
 
   for(int i=0;radio_types[i].id>=0;i++)
     {
       if (radio_types[i].autodetect(fd)==1) {
+	fprintf(stderr,"Radio is a %s (%s)\n",
+		radio_types[i].name,radio_types[i].description);
 	return 0;
       }
     }

@@ -319,7 +319,7 @@ int rfd900_radio_detect(int fd)
   
   eeprom_read(fd);
 
-  return 0;
+  return 1;
 }
 
 /* 
