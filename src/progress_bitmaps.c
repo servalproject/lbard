@@ -42,6 +42,102 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "lbard.h"
 
 /*
+  Generate the starting offset and bitmap of 64 byte segments that we need
+  relative to that point in the payload stream.  The purpose is to provide a list
+  with enough pending 64 byte segments so that all our current senders know where they
+  should next send from.
+
+  The bitmap is based on the absolute first hole in the stream that we are missing.
+
+  The segment list is arranged in reverse order, so we start by getting the last
+  piece in the segment list. If it starts at 0, then our starting point is the end
+  of the first segment. If not, then our starting point is 0. We then mark the bitmap
+  as requiring all pieces.  Then the segment list is retraversed, and any 64 byte
+  region that we have in its entirety is marked as already held.
+*/
+int partial_update_request_bitmap(struct partial_bundle *p)
+{
+  // Get starting point
+  int starting_position=0;
+  // 32*8*64= 16KiB of data, enough for several seconds, even with 16 senders.
+  unsigned char bitmap[32];
+  bzero(&bitmap[0],32);
+  struct segment_list *l=p->body_segments;
+  while(l&&l->next) l=l->next;
+  if (l) {
+    if (!l->start_offset) starting_position=l->length;
+  }
+
+  l=p->body_segments;
+  while(l) {
+    if ((l->start_offset>=starting_position)
+	&&(l->start_offset<=(starting_position+32*8*64))) {
+      int start=l->start_offset;
+      int length=l->length;
+      // Ignore any first partial 
+      if (start&63) {
+	int trim=64-(start&63);
+	start+=trim;
+	length-=trim;
+      }
+      // Work out first block number
+      int block=(start-starting_position)>>6; //  divide by 64
+      // Then mark as received all those we already have
+      while (length>=64) {
+	bitmap[block>>3]|=(1<<(block&7));
+	block++; length-=64;
+      }
+    }
+
+    l=l->next;
+  }
+
+  // Save request bitmap
+  p->request_bitmap_start=starting_position;
+  memcpy(p->request_bitmap,bitmap,32);
+  
+  return 0;
+}
+
+int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg_in,int *offset)
+{  
+  fprintf(stderr,"Saw BITMAP @ %d\n",*offset);
+  unsigned char *msg=&msg_in[*offset];
+  (*offset)+=1; // Skip 'M'
+  (*offset)+=8; // Skip BID prefix
+  (*offset)+=2; // Skip manifest starting point
+  (*offset)+=4; // Skip start of region of interest
+  (*offset)+=32; // Skip progress bitmap
+
+  // Get fields
+  unsigned char *bid_prefix=&msg[1];
+  int manifest_offset=msg[9]|(msg[10]<<8);
+  int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[14]<<24);
+  unsigned char *bitmap=&msg[15];
+  int bundle=lookup_bundle_by_prefix(bid_prefix,8);
+
+  fprintf(stderr,"T+%lldms : SYNC BITMAP ACK: %s* is informing everyone to send from m=%d, p=%d of"
+	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d/%d)\n    ",
+	  gettime_ms()-start_time,
+	  p?p->sid_prefix:"<null>",
+	  manifest_offset,body_offset,
+	  msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8],
+	  bundle,bundle_count);
+  dump_progress_bitmap(bitmap);
+
+  if (p->tx_bundle==bundle) {
+    // We are sending this bundle to them, so update our info
+    if (p->tx_bundle_manifest_offset<manifest_offset)
+      p->tx_bundle_manifest_offset=manifest_offset;
+    p->request_bitmap_bundle=bundle;
+    p->request_bitmap_offset=body_offset;
+    memcpy(p->request_bitmap,bitmap,32);
+  }
+  
+  return 0;
+}
+
+/*
   Update the point we intend to send from in the current bundle based on the
   request bitmap.
  */
@@ -49,7 +145,11 @@ int peer_update_send_point(int peer)
 {
   // Only update if the bundle ID of the bitmap and the bundle being sent match
   if (peer_records[peer]->request_bitmap_bundle!=peer_records[peer]->tx_bundle)
-    return 0;
+    {
+      printf(">>> %s BITMAP : No updating send point because request_bitmap_bundle != tx_bundle (%d vs %d)\n",
+	     timestamp_str(),peer_records[peer]->request_bitmap_bundle,peer_records[peer]->tx_bundle);
+      return 0;
+    }
 
   // Pick random piece that has yet to be received, and send that
   int candidates[256];
@@ -85,9 +185,10 @@ int peer_update_send_point(int peer)
     int selection=candidates[candidate];
     peer_records[peer]->tx_bundle_body_offset
       =(peer_records[peer]->request_bitmap_offset+(selection*64));
-    fprintf(stderr,"BITMAP based send point = %d (candidate %d/%d = block %d)\n",
-	    peer_records[peer]->tx_bundle_body_offset,
-	    candidate,candidate_count,selection);
+    printf(">>> %s BITMAP based send point for peer #%d(%s*) = %d (candidate %d/%d = block %d)\n",
+	   timestamp_str(),peer,peer_records[peer]->sid_prefix,
+	   peer_records[peer]->tx_bundle_body_offset,
+	   candidate,candidate_count,selection);
     
   }
   return 0;
@@ -112,6 +213,9 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	    &&peer_records[i]->request_bitmap_bundle!=peer_records[i]->tx_bundle))
 	  )
 	{
+	  printf(">>> %s BITMAP: Resetting progress bitmap for peer #%d(%s*s)\n",
+		 timestamp_str(),i,peer_records[i]->sid_prefix);
+
 	  // Reset bitmap and start accumulating
 	  bzero(peer_records[i]->request_bitmap,32);
 	  peer_records[i]->request_bitmap_bundle=bundle_number;
@@ -144,11 +248,10 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 		printf(">>> %s Marking [%d,%d) sent to peer #%d(%s*) due to transmitted piece.\n",
 		       timestamp_str(),block_offset,block_offset+64,i,peer_records[i]->sid_prefix);
 		if (!(peer_records[i]->request_bitmap[bit>>3]&(1<<(bit&7))))
-		  fprintf(stderr,
-			  "BITMAP: Setting bit %d due to transmitted piece.\n",bit);
+		  printf(">>> %s BITMAP: Setting bit %d due to transmitted piece.\n",
+			 timestamp_str(),bit);
 		else
-		  fprintf(stderr,
-			  "BITMAP: Bit %d already set!\n",bit);
+		  printf(">>> %s BITMAP: Bit %d already set!\n",timestamp_str(),bit);
 		  
 		peer_records[i]->request_bitmap[bit>>3]|=(1<<(bit&7));
 		bit++; bytes_remaining-=64; block_offset+=64;
@@ -159,14 +262,15 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	}
       } else {
 	if (peer_records[i]) {
-	  if (0) printf(">>> %s NOT Marking [%d,%d) sent (no matching bitmap: %d vs %d).\n",
+	  if (1) printf(">>> %s NOT Marking [%d,%d) sent to peer #%d(%s*) (no matching bitmap: %d vs %d).\n",
 			timestamp_str(),start_offset,start_offset+bytes,
+		        i,peer_records[i]->sid_prefix,
 			peer_records[i]->request_bitmap_bundle,bundle_number);
 	  if (peer_records[i]->tx_bundle==bundle_number)
-	    if (0) printf(">>> %s ... but I should care, because it matches the bundle I am sending.\n",timestamp_str());
+	    if (1) printf(">>> %s ... but I should care about marking it, because it matches the bundle I am sending.\n",timestamp_str());
 	  if (peer_records[i]->tx_bundle==-1)
 	    // In fact, if we see someone sending a bundle to someone, and we don't yet know if we can send it yet, we should probably start on a speculative basis
-	    printf(">>> %s ... but I could care, because I am not sending a bundle to them yet.\n",timestamp_str());
+	    printf(">>> %s ... but I could care about marking it, because I am not sending a bundle to them yet.\n",timestamp_str());
 	}
       }
     }

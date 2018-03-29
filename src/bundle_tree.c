@@ -214,8 +214,9 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 
   if (actual_bytes<0) return -1;
 
-  printf(">>> %s I just sent piece [%d,%d) for %s*.\n",
-	 timestamp_str(),start_offset,start_offset+actual_bytes,
+  printf(">>> %s I just sent %s piece [%d,%d) for %s*.\n",
+	 timestamp_str(),is_manifest?"manifest":"body",
+	 start_offset,start_offset+actual_bytes,
 	 peer_records[target_peer]->sid_prefix);
   if (!is_manifest)
     peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,
@@ -1047,44 +1048,6 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
     
   }
 
-  return 0;
-}
-
-int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg_in,int *offset)
-{  
-  fprintf(stderr,"Saw BITMAP @ %d\n",*offset);
-  unsigned char *msg=&msg_in[*offset];
-  (*offset)+=1; // Skip 'M'
-  (*offset)+=8; // Skip BID prefix
-  (*offset)+=2; // Skip manifest starting point
-  (*offset)+=4; // Skip start of region of interest
-  (*offset)+=32; // Skip progress bitmap
-
-  // Get fields
-  unsigned char *bid_prefix=&msg[1];
-  int manifest_offset=msg[9]|(msg[10]<<8);
-  int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[14]<<24);
-  unsigned char *bitmap=&msg[15];
-  int bundle=lookup_bundle_by_prefix(bid_prefix,8);
-
-  fprintf(stderr,"T+%lldms : SYNC BITMAP ACK: %s* is informing everyone to send from m=%d, p=%d of"
-	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d/%d)\n    ",
-	  gettime_ms()-start_time,
-	  p?p->sid_prefix:"<null>",
-	  manifest_offset,body_offset,
-	  msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8],
-	  bundle,bundle_count);
-  dump_progress_bitmap(bitmap);
-
-  if (p->tx_bundle==bundle) {
-    // We are sending this bundle to them, so update our info
-    if (p->tx_bundle_manifest_offset<manifest_offset)
-      p->tx_bundle_manifest_offset=manifest_offset;
-    p->request_bitmap_bundle=bundle;
-    p->request_bitmap_offset=body_offset;
-    memcpy(p->request_bitmap,bitmap,32);
-  }
-  
   return 0;
 }
 

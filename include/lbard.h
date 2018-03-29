@@ -570,5 +570,6 @@ int peer_update_send_point(int peer);
 int process_ota_bundle(char *bid,char *version);
 int setup_periodic_requests(char *filename);
 int make_periodic_requests(void);
+int lookup_bundle_by_prefix(const unsigned char *prefix,int len);
 
 #include "util.h"
