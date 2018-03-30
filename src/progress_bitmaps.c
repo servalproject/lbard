@@ -149,6 +149,32 @@ int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg_in,int *o
   return 0;
 }
 
+int progress_bitmap_translate(struct peer_state *p,int new_body_offset)
+{
+
+  // First, check if the translation requires us to discard our bitmap,
+  // or whether we can keep all or part of it.
+  
+  // Start with an empty bitmap
+  unsigned char new_request_bitmap[32];
+  bzero(new_request_bitmap,32);
+
+  int bit_delta=(new_body_offset-p->request_bitmap_offset)/64;
+  
+  // Copy in any bits from the pre-translation bitmap
+  for(int bit=0;bit<256;bit++) {
+    int the_bit=0;
+    int old_bit=bit+bit_delta;
+    if (old_bit>=0&&old_bit<256)
+      the_bit=p->request_bitmap[old_bit>>3]&(1<<(old_bit&7));
+    if (the_bit)
+      new_request_bitmap[bit>>3]|=(1<<(bit&7));
+  }
+  
+  p->request_bitmap_offset=new_body_offset;
+  memcpy(p->request_bitmap,new_request_bitmap,32);
+}
+
 /*
   Update the point we intend to send from in the current bundle based on the
   request bitmap.
@@ -162,6 +188,18 @@ int peer_update_send_point(int peer)
 	     timestamp_str(),peer_records[peer]->request_bitmap_bundle,peer_records[peer]->tx_bundle);
       return 0;
     }
+
+  printf(">>> %s TX bitmap for %s* : bundle:%-2d/%-2d, m:%4d, p:%4d : ",
+	 timestamp_str(),peer_records[peer]->sid_prefix,
+
+	 peer_records[peer]->tx_bundle,
+	 peer_records[peer]->request_bitmap_bundle,
+	 
+	 peer_records[peer]->tx_bundle_manifest_offset,
+	 peer_records[peer]->request_bitmap_offset);
+  // Keep all bitmaps in line, by padding front with - characters where the bitmap starts later
+  for(int i=0;i<peer_records[peer]->request_bitmap_offset;i+=64) printf("-");
+  dump_progress_bitmap(stdout,peer_records[peer]->request_bitmap);
 
   // Pick random piece that has yet to be received, and send that
   int candidates[256];

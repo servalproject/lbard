@@ -267,8 +267,8 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 	} else {
 	  if ((peer_records[pn]->tx_bundle_body_offset>=start_offset)
 	      &&(peer_records[pn]->tx_bundle_body_offset<(start_offset+actual_bytes))) {
-	    fprintf(stderr,"T+%lldms : Cursor advance from %d to %d, due to sending [%d..%d].\n",
-		    gettime_ms()-start_time,
+	    fprintf(">>> %s Cursor advance from %d to %d, due to sending [%d..%d].\n",
+		    timestamp_str(),
 		    peer_records[pn]->tx_bundle_body_offset,(start_offset+actual_bytes),
 		    start_offset,(start_offset+actual_bytes)
 		    );
@@ -1093,8 +1093,11 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
 
   if (bundle==p->request_bitmap_bundle) {
     // Reset TX bitmap, since we are being asked to send from here.
-    bzero(p->request_bitmap,32);    
-    p->request_bitmap_offset=body_offset;
+    // XXX - Is the ACK telling us that they DEFFINATELY have received to this point,
+    // or is it possible that it is giving a suggested start, but that there may be
+    // previous holes? In the latter case, we don't want to advance beyond those holes,
+    // so that we don't forget the progress already made.
+    progress_bitmap_translate(p,body_offset);
   }
   
   if (bundle==p->tx_bundle) {
