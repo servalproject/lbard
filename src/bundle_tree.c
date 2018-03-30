@@ -267,11 +267,11 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 	} else {
 	  if ((peer_records[pn]->tx_bundle_body_offset>=start_offset)
 	      &&(peer_records[pn]->tx_bundle_body_offset<(start_offset+actual_bytes))) {
-	    fprintf(">>> %s Cursor advance from %d to %d, due to sending [%d..%d].\n",
-		    timestamp_str(),
-		    peer_records[pn]->tx_bundle_body_offset,(start_offset+actual_bytes),
-		    start_offset,(start_offset+actual_bytes)
-		    );
+	    printf(">>> %s Cursor advance from %d to %d, due to sending [%d..%d].\n",
+		   timestamp_str(),
+		   peer_records[pn]->tx_bundle_body_offset,(start_offset+actual_bytes),
+		   start_offset,(start_offset+actual_bytes)
+		   );
 	    peer_records[pn]->tx_bundle_body_offset=(start_offset+actual_bytes);
 	  }
 	}

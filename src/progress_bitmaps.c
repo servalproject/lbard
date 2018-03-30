@@ -46,7 +46,7 @@ int dump_progress_bitmap(FILE *f, unsigned char *b)
   for(int i=0;i<(32*8);i++) {
     if (b[i>>3]&(1<<(i&7)))
       fprintf(f,"."); else fprintf(f,"Y");
-    if (((i&63)==63)&&(i!=255)) fprintf(f,"\n    ");
+    //    if (((i&63)==63)&&(i!=255)) fprintf(f,"\n    ");
   }
   fprintf(f,"\n");
   return 0;
@@ -176,6 +176,8 @@ int progress_bitmap_translate(struct peer_state *p,int new_body_offset)
   
   p->request_bitmap_offset=new_body_offset;
   memcpy(p->request_bitmap,new_request_bitmap,32);
+
+  return 0;
 }
 
 /*
@@ -305,8 +307,9 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	    int bit=offset/64;
 	    if (bit>=0)
 	      while((bytes_remaining>=64)&&(bit<(32*8*64))) {
-		printf(">>> %s Marking [%d,%d) sent to peer #%d(%s*) due to transmitted piece.\n",
-		       timestamp_str(),block_offset,block_offset+64,i,peer_records[i]->sid_prefix);
+		if (0)
+		  printf(">>> %s Marking [%d,%d) sent to peer #%d(%s*) due to transmitted piece.\n",
+			 timestamp_str(),block_offset,block_offset+64,i,peer_records[i]->sid_prefix);
 		if (!(peer_records[i]->request_bitmap[bit>>3]&(1<<(bit&7))))
 		  printf(">>> %s BITMAP: Setting bit %d due to transmitted piece.\n",
 			 timestamp_str(),bit);
