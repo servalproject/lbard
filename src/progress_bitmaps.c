@@ -41,6 +41,18 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+int dump_progress_bitmap(FILE *f, unsigned char *b)
+{
+  for(int i=0;i<(32*8);i++) {
+    if (b[i>>3]&(1<<(i&7)))
+      fprintf(f,"."); else fprintf(f,"Y");
+    if (((i&63)==63)&&(i!=255)) fprintf(f,"\n    ");
+  }
+  fprintf(f,"\n");
+  return 0;
+}
+
+
 /*
   Generate the starting offset and bitmap of 64 byte segments that we need
   relative to that point in the payload stream.  The purpose is to provide a list
@@ -116,14 +128,14 @@ int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg_in,int *o
   unsigned char *bitmap=&msg[15];
   int bundle=lookup_bundle_by_prefix(bid_prefix,8);
 
-  fprintf(stderr,"T+%lldms : SYNC BITMAP ACK: %s* is informing everyone to send from m=%d, p=%d of"
-	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d/%d)\n    ",
-	  gettime_ms()-start_time,
-	  p?p->sid_prefix:"<null>",
-	  manifest_offset,body_offset,
-	  msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8],
-	  bundle,bundle_count);
-  dump_progress_bitmap(bitmap);
+  printf(">>> %s SYNC BITMAP ACK: %s* is informing everyone to send from m=%d, p=%d of"
+	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d/%d):  ",
+	 timestamp_str(),
+	 p?p->sid_prefix:"<null>",
+	 manifest_offset,body_offset,
+	 msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8],
+	 bundle,bundle_count);
+  dump_progress_bitmap(stdout, bitmap);
 
   if (p->tx_bundle==bundle) {
     // We are sending this bundle to them, so update our info
@@ -198,8 +210,8 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 							 int start_offset,
 							 int bytes)
 {
-  fprintf(stderr,">>> %s Saw body piece [%d,%d)\n",
-	 timestamp_str(),start_offset,start_offset+bytes);
+  printf(">>> %s Saw body piece [%d,%d) of bundle #%d\n",
+	 timestamp_str(),start_offset,start_offset+bytes,bundle_number);
   
   for(int i=0;i<MAX_PEERS;i++)
     {
@@ -209,12 +221,19 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	  (peer_records[i]->request_bitmap_bundle==-1)
 	  ||
 	  // We have a bitmap, but for a different bundle to the one we are sending
-	  ((peer_records[i]->tx_bundle==bundle_number
-	    &&peer_records[i]->request_bitmap_bundle!=peer_records[i]->tx_bundle))
+	  (
+	   (peer_records[i]->tx_bundle!=-1)
+	   &&
+	   (peer_records[i]->tx_bundle==bundle_number)
+	   &&
+	   (peer_records[i]->request_bitmap_bundle!=peer_records[i]->tx_bundle)
+	   )
 	  )
 	{
-	  printf(">>> %s BITMAP: Resetting progress bitmap for peer #%d(%s*s)\n",
-		 timestamp_str(),i,peer_records[i]->sid_prefix);
+	  printf(">>> %s BITMAP: Resetting progress bitmap for peer #%d(%s*): tx_bundle=%d, bundle_number=%d, request_bitmap_bundle=%d\n",
+		 timestamp_str(),i,peer_records[i]->sid_prefix,
+		 peer_records[i]->tx_bundle,bundle_number,
+		 peer_records[i]->request_bitmap_bundle);
 
 	  // Reset bitmap and start accumulating
 	  bzero(peer_records[i]->request_bitmap,32);

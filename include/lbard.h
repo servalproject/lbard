@@ -562,7 +562,7 @@ int partial_update_recent_senders(struct partial_bundle *p,char *sender_prefix_h
 int partial_update_request_bitmap(struct partial_bundle *p);
 int hex_to_val(int c);
 int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg,int *offset);
-int dump_progress_bitmap(unsigned char *b);
+int dump_progress_bitmap(FILE *f, unsigned char *b);
 int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 							 int start_offset,
 							 int bytes);

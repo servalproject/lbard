@@ -119,17 +119,6 @@ int dump_segment_list(struct segment_list *s)
   return 0;
 }
 
-int dump_progress_bitmap(unsigned char *b)
-{
-  for(int i=0;i<(32*8);i++) {
-    if (b[i>>3]&(1<<(i&7)))
-      fprintf(stderr,"."); else fprintf(stderr,"Y");
-    if (((i&63)==63)&&(i!=255)) fprintf(stderr,"\n    ");
-  }
-  fprintf(stderr,"\n");
-  return 0;
-}
-
 int dump_partial(struct partial_bundle *p)
 {
   fprintf(stderr,"Progress receiving BID=%s* version %lld:\n",
@@ -142,7 +131,7 @@ int dump_partial(struct partial_bundle *p)
   dump_segment_list(p->body_segments);
   fprintf(stderr,"  Request bitmap: start=%d, bits=\n    ",
 	  p->request_bitmap_start);
-  dump_progress_bitmap(p->request_bitmap);
+  dump_progress_bitmap(stderr,p->request_bitmap);
   return 0;
 }
 
