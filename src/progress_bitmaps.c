@@ -162,7 +162,10 @@ int progress_bitmap_translate(struct peer_state *p,int new_body_offset)
   int bit_delta=(new_body_offset-p->request_bitmap_offset)/64;
   
   // Copy in any bits from the pre-translation bitmap
-  for(int bit=0;bit<256;bit++) {
+  // We start at bit 1, not bit 0, since we assume that the reason we
+  // are advancing to this point, is that the piece at this position
+  // requires retransmission.
+  for(int bit=1;bit<256;bit++) {
     int the_bit=0;
     int old_bit=bit+bit_delta;
     if (old_bit>=0&&old_bit<256)
