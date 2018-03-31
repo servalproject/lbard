@@ -23,7 +23,7 @@ source "${0%/*}/../testdefs.sh"
 
 lbard_console() {
    local C="$instance_name"
-   executeOk --timeout=600 --executable="lbard"  --stdout-file="${C}_LBARDOUT" --stderr-file="${C}_LBARDERR" $*
+   executeOk --core-backtrace --timeout=600 --executable="lbard"  --stdout-file="${C}_LBARDOUT" --stderr-file="${C}_LBARDERR" $*
    tfw_cat --stdout --stderr
 }
 
