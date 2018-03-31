@@ -495,7 +495,7 @@ int saw_piece(char *peer_prefix,int for_me,
     // To deal with multiple senders that are providing us with pieces in lock-step,
     // we want to be able to redirect them to send from different positions in the bundle.
     // XXX - Does this mean that we will never have to deal with next_byte_would_be_useful==0 ?
-    if (!(option_flags&FLAG_NO_BITMAP_PROGRESS)) {
+    if (option_flags&FLAG_NO_BITMAP_PROGRESS) {
       if (!new_bytes_in_piece)
 	sync_schedule_progress_report(peer,i,1 /* random jump */);
       else if (!next_byte_would_be_useful)
