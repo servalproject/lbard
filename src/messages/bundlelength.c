@@ -73,6 +73,8 @@ int message_parser_4C(struct peer_state *sender,char *sender_prefix,
   // Get instance ID of peer. We use this to note if a peer's lbard has restarted
   int offset=0;
 
+  offset++;
+  
   if (length-offset<(1+8+8+4)) return -3;
   int bid_prefix_offset=offset;
   char bid_prefix[2*8+1+1];
