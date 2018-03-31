@@ -45,6 +45,13 @@ extern char *my_sid_hex;
 #include "sha1.h"
 #include "util.h"
 
+int report_queue_length=0;
+uint8_t report_queue[REPORT_QUEUE_LEN][MAX_REPORT_LEN];
+uint8_t report_lengths[REPORT_QUEUE_LEN];
+struct peer_state *report_queue_peers[REPORT_QUEUE_LEN];
+int report_queue_partials[REPORT_QUEUE_LEN];
+char *report_queue_message[REPORT_QUEUE_LEN];
+
 int bundle_calculate_tree_key(sync_key_t *bundle_tree_key,
 			      uint8_t sync_tree_salt[SYNC_SALT_LEN],
 			      char *bid,
@@ -468,15 +475,6 @@ int sync_tree_send_data(int *offset,int mtu, unsigned char *msg_out,int peer,
   return 0;
 }
 
-#define REPORT_QUEUE_LEN 32
-#define MAX_REPORT_LEN 64
-int report_queue_length=0;
-uint8_t report_queue[REPORT_QUEUE_LEN][MAX_REPORT_LEN];
-uint8_t report_lengths[REPORT_QUEUE_LEN];
-struct peer_state *report_queue_peers[REPORT_QUEUE_LEN];
-int report_queue_partials[REPORT_QUEUE_LEN];
-char *report_queue_message[REPORT_QUEUE_LEN];
-
 int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 			      char *sid_prefix_hex,
 			      char *servald_server,char *credential)
@@ -629,46 +627,6 @@ int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial)
 }
 
 
-/* Find the first byte missing in the following segment list.
-   Basically this boils down to being either byte 0, or the
-   first byte after the first segment. 
-
-   However, we actually want to randomise the byte we ask for,
-   so that if a peer is sending to multiple peers, that we can
-   encourage them to send unique content.  This ideally requires
-   that we know who a piece is addressed to. But in the very
-   least, we should pick a random starting point that is adjacent
-   to one of our partial pieces.  However, we need to take care to
-   not make the sender think that we have it all.
-*/
-int partial_first_missing_byte(struct segment_list *s)
-{
-  int add_zero=1;
-  
-  int candidates[16];
-  int candidate_count=0;
-  
-  // Walk the segment list. Adjacent segments should be merged,
-  // so the offset following each segment is a valid candidate,
-  // except if a candidate is the end of the file.
-  while(s) {
-    if (!s->start_offset) add_zero=0;
-    if (candidate_count<16)
-      candidates[candidate_count++]=s->start_offset+s->length;
-    s=s->next;
-  }
-  if ((candidate_count<16)&&(add_zero)) candidates[candidate_count++]=0;
-  
-  // The values should be in descending order. Don't ask for highest value,
-  // incase it signals the end of the bundle (we don't necessarily know the
-  // payload length during reception).  Thus only ask for the end point if
-  // there are no other alternatives.
-  if ((!(option_flags&FLAG_NO_RANDOMIZE_REDIRECT_OFFSET))
-      &&(candidate_count>1))
-    return candidates[1+random()%(candidate_count-1)]&0xffffff00;
-  else return candidates[0];
-}
-
 int sync_schedule_progress_report_bitmap(int peer, int partial)
 {
   printf(">>> %s Scheduling bitmap report.\n",timestamp_str());
@@ -739,91 +697,6 @@ int sync_schedule_progress_report_bitmap(int peer, int partial)
   assert(ofs<MAX_REPORT_LEN);
   if (slot>=report_queue_length) report_queue_length=slot+1;
 
-  return 0;
-}
-
-int sync_schedule_progress_report(int peer, int partial, int randomJump)
-{
-  int slot=report_queue_length;
-
-  for(int i=0;i<report_queue_length;i++) {
-    if (report_queue_peers[i]==peer_records[peer]) {
-      // We already want to tell this peer something.
-      // We should only need to tell a peer one thing at a time.
-      slot=i; break;
-    }
-  }
-  
-  if (slot>=REPORT_QUEUE_LEN) slot=random()%REPORT_QUEUE_LEN;
-
-  // Mark utilisation of slot, so that we can flush out stale messages
-  report_queue_partials[slot]=partial;
-  report_queue_peers[slot]=peer_records[peer];
-  
-  int ofs=0;
-  if (randomJump) report_queue[slot][ofs++]='a';
-  else report_queue[slot][ofs++]='A';
-
-  if (report_queue_message[slot]) {
-    fprintf(stderr,"Replacing report_queue message '%s' with 'progress report' (ACK)\n",
-	    report_queue_message[slot]);
-    free(report_queue_message[slot]);
-    report_queue_message[slot]=NULL;
-  } else {
-    fprintf(stderr,"Setting report_queue message to 'progress report' (ACK)\n");
-  }
-  report_queue_message[slot]=strdup("progress report");
-
-  // BID prefix
-  for(int i=0;i<8;i++) {
-    int hex_value=0;
-    char hex_string[3]={partials[partial].bid_prefix[i*2+0],
-			partials[partial].bid_prefix[i*2+1],
-			0};
-    hex_value=strtoll(hex_string,NULL,16);
-    report_queue[slot][ofs++]=hex_value;
-  }
-  
-  // manifest and body offset
-  int first_required_manifest_offset
-    =partial_first_missing_byte(partials[partial].manifest_segments);
-  int first_required_body_offset
-    =partial_first_missing_byte(partials[partial].body_segments);
-  report_queue[slot][ofs++]=first_required_manifest_offset&0xff;
-  report_queue[slot][ofs++]=(first_required_manifest_offset>>8)&0xff;
-  report_queue[slot][ofs++]=first_required_body_offset&0xff;
-  report_queue[slot][ofs++]=(first_required_body_offset>>8)&0xff;
-  report_queue[slot][ofs++]=(first_required_body_offset>>16)&0xff;
-  report_queue[slot][ofs++]=(first_required_body_offset>>24)&0xff;
-
-  // Include who we are asking
-  report_queue[slot][ofs++]=peer_records[peer]->sid_prefix_bin[0];
-  report_queue[slot][ofs++]=peer_records[peer]->sid_prefix_bin[1];
-  
-  report_lengths[slot]=ofs;
-  assert(ofs<MAX_REPORT_LEN);
-  if (slot>=report_queue_length) report_queue_length=slot+1;
-
-  if (randomJump) {
-    if (!monitor_mode)
-      fprintf(stderr,
-	      "T+%lldms : Redirecting %s to an area we have not yet received of %s*/%lld, i.e., somewhere not before m_first=%d, b_first=%d\n",
-	      gettime_ms()-start_time,
-	      peer_records[peer]->sid_prefix,
-	      partials[partial].bid_prefix,
-	      partials[partial].bundle_version,
-	      first_required_manifest_offset,
-	      first_required_body_offset);    
-  } else
-      if (!monitor_mode)
-	fprintf(stderr,
-		"T+%lldms : ACKing progress on transfer of %s* from %s. m_first=%d, b_first=%d\n",
-		gettime_ms()-start_time,
-		partials[partial].bid_prefix,
-		peer_records[peer]->sid_prefix,
-		first_required_manifest_offset,
-		first_required_body_offset);    
-  
   return 0;
 }
 
@@ -1051,100 +924,6 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
   return 0;
 }
 
-int sync_parse_ack(struct peer_state *p,unsigned char *msg,
-		   char *sid_prefix_hex,
-		   char *servald_server, char *credential)
-{
-  // Get fields
-  int manifest_offset=msg[9]|(msg[10]<<8);
-
-  int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[14]<<24);
-  int for_me=0;
-
-  if ((msg[15]==my_sid[0])&&(msg[16]==my_sid[1])) for_me=1;
-  
-  // Does the ACK tell us to jump exactly here, or to a random place somewhere
-  // after it?  If it indicates a random jump, only do the jump 1/2 the time.
-  int randomJump=0;
-  if(msg[0]=='a') randomJump=random()&1;
-
-  unsigned char *bid_prefix=&msg[1];
-
-  int bundle=lookup_bundle_by_prefix(bid_prefix,8);
-
-  fprintf(stderr,"T+%lldms : SYNC ACK: '%c' %s* is asking for %s (%02X%02X) to send from m=%d, p=%d of"
-	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d/%d)\n",
-	  gettime_ms()-start_time,
-	  msg[0],
-	  p?p->sid_prefix:"<null>",
-	  for_me?"us":"someone else",
-	  msg[15],msg[16],
-	  manifest_offset,body_offset,
-	  msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8],
-	  bundle,bundle_count);
-
-  if (!for_me) return 0;
-  
-  // Sanity check inputs, so that we don't mishandle memory.
-  if (manifest_offset<0) manifest_offset=0;
-  if (body_offset<0) body_offset=0;  
-
-  if (bundle<0) return -1;
-
-  if (bundle==p->request_bitmap_bundle) {
-    // Reset TX bitmap, since we are being asked to send from here.
-    // XXX - Is the ACK telling us that they DEFFINATELY have received to this point,
-    // or is it possible that it is giving a suggested start, but that there may be
-    // previous holes? In the latter case, we don't want to advance beyond those holes,
-    // so that we don't forget the progress already made.
-    progress_bitmap_translate(p,body_offset);
-  }
-  
-  if (bundle==p->tx_bundle) {
-
-    if (!(option_flags&FLAG_NO_HARD_LOWER)) {
-      p->tx_bundle_manifest_offset_hard_lower_bound=manifest_offset;
-      p->tx_bundle_body_offset_hard_lower_bound=body_offset;
-      fprintf(stderr,"HARDLOWER: Setting hard lower limit to M/B = %d/%d due to ACK packet\n",
-	      manifest_offset,body_offset);
-    }
-    if (randomJump) {
-      // Jump to a random position somewhere after the provided points.
-      if (!prime_bundle_cache(bundle,
-			      sid_prefix_hex,servald_server,credential))
-	{
-	  if (manifest_offset<cached_manifest_encoded_len) {
-	    if (!(option_flags&FLAG_NO_RANDOMIZE_REDIRECT_OFFSET)) {
-	      if (cached_manifest_encoded_len-manifest_offset)
-		manifest_offset+=random()%(cached_manifest_encoded_len-manifest_offset);
-	      manifest_offset&=0xffffff00;
-	    }
-	  }
-	  if (body_offset<cached_body_len) {
-	    if (!(option_flags&FLAG_NO_RANDOMIZE_REDIRECT_OFFSET)) {
-	      if (cached_body_len-body_offset)
-		body_offset+=random()%(cached_body_len-body_offset);
-	      body_offset&=0xffffff00;
-	    }
-	  }
-	  fprintf(stderr,"SYNC ACK: %s* is redirected us to a random location. Sending from m=%d, p=%d\n",
-		  p->sid_prefix,manifest_offset,body_offset);
-	}
-    } else 
-      fprintf(stderr,"SYNC ACK: %s* is asking for us to send from m=%d, p=%d\n",
-	      p->sid_prefix,manifest_offset,body_offset);
-    p->tx_bundle_manifest_offset=manifest_offset;
-    p->tx_bundle_body_offset=body_offset;      
-  } else {
-    fprintf(stderr,"SYNC ACK: Ignoring, because we are sending bundle #%d, and request is for bundle #%d\n",p->tx_bundle,bundle);
-    fprintf(stderr,"          Requested BID/version = %s/%lld\n",
-	    bundles[bundle].bid_hex, bundles[bundle].version);
-    fprintf(stderr,"                 TX BID/version = %s/%lld\n",
-	    bundles[p->tx_bundle].bid_hex, bundles[p->tx_bundle].version);
-  }
-
-  return 0;
-}
 
 void peer_has_this_key(void *context, void *peer_context, const sync_key_t *key)
 {

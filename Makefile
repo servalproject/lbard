@@ -136,7 +136,7 @@ $(SRCDIR)/radio_types.c:	$(RADIODRIVERS) Makefile
 	echo "  {-1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,-1}" >> $(SRCDIR)/radio_types.c
 	echo "};" >> $(SRCDIR)/radio_types.c
 
-$(SRCDIR)/message_handlers.c:	$(MESSAGESRCS) Makefile
+$(SRCDIR)/message_handlers.c:	$(MESSAGEHANDLERS) Makefile
 	echo '#include <stdio.h>' > $(SRCDIR)/message_handlers.c
 	echo '#include <fcntl.h>' >> $(SRCDIR)/message_handlers.c
 	echo '#include <sys/uio.h>' >> $(SRCDIR)/message_handlers.c
@@ -152,7 +152,7 @@ $(SRCDIR)/message_handlers.c:	$(MESSAGESRCS) Makefile
 	./gen_msghandler_list >> $(SRCDIR)/message_handlers.c
 	echo 'NULL};' >> $(SRCDIR)/message_handlers.c
 
-$(INCLUDEDIR)/message_handlers.h:	$(MESSAGESRCS) Makefile
+$(INCLUDEDIR)/message_handlers.h:	$(MESSAGEHANDLERS) Makefile
 	cat $(SRCDIR)/messages/*.c | grep message_parser_ | cut -f2 -d" " | cut -f1 -d"(" | awk '{ printf("int %s(struct peer_state *,char *, char *, char *,unsigned char *,int);\n",$$1); }' >$(INCLUDEDIR)/message_handlers.h
 	cat $(SRCDIR)/messages/*.c | grep "#define message_parser_" >>$(INCLUDEDIR)/message_handlers.h
 

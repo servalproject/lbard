@@ -177,3 +177,44 @@ int merge_segments(struct segment_list **s)
   }
   return 0;
 }
+
+/* Find the first byte missing in the following segment list.
+   Basically this boils down to being either byte 0, or the
+   first byte after the first segment. 
+
+   However, we actually want to randomise the byte we ask for,
+   so that if a peer is sending to multiple peers, that we can
+   encourage them to send unique content.  This ideally requires
+   that we know who a piece is addressed to. But in the very
+   least, we should pick a random starting point that is adjacent
+   to one of our partial pieces.  However, we need to take care to
+   not make the sender think that we have it all.
+*/
+int partial_first_missing_byte(struct segment_list *s)
+{
+  int add_zero=1;
+  
+  int candidates[16];
+  int candidate_count=0;
+  
+  // Walk the segment list. Adjacent segments should be merged,
+  // so the offset following each segment is a valid candidate,
+  // except if a candidate is the end of the file.
+  while(s) {
+    if (!s->start_offset) add_zero=0;
+    if (candidate_count<16)
+      candidates[candidate_count++]=s->start_offset+s->length;
+    s=s->next;
+  }
+  if ((candidate_count<16)&&(add_zero)) candidates[candidate_count++]=0;
+  
+  // The values should be in descending order. Don't ask for highest value,
+  // incase it signals the end of the bundle (we don't necessarily know the
+  // payload length during reception).  Thus only ask for the end point if
+  // there are no other alternatives.
+  if ((!(option_flags&FLAG_NO_RANDOMIZE_REDIRECT_OFFSET))
+      &&(candidate_count>1))
+    return candidates[1+random()%(candidate_count-1)]&0xffffff00;
+  else return candidates[0];
+}
+

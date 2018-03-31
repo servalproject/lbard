@@ -281,7 +281,17 @@ typedef struct bundle_node {
   // Links to other elements in the tree
   struct bundle_node *parent,*left, *right;
 } bundle_node;
-  
+
+#define REPORT_QUEUE_LEN 32
+#define MAX_REPORT_LEN 64
+extern int report_queue_length;
+extern uint8_t report_queue[REPORT_QUEUE_LEN][MAX_REPORT_LEN];
+extern uint8_t report_lengths[REPORT_QUEUE_LEN];
+extern struct peer_state *report_queue_peers[REPORT_QUEUE_LEN];
+extern int report_queue_partials[REPORT_QUEUE_LEN];
+extern char *report_queue_message[REPORT_QUEUE_LEN];
+
+
 extern unsigned int my_instance_id;
 
 #define MAX_PEERS 1024
@@ -564,6 +574,7 @@ int _report_file(const char *filename,const char *file,
 #define report_file(X) _report_file(X,__FILE__,__LINE__,__FUNCTION__)
 int partial_update_recent_senders(struct partial_bundle *p,char *sender_prefix_hex);
 int partial_update_request_bitmap(struct partial_bundle *p);
+int partial_first_missing_byte(struct segment_list *s);
 int hex_to_val(int c);
 int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg,int *offset);
 int dump_progress_bitmap(FILE *f, unsigned char *b);
