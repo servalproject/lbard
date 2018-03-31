@@ -156,7 +156,11 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
 		   char *servald_server, char *credential)
 {
   // Get fields
-  int manifest_offset=msg[9]|(msg[10]<<8);
+
+  // Manifest progress is now exclusively sent as a bitmap, not an offset.
+  // Compute first useful offset for legacy purposes.
+  int manifest_offset=1024;
+  for(int i=0;i<16;i++) if (!(msg[9+(i>>3)]&(1<<(i&7)))) { manifest_offset=i*64; break; }
 
   int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[14]<<24);
   int for_me=0;
@@ -192,7 +196,12 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
   if (bundle<0) return -1;
 
   if (bundle==p->request_bitmap_bundle) {
-    // Reset TX bitmap, since we are being asked to send from here.
+
+    // For manifest progress, simply copy in the manifest progress bitmap
+    p->request_manifest_bitmap[0]=msg[9];
+    p->request_manifest_bitmap[0]=msg[10];
+
+    // Reset (or translate) TX bitmap, since we are being asked to send from here.
     if (msg[0]=='F'&&msg[0]=='f') {
       // Message types  F and f indicate that this really is the first byte we
       // could ever need, so translate the progress bitmap to the new offset
