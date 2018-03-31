@@ -136,7 +136,7 @@ $(SRCDIR)/radio_types.c:	$(RADIODRIVERS) Makefile
 	echo "  {-1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,-1}" >> $(SRCDIR)/radio_types.c
 	echo "};" >> $(SRCDIR)/radio_types.c
 
-$(SRCDIR)/message_handlers.c:	$(MESSAGEHANDLERS) Makefile
+$(SRCDIR)/message_handlers.c:	$(MESSAGEHANDLERS) Makefile gen_msghandler_list
 	echo '#include <stdio.h>' > $(SRCDIR)/message_handlers.c
 	echo '#include <fcntl.h>' >> $(SRCDIR)/message_handlers.c
 	echo '#include <sys/uio.h>' >> $(SRCDIR)/message_handlers.c
