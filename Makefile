@@ -130,3 +130,17 @@ $(SRCDIR)/radio_types.c:	$(RADIODRIVERS) Makefile
 	echo "  {-1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,-1}" >> $(SRCDIR)/radio_types.c
 	echo "};" >> $(SRCDIR)/radio_types.c
 
+$(SRCDIR)/message_handlers.c:	$(MESSAGESRCS) Makefile
+	echo '#include <stdio.h>' > $(SRCDIR)/message_handlers.c
+	echo '#include <fcntl.h>' >> $(SRCDIR)/message_handlers.c
+	echo '#include <sys/uio.h>' >> $(SRCDIR)/message_handlers.c
+	echo '#include <sys/socket.h>' >> $(SRCDIR)/message_handlers.c
+	echo '#include <time.h>' >> $(SRCDIR)/message_handlers.c
+	echo '#include "sync.h"' >> $(SRCDIR)/message_handlers.c
+	echo '#include "lbard.h"' >> $(SRCDIR)/message_handlers.c
+	echo '#include "hf.h"' >> $(SRCDIR)/message_handlers.c
+	echo '#include "radios.h"' >> $(SRCDIR)/message_handlers.c
+	echo '' >> $(SRCDIR)/message_handlers.c
+	echo "message_handler message_handlers[257]={" >> $(SRCDIR)/message_handlers.c
+	./gen_msghandler_list >> $(SRCDIR)/message_handlers.c
+	echo 'NULL};' >> $(SRCDIR)/message_handlers.c

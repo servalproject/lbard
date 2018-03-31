@@ -1,0 +1,124 @@
+/*
+Serval Low-bandwidth asychronous Rhizome Demonstrator.
+Copyright (C) 2015-2018 Serval Project Inc., Flinders University.
+
+This program monitors a local Rhizome database and attempts
+to synchronise it over low-bandwidth declarative transports, 
+such as bluetooth name or wifi-direct service information
+messages.  It is intended to give a high priority to MeshMS
+converations among nearby nodes.
+
+The design is fully asynchronous, so a call to the update_my_message()
+function from time to time should be all that is required.
+
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
+#include <stdio.h>
+#include <time.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <dirent.h>
+#include <assert.h>
+#include <sys/time.h>
+
+#include "sync.h"
+#include "lbard.h"
+
+
+int message_parser_42(struct peer_state *sender,unsigned char *prefix,
+		      char *servald_server, char *credential,
+		      unsigned char *msg,int length)
+{
+  int offset=0;
+  offset++;
+  if (len-offset<BAR_LENGTH) {
+    fprintf(stderr,"Ignoring runt BAR (len=%d instead of %d)\n",
+	    len-offset,BAR_LENGTH);
+    return -2;
+  }
+  // BAR announcement
+  unsigned char *bid_prefix_bin=&msg[offset];
+  snprintf(bid_prefix,8*2+1,"%02X%02X%02X%02X%02X%02X%02X%02X",
+	   msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
+	   msg[offset+4],msg[offset+5],msg[offset+6],msg[offset+7]);
+  offset+=8;
+  version=0;
+  for(int i=0;i<8;i++) version|=((long long)msg[offset+i])<<(i*8LL);
+  offset+=8;
+  snprintf(recipient_prefix,4*2+1,"%02x%02x%02x%02x",
+	   msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3]);
+  offset+=4;
+  size_byte=msg[offset];
+  offset+=1;
+#ifdef SYNC_BY_BAR
+  if (debug_pieces)
+    printf(
+	   "Saw a BAR from %s*: %s* version %lld size byte 0x%02x"
+	   " (we know of %d bundles held by that peer)\n",
+	   p->sid_prefix,bid_prefix,version,size_byte,p->bundle_count);
+#endif
+  if (monitor_mode)
+    {
+      char sender_prefix[128];
+      char monitor_log_buf[1024];
+      sprintf(sender_prefix,"%s*",p->sid_prefix);
+      snprintf(monitor_log_buf,sizeof(monitor_log_buf),
+	       "BAR: BID=%s*, version 0x%010llx,"
+	       " %smeshms payload has %lld--%lld bytes,"
+#ifdef SYNC_BY_BAR
+	       " (%d unique)"
+#endif
+	       ,
+	       bid_prefix,version,
+	       (size_byte&0x80)?"non-":"",
+	       (size_byte&0x7f)?(size_byte_to_length((size_byte&0x7f)-1)):0,
+	       size_byte_to_length((size_byte&0x7f))-1
+#ifdef SYNC_BY_BAR
+	       ,p->bundle_count
+#endif
+	       );	
+      
+      monitor_log(sender_prefix,NULL,monitor_log_buf);
+    }
+  
+#ifdef SYNC_BY_BAR
+  peer_note_bar(p,bid_prefix,version,recipient_prefix,size_byte);
+#else
+  int bundle=lookup_bundle_by_prefix_bin_and_version_or_older(bid_prefix_bin,version);
+  if (bundle>-1) {
+    printf("T+%lldms : SYNC FIN: %s* has finished receiving"
+	   " %s version %lld (bundle #%d)\n",
+	   gettime_ms()-start_time,p?p->sid_prefix:"<null>",bid_prefix,
+	   version,bundle);
+    
+    sync_dequeue_bundle(p,bundle);
+  } else {
+    printf("T+%lldms : SYNC FIN: %s* has finished receiving"
+	   " %s (%02X...) version %lld (NO SUCH BUNDLE!)\n",
+	   gettime_ms()-start_time,p?p->sid_prefix:"<null>",
+	   bid_prefix,bid_prefix_bin[0],version);
+  }
+  
+#endif
+  
+  return offset;
+}
+

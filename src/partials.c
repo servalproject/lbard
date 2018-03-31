@@ -121,17 +121,22 @@ int dump_segment_list(struct segment_list *s)
 
 int dump_partial(struct partial_bundle *p)
 {
-  fprintf(stderr,"Progress receiving BID=%s* version %lld:\n",
-	  p->bid_prefix,p->bundle_version);
-  fprintf(stderr,"  manifest is %d bytes long, and body %d bytes long.\n",
-	  p->manifest_length,p->body_length);
-  fprintf(stderr,"  Manifest pieces received:\n");
-  dump_segment_list(p->manifest_segments);
-  fprintf(stderr,"  Body pieces received:\n");
-  dump_segment_list(p->body_segments);
-  fprintf(stderr,"  Request bitmap: start=%d, bits=\n    ",
-	  p->request_bitmap_start);
-  dump_progress_bitmap(stderr,p->request_bitmap);
+  printf(">>> %s Progress receiving BID=%s* version %lld: "
+	 "manifest is %d bytes long, and body %d bytes long. Bitmap p=%5d : ",
+	 timestamp_str(),p->bid_prefix,p->bundle_version,
+         p->manifest_length,p->body_length,
+	 p->request_bitmap_start
+	 );
+  dump_progress_bitmap(stdout,p->request_bitmap);
+
+  if (0) {
+    fprintf(stderr,"  Manifest pieces received:\n");
+    dump_segment_list(p->manifest_segments);
+    fprintf(stderr,"  Body pieces received:\n");
+    dump_segment_list(p->body_segments);
+    fprintf(stderr,"  Request bitmap: start=%d, bits=\n    ",
+	    p->request_bitmap_start);
+  }
   return 0;
 }
 
