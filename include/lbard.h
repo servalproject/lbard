@@ -73,9 +73,10 @@ struct partial_bundle {
 
   struct recent_senders senders;
 
-  // Request bitmap
+  // Request bitmap for body and for manifest
   int request_bitmap_start;
   unsigned char request_bitmap[32];
+  unsigned char request_manifest_bitmap[2];
 };
 
 struct peer_state {
@@ -144,9 +145,15 @@ struct peer_state {
   int tx_queue_overflow;
 #endif
 
+  /* Bitmaps that we use to keep track of progress of sending a bundle.
+     We mark off blocks as we send them, or as we see them TXd by others,
+     or as we get an explicit bitmap state sent by the receiver.
+     
+     A set bit means that we have received that 64 byte piece. */
   int request_bitmap_bundle;
   int request_bitmap_offset;
   unsigned char request_bitmap[32];
+  unsigned char request_manifest_bitmap[2];
 };
 
 // Bundles this peer is transferring.
@@ -574,7 +581,7 @@ int _report_file(const char *filename,const char *file,
 #define report_file(X) _report_file(X,__FILE__,__LINE__,__FUNCTION__)
 int partial_update_recent_senders(struct partial_bundle *p,char *sender_prefix_hex);
 int partial_update_request_bitmap(struct partial_bundle *p);
-int partial_first_missing_byte(struct segment_list *s);
+int partial_find_missing_byte(struct segment_list *s,int *isFirstMissingByte);
 int hex_to_val(int c);
 int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg,int *offset);
 int dump_progress_bitmap(FILE *f, unsigned char *b);

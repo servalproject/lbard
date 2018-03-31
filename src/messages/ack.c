@@ -53,6 +53,11 @@ int sync_schedule_progress_report(int peer, int partial, int randomJump)
       slot=i; break;
     }
   }
+
+  // Work out where we will request data to be sent from
+  int isReallyFirstByte=0;
+  int first_required_body_offset
+    =partial_find_missing_byte(partials[partial].body_segments,&isReallyFirstByte);
   
   if (slot>=REPORT_QUEUE_LEN) slot=random()%REPORT_QUEUE_LEN;
 
@@ -61,8 +66,23 @@ int sync_schedule_progress_report(int peer, int partial, int randomJump)
   report_queue_peers[slot]=peer_records[peer];
   
   int ofs=0;
-  if (randomJump) report_queue[slot][ofs++]='a';
-  else report_queue[slot][ofs++]='A';
+
+  // Differentiate between an ACK which is really from the earliest byte we could need,
+  // versus from the start of a region we are still missing
+  // (Senders can use this information to keep bitmap state from the earliest missing
+  // byte, if we ack from a later missing region, but they are close enough together
+  // that it makes sense to keep from the start. This is especially useful for bundles
+  // that are smaller than the 16KB bitmap window, where otherwise useful information
+  // is being discarded, which could result in unnecessary retransmission.
+  if (isReallyFirstByte) {
+    // We are really requesting the first byte we could ever need
+    if (randomJump) report_queue[slot][ofs++]='f';
+    else report_queue[slot][ofs++]='F';
+  } else {
+    // We are requeting the first byte of of a region we need, but it is not the first
+    if (randomJump) report_queue[slot][ofs++]='a';
+    else report_queue[slot][ofs++]='A';
+  }
 
   if (report_queue_message[slot]) {
     fprintf(stderr,"Replacing report_queue message '%s' with 'progress report' (ACK)\n",
@@ -85,12 +105,16 @@ int sync_schedule_progress_report(int peer, int partial, int randomJump)
   }
   
   // manifest and body offset
-  int first_required_manifest_offset
-    =partial_first_missing_byte(partials[partial].manifest_segments);
-  int first_required_body_offset
-    =partial_first_missing_byte(partials[partial].body_segments);
-  report_queue[slot][ofs++]=first_required_manifest_offset&0xff;
-  report_queue[slot][ofs++]=(first_required_manifest_offset>>8)&0xff;
+  // (for manifest, it can only consist of 16 x 64 byte pieces, so instead
+  //  always send a bitmap for the manifest progress. But we also calculate
+  //  the first offset for debug purposes.)
+  int first_required_manifest_offset=1024;
+  for(int i=0;i<16;i++)
+    if (!(partials[partial].request_manifest_bitmap[i>>3]&(1<<(i&7))))
+      { first_required_manifest_offset=i*64; break; }
+
+  report_queue[slot][ofs++]=partials[partial].request_manifest_bitmap[0];
+  report_queue[slot][ofs++]=partials[partial].request_manifest_bitmap[1];
   report_queue[slot][ofs++]=first_required_body_offset&0xff;
   report_queue[slot][ofs++]=(first_required_body_offset>>8)&0xff;
   report_queue[slot][ofs++]=(first_required_body_offset>>16)&0xff;
@@ -142,7 +166,7 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
   // Does the ACK tell us to jump exactly here, or to a random place somewhere
   // after it?  If it indicates a random jump, only do the jump 1/2 the time.
   int randomJump=0;
-  if(msg[0]=='a') randomJump=random()&1;
+  if(msg[0]=='a'||msg[0]=='f') randomJump=random()&1;
 
   unsigned char *bid_prefix=&msg[1];
 
@@ -169,11 +193,25 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
 
   if (bundle==p->request_bitmap_bundle) {
     // Reset TX bitmap, since we are being asked to send from here.
-    // XXX - Is the ACK telling us that they DEFFINATELY have received to this point,
-    // or is it possible that it is giving a suggested start, but that there may be
-    // previous holes? In the latter case, we don't want to advance beyond those holes,
-    // so that we don't forget the progress already made.
-    progress_bitmap_translate(p,body_offset);
+    if (msg[0]=='F'&&msg[0]=='f') {
+      // Message types  F and f indicate that this really is the first byte we
+      // could ever need, so translate the progress bitmap to the new offset
+      progress_bitmap_translate(p,body_offset);
+    } else {
+      // Message types A and a indicate that there are lowered number byte(s) we
+      // still need, so we should only conservatively advance the bitmap, so as
+      // to keep as much of the state that we have that might tell us which those
+      // missing bytes might be.
+      int body_offset_conservative=p->request_bitmap_offset;
+      // First, always go backwards if we need to
+      if (body_offset<body_offset_conservative) body_offset_conservative=body_offset;
+      // And advance only if the new offset would be <4KB from the end of the window
+      // (and only then if we aren't sure that the bundle is <= 16KB)
+      if (bundles[bundle].length>(16*1024)) {
+	if (body_offset>(body_offset_conservative+(12*1024)))
+	  body_offset_conservative=body_offset;	    
+      }
+    }
   }
   
   if (bundle==p->tx_bundle) {
@@ -222,6 +260,8 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
   return 0;
 }
 
+#define message_parser_46 message_parser_41
+#define message_parser_66 message_parser_41
 #define message_parser_61 message_parser_41
 
 int message_parser_41(struct peer_state *sender,char *prefix,

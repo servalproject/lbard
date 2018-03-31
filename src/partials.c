@@ -190,7 +190,7 @@ int merge_segments(struct segment_list **s)
    to one of our partial pieces.  However, we need to take care to
    not make the sender think that we have it all.
 */
-int partial_first_missing_byte(struct segment_list *s)
+int partial_find_missing_byte(struct segment_list *s,int *isFirstMissingByte)
 {
   int add_zero=1;
   
@@ -212,9 +212,18 @@ int partial_first_missing_byte(struct segment_list *s)
   // incase it signals the end of the bundle (we don't necessarily know the
   // payload length during reception).  Thus only ask for the end point if
   // there are no other alternatives.
+  int selection=candidate_count-1;
+  if (selection<0) selection=0;
+  
   if ((!(option_flags&FLAG_NO_RANDOMIZE_REDIRECT_OFFSET))
       &&(candidate_count>1))
-    return candidates[1+random()%(candidate_count-1)]&0xffffff00;
-  else return candidates[0];
+    selection=random()%(candidate_count-1);
+
+  if (isFirstMissingByte) {
+    *isFirstMissingByte=0;
+    if (selection==(candidate_count-1)) *isFirstMissingByte=1;
+  }
+
+  return candidates[selection]&0xffffffc0;
 }
 
