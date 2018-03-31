@@ -13,3 +13,7 @@ include/version.h
 src/radio_types.c
 include/message_handlers.h
 src/message_handlers.c
+index.html
+tty.txt
+status.json
+lbard.monitor.*.txt
