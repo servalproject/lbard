@@ -129,9 +129,6 @@ int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg_in,int *o
   int body_offset=msg[11]|(msg[12]<<8)|(msg[13]<<16)|(msg[14]<<24);
   unsigned char *bitmap=&msg[15];
   int bundle=lookup_bundle_by_prefix(bid_prefix,8);
-
-  int manifest_offset=1024;    
-  for(int i=0;i<16;i++) if (manifest_bitmap[i>>3]&(1<<(i&7))) manifest_offset=i*64;
   
   if (p->tx_bundle==bundle) {
     // We are sending this bundle to them, so update our info
@@ -146,6 +143,8 @@ int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg_in,int *o
     // Update manifest bitmap ...
     memcpy(p->request_manifest_bitmap,manifest_bitmap,2);
     // ... and quickly recalculate first useful TX point
+    int manifest_offset=1024;    
+    for(int i=0;i<16;i++) if (manifest_bitmap[i>>3]&(1<<(i&7))) manifest_offset=i*64;
     p->tx_bundle_manifest_offset=manifest_offset;
   }
 
