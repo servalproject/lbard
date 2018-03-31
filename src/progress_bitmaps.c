@@ -306,10 +306,10 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 
 	  if (is_manifest) {
 	    // Manifest progress is easier to update, as the bitmap is a fixed 16 bits
-	    for(int i=0;i<16;i++)
-	      if ((start_offset<=(64*i))
-		  &&(start_offset+bytes>=(64+64*i)))
-		peer_records[i]->request_manifest_bitmap[i>>3]|=1<<(i&7);
+	    for(int j=0;j<16;j++)
+	      if ((start_offset<=(64*j))
+		  &&(start_offset+bytes>=(64+64*j)))
+		peer_records[i]->request_manifest_bitmap[j>>3]|=1<<(j&7);
 	    
 	  } else {	  
 	    // Reset bitmap and start accumulating
