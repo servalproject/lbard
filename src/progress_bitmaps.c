@@ -206,7 +206,8 @@ int peer_update_send_point(int peer)
   dump_progress_bitmap(stdout,peer_records[peer]->request_bitmap);
 
   // Pick random piece that has yet to be received, and send that
-  int candidates[256];
+#define MAX_CANDIDATES 32
+  int candidates[MAX_CANDIDATES];
   int candidate_count=0;
 
   // But limit send point to the valid range of the bundle
@@ -218,13 +219,14 @@ int peer_update_send_point(int peer)
   // Search on even boundaries first
   int i=0; if (peer_records[peer]->request_bitmap_offset&0x40) i=1;
   for(;i<max_bit;i+=2)
-    if (!(peer_records[peer]->request_bitmap[i>>3]&(1<<(i&7))))
-      candidates[candidate_count++]=i;
+    if (!(peer_records[peer]->request_bitmap[i>>3]&(1<<(i&7)))) {
+      if (candidate_count<MAX_CANDIDATES) candidates[candidate_count++]=i;
+    }
   if (!candidate_count) {
     // No evenly aligned candidates, so include all
     for(i=0;i<max_bit;i++)
       if (!(peer_records[peer]->request_bitmap[i>>3]&(1<<(i&7))))
-	candidates[candidate_count++]=i;
+      if (candidate_count<MAX_CANDIDATES) candidates[candidate_count++]=i;
   }
   
   if (!candidate_count) {
@@ -251,7 +253,8 @@ int peer_update_send_point(int peer)
   candidate_count=0;
   for(int i=0;i<(1024/64);i++) {
     if (!(peer_records[peer]->request_manifest_bitmap[i>>3]&(1<<(i&7)))) {
-      candidates[candidate_count++]=peer_records[peer]->tx_bundle_manifest_offset=i*64;
+      if (candidate_count<MAX_CANDIDATES)
+	candidates[candidate_count++]=peer_records[peer]->tx_bundle_manifest_offset=i*64;
     }
   }
   if (!candidate_count)

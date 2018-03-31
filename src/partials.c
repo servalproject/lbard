@@ -122,9 +122,10 @@ int dump_segment_list(struct segment_list *s)
 int dump_partial(struct partial_bundle *p)
 {
   printf(">>> %s Progress receiving BID=%s* version %lld: "
-	 "manifest is %d bytes long, and body %d bytes long. Bitmap p=%5d : ",
+	 "manifest is %d bytes long (RX bitmap %02x%02x), and body %d bytes long. Bitmap p=%5d : ",
 	 timestamp_str(),p->bid_prefix,p->bundle_version,
-         p->manifest_length,p->body_length,
+         p->manifest_length,p->request_manifest_bitmap[0],p->request_manifest_bitmap[1],
+	 p->body_length,
 	 p->request_bitmap_start
 	 );
   dump_progress_bitmap(stdout,p->request_bitmap);
@@ -193,7 +194,11 @@ int merge_segments(struct segment_list **s)
 int partial_find_missing_byte(struct segment_list *s,int *isFirstMissingByte)
 {
   int add_zero=1;
-  
+
+  // We limit ourselves to the first 16 gaps, so that we can tend to complete
+  // reception of earlier parts of a bundle before proceeding to later parts.
+  // This reduces the complexity of the job of receiving, by tending to reduce
+  // the number of segments of received material at any point in time.
   int candidates[16];
   int candidate_count=0;
   
