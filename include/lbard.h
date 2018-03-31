@@ -586,6 +586,7 @@ int hex_to_val(int c);
 int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg,int *offset);
 int dump_progress_bitmap(FILE *f, unsigned char *b);
 int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
+							 int is_manifest,
 							 int start_offset,
 							 int bytes);
 int peer_update_send_point(int peer);

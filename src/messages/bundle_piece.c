@@ -106,10 +106,10 @@ int saw_piece(char *peer_prefix,int for_me,
 
 	// Update progress bitmaps for all peers whenver we see a piece received that we
 	// think that they might want.  This stops us from resending the same piece later.
-	if ((bundle_number>=0)&&(!is_manifest_piece)) {
+	if (bundle_number>=0) {
 	  printf(">>> %s Examining transmitted piece for bitmap updates.\n",
 		 timestamp_str());
-	  peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,
+	  peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,is_manifest_piece,
 							       piece_offset,piece_bytes);
 	}
 	
@@ -127,10 +127,10 @@ int saw_piece(char *peer_prefix,int for_me,
 
   // Update progress bitmaps for all peers whenver we see a piece received that we
   // think that they might want.  This stops us from resending the same piece later.
-  if ((bundle_number>=0)&&(!is_manifest_piece)) {
+  if (bundle_number>=0) {
     printf(">>> %s Examining transmitted piece for bitmap updates.\n",
 	   timestamp_str());
-    peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,
+    peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,is_manifest_piece,
 							 piece_offset,piece_bytes);
   }
   
