@@ -9,8 +9,9 @@ clean:
 SRCDIR=src
 INCLUDEDIR=include
 
-RADIODRIVERS=	$(SRCDIR)/drivers/drv_*.c
-RADIOHEADERS=	$(SRCDIR)/drivers/drv_*.h
+MESSAGEHANDLERS=	$(SRCDIR)/messages/*.c
+RADIODRIVERS=		$(SRCDIR)/drivers/drv_*.c
+RADIOHEADERS=		$(SRCDIR)/drivers/drv_*.h
 
 SRCS=	$(SRCDIR)/main.c \
 	$(SRCDIR)/rhizome.c \
@@ -56,8 +57,12 @@ SRCS=	$(SRCDIR)/main.c \
 	\
 	$(SRCDIR)/hf_ale.c \
 	$(SRCDIR)/hf_config.c \
+	\
 	$(SRCDIR)/radio_types.c \
-	$(RADIODRIVERS)
+	$(RADIODRIVERS) \
+	\
+	$(SRCDIR)/message_handlers.c \
+	$(MESSAGEHANDLERS) \
 
 
 HDRS=	$(INCLUDEDIR)/lbard.h \
@@ -68,7 +73,8 @@ HDRS=	$(INCLUDEDIR)/lbard.h \
 	$(INCLUDEDIR)/util.h \
 	$(INCLUDEDIR)/radios.h \
 	$(RADIOHEADERS) \
-	$(SRCDIR)/miniz.c
+	$(SRCDIR)/miniz.c \
+	$(INCLUDEDIR)/message_handlers.h
 
 #CC=/usr/local/Cellar/llvm/3.6.2/bin/clang
 #LDFLAGS= -lgmalloc
@@ -140,7 +146,13 @@ $(SRCDIR)/message_handlers.c:	$(MESSAGESRCS) Makefile
 	echo '#include "lbard.h"' >> $(SRCDIR)/message_handlers.c
 	echo '#include "hf.h"' >> $(SRCDIR)/message_handlers.c
 	echo '#include "radios.h"' >> $(SRCDIR)/message_handlers.c
+	echo '#include "message_handlers.h"' >> $(SRCDIR)/message_handlers.c
 	echo '' >> $(SRCDIR)/message_handlers.c
 	echo "message_handler message_handlers[257]={" >> $(SRCDIR)/message_handlers.c
 	./gen_msghandler_list >> $(SRCDIR)/message_handlers.c
 	echo 'NULL};' >> $(SRCDIR)/message_handlers.c
+
+$(INCLUDEDIR)/message_handlers.h:	$(MESSAGESRCS) Makefile
+	cat $(SRCDIR)/messages/*.c | grep message_parser_ | cut -f2 -d" " | cut -f1 -d"(" | awk '{ printf("int %s(struct peer_state *,char *, char *, char *,unsigned char *,int);\n",$$1); }' >$(INCLUDEDIR)/message_handlers.h
+	cat $(SRCDIR)/messages/*.c | grep "#define message_parser_" >>$(INCLUDEDIR)/message_handlers.h
+

@@ -49,37 +49,39 @@ int message_parser_42(struct peer_state *sender,unsigned char *prefix,
 {
   int offset=0;
   offset++;
-  if (len-offset<BAR_LENGTH) {
+  if (length-offset<BAR_LENGTH) {
     fprintf(stderr,"Ignoring runt BAR (len=%d instead of %d)\n",
-	    len-offset,BAR_LENGTH);
+	    length-offset,BAR_LENGTH);
     return -2;
   }
   // BAR announcement
   unsigned char *bid_prefix_bin=&msg[offset];
+  char bid_prefix[8*2+1+1];
   snprintf(bid_prefix,8*2+1,"%02X%02X%02X%02X%02X%02X%02X%02X",
 	   msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
 	   msg[offset+4],msg[offset+5],msg[offset+6],msg[offset+7]);
   offset+=8;
-  version=0;
+  long long version=0;
   for(int i=0;i<8;i++) version|=((long long)msg[offset+i])<<(i*8LL);
   offset+=8;
+  char recipient_prefix[4*2+1+1];
   snprintf(recipient_prefix,4*2+1,"%02x%02x%02x%02x",
 	   msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3]);
   offset+=4;
-  size_byte=msg[offset];
+  unsigned char size_byte=msg[offset];
   offset+=1;
 #ifdef SYNC_BY_BAR
   if (debug_pieces)
     printf(
 	   "Saw a BAR from %s*: %s* version %lld size byte 0x%02x"
 	   " (we know of %d bundles held by that peer)\n",
-	   p->sid_prefix,bid_prefix,version,size_byte,p->bundle_count);
+	   sender->sid_prefix,bid_prefix,version,size_byte,sender->bundle_count);
 #endif
   if (monitor_mode)
     {
       char sender_prefix[128];
       char monitor_log_buf[1024];
-      sprintf(sender_prefix,"%s*",p->sid_prefix);
+      sprintf(sender_prefix,"%s*",sender->sid_prefix);
       snprintf(monitor_log_buf,sizeof(monitor_log_buf),
 	       "BAR: BID=%s*, version 0x%010llx,"
 	       " %smeshms payload has %lld--%lld bytes,"
@@ -92,7 +94,7 @@ int message_parser_42(struct peer_state *sender,unsigned char *prefix,
 	       (size_byte&0x7f)?(size_byte_to_length((size_byte&0x7f)-1)):0,
 	       size_byte_to_length((size_byte&0x7f))-1
 #ifdef SYNC_BY_BAR
-	       ,p->bundle_count
+	       ,sender->bundle_count
 #endif
 	       );	
       
@@ -100,20 +102,20 @@ int message_parser_42(struct peer_state *sender,unsigned char *prefix,
     }
   
 #ifdef SYNC_BY_BAR
-  peer_note_bar(p,bid_prefix,version,recipient_prefix,size_byte);
+  peer_note_bar(sender,bid_prefix,version,recipient_prefix,size_byte);
 #else
   int bundle=lookup_bundle_by_prefix_bin_and_version_or_older(bid_prefix_bin,version);
   if (bundle>-1) {
     printf("T+%lldms : SYNC FIN: %s* has finished receiving"
 	   " %s version %lld (bundle #%d)\n",
-	   gettime_ms()-start_time,p?p->sid_prefix:"<null>",bid_prefix,
+	   gettime_ms()-start_time,sender?sender->sid_prefix:"<null>",bid_prefix,
 	   version,bundle);
     
-    sync_dequeue_bundle(p,bundle);
+    sync_dequeue_bundle(sender,bundle);
   } else {
     printf("T+%lldms : SYNC FIN: %s* has finished receiving"
 	   " %s (%02X...) version %lld (NO SUCH BUNDLE!)\n",
-	   gettime_ms()-start_time,p?p->sid_prefix:"<null>",
+	   gettime_ms()-start_time,sender?sender->sid_prefix:"<null>",
 	   bid_prefix,bid_prefix_bin[0],version);
   }
   

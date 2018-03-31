@@ -42,19 +42,19 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
-int message_parser_41(struct peer_state *sender,unsigned char *prefix,
+int message_parser_41(struct peer_state *sender,char *prefix,
 		      char *servald_server, char *credential,
 		      unsigned char *message,int length)
 {
-  sync_parse_ack(p,message,prefix,servald_server,credential);
+  sync_parse_ack(sender,message,prefix,servald_server,credential);
   return 17;
 }
 
-int message_parser_61(struct peer_state *sender,unsigned char *prefix,
+int message_parser_61(struct peer_state *sender,char *prefix,
 		      char *servald_server, char *credential,
 		      unsigned char *message,int length)
 {
-  sync_parse_ack(p,message,prefix,servald_server,credential);
+  sync_parse_ack(sender,message,prefix,servald_server,credential);
   return 17;
 }
 

@@ -42,7 +42,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
-int message_parser_53(struct peer_state *sender,unsigned char *prefix,
+int message_parser_53(struct peer_state *sender,char *sender_prefix,
 		      char *servald_server, char *credential,
 		      unsigned char *msg,int length)
 {
@@ -50,7 +50,7 @@ int message_parser_53(struct peer_state *sender,unsigned char *prefix,
   // Sync-tree synchronisation message
   
   // process the message
-  sync_tree_receive_message(p,&msg[offset]);
+  sync_tree_receive_message(sender,&msg[offset]);
   
   // Skip over the message
   if (msg[offset+1]) offset+=msg[offset+1];
@@ -60,7 +60,7 @@ int message_parser_53(struct peer_state *sender,unsigned char *prefix,
       {
 	char sender_prefix[128];
 	char monitor_log_buf[1024];
-	sprintf(sender_prefix,"%s*",p->sid_prefix);
+	sprintf(sender_prefix,"%s*",sender->sid_prefix);
 	
 	snprintf(monitor_log_buf,sizeof(monitor_log_buf),
 		 "S field with zero length at radio packet offset %d",

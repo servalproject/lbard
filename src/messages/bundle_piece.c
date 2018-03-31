@@ -514,14 +514,23 @@ int saw_piece(char *peer_prefix,int for_me,
 #define message_parser_70 message_parser_50
 #define message_parser_71 message_parser_50
 
-int message_parser_50(struct peer_state *sender,unsigned char *prefix,
+int message_parser_50(struct peer_state *sender,char *sender_prefix,
 		      char *servald_server, char *credential,
 		      unsigned char *msg,int length)
 {
   int offset=0;
+
+  char bid_prefix[8*2+1];
+  long long version;
+  unsigned int offset_compound;
+  long long piece_offset;
+  int piece_bytes;
+  int piece_is_manifest;
+  int above_1mb=0;
+  int is_end_piece=0;
+  int for_me=0;
+
   // Skip header character
-  above_1mb=0;
-  is_end_piece=0;
   if (!(msg[offset]&0x20)) above_1mb=1;
   if (!(msg[offset]&0x01)) is_end_piece=1;
   offset++;
@@ -531,8 +540,8 @@ int message_parser_50(struct peer_state *sender,unsigned char *prefix,
   else for_me=1;
   offset+=2;
   
-  if (len-offset<(1+8+8+4+1)) return -3;
-  bid_prefix_bin=&msg[offset];
+  if (length-offset<(1+8+8+4+1)) return -3;
+  unsigned char *bid_prefix_bin=&msg[offset];
   snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
 	   msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
 	   msg[offset+4],msg[offset+5],msg[offset+6],msg[offset+7]);
@@ -552,7 +561,7 @@ int message_parser_50(struct peer_state *sender,unsigned char *prefix,
     {
       char sender_prefix[128];
       char monitor_log_buf[1024];
-      sprintf(sender_prefix,"%s*",p->sid_prefix);
+      sprintf(sender_prefix,"%s*",sender->sid_prefix);
       snprintf(monitor_log_buf,sizeof(monitor_log_buf),
 	       "Piece of bundle: BID=%s*, [%lld--%lld) of %s.%s",
 	       bid_prefix,
@@ -564,7 +573,7 @@ int message_parser_50(struct peer_state *sender,unsigned char *prefix,
       monitor_log(sender_prefix,NULL,monitor_log_buf);
     }
   
-  saw_piece(peer_prefix,for_me,
+  saw_piece(sender_prefix,for_me,
 	    bid_prefix,bid_prefix_bin,
 	    version,piece_offset,piece_bytes,is_end_piece,
 	    piece_is_manifest,&msg[offset],

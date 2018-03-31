@@ -66,23 +66,24 @@ int saw_length(char *peer_prefix,char *bid_prefix,long long version,
   return -1;
 }
 
-int message_parser_4C(struct peer_state *sender,unsigned char *prefix,
+int message_parser_4C(struct peer_state *sender,char *sender_prefix,
 		      char *servald_server, char *credential,
 		      unsigned char *msg,int length)
 {
   // Get instance ID of peer. We use this to note if a peer's lbard has restarted
   int offset=0;
 
-  if (len-offset<(1+8+8+4)) return -3;
+  if (length-offset<(1+8+8+4)) return -3;
   int bid_prefix_offset=offset;
+  char bid_prefix[2*8+1+1];
   snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
 	   msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
 	   msg[offset+4],msg[offset+5],msg[offset+6],msg[offset+7]);
   offset+=8;
-  version=0;
+  long long version=0;
   for(int i=0;i<8;i++) version|=((long long)msg[offset+i])<<(i*8LL);
   offset+=8;
-  offset_compound=0;
+  long long offset_compound=0;
   for(int i=0;i<4;i++) offset_compound|=((long long)msg[offset+i])<<(i*8LL);
   offset+=4;
 
@@ -90,17 +91,17 @@ int message_parser_4C(struct peer_state *sender,unsigned char *prefix,
     {
       char sender_prefix[128];
       char monitor_log_buf[1024];
-      sprintf(sender_prefix,"%s*",p->sid_prefix);
+      sprintf(sender_prefix,"%s*",sender->sid_prefix);
       char bid_prefix[128];
       bytes_to_prefix(&msg[bid_prefix_offset],bid_prefix);
       snprintf(monitor_log_buf,sizeof(monitor_log_buf),
-	       "Payload length: BID=%s*, version 0x%010llx, length = %d bytes",
+	       "Payload length: BID=%s*, version 0x%010llx, length = %lld bytes",
 	       bid_prefix,version,offset_compound);
       
       monitor_log(sender_prefix,NULL,monitor_log_buf);
     }
   
-  saw_length(peer_prefix,bid_prefix,version,offset_compound);
+  saw_length(sender_prefix,bid_prefix,version,offset_compound);
   
   return offset;
 }

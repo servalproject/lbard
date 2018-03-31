@@ -43,7 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "lbard.h"
 
 
-int message_parser_47(struct peer_state *sender,unsigned char *prefix,
+int message_parser_47(struct peer_state *sender,char *sender_prefix,
 		      char *servald_server, char *credential,
 		      unsigned char *msg,int length)
 {
@@ -53,20 +53,27 @@ int message_parser_47(struct peer_state *sender,unsigned char *prefix,
   {
     unsigned int peer_instance_id=0;
     for(int i=0;i<4;i++) peer_instance_id|=(msg[offset++]<<(i*8));
-    if (!p->instance_id) p->instance_id=peer_instance_id;
-    if (p->instance_id!=peer_instance_id) {
+    if (!sender->instance_id) sender->instance_id=peer_instance_id;
+    if (sender->instance_id!=peer_instance_id) {
       // Peer's instance ID has changed: Forget all knowledge of the peer and
       // return (ignoring the rest of the packet).
 #ifndef SYNC_BY_BAR
+      int peer_index=-1;
+      for(int i=0;i<peer_count;i++) if (sender==peer_records[i]) { peer_index=i; break; }
+      if (peer_index==-1) {
+	// Could not find peer structure. This should not happen.
+	return 0;
+      }
+      
       free_peer(peer_records[peer_index]);
-      p=calloc(1,sizeof(struct peer_state));
-      for(int i=0;i<4;i++) p->sid_prefix_bin[i]=msg[i];
-      p->sid_prefix=strdup(peer_prefix);
-      p->last_message_number=-1;
-      p->tx_bundle=-1;
-      p->instance_id=peer_instance_id;
-      printf("Peer %s* has restarted -- discarding stale knowledge of its state.\n",p->sid_prefix);
-      peer_records[peer_index]=p;
+      sender=calloc(1,sizeof(struct peer_state));
+      for(int i=0;i<4;i++) sender->sid_prefix_bin[i]=msg[i];
+      sender->sid_prefix=strdup(sender_prefix);
+      sender->last_message_number=-1;
+      sender->tx_bundle=-1;
+      sender->instance_id=peer_instance_id;
+      printf("Peer %s* has restarted -- discarding stale knowledge of its state.\n",sender->sid_prefix);
+      peer_records[peer_index]=sender;
 #endif
     }
   }

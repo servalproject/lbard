@@ -43,12 +43,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "lbard.h"
 
 
-int message_parser_4D(struct peer_state *sender,unsigned char *prefix,
+int message_parser_4D(struct peer_state *sender,char *sender_prefix,
 		      char *servald_server, char *credential,
 		      unsigned char *msg,int length)
 {
   int offset=0;
-  sync_parse_progress_bitmap(p,msg,&offset);
+  sync_parse_progress_bitmap(sender,msg,&offset);
   
   return offset;
 }

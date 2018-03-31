@@ -167,6 +167,10 @@ struct recent_bundle {
   time_t timeout;
 };
 
+typedef int (*message_handler)(struct peer_state *,char *,
+			       char *, char *,unsigned char *,int);  
+extern message_handler message_handlers[257];
+
 extern int txpower;
 extern int txfreq;
 

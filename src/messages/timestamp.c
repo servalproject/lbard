@@ -42,7 +42,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
-int message_parser_54(struct peer_state *sender,unsigned char *prefix,
+int message_parser_54(struct peer_state *sender,char *sender_prefix,
 		      char *servald_server, char *credential,
 		      unsigned char *msg,int length)
 {
@@ -84,7 +84,7 @@ int message_parser_54(struct peer_state *sender,unsigned char *prefix,
     tv.tv_usec+=26400;
     
     char sender_prefix[128];	
-    sprintf(sender_prefix,"%s*",p->sid_prefix);
+    sprintf(sender_prefix,"%s*",sender->sid_prefix);
     
     saw_timestamp(sender_prefix,stratum,&tv);
     
@@ -94,15 +94,15 @@ int message_parser_54(struct peer_state *sender,unsigned char *prefix,
     // against each other, we can hopefully quite accurately piece together the timing of bundle
     // transfers via UHF, for example.
     time_t now =time(0);
-    long long delta=(long long)now-(long long)p->last_timestamp_received;
+    long long delta=(long long)now-(long long)sender->last_timestamp_received;
     fprintf(stderr,"Logging timestamp message from %s (delta=%lld).\n",sender_prefix,delta);
     if (delta<0) {
       fprintf(stderr,"Correcting last timestamp report time to be in the past, not future.\n");
-      p->last_timestamp_received=0;
+      sender->last_timestamp_received=0;
     }
     if (delta>60) {
       fprintf(stderr,"Logging timestamp message, since >60 seconds since last seen from this peer.\n");	  
-      p->last_timestamp_received=now;
+      sender->last_timestamp_received=now;
       FILE *bundlelogfile=NULL;
       if (debug_bundlelog) {
 	bundlelogfile=fopen(bundlelog_filename,"a");
@@ -116,8 +116,8 @@ int message_parser_54(struct peer_state *sender,unsigned char *prefix,
 	} else perror("Could not open bundle log file");
       } else fprintf(stderr,"Logging timestamps disabled via debug_bundlelog.\n");
     } else fprintf(stderr,"Not logging timestamp message, since we logged one just recently (%lld-%lld = %lld).\n",
-		   (long long)now,(long long)p->last_timestamp_received,
-		   (long long)now-(long long)p->last_timestamp_received);		       
+		   (long long)now,(long long)sender->last_timestamp_received,
+		   (long long)now-(long long)sender->last_timestamp_received);		       
     
   }
 

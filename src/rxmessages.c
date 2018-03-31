@@ -70,18 +70,6 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
 
   int offset=8; 
 
-  char bid_prefix[8*2+1];
-  long long version;
-  int size_byte;
-  char recipient_prefix[4*2+1];
-  unsigned int offset_compound;
-  long long piece_offset;
-  int piece_bytes;
-  int piece_is_manifest;
-  int above_1mb;
-  int is_end_piece;
-  int for_me=0;
-
   int peer_index=-1;
   
   // Find or create peer structure for this.
@@ -132,9 +120,9 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
       fflush(stderr);
     }
 
-    if (message_parser_list[msg[offset]]) {
-      int advance=message_parser_list[msg[offset]](p,prefix,servald_server,credential,
-						   &msg[offset],len-offset);
+    if (message_handlers[msg[offset]]) {
+      int advance=message_handlers[msg[offset]](p,prefix,servald_server,credential,
+						&msg[offset],len-offset);
       if (advance<1) {
 	fprintf(stderr,
 		"At packet offset 0x%x, message parser 0x%02x returned zero or negative message length (=%d).\n"

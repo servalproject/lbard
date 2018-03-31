@@ -42,7 +42,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
-int message_parser_52(struct peer_state *sender,unsigned char *prefix,
+int message_parser_52(struct peer_state *sender,char *sender_prefix,
 		      char *servald_server, char *credential,
 		      unsigned char *msg,int length)
 {
@@ -70,13 +70,13 @@ int message_parser_52(struct peer_state *sender,unsigned char *prefix,
     
     if (debug_pull) {
       printf("Saw request from SID=%s* BID=%s @ %c%d addressed to SID=%s*\n",
-	     peer_prefix,bid_prefix,is_manifest?'M':'B',bundle_offset,
+	     sender_prefix,bid_prefix,is_manifest?'M':'B',bundle_offset,
 	     target_sid);
     }
     {
       char status_msg[1024];
       snprintf(status_msg,1024,"Saw request from SID=%s* BID=%s @ %c%d addressed to SID=%s*\n",
-	       peer_prefix,bid_prefix,is_manifest?'M':'B',bundle_offset,
+	       sender_prefix,bid_prefix,is_manifest?'M':'B',bundle_offset,
 	       target_sid);
       status_log(status_msg);
     }
@@ -85,7 +85,7 @@ int message_parser_52(struct peer_state *sender,unsigned char *prefix,
       {
 	char sender_prefix[128];
 	char monitor_log_buf[1024];
-	sprintf(sender_prefix,"%s*",p->sid_prefix);
+	sprintf(sender_prefix,"%s*",sender->sid_prefix);
 	snprintf(monitor_log_buf,sizeof(monitor_log_buf),
 		 "Request for BID=%s*, beginning at offset %d of %s.",
 		 bid_prefix,bundle_offset,is_manifest?"manifest":"payload");
