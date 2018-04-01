@@ -607,6 +607,7 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out);
 int sync_build_bar_in_slot(int slot,unsigned char *bid_bin,
 			   long long bundle_version);
+int append_generationid(unsigned char *msg_out,int *offset);
 
 
 #include "util.h"

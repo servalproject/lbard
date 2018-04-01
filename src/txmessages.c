@@ -160,19 +160,13 @@ int update_my_message(int serialfd,
   }
   if (!(random()%10)) {
     // Occassionally announce our instance (generation) ID
-    // G + 4 random bytes = 5 bytes
-    struct timeval tv;
-    gettimeofday(&tv,NULL);    
-    
-    msg_out[offset++]='G';
-    for(int i=0;i<4;i++) msg_out[offset++]=(my_instance_id>>(i*8))&0xff;
+    append_generationid(msg_out,&offset);
   }
   
 #ifdef SYNC_BY_BAR
   // Put one or more BARs
   int bar_number=find_highest_priority_bar();
   if (bundle_count&&((mtu-offset)>=BAR_LENGTH)) {
-    msg_out[offset++]='B'; // indicates a BAR follows
     append_bar(bar_number,&offset,mtu,msg_out);
   }
 
@@ -183,7 +177,6 @@ int update_my_message(int serialfd,
   int bar_count=0;
   while (bundle_count&&(mtu-offset)>=BAR_LENGTH) {
     int bundle_number=find_highest_priority_bar();
-    msg_out[offset++]='B'; // indicates a BAR follows
     append_bar(bundle_number,&offset,mtu,msg_out);
     bar_count++;
   }

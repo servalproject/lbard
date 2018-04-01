@@ -50,6 +50,8 @@ int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
   // 8 bytes : version
   // 4 bytes : recipient prefix
   // 1 byte : log2(ish) size and meshms flag
+
+  msg_out[(*offset)++]='B'; // indicates a BAR follows
   
   for(int i=0;i<8;i++)
     msg_out[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);

@@ -42,6 +42,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+int append_generationid(unsigned char *msg_out,int *offset)
+{
+  // G + 4 random bytes = 5 bytes
+  struct timeval tv;
+  gettimeofday(&tv,NULL);    
+  
+  msg_out[(*offset)++]='G';
+  for(int i=0;i<4;i++) msg_out[(*offset)++]=(my_instance_id>>(i*8))&0xff;
+  return 0;
+}
 
 int message_parser_47(struct peer_state *sender,char *sender_prefix,
 		      char *servald_server, char *credential,
