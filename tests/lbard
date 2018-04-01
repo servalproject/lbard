@@ -892,7 +892,7 @@ test_TenSendersCombined5() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined15="Ten receivers receive 6KB bundle from 10 senders, disable bitmap transfers and randomised start offsets"
+doc_TenSendersCombined6="Ten receivers receive 6KB bundle from 10 senders, disable bitmap transfers and randomised start offsets"
 setup_TenSendersCombined6() {
    setup20 "infinitespeed" 0 0 "flags=6"
    # Insert a file on server A - J
