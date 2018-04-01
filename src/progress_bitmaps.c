@@ -137,6 +137,13 @@ int partial_update_request_bitmap(struct partial_bundle *p)
 	manifest_bitmap[block>>3]|=(1<<(block&7));
 	block++; length-=64;
       }
+
+      // Mark last piece of manifest as sent for case where manifest
+      // is not a multiple of 64 bytes long
+      if (start+length==p->manifest_length) {
+	block=p->manifest_length/64;
+	manifest_bitmap[block>>3]|=(1<<(block&7));	
+      }
     }
 
     l=l->next;

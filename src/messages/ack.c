@@ -200,6 +200,13 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
     // For manifest progress, simply copy in the manifest progress bitmap
     p->request_manifest_bitmap[0]=msg[9];
     p->request_manifest_bitmap[0]=msg[10];
+    // (but mark from end of manifest to 1KB limit as always received)
+    if (p->manifest_length>0)
+      for(int i=0;i<16;i++)
+	{
+	  if ((i*64)>=p->manifest_length)
+	    p->request_manifest_bitmap[i>>3]|=1<<(i&7);
+	}
 
     // Reset (or translate) TX bitmap, since we are being asked to send from here.
     if (msg[0]=='F'&&msg[0]=='f') {
