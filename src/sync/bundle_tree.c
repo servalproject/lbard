@@ -130,13 +130,15 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
     fclose(f);
   }
 
-  printf(">>> %s Calling sync_recv_message(len=%d)\n",
-	 timestamp_str(),sync_bytes);
-  dump_bytes("Sync message",&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
+  if (debug_sync) {
+    printf(">>> %s Calling sync_recv_message(len=%d)\n",
+	   timestamp_str(),sync_bytes);
+    dump_bytes("Sync message",&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
+  }
   
   sync_recv_message(sync_state,(void *)p,&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
-  printf(">>> %s sync_recv_message() returned.\n",	 
-	 timestamp_str());
+  if (debug_sync) 
+    printf(">>> %s sync_recv_message() returned.\n",timestamp_str());
   
   return 0;
 }

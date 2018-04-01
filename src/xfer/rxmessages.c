@@ -121,8 +121,9 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
     }
 
     if (message_handlers[msg[offset]]) {
-      printf("### %s : Calling message handler for type '%c' @ offset 0x%x\n",
-	     timestamp_str(),msg[offset],offset);
+      if (debug_pieces)
+	printf("### %s : Calling message handler for type '%c' @ offset 0x%x\n",
+	       timestamp_str(),msg[offset],offset);
       int advance=message_handlers[msg[offset]](p,peer_prefix,servald_server,credential,
 						&msg[offset],len-offset);
       if (advance<1) {
@@ -132,7 +133,8 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
 		offset,msg[offset],advance);
 	return -1;
       } else {
-	printf("### %s : Handler consumed %d packet bytes.\n",timestamp_str(),advance);
+	if (debug_pieces)
+	  printf("### %s : Handler consumed %d packet bytes.\n",timestamp_str(),advance);
 	offset+=advance;
       }
     } else {
