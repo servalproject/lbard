@@ -290,7 +290,7 @@ int http_report_network_status(int socket)
       }
       
       
-      printf("</body>\n</html>\n");
+      fprintf(f,"</body>\n</html>\n");
       
       fclose(f);
     }
