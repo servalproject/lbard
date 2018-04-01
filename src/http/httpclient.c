@@ -307,15 +307,15 @@ int http_get_simple(char *server_and_port, char *auth_token,
 	line[len+1]=0;
 	if (sscanf(line,"Content-Length: %d",&content_length)==1) {
 	  // got content length
-	  fprintf(stderr,"HTTP Content-Length = %d\n",content_length);
+	  // fprintf(stderr,"HTTP Content-Length = %d\n",content_length);
 	}
 	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
 	  // got http response
-	  fprintf(stderr,"HTTP Response = %d\n",http_response);
+	  // fprintf(stderr,"HTTP Response = %d\n",http_response);
 	}
 	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
 	  // got http response
-	  fprintf(stderr,"HTTP Response = %d\n",http_response);
+	  // fprintf(stderr,"HTTP Response = %d\n",http_response);
 	}
 	len=0;
 	// Have we found end of headers?
@@ -330,7 +330,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
   }
 
   // Got headers, read body and write to file
-  fprintf(stderr,"  reading body...\n");
+  // fprintf(stderr,"  reading body...\n");
 
   int rxlen=0;
   r=0;
@@ -338,11 +338,11 @@ int http_get_simple(char *server_and_port, char *auth_token,
     errno=0;
     r=read_nonblock(sock,line,LINE_BYTES);
     if (r>0) {
-      fprintf(stderr,"read %d body bytes @ T%lld\n",r,timeout_time-gettime_ms());
+      // fprintf(stderr,"read %d body bytes @ T%lld\n",r,timeout_time-gettime_ms());
       if (last_read_time) *last_read_time=gettime_ms();
       int written=fwrite(line,1,r,outfile);      
       if (written!=r) {
-	fprintf(stderr,"Short write: %d of %d bytes\n",written,r);
+	fprintf(stderr,"Short write of HTTP data to file: %d of %d bytes\n",written,r);
 	close(sock);
 	return -1;
       }
@@ -371,9 +371,9 @@ int http_get_simple(char *server_and_port, char *auth_token,
   {
     struct stat s;
     int r=fstat(fileno(outfile),&s);
-    fprintf(stderr,"  HTTP download file: length=%lld, stat result=%d\n",
-	    (long long)s.st_size,r);
-    perror("fstat");
+    if (0) fprintf(stderr,"  HTTP download file: length=%lld, stat result=%d\n",
+		   (long long)s.st_size,r);
+    if (errno) perror("fstat");
     if (s.st_size<content_length) {
       fprintf(stderr,"  HTTP download file is too short. Returning error.\n");
       return -1;
@@ -500,12 +500,12 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 	   "--%s--\r\n",
 	   boundary_string);
 
-  fprintf(stderr,"  content_length was calculated at %d bytes, total_len=%d\n",
-	  content_length,total_len);
+  if (0) fprintf(stderr,"  content_length was calculated at %d bytes, total_len=%d\n",
+		 content_length,total_len);
   int present_len=2+boundary_len+2+strlen(manifest_header);
-  fprintf(stderr,
-	  "    subtotal_len=%d, difference+present=%d (should match content_length)\n",
-	  subtotal_len,total_len-subtotal_len+present_len);
+  if  (0) fprintf(stderr,
+		  "    subtotal_len=%d, difference+present=%d (should match content_length)\n",
+		  subtotal_len,total_len-subtotal_len+present_len);
   
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;

@@ -115,7 +115,6 @@ int sync_schedule_progress_report_bitmap(int peer, int partial)
 
 int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg_in,int *offset)
 {  
-  fprintf(stderr,"Saw BITMAP @ %d\n",*offset);
   unsigned char *msg=&msg_in[*offset];
   (*offset)+=1; // Skip 'M'
   (*offset)+=8; // Skip BID prefix

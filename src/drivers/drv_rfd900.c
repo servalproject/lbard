@@ -95,9 +95,7 @@ int rfd900_serviceloop(int serialfd)
     */
 
     // Also periodically update log of connected peers
-    fprintf(stderr,"About to call http_report_network_status(-1)\n");
     http_report_network_status(-1);
-    fprintf(stderr,"Returned from http_report_network_status(-1)\n");
     
     double ratio = 1.00;
     if (target_transmissions_per_4seconds)

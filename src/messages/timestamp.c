@@ -82,9 +82,10 @@ int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
       // By adding only one milli-strata, we effectively match the stratum that
       // updated us for the next 256 UHF packet transmissions. This should give
       // us the stability we desire.
-      printf("Saw timestamp from %s with stratum 0x%02x,"
-	     " which is better than our stratum of 0x%02x.0x%02x\n",
-	     sender_prefix,stratum,my_time_stratum>>8,my_time_stratum&0xff);
+      if (debug_radio)
+	printf("Saw timestamp from %s with stratum 0x%02x,"
+	       " which is better than our stratum of 0x%02x.0x%02x\n",
+	       sender_prefix,stratum,my_time_stratum>>8,my_time_stratum&0xff);
       my_time_stratum=((stratum+1)<<8);
     }
   }
@@ -132,7 +133,6 @@ int message_parser_54(struct peer_state *sender,char *sender_prefix,
 {
   int offset=0;
   {
-    fprintf(stderr,"Saw timestamp message.\n");
     offset++;
     int stratum=msg[offset++];
     struct timeval tv;
@@ -179,13 +179,13 @@ int message_parser_54(struct peer_state *sender,char *sender_prefix,
     // transfers via UHF, for example.
     time_t now =time(0);
     long long delta=(long long)now-(long long)sender->last_timestamp_received;
-    fprintf(stderr,"Logging timestamp message from %s (delta=%lld).\n",sender_prefix,delta);
+    // fprintf(stderr,"Logging timestamp message from %s (delta=%lld).\n",sender_prefix,delta);
     if (delta<0) {
       fprintf(stderr,"Correcting last timestamp report time to be in the past, not future.\n");
       sender->last_timestamp_received=0;
     }
     if (delta>60) {
-      fprintf(stderr,"Logging timestamp message, since >60 seconds since last seen from this peer.\n");	  
+      // fprintf(stderr,"Logging timestamp message, since >60 seconds since last seen from this peer.\n");	  
       sender->last_timestamp_received=now;
       FILE *bundlelogfile=NULL;
       if (debug_bundlelog) {

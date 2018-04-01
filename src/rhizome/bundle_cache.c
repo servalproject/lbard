@@ -141,8 +141,6 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     if (cached_manifest_len>1024) return -1;
     
     // Generate binary encoded manifest from plain text version
-    fprintf(stderr,"About to binary encode manifest of %d bytes\n",
-	    cached_manifest_len);
     if (cached_manifest_encoded) free(cached_manifest_encoded);
     cached_manifest_encoded=malloc(1024);
     assert(cached_manifest_encoded);
@@ -154,8 +152,6 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
       bcopy(cached_manifest,cached_manifest_encoded,cached_manifest_len);
       cached_manifest_encoded_len = cached_manifest_len;	
     }        
-    fprintf(stderr,"Encoded manifest in %d bytes\n",
-	    cached_manifest_encoded_len);
     
     snprintf(path,8192,"/restful/rhizome/%s/raw.bin",
 	     bundles[bundle_number].bid_hex);

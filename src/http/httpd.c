@@ -89,12 +89,14 @@ int http_process(struct sockaddr *cliaddr,
   int version_major, version_minor;
   int offset;
   int request_len = read(socket,buffer,8192);
-  printf("Read %d bytes of request.\n",request_len);
+  if (debug_http) printf("Read %d bytes of request.\n",request_len);
   int r=sscanf(buffer,"GET %[^ ] HTTP/%d.%d\n%n",
 	       uri,&version_major,&version_minor,&offset);
-  printf("  scanned %d fields.\n",r);
-  printf("    uri=%s\n",uri);
-  printf("    request version=%d.%d\n",version_major,version_minor);
+  if (debug_http) {
+    printf("  scanned %d fields.\n",r);
+    printf("    uri=%s\n",uri);
+    printf("    request version=%d.%d\n",version_major,version_minor);
+  }
   if (r==3)
     {
       char location[8192]="";
@@ -104,9 +106,11 @@ int http_process(struct sockaddr *cliaddr,
 	urldecode(location);
 	urldecode(message);
       
-	printf("  scanned URI fields.\n");
-	printf("    location=[%s]\n",location);
-	printf("    message=[%s]\n",message);
+	if (debug_http) {
+	  printf("  scanned URI fields.\n");
+	  printf("    location=[%s]\n",location);
+	  printf("    message=[%s]\n",message);
+	}
 	
 	char *m="HTTP/1.0 200 OK\nServer: Serval LBARD\n\nYour message has been submitted.";
 	

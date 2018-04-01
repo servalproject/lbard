@@ -48,6 +48,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "version.h"
 #include "radios.h"
 
+int debug_http=0;
 int debug_radio=0;
 int debug_pieces=1;
 int debug_announce=0;
@@ -348,6 +349,7 @@ int main(int argc, char **argv)
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
       else if (!strcasecmp("radio",argv[n])) debug_radio=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
+      else if (!strcasecmp("http",argv[n])) debug_http=1;
       else if (!strcasecmp("announce",argv[n])) debug_announce=1;
       else if (!strcasecmp("insert",argv[n])) debug_insert=1;
       else if (!strcasecmp("radio_rx",argv[n])) debug_radio_rx=1;      
