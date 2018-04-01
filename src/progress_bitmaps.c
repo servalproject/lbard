@@ -191,6 +191,23 @@ int progress_bitmap_translate(struct peer_state *p,int new_body_offset)
   return 0;
 }
 
+int dump_peer_tx_bitmap(int peer)
+{
+  printf(">>> %s TX bitmap for %s* : bundle:%-2d/%-2d, m:%4d, p:%4d : ",
+	 timestamp_str(),peer_records[peer]->sid_prefix,
+	 
+	 peer_records[peer]->tx_bundle,
+	 peer_records[peer]->request_bitmap_bundle,
+	 
+	 peer_records[peer]->tx_bundle_manifest_offset,
+	 peer_records[peer]->request_bitmap_offset);
+  // Keep all bitmaps in line, by padding front with - characters where the bitmap starts later
+  for(int i=0;i<peer_records[peer]->request_bitmap_offset;i+=64) printf("-");
+  dump_progress_bitmap(stdout,peer_records[peer]->request_bitmap);
+
+  return 0;
+}
+
 /*
   Update the point we intend to send from in the current bundle based on the
   request bitmap.
@@ -205,18 +222,8 @@ int peer_update_send_point(int peer)
       return 0;
     }
 
-  printf(">>> %s TX bitmap for %s* : bundle:%-2d/%-2d, m:%4d, p:%4d : ",
-	 timestamp_str(),peer_records[peer]->sid_prefix,
-
-	 peer_records[peer]->tx_bundle,
-	 peer_records[peer]->request_bitmap_bundle,
-	 
-	 peer_records[peer]->tx_bundle_manifest_offset,
-	 peer_records[peer]->request_bitmap_offset);
-  // Keep all bitmaps in line, by padding front with - characters where the bitmap starts later
-  for(int i=0;i<peer_records[peer]->request_bitmap_offset;i+=64) printf("-");
-  dump_progress_bitmap(stdout,peer_records[peer]->request_bitmap);
-
+  dump_peer_tx_bitmap(peer);
+  
   // Pick random piece that has yet to be received, and send that
 #define MAX_CANDIDATES 32
   int candidates[MAX_CANDIDATES];
@@ -232,7 +239,10 @@ int peer_update_send_point(int peer)
   int i=0; if (peer_records[peer]->request_bitmap_offset&0x40) i=1;
   for(;i<max_bit;i+=2)
     if (!(peer_records[peer]->request_bitmap[i>>3]&(1<<(i&7)))) {
-      if (candidate_count<MAX_CANDIDATES) candidates[candidate_count++]=i;
+      // If the entire bundle has an odd number of pieces, then the last piece
+      // is not eligible to be an even boundary.
+      if (i!=(max_bit-1))
+	if (candidate_count<MAX_CANDIDATES) candidates[candidate_count++]=i;
     }
   if (!candidate_count) {
     // No evenly aligned candidates, so include all

@@ -144,7 +144,7 @@ int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg_in,int *o
     // Update manifest bitmap ...
     memcpy(p->request_manifest_bitmap,manifest_bitmap,2);
     // ... and quickly recalculate first useful TX point
-    for(int i=0;i<16;i++) if (manifest_bitmap[i>>3]&(1<<(i&7))) manifest_offset=i*64;
+    for(int i=0;i<16;i++) if (!(manifest_bitmap[i>>3]&(1<<(i&7)))) { manifest_offset=i*64; break; }
     p->tx_bundle_manifest_offset=manifest_offset;
   }
 

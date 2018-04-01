@@ -595,5 +595,6 @@ int setup_periodic_requests(char *filename);
 int make_periodic_requests(void);
 int lookup_bundle_by_prefix(const unsigned char *prefix,int len);
 int progress_bitmap_translate(struct peer_state *p,int new_body_offset);
+int dump_peer_tx_bitmap(int peer);
 
 #include "util.h"
