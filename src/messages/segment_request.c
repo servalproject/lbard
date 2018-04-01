@@ -42,6 +42,57 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+int request_segment(int peer, char *bid_prefix, int bundle_length,
+		    int seg_start, int is_manifest,
+		    int *offset, int mtu,unsigned char *msg_out)
+{
+  // Check that we have enough space
+  if ((mtu-*offset)<(1+2+8+3)) return -1;
+
+  int start_offset=*offset;
+  
+  // Request piece
+  msg_out[(*offset)++]='R';
+
+  // First 2 bytes only of peer SID. This will almost always get the benefit of
+  // specifying the peer precisely, but save bytes on average
+  msg_out[(*offset)++]=peer_records[peer]->sid_prefix_bin[0];
+  msg_out[(*offset)++]=peer_records[peer]->sid_prefix_bin[1];
+
+  // BID prefix
+  for(int i=0;i<8;i++)
+    msg_out[(*offset)++]=
+      hex_to_val(bid_prefix[i*2+1])
+      +hex_to_val(bid_prefix[i*2+0])*16;
+
+  // Start offset of interest
+  msg_out[(*offset)++]=(seg_start>>0)&0xff;
+  msg_out[(*offset)++]=(seg_start>>8)&0xff;
+  msg_out[(*offset)++]=((seg_start>>16)&0x7f)|(is_manifest?0x80:0x00);
+
+  if (debug_pull) {
+    printf("Requesting BID=%s @ %c%d (len=%d) from SID=%s*\n",
+	    bid_prefix,
+	    is_manifest?'M':'B',seg_start,
+	    bundle_length,
+	    peer_records[peer]->sid_prefix);
+    printf("Request block: ");
+    for(;start_offset<*offset;start_offset++)
+      printf(" %02X",msg_out[start_offset]);
+    printf("\n");
+  }
+
+  char status_msg[1024];
+  snprintf(status_msg,1024,"Requesting BID=%s @ %c%d (len=%d) from SID=%s*\n",
+	    bid_prefix,
+	    is_manifest?'M':'B',seg_start,
+	    bundle_length,
+	    peer_records[peer]->sid_prefix);
+  status_log(status_msg);
+  
+  return 0;
+}
+
 int message_parser_52(struct peer_state *sender,char *sender_prefix,
 		      char *servald_server, char *credential,
 		      unsigned char *msg,int length)

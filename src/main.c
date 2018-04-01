@@ -514,12 +514,8 @@ int main(int argc, char **argv)
 	  
 	  unsigned char msg_out[1024];
 	  int offset=0;
-	  msg_out[offset++]='T';
-	  msg_out[offset++]=my_time_stratum>>8;
-	  for(int i=0;i<8;i++)
-	    msg_out[offset++]=(tv.tv_sec>>(i*8))&0xff;
-	  for(int i=0;i<3;i++)
-	    msg_out[offset++]=(tv.tv_usec>>(i*8))&0xff;
+	  append_timestamp(msg_out,&offset);
+	  
 	  // Now broadcast on every interface to port 0x5401
 	  // Oh that's right, UDP sockets don't have an easy way to do that.
 	  // We could interrogate the OS to ask about all interfaces, but we
