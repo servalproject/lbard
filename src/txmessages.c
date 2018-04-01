@@ -74,44 +74,6 @@ int append_bytes(int *offset,int mtu,unsigned char *msg_out,
   }
 }
 
-#ifdef SYNC_BY_BAR
-int append_bar(int bundle_number,int *offset,int mtu,unsigned char *msg_out)
-{
-  // BAR consists of:
-  // 8 bytes : BID prefix
-  // 8 bytes : version
-  // 4 bytes : recipient prefix
-  // 1 byte : log2(ish) size and meshms flag
-  
-  for(int i=0;i<8;i++)
-    msg_out[(*offset)++]=hex_byte_value(&bundles[bundle_number].bid[i*2]);
-  for(int i=0;i<8;i++)
-    msg_out[(*offset)++]=(bundles[bundle_number].version>>(i*8))&0xff;
-  for(int i=0;i<4;i++)
-    msg_out[(*offset)++]=hex_byte_value(&bundles[bundle_number].recipient[i*2]);
-  int size_byte=log2ish(bundles[bundle_number].length);
-  if ((!strcasecmp("MeshMS1",bundles[bundle_number].service))
-      ||(!strcasecmp("MeshMS2",bundles[bundle_number].service)))
-    size_byte&=0x7f;
-  else
-    size_byte|=0x80;
-  msg_out[(*offset)++]=size_byte;
-
-  char status_msg[1024];
-  snprintf(status_msg,1024,"Announcing BAR %c%c%c%c%c%c%c%c* version %lld [%s]",
-	   bundles[bundle_number].bid[0],bundles[bundle_number].bid[1],
-	   bundles[bundle_number].bid[2],bundles[bundle_number].bid[3],
-	   bundles[bundle_number].bid[4],bundles[bundle_number].bid[5],
-	   bundles[bundle_number].bid[6],bundles[bundle_number].bid[7],
-	   bundles[bundle_number].version,	   
-	   bundles[bundle_number].service);
-  status_log(status_msg);
-
-  
-  return 0;
-}
-#endif
-
 /* Our time stratum. 0xff00 means that we have not had any external time input,
    other values are hops from a time authority (who may or may not actually be
    accurate).  The time is used for logging purposes, and while more accurate would
@@ -193,18 +155,8 @@ int update_my_message(int serialfd,
 
   if (!(random()%10)) {
     // Occassionally announce our time
-    // T + (our stratum) + (64 bit seconds since 1970) +
-    // + (24 bit microseconds)
-    // = 1+1+8+3 = 13 bytes
-    struct timeval tv;
-    gettimeofday(&tv,NULL);    
-    
-    msg_out[offset++]='T';
-    msg_out[offset++]=my_time_stratum>>8;
-    for(int i=0;i<8;i++)
-      msg_out[offset++]=(tv.tv_sec>>(i*8))&0xff;
-    for(int i=0;i<3;i++)
-      msg_out[offset++]=(tv.tv_usec>>(i*8))&0xff;    
+
+    append_timestamp(msg_out,&offset);
   }
   if (!(random()%10)) {
     // Occassionally announce our instance (generation) ID

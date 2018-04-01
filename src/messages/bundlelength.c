@@ -42,6 +42,25 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+int announce_bundle_length(int mtu, unsigned char *msg,int *offset,
+			   unsigned char *bid_bin,long long version,unsigned int length)
+{
+  if ((mtu-*offset)>(1+8+8+4)) {
+    // Announce length of bundle
+    msg[(*offset)++]='L';
+    // Bundle prefix (8 bytes)
+    for(int i=0;i<8;i++) msg[(*offset)++]=bid_bin[i];
+    // Bundle version (8 bytes)
+    for(int i=0;i<8;i++) msg[(*offset)++]=(version>>(i*8))&0xff;
+    // Length (4 bytes)
+    msg[(*offset)++]=(length>>0)&0xff;
+    msg[(*offset)++]=(length>>8)&0xff;
+    msg[(*offset)++]=(length>>16)&0xff;
+    msg[(*offset)++]=(length>>24)&0xff;
+  }
+  return 0;
+}
+
 int saw_length(char *peer_prefix,char *bid_prefix,long long version,
 	       int body_length)
 {

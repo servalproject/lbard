@@ -1,5 +1,7 @@
 #include <sys/time.h>
 
+#define SYNC_MSG_HEADER_LEN 2
+
 // For now we use a fixed link MTU for all radio types for now.
 // For ALE 2G we fragment frames.  We can revise this for ALE 3G large message blocks,
 // and when we implement a better analog modem down the track.
@@ -595,5 +597,16 @@ int make_periodic_requests(void);
 int lookup_bundle_by_prefix(const unsigned char *prefix,int len);
 int progress_bitmap_translate(struct peer_state *p,int new_body_offset);
 int dump_peer_tx_bitmap(int peer);
+int announce_bundle_length(int mtu, unsigned char *msg,int *offset,
+			   unsigned char *bid_bin,long long version,unsigned int length);
+int append_timestamp(unsigned char *msg_out,int *offset);
+int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
+				  unsigned char *p, int is_manifest,
+				  int *offset,int mtu,unsigned char *msg,
+				  int target_peer);
+int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out);
+int sync_build_bar_in_slot(int slot,unsigned char *bid_bin,
+			   long long bundle_version);
+
 
 #include "util.h"

@@ -118,7 +118,6 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
     printf("Receiving sync tree message of %d bytes\n",len);
       
   // Pull out the sync tree message for processing.
-#define SYNC_MSG_HEADER_LEN 2
   int sync_bytes=len-SYNC_MSG_HEADER_LEN;
 
   if (debug_sync_keys) {
@@ -141,176 +140,6 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
   
   return 0;
 }
-
-int sync_tree_send_message(int *offset,int mtu, unsigned char *msg_out)
-{         
-  uint8_t msg[256];
-  int len=0;
-
-  int bytes_available=mtu-SYNC_MSG_HEADER_LEN-(*offset);
-  if (bytes_available<1) return -1;
-  
-  /* Send sync status message */
-  msg[len++]='S'; // Sync message
-  int length_byte_offset=len;
-  msg[len++]=0; // place holder for length
-  assert(len==SYNC_MSG_HEADER_LEN);
-
-  int used=sync_build_message(sync_state,&msg[len],bytes_available);
-
-  if (debug_sync_keys) {
-    char filename[1024];
-    snprintf(filename,1024,"lbardkeys.%s.sent_sync_message",my_sid_hex);
-    FILE *f=fopen(filename,"a");
-    fprintf(f,"%d:",used);
-    for(int i=0;i<used;i++) fprintf(f,"%02X ",msg[len+i]);
-    fprintf(f,"\n");
-    fclose(f);
-  }
-  
-  len+=used;
-  // Record the length of the field
-  msg[length_byte_offset]=len;
-  append_bytes(offset,mtu,msg_out,msg,len);
-
-  // Record in retransmit buffer
-  // printf("Sending sync message (length now = $%02x, used %d)\n",*offset,used);
-
-  
-  return 0;
-}
-
-int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
-				  unsigned char *p, int is_manifest,
-				  int *offset,int mtu,unsigned char *msg,
-				  int target_peer)
-{
-  int max_bytes=mtu-(*offset)-21;
-  int bytes_available=len-start_offset;
-  int actual_bytes=0;
-  int not_end_of_item=0;
-
-  // If we can't announce even one byte, we should just give up.
-  if (start_offset>0xfffff) {
-    max_bytes-=2; if (max_bytes<0) max_bytes=0;
-  }
-  if (max_bytes<1) return -1;
-
-  // Work out number of bytes to include in announcement
-  if (bytes_available<max_bytes) {
-    actual_bytes=bytes_available;
-    not_end_of_item=0;
-  } else {
-    actual_bytes=max_bytes;
-    not_end_of_item=1;
-  }
-
-  // If not sending last piece, limit to 64 byte segment boundary.
-  // This is partly to aid debugging, but also avoids wasting bytes when we are
-  // using the request bitmap for transfers, where accounting is in 64 byte units.
-  if (not_end_of_item) {
-    int end_point=start_offset+actual_bytes;
-    if (!(option_flags&FLAG_NO_BITMAP_PROGRESS)) {
-      if (end_point&63) actual_bytes-=end_point&63;
-    }
-    if (actual_bytes<1) return 0;
-  }
-  
-  // Make sure byte count fits in 11 bits.
-  if (actual_bytes>0x7ff) actual_bytes=0x7ff;
-
-  if (actual_bytes<0) return -1;
-
-  printf(">>> %s I just sent %s piece [%d,%d) for %s*.\n",
-	 timestamp_str(),is_manifest?"manifest":"body",
-	 start_offset,start_offset+actual_bytes,
-	 peer_records[target_peer]->sid_prefix);
-  peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,is_manifest,
-						       start_offset,actual_bytes);
-  dump_peer_tx_bitmap(target_peer);
-  
-  // Generate 4 byte offset block (and option 2-byte extension for big bundles)
-  long long offset_compound=0;
-  offset_compound=(start_offset&0xfffff);
-  offset_compound|=((actual_bytes&0x7ff)<<20);
-  if (is_manifest) offset_compound|=0x80000000;
-  offset_compound|=((start_offset>>20LL)&0xffffLL)<<32LL;
-
-  // Now write the 23/25 byte header and actual bytes into output message
-  // BID prefix (8 bytes)
-  if (start_offset>0xfffff)
-    msg[(*offset)++]='P'+not_end_of_item;
-  else 
-    msg[(*offset)++]='p'+not_end_of_item;
-
-  // Intended recipient
-  msg[(*offset)++]=peer_records[target_peer]->sid_prefix_bin[0];
-  msg[(*offset)++]=peer_records[target_peer]->sid_prefix_bin[1];
-  
-  for(int i=0;i<8;i++) msg[(*offset)++]=bundles[bundle_number].bid_bin[i];
-  // Bundle version (8 bytes)
-  for(int i=0;i<8;i++)
-    msg[(*offset)++]=(cached_version>>(i*8))&0xff;
-  // offset_compound (4 bytes)
-  for(int i=0;i<4;i++)
-    msg[(*offset)++]=(offset_compound>>(i*8))&0xff;
-  if (start_offset>0xfffff) {
-    for(int i=4;i<6;i++)
-      msg[(*offset)++]=(offset_compound>>(i*8))&0xff;
-  }
-
-  bcopy(p,&msg[(*offset)],actual_bytes);
-  (*offset)+=actual_bytes;
-
-  /* Advance the cursor for sending this bundle to all other peers if their cursor
-     sits within the window we have just sent. */
-  for(int pn=0;pn<peer_count;pn++) {
-    if (pn!=target_peer&&peer_records[pn]) {
-      if (peer_records[pn]->tx_bundle==bundle_number) {
-	if (is_manifest) {
-	  if ((peer_records[pn]->tx_bundle_manifest_offset>=start_offset)
-	      &&(peer_records[pn]->tx_bundle_manifest_offset<(start_offset+actual_bytes)))
-	    peer_records[pn]->tx_bundle_manifest_offset=(start_offset+actual_bytes);
-	} else {
-	  if ((peer_records[pn]->tx_bundle_body_offset>=start_offset)
-	      &&(peer_records[pn]->tx_bundle_body_offset<(start_offset+actual_bytes))) {
-	    printf(">>> %s Cursor advance from %d to %d, due to sending [%d..%d].\n",
-		   timestamp_str(),
-		   peer_records[pn]->tx_bundle_body_offset,(start_offset+actual_bytes),
-		   start_offset,(start_offset+actual_bytes)
-		   );
-	    peer_records[pn]->tx_bundle_body_offset=(start_offset+actual_bytes);
-	  }
-	}
-      }
-    }
-  }
-  
-  if (debug_announce) {
-    printf("T+%lldms : Announcing for %s* ",gettime_ms()-start_time,
-	   peer_records[target_peer]->sid_prefix);
-    for(int i=0;i<8;i++) printf("%c",bundles[bundle_number].bid_hex[i]);
-    printf("* (priority=0x%llx) version %lld %s segment [%d,%d)\n",
-	   bundles[bundle_number].last_priority,
-	   bundles[bundle_number].version,
-	   is_manifest?"manifest":"payload",
-	   start_offset,start_offset+actual_bytes);
-  }
-
-  char status_msg[1024];
-  snprintf(status_msg,1024,"Announcing %c%c%c%c%c%c%c%c* version %lld %s segment [%d,%d)",
-	   bundles[bundle_number].bid_hex[0],bundles[bundle_number].bid_hex[1],
-	   bundles[bundle_number].bid_hex[2],bundles[bundle_number].bid_hex[3],
-	   bundles[bundle_number].bid_hex[4],bundles[bundle_number].bid_hex[5],
-	   bundles[bundle_number].bid_hex[6],bundles[bundle_number].bid_hex[7],
-	   bundles[bundle_number].version,
-	   is_manifest?"manifest":"payload",
-	   start_offset,start_offset+actual_bytes);
-  status_log(status_msg);
-
-  return actual_bytes;
-}
-
 
 int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 			       unsigned char *msg,
@@ -387,20 +216,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 		bundles[bundle_number].bid_hex,
 		bundle_number,bundles[bundle_number].version,
 		cached_version);
-	if ((mtu-*offset)>(1+8+8+4)) {
-	  // Announce length of bundle
-	  msg[(*offset)++]='L';
-	  // Bundle prefix (8 bytes)
-	  for(int i=0;i<8;i++) msg[(*offset)++]=bundles[bundle_number].bid_bin[i];
-	  // Bundle version (8 bytes)
-	  for(int i=0;i<8;i++)
-	    msg[(*offset)++]=(cached_version>>(i*8))&0xff;
-	  // Length (4 bytes)
-	  msg[(*offset)++]=(bundles[bundle_number].length>>0)&0xff;
-	  msg[(*offset)++]=(bundles[bundle_number].length>>8)&0xff;
-	  msg[(*offset)++]=(bundles[bundle_number].length>>16)&0xff;
-	  msg[(*offset)++]=(bundles[bundle_number].length>>24)&0xff;
-	}
+	announce_bundle_length(mtu,msg,offset,bundles[bundle_number].bid_bin,cached_version,bundles[bundle_number].length);
       }
   }
   {
@@ -544,25 +360,6 @@ int sync_tree_populate_with_our_bundles()
 {
   for(int i=0;i<bundle_count;i++)
     sync_add_key(sync_state,&bundles[i].sync_key,&bundles[i]);
-  return 0;
-}
-
-
-int sync_build_bar_in_slot(int slot,unsigned char *bid_bin,
-			   long long bundle_version)
-{
-  int ofs=0;
-  report_queue[slot][ofs++]='B';
-
-  // BID prefix
-  for(int i=0;i<8;i++) report_queue[slot][ofs++]=bid_bin[i];
-  // Bundle Version
-  for(int i=0;i<8;i++) report_queue[slot][ofs++]=(bundle_version>>(i*8))&0xff;
-  // Dummy recipient + size byte
-  for(int i=0;i<5;i++) report_queue[slot][ofs++]=(bundle_version>>(i*8))&0xff;
-
-  report_lengths[slot]=ofs;
-  assert(ofs<MAX_REPORT_LEN);
   return 0;
 }
 

@@ -42,6 +42,136 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
+				  unsigned char *p, int is_manifest,
+				  int *offset,int mtu,unsigned char *msg,
+				  int target_peer)
+{
+  int max_bytes=mtu-(*offset)-21;
+  int bytes_available=len-start_offset;
+  int actual_bytes=0;
+  int not_end_of_item=0;
+
+  // If we can't announce even one byte, we should just give up.
+  if (start_offset>0xfffff) {
+    max_bytes-=2; if (max_bytes<0) max_bytes=0;
+  }
+  if (max_bytes<1) return -1;
+
+  // Work out number of bytes to include in announcement
+  if (bytes_available<max_bytes) {
+    actual_bytes=bytes_available;
+    not_end_of_item=0;
+  } else {
+    actual_bytes=max_bytes;
+    not_end_of_item=1;
+  }
+
+  // If not sending last piece, limit to 64 byte segment boundary.
+  // This is partly to aid debugging, but also avoids wasting bytes when we are
+  // using the request bitmap for transfers, where accounting is in 64 byte units.
+  if (not_end_of_item) {
+    int end_point=start_offset+actual_bytes;
+    if (!(option_flags&FLAG_NO_BITMAP_PROGRESS)) {
+      if (end_point&63) actual_bytes-=end_point&63;
+    }
+    if (actual_bytes<1) return 0;
+  }
+  
+  // Make sure byte count fits in 11 bits.
+  if (actual_bytes>0x7ff) actual_bytes=0x7ff;
+
+  if (actual_bytes<0) return -1;
+
+  printf(">>> %s I just sent %s piece [%d,%d) for %s*.\n",
+	 timestamp_str(),is_manifest?"manifest":"body",
+	 start_offset,start_offset+actual_bytes,
+	 peer_records[target_peer]->sid_prefix);
+  peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,is_manifest,
+						       start_offset,actual_bytes);
+  dump_peer_tx_bitmap(target_peer);
+  
+  // Generate 4 byte offset block (and option 2-byte extension for big bundles)
+  long long offset_compound=0;
+  offset_compound=(start_offset&0xfffff);
+  offset_compound|=((actual_bytes&0x7ff)<<20);
+  if (is_manifest) offset_compound|=0x80000000;
+  offset_compound|=((start_offset>>20LL)&0xffffLL)<<32LL;
+
+  // Now write the 23/25 byte header and actual bytes into output message
+  // BID prefix (8 bytes)
+  if (start_offset>0xfffff)
+    msg[(*offset)++]='P'+not_end_of_item;
+  else 
+    msg[(*offset)++]='p'+not_end_of_item;
+
+  // Intended recipient
+  msg[(*offset)++]=peer_records[target_peer]->sid_prefix_bin[0];
+  msg[(*offset)++]=peer_records[target_peer]->sid_prefix_bin[1];
+  
+  for(int i=0;i<8;i++) msg[(*offset)++]=bundles[bundle_number].bid_bin[i];
+  // Bundle version (8 bytes)
+  for(int i=0;i<8;i++)
+    msg[(*offset)++]=(cached_version>>(i*8))&0xff;
+  // offset_compound (4 bytes)
+  for(int i=0;i<4;i++)
+    msg[(*offset)++]=(offset_compound>>(i*8))&0xff;
+  if (start_offset>0xfffff) {
+    for(int i=4;i<6;i++)
+      msg[(*offset)++]=(offset_compound>>(i*8))&0xff;
+  }
+
+  bcopy(p,&msg[(*offset)],actual_bytes);
+  (*offset)+=actual_bytes;
+
+  /* Advance the cursor for sending this bundle to all other peers if their cursor
+     sits within the window we have just sent. */
+  for(int pn=0;pn<peer_count;pn++) {
+    if (pn!=target_peer&&peer_records[pn]) {
+      if (peer_records[pn]->tx_bundle==bundle_number) {
+	if (is_manifest) {
+	  if ((peer_records[pn]->tx_bundle_manifest_offset>=start_offset)
+	      &&(peer_records[pn]->tx_bundle_manifest_offset<(start_offset+actual_bytes)))
+	    peer_records[pn]->tx_bundle_manifest_offset=(start_offset+actual_bytes);
+	} else {
+	  if ((peer_records[pn]->tx_bundle_body_offset>=start_offset)
+	      &&(peer_records[pn]->tx_bundle_body_offset<(start_offset+actual_bytes))) {
+	    printf(">>> %s Cursor advance from %d to %d, due to sending [%d..%d].\n",
+		   timestamp_str(),
+		   peer_records[pn]->tx_bundle_body_offset,(start_offset+actual_bytes),
+		   start_offset,(start_offset+actual_bytes)
+		   );
+	    peer_records[pn]->tx_bundle_body_offset=(start_offset+actual_bytes);
+	  }
+	}
+      }
+    }
+  }
+  
+  if (debug_announce) {
+    printf("T+%lldms : Announcing for %s* ",gettime_ms()-start_time,
+	   peer_records[target_peer]->sid_prefix);
+    for(int i=0;i<8;i++) printf("%c",bundles[bundle_number].bid_hex[i]);
+    printf("* (priority=0x%llx) version %lld %s segment [%d,%d)\n",
+	   bundles[bundle_number].last_priority,
+	   bundles[bundle_number].version,
+	   is_manifest?"manifest":"payload",
+	   start_offset,start_offset+actual_bytes);
+  }
+
+  char status_msg[1024];
+  snprintf(status_msg,1024,"Announcing %c%c%c%c%c%c%c%c* version %lld %s segment [%d,%d)",
+	   bundles[bundle_number].bid_hex[0],bundles[bundle_number].bid_hex[1],
+	   bundles[bundle_number].bid_hex[2],bundles[bundle_number].bid_hex[3],
+	   bundles[bundle_number].bid_hex[4],bundles[bundle_number].bid_hex[5],
+	   bundles[bundle_number].bid_hex[6],bundles[bundle_number].bid_hex[7],
+	   bundles[bundle_number].version,
+	   is_manifest?"manifest":"payload",
+	   start_offset,start_offset+actual_bytes);
+  status_log(status_msg);
+
+  return actual_bytes;
+}
 
 int saw_piece(char *peer_prefix,int for_me,
 	      char *bid_prefix, unsigned char *bid_prefix_bin,

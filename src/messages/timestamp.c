@@ -42,6 +42,24 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+int append_timestamp(unsigned char *msg_out,int *offset)
+{
+  // T + (our stratum) + (64 bit seconds since 1970) +
+  // + (24 bit microseconds)
+  // = 1+1+8+3 = 13 bytes
+  struct timeval tv;
+  gettimeofday(&tv,NULL);    
+  
+  msg_out[(*offset)++]='T';
+  msg_out[(*offset)++]=my_time_stratum>>8;
+  for(int i=0;i<8;i++)
+    msg_out[(*offset)++]=(tv.tv_sec>>(i*8))&0xff;
+  for(int i=0;i<3;i++)
+    msg_out[(*offset)++]=(tv.tv_usec>>(i*8))&0xff;
+  return 0;
+}
+
+
 int message_parser_54(struct peer_state *sender,char *sender_prefix,
 		      char *servald_server, char *credential,
 		      unsigned char *msg,int length)
