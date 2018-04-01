@@ -51,6 +51,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 int debug_http=0;
 int debug_radio=0;
 int debug_pieces=0;
+int debug_bitmap=0;
+int debug_bundles=0;
 int debug_announce=0;
 int debug_pull=0;
 int debug_insert=0;
@@ -347,8 +349,10 @@ int main(int argc, char **argv)
 	time_broadcast_addrs[0]=strdup(&argv[n][14]);
       else if (!strcasecmp("logrejects",argv[n])) debug_insert=1;
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
+      else if (!strcasecmp("bitmap",argv[n])) debug_bitmap=1;
       else if (!strcasecmp("radio",argv[n])) debug_radio=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
+      else if (!strcasecmp("bundles",argv[n])) debug_bundles=1;
       else if (!strcasecmp("http",argv[n])) debug_http=1;
       else if (!strcasecmp("announce",argv[n])) debug_announce=1;
       else if (!strcasecmp("insert",argv[n])) debug_insert=1;

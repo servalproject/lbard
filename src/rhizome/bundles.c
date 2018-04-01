@@ -69,11 +69,11 @@ int register_bundle(char *service,
   bundle_calculate_tree_key(&bundle_sync_key,bundle_tree_salt,
 			    bid,strtoll(version,NULL,10),length,filehash);   
 
-  if (1)
+  if (debug_bundles)
     printf(">>> %s We now have bundle %s*,"
-	   " service=%s, version=%s\n"
-	   "    sender=%s,\n"
-	   "    recipient=%s\n",
+	   " service=%s, version=%s,"
+	   " sender=%s,"
+	   " recipient=%s\n",
 	   timestamp_str(),
 	   bid,service,version,sender,recipient);
 

@@ -706,11 +706,11 @@ void peer_does_not_have_this_key(void *context, void *peer_context,void *key_con
   struct peer_state *p=(struct peer_state *)peer_context;
   struct bundle_record *b=(struct bundle_record*)key_context;
 
-  if (1)
+  if (debug_bundles)
     printf(">>> %s Peer %s* is missing bundle %s* (key prefix=%02X%02X*), "
-	   "service=%s, version=%lld\n"
-	   "    sender=%s,\n"
-	   "    recipient=%s\n",
+	   "service=%s, version=%lld,"
+	   " sender=%s,"
+	   " recipient=%s\n",
 	   timestamp_str(),
 	   p->sid_prefix,
 	   b->bid_hex,

@@ -327,6 +327,8 @@ extern unsigned int option_flags;
 #define FLAG_NO_HARD_LOWER 8
 
 extern FILE *debug_file;
+extern int debug_bundles;
+extern int debug_bitmap;
 extern int debug_http;
 extern int debug_radio;
 extern int debug_pieces;
