@@ -21,7 +21,7 @@ SRCS=	$(SRCDIR)/main.c \
 	$(SRCDIR)/rhizome/peers.c \
 	$(SRCDIR)/rhizome/rank.c \
 	$(SRCDIR)/rhizome/bundles.c \
-	$(SRCDIR)/rhizome/manifests.c \
+	$(SRCDIR)/rhizome/manifest_compress.c \
 	$(SRCDIR)/rhizome/meshms.c \
 	$(SRCDIR)/rhizome/otaupdate.c \
 	\
@@ -111,8 +111,8 @@ fakecsmaradio:	\
 	Makefile $(FAKERADIOSRCS) $(INCLUDEDIR)/fakecsmaradio.h
 	$(CC) $(CFLAGS) -o fakecsmaradio $(FAKERADIOSRCS)
 
-$(BINDIR)/manifesttest:	Makefile $(SRCDIR)/rhizome/manifests.c $(SRCDIR)/util.c
-	$(CC) $(CFLAGS) -DTEST -o $(BINDIR)/manifesttest $(SRCDIR)/rhizome/manifests.c $(SRCDIR)/util.c
+$(BINDIR)/manifesttest:	Makefile $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c
+	$(CC) $(CFLAGS) -DTEST -o $(BINDIR)/manifesttest $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c
 
 $(INCLUDEDIR)/radios.h:	$(RADIODRIVERS) Makefile
 	echo "Radio driver files: $(RADIODRIVERS)"
