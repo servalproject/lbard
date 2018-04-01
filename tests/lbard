@@ -742,7 +742,7 @@ test_FileDeliveryThreeHops() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_FileDeliveryThreeHops15="5K file delivery, via two intermediate UHF hops, disable improvements"
+doc_FileDeliveryThreeHops15="5K file delivery, via two intermediate UHF hops, disable all improvements"
 setup_FileDeliveryThreeHops15() {
     # We want to allow 0->3->2->1 only
     setup "allow between 0,3; allow between 3,2; allow between 2,1; deny all;" 0 0 "flags=15"
@@ -757,7 +757,7 @@ test_FileDeliveryThreeHops15() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined1="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined1="Ten receivers receive 6KB bundle from 10 senders, disable randomise redirect offset"
 setup_TenSendersCombined1() {
    setup20 "infinitespeed" 0 0 "flags=1"
    # Insert a file on server A - J
@@ -784,7 +784,7 @@ test_TenSendersCombined1() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined2="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined2="Ten receivers receive 6KB bundle from 10 senders, disable randomise start offset"
 setup_TenSendersCombined2() {
    setup20 "infinitespeed" 0 0 "flags=2"
    # Insert a file on server A - J
@@ -811,7 +811,7 @@ test_TenSendersCombined2() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined3="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined3="Ten receivers receive 6KB bundle from 10 senders, disable randomise start and redirect offsets"
 setup_TenSendersCombined3() {
    setup20 "infinitespeed" 0 0 "flags=3"
    # Insert a file on server A - J
@@ -838,7 +838,7 @@ test_TenSendersCombined3() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined4="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined4="Ten receivers receive 6KB bundle from 10 senders, disable bitmap tranfsers"
 setup_TenSendersCombined4() {
    setup20 "infinitespeed" 0 0 "flags=4"
    # Insert a file on server A - J
@@ -865,7 +865,7 @@ test_TenSendersCombined4() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined5="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined5="Ten receivers receive 6KB bundle from 10 senders, disable bitmap transfers and randomised redirection"
 setup_TenSendersCombined5() {
    setup20 "infinitespeed" 0 0 "flags=5"
    # Insert a file on server A - J
@@ -892,7 +892,7 @@ test_TenSendersCombined5() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined15="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined15="Ten receivers receive 6KB bundle from 10 senders, disable bitmap transfers and randomised start offsets"
 setup_TenSendersCombined6() {
    setup20 "infinitespeed" 0 0 "flags=6"
    # Insert a file on server A - J
@@ -919,7 +919,7 @@ test_TenSendersCombined6() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined7="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined7="Ten receivers receive 6KB bundle from 10 senders, disable bitmap transfers and randomised start and redirection offsets"
 setup_TenSendersCombined7() {
    setup20 "infinitespeed" 0 0 "flags=7"
    # Insert a file on server A - J
@@ -946,7 +946,7 @@ test_TenSendersCombined7() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined8="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined8="Ten receivers receive 6KB bundle from 10 senders, disable hard lower bound advancing"
 setup_TenSendersCombined8() {
    setup20 "infinitespeed" 0 0 "flags=8"
    # Insert a file on server A - J
@@ -973,7 +973,7 @@ test_TenSendersCombined8() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined9="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined9="Ten receivers receive 6KB bundle from 10 senders, disable hard lower bound advancing and randomisation of redirection offset"
 setup_TenSendersCombined9() {
    setup20 "infinitespeed" 0 0 "flags=9"
    # Insert a file on server A - J
@@ -1000,7 +1000,7 @@ test_TenSendersCombined9() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined10="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined10="Ten receivers receive 6KB bundle from 10 senders, disable hard lower bound advancing and randomisation of start offset"
 setup_TenSendersCombined10() {
    setup20 "infinitespeed" 0 0 "flags=10"
    # Insert a file on server A - J
@@ -1027,7 +1027,7 @@ test_TenSendersCombined10() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined11="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined11="Ten receivers receive 6KB bundle from 10 senders, disable hard lower bound advancing and randomisation of start and redirection offsets"
 setup_TenSendersCombined11() {
    setup20 "infinitespeed" 0 0 "flags=11"
    # Insert a file on server A - J
@@ -1054,7 +1054,7 @@ test_TenSendersCombined11() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined12="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined12="Ten receivers receive 6KB bundle from 10 senders, disable hard lower bound advancing and bitmap transfers"
 setup_TenSendersCombined12() {
    setup20 "infinitespeed" 0 0 "flags=12"
    # Insert a file on server A - J
@@ -1081,7 +1081,7 @@ test_TenSendersCombined12() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined13="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined13="Ten receivers receive 6KB bundle from 10 senders, disable hard lower bound advancing, bitmap transfers and randomisation of redirection offset"
 setup_TenSendersCombined13() {
    setup20 "infinitespeed" 0 0 "flags=13"
    # Insert a file on server A - J
@@ -1108,7 +1108,7 @@ test_TenSendersCombined13() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined14="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined14="Ten receivers receive 6KB bundle from 10 senders, disable hard lower bound advancing, bitmap transfers and randomisation of start offset"
 setup_TenSendersCombined14() {
    setup20 "infinitespeed" 0 0 "flags=14"
    # Insert a file on server A - J
@@ -1135,7 +1135,7 @@ test_TenSendersCombined14() {
    wait_until --timeout=900 all_bundles_received
 }
 
-doc_TenSendersCombined15="Ten receivers receive 6KB bundle from 10 senders, disable improvements"
+doc_TenSendersCombined15="Ten receivers receive 6KB bundle from 10 senders, disable all improvements"
 setup_TenSendersCombined15() {
    setup20 "infinitespeed" 0 0 "flags=15"
    # Insert a file on server A - J
