@@ -72,6 +72,7 @@ HDRS=	$(INCLUDEDIR)/lbard.h \
 	$(INCLUDEDIR)/sha3.h \
 	$(INCLUDEDIR)/util.h \
 	$(INCLUDEDIR)/radios.h \
+	$(INCLUDEDIR)/radio_type.h \
 	$(RADIOHEADERS) \
 	$(SRCDIR)/miniz.c \
 	$(INCLUDEDIR)/message_handlers.h
