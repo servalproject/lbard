@@ -128,7 +128,16 @@ int dump_partial(struct partial_bundle *p)
 	 p->body_length,
 	 p->request_bitmap_start
 	 );
-  dump_progress_bitmap(stdout,p->request_bitmap);
+  int max_block=256;
+  if (p->body_length>-1) {
+    max_block=(p->body_length-p->request_bitmap_start);
+    if (max_block&0x3f)
+      max_block=1+max_block/64;
+    else
+      max_block=0+max_block/64;    
+  }
+  if (max_block>256) max_block=256;
+  dump_progress_bitmap(stdout,p->request_bitmap,max_block);
 
   if (0) {
     fprintf(stderr,"  Manifest pieces received:\n");

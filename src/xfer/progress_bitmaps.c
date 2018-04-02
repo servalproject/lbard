@@ -41,9 +41,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
-int dump_progress_bitmap(FILE *f, unsigned char *b)
+int dump_progress_bitmap(FILE *f, unsigned char *b,int blocks)
 {
-  for(int i=0;i<(32*8);i++) {
+  for(int i=0;i<(32*8)&&(i<blocks);i++) {
     if (b[i>>3]&(1<<(i&7)))
       fprintf(f,"."); else fprintf(f,"Y");
     //    if (((i&63)==63)&&(i!=255)) fprintf(f,"\n    ");
@@ -124,7 +124,19 @@ int partial_update_request_bitmap(struct partial_bundle *p)
 	&&(l->start_offset<=1024)) {
       int start=l->start_offset;
       int length=l->length;
-      // Ignore any first partial 
+
+      // If the segment covers the last part of the manifest, but isn't a multiple of 64
+      // bytes, then we still need to mark the last piece as received.
+      if ((p->manifest_length!=-1)
+	  &&((start+length)==p->manifest_length)
+	  &&(p->manifest_length&0x3f))
+	{
+	  int block=(start+length)/64;
+	  if (block>=0&&block<16) manifest_bitmap[block>>3]|=(1<<(block&7));
+	  printf(">>> BITMAP marking manifest end-piece #%d as received\n",block);
+	}				        
+
+      // Ignore any first partial block, as we have no way to keep track of those in the bitmap.
       if (start&63) {
 	int trim=64-(start&63);
 	start+=trim;
@@ -132,6 +144,7 @@ int partial_update_request_bitmap(struct partial_bundle *p)
       }
       // Work out first block number
       int block=start>>6; //  divide by 64
+
       // Then mark as received all those we already have
       while (length>=64&&(block<16)) {
 	manifest_bitmap[block>>3]|=(1<<(block&7));
@@ -203,7 +216,16 @@ int dump_peer_tx_bitmap(int peer)
 	 peer_records[peer]->request_bitmap_offset);
   // Keep all bitmaps in line, by padding front with - characters where the bitmap starts later
   for(int i=0;i<peer_records[peer]->request_bitmap_offset;i+=64) printf("-");
-  dump_progress_bitmap(stdout,peer_records[peer]->request_bitmap);
+  int max_block=256;
+  if (peer_records[peer]->tx_bundle>-1) {    
+    max_block=(bundles[peer_records[peer]->tx_bundle].length-peer_records[peer]->request_bitmap_offset);
+    if (max_block&0x3f)
+      max_block=1+max_block/64;
+    else
+      max_block=0+max_block/64;
+  }
+  if (max_block>256) max_block=256;
+  dump_progress_bitmap(stdout,peer_records[peer]->request_bitmap,max_block);
 
   return 0;
 }
@@ -273,7 +295,6 @@ int peer_update_send_point(int peer)
   }
 
   // For the manifest, we just have our simple bitmap to go through
-  // XXX - We don't currently randomise
   candidate_count=0;
   for(int i=0;i<(1024/64);i++) {
     if (!(peer_records[peer]->request_manifest_bitmap[i>>3]&(1<<(i&7)))) {
@@ -367,11 +388,14 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 		int block_offset=start_offset;
 		int trim=offset&64;
 		int bytes_remaining=bytes;
-		if (trim) { offset+=64-trim; bytes_remaining-=trim; }
+		// Trim final partial piece from length, but only if it isn't
+		// the last few bytes of the bundle.
+		if (trim&&((start_offset+bytes)<(bundles[bundle_number].length)))
+		  { offset+=64-trim; bytes_remaining-=trim; }
 		int bit=offset/64;
 		if (bit>=0)
 		  while((bytes_remaining>=64)&&(bit<(32*8*64))) {
-		    if (0)
+		    if (debug_bitmap)
 		      printf(">>> %s Marking [%d,%d) sent to peer #%d(%s*) due to transmitted piece.\n",
 			     timestamp_str(),block_offset,block_offset+64,i,peer_records[i]->sid_prefix);
 		    if (!(peer_records[i]->request_bitmap[bit>>3]&(1<<(bit&7))))

@@ -442,9 +442,10 @@ int lookup_bundle_by_prefix(const unsigned char *prefix,int len)
 	best_bundle=bundle;      
     }
   }
-  printf("  %02X%02X%02X%02x* is bundle #%d of %d\n",
-	 prefix[0],prefix[1],prefix[2],prefix[3],
-	 best_bundle,bundle_count);
+  if (0)
+    printf("  %02X%02X%02X%02x* is bundle #%d of %d\n",
+	   prefix[0],prefix[1],prefix[2],prefix[3],
+	   best_bundle,bundle_count);
   return best_bundle;
 }
 
