@@ -228,8 +228,9 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
     if (!(option_flags&FLAG_NO_HARD_LOWER)) {
       p->tx_bundle_manifest_offset_hard_lower_bound=manifest_offset;
       p->tx_bundle_body_offset_hard_lower_bound=body_offset;
-      fprintf(stderr,"HARDLOWER: Setting hard lower limit to M/B = %d/%d due to ACK packet\n",
-	      manifest_offset,body_offset);
+      if (debug_ack)
+	fprintf(stderr,"HARDLOWER: Setting hard lower limit to M/B = %d/%d due to ACK packet\n",
+		manifest_offset,body_offset);
     }
     if (randomJump) {
       // Jump to a random position somewhere after the provided points.

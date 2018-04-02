@@ -52,6 +52,7 @@ int debug_http=0;
 int debug_radio=0;
 int debug_pieces=0;
 int debug_bitmap=0;
+int debug_ack=0;
 int debug_bundles=0;
 int debug_announce=0;
 int debug_pull=0;
@@ -350,6 +351,7 @@ int main(int argc, char **argv)
       else if (!strcasecmp("logrejects",argv[n])) debug_insert=1;
       else if (!strcasecmp("pull",argv[n])) debug_pull=1;
       else if (!strcasecmp("bitmap",argv[n])) debug_bitmap=1;
+      else if (!strcasecmp("ack",argv[n])) debug_ack=1;
       else if (!strcasecmp("radio",argv[n])) debug_radio=1;
       else if (!strcasecmp("pieces",argv[n])) debug_pieces=1;
       else if (!strcasecmp("bundles",argv[n])) debug_bundles=1;

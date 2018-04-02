@@ -149,7 +149,8 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 			       char *servald_server, char *credential)
 {
   int bundle_number=peer_records[peer]->tx_bundle;
-  fprintf(stderr,"HARDLOWER: Announcing a piece of bundle #%d\n",bundle_number);
+  if (debug_ack)
+    fprintf(stderr,"HARDLOWER: Announcing a piece of bundle #%d\n",bundle_number);
   if (bundle_number<0) return -1;
   
   if (prime_bundle_cache(bundle_number,
@@ -159,7 +160,8 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
       {
 	sync_dequeue_bundle(peer_records[peer],peer_records[peer]->tx_bundle);
       }
-    fprintf(stderr,"HARDLOWER: Couldn't prime bundle cache.\n");
+    if (debug_ack)
+      fprintf(stderr,"HARDLOWER: Couldn't prime bundle cache.\n");
     return -1;
   }
   else
@@ -228,20 +230,22 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
       if (peer_records[peer]->tx_bundle_body_offset
 	  <peer_records[peer]->tx_bundle_body_offset_hard_lower_bound)
 	{
-	  fprintf(stderr,"HARDLOWER: Advancing tx_bundle_body_offset from %d to %d\n",
-		  peer_records[peer]->tx_bundle_body_offset,
-		  peer_records[peer]->tx_bundle_body_offset_hard_lower_bound);
+	  if (debug_ack)
+	    fprintf(stderr,"HARDLOWER: Advancing tx_bundle_body_offset from %d to %d\n",
+		    peer_records[peer]->tx_bundle_body_offset,
+		    peer_records[peer]->tx_bundle_body_offset_hard_lower_bound);
 	  peer_records[peer]->tx_bundle_body_offset
 	    =peer_records[peer]->tx_bundle_body_offset_hard_lower_bound;
 	}
     }
     
-    fprintf(stderr,"HARDLOWER: Sending body piece with body_offset=%d, body_len=%d (hard lower limit = %d/%d\n",
-	    peer_records[peer]->tx_bundle_body_offset,
-	    cached_body_len,
-	    peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound,
-	    peer_records[peer]->tx_bundle_body_offset_hard_lower_bound
-	    );
+    if (debug_ack)
+      fprintf(stderr,"HARDLOWER: Sending body piece with body_offset=%d, body_len=%d (hard lower limit = %d/%d\n",
+	      peer_records[peer]->tx_bundle_body_offset,
+	      cached_body_len,
+	      peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound,
+	      peer_records[peer]->tx_bundle_body_offset_hard_lower_bound
+	      );
     int start_offset=peer_records[peer]->tx_bundle_body_offset;
     
     int bytes =
@@ -556,7 +560,8 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     // Not already sending to another peer, so just pick a random point and start
     p->tx_bundle=bundle;
     if (!(option_flags&FLAG_NO_HARD_LOWER)) {
-      fprintf(stderr,"HARDLOWER: Resetting hard lower start point to 0,0\n");
+      if (debug_ack)
+	fprintf(stderr,"HARDLOWER: Resetting hard lower start point to 0,0\n");
     }
     p->tx_bundle_manifest_offset_hard_lower_bound=0;
     p->tx_bundle_body_offset_hard_lower_bound=0;
@@ -591,8 +596,9 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
     p->tx_bundle=-1;
     // Advance next in queue, if there is anything
     if (p->tx_queue_len) {
-      fprintf(stderr,"HARDLOWER: DEQUEUING:\n     %d more bundles in the queue. Next is bundle #%d\n",
-	     p->tx_queue_len,p->tx_queue_bundles[0]);
+      if (debug_ack)
+	fprintf(stderr,"HARDLOWER: DEQUEUING:\n     %d more bundles in the queue. Next is bundle #%d\n",
+		p->tx_queue_len,p->tx_queue_bundles[0]);
       p->tx_bundle=p->tx_queue_bundles[0];
       p->tx_bundle_priority=p->tx_queue_priorities[0];
       p->tx_bundle_manifest_offset=0;
@@ -600,7 +606,8 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
       p->tx_bundle_manifest_offset_hard_lower_bound=0;
       p->tx_bundle_body_offset_hard_lower_bound=0;
       if (!(option_flags&FLAG_NO_HARD_LOWER)) {
-	fprintf(stderr,"HARDLOWER: Resetting hard lower start point to 0,0\n");
+	if (debug_ack)
+	  fprintf(stderr,"HARDLOWER: Resetting hard lower start point to 0,0\n");
       }
       bcopy(&p->tx_queue_bundles[1],
 	    &p->tx_queue_bundles[0],

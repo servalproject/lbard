@@ -332,6 +332,7 @@ extern int debug_bitmap;
 extern int debug_http;
 extern int debug_radio;
 extern int debug_pieces;
+extern int debug_ack;
 extern int debug_announce;
 extern int debug_pull;
 extern int debug_insert;
