@@ -167,7 +167,7 @@ int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg_in,int *o
       max_block=0+max_block/64;    
   }
   if (max_block>256) max_block=256;
-  if (dump_bitmap) dump_progress_bitmap(stdout, bitmap, max_block);
+  if (debug_bitmap) dump_progress_bitmap(stdout, bitmap, max_block);
   
   return 0;
 }
