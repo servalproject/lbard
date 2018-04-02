@@ -236,7 +236,7 @@ int dump_peer_tx_bitmap(int peer)
       max_block=0+max_block/64;
   }
   if (max_block>256) max_block=256;
-  dump_progress_bitmap(stdout,peer_records[peer]->request_bitmap,max_block);
+  if (debug_bitmap) dump_progress_bitmap(stdout,peer_records[peer]->request_bitmap,max_block);
 
   return 0;
 }
