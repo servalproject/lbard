@@ -216,14 +216,15 @@ int progress_bitmap_translate(struct peer_state *p,int new_body_offset)
 
 int dump_peer_tx_bitmap(int peer)
 {
-  printf(">>> %s TX bitmap for %s* : bundle:%-2d/%-2d, m:%4d, p:%4d : ",
-	 timestamp_str(),peer_records[peer]->sid_prefix,
-	 
-	 peer_records[peer]->tx_bundle,
-	 peer_records[peer]->request_bitmap_bundle,
-	 
-	 peer_records[peer]->tx_bundle_manifest_offset,
-	 peer_records[peer]->request_bitmap_offset);
+  if (debug_bitmap)
+    printf(">>> %s TX bitmap for %s* : bundle:%-2d/%-2d, m:%4d, p:%4d : ",
+	   timestamp_str(),peer_records[peer]->sid_prefix,
+	   
+	   peer_records[peer]->tx_bundle,
+	   peer_records[peer]->request_bitmap_bundle,
+	   
+	   peer_records[peer]->tx_bundle_manifest_offset,
+	   peer_records[peer]->request_bitmap_offset);
   // Keep all bitmaps in line, by padding front with - characters where the bitmap starts later
   for(int i=0;i<peer_records[peer]->request_bitmap_offset;i+=64) printf("-");
   int max_block=256;

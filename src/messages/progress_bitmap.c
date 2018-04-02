@@ -147,15 +147,16 @@ int sync_parse_progress_bitmap(struct peer_state *p,unsigned char *msg_in,int *o
     p->tx_bundle_manifest_offset=manifest_offset;
   }
 
-  printf(">>> %s BITMAP ACK: %s* is informing everyone to send from m=%d (%02x%02x), p=%d of"
-	  " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d/%d):  ",
-	 timestamp_str(),
-	 p?p->sid_prefix:"<null>",
-	 manifest_offset,
-	 p->request_manifest_bitmap[0],p->request_manifest_bitmap[1],
-	 body_offset,
-	 msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8],
-	 bundle,bundle_count);
+  if (debug_bitmap)
+    printf(">>> %s BITMAP ACK: %s* is informing everyone to send from m=%d (%02x%02x), p=%d of"
+	   " %02x%02x%02x%02x%02x%02x%02x%02x (bundle #%d/%d):  ",
+	   timestamp_str(),
+	   p?p->sid_prefix:"<null>",
+	   manifest_offset,
+	   p->request_manifest_bitmap[0],p->request_manifest_bitmap[1],
+	   body_offset,
+	   msg[1],msg[2],msg[3],msg[4],msg[5],msg[6],msg[7],msg[8],
+	   bundle,bundle_count);
 
   int max_block=256;
   if (bundle>-1) {
