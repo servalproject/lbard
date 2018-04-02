@@ -125,6 +125,9 @@ int partial_update_request_bitmap(struct partial_bundle *p)
       int start=l->start_offset;
       int length=l->length;
 
+      if (debug_bitmap)
+	printf("  manifest_bitmap: applying segment [%d,%d)\n",start,start+length);
+      
       // If the segment covers the last part of the manifest, but isn't a multiple of 64
       // bytes, then we still need to mark the last piece as received.
       if ((p->manifest_length!=-1)
@@ -132,8 +135,14 @@ int partial_update_request_bitmap(struct partial_bundle *p)
 	  &&(p->manifest_length&0x3f))
 	{
 	  int block=(start+length)/64;
-	  if (block>=0&&block<16) manifest_bitmap[block>>3]|=(1<<(block&7));
-	  printf(">>> BITMAP marking manifest end-piece #%d as received\n",block);
+	  if (block>=0&&block<16) {
+	    if (debug_bitmap)
+	      printf(">>> BITMAP marking manifest from end-piece #%d onwards as received\n",block);
+	    while(block<16) {
+	      manifest_bitmap[block>>3]|=(1<<(block&7));
+	      block++;
+	    }
+	  }
 	}				        
 
       // Ignore any first partial block, as we have no way to keep track of those in the bitmap.
@@ -147,6 +156,7 @@ int partial_update_request_bitmap(struct partial_bundle *p)
 
       // Then mark as received all those we already have
       while (length>=64&&(block<16)) {
+	if (debug_bitmap) printf("    marking block #%d as received.\n",block);
 	manifest_bitmap[block>>3]|=(1<<(block&7));
 	block++; length-=64;
       }
