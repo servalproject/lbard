@@ -178,7 +178,8 @@ time_t last_network_status_call=0;
 time_t last_peer_log=0;
 int http_report_network_status(int socket)
 {
-  if ((time(0)-last_network_status_call)>1)
+  if (((time(0)-last_network_status_call)>1)||
+      ((time(0)-last_network_status_call)<0))
     {
       last_network_status_call=time(0);
       FILE *f=fopen("/tmp/networkstatus.html","w");
@@ -302,7 +303,8 @@ int http_report_network_status(int socket)
 time_t last_json_network_status_call=0;
 int http_report_network_status_json(int socket)
 {
-  if ((time(0)-last_json_network_status_call)>1)
+  if (((time(0)-last_json_network_status_call)>1)||
+      ((time(0)-last_json_network_status_call)<0))
     {
       last_network_status_call=time(0);
       FILE *f=fopen("/tmp/networkstatus.json","w");
