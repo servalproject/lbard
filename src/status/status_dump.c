@@ -121,6 +121,7 @@ int status_dump()
   }
   qsort(order,bundle_count,sizeof(struct b),compare_b);
 
+#if 0
   fprintf(f,"<h2>Peer list</h2>\n<table border=1 padding=2 spacing=2><tr><th>Time since last message</th></tr>\n");
   for (i=0;i<peer_count;i++)
     fprintf(f,"<tr><td>%s*</td><td>%lld</td></tr>\n",
@@ -128,6 +129,7 @@ int status_dump()
 	    (long long)(time(0)-peer_records[i]->last_message_time));
   fprintf(f,"</table>\n");
   fflush(f);
+#endif
 
   // Show peer reachability with indication of activity
   fprintf(f,"<h2>Mesh Extenders Reachable via Radio</h2>\n<table border=1 padding=2 spacing=2><tr><th>Mesh Extender ID</th><th>Performance</th><th>Sending</th></tr>\n");
