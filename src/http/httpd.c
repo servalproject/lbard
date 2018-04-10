@@ -180,7 +180,22 @@ int http_process(struct sockaddr *cliaddr,
 	return 0;	
       } else if (!strcasecmp(uri,"/")) {
 	// Report on current peer status
-	http_report_network_status(socket);
+	http_report_network_status(socket,0);
+	close(socket);
+	return 0;	
+      } else if (!strcasecmp(uri,"/n")) {
+	// Report on current peer status
+	http_report_network_status(socket,1);
+	close(socket);
+	return 0;	
+      } else if (!strcasecmp(uri,"/b")) {
+	// Report on current peer status
+	http_report_network_status(socket,2);
+	close(socket);
+	return 0;	
+      } else if (!strcasecmp(uri,"/bn")) {
+	// Report on current peer status
+	http_report_network_status(socket,3);
 	close(socket);
 	return 0;	
       } else if (!strcasecmp(uri,"/avacado/testmode1")) {

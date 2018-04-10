@@ -94,9 +94,6 @@ int rfd900_serviceloop(int serialfd)
        on channel, then we should back-off.
     */
 
-    // Also periodically update log of connected peers
-    http_report_network_status(-1);
-    
     double ratio = 1.00;
     if (target_transmissions_per_4seconds)
       ratio = (radio_transmissions_seen+radio_transmissions_byus)
