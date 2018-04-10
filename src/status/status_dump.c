@@ -80,7 +80,9 @@ int status_dump()
   FILE *f=fopen(STATUS_FILE,"w");
   if (!f) return -1;
 
-  fprintf(f,"<HTML>\n<HEAD>lbard version %s status dump @ T=%lldms</head><body>\n",
+  fprintf(f,"<HTML>\n<HEAD>lbard version %s status dump @ T=%lldms</head>\n"
+	  "<body><h1>LBARD version %s, status dump @ T=%lldms</h1>\n",
+	  VERSION_STRING,gettime_ms(),
 	  VERSION_STRING,gettime_ms());
   
   struct b order[bundle_count];
