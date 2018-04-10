@@ -80,7 +80,6 @@ time_t last_peer_log=0;
 
 int status_dump()
 {
-
   if (last_peer_log>time(0)) last_peer_log=time(0);
   
   // Periodically record list of peers in bundle log, if we are maintaining one
@@ -98,7 +97,10 @@ int status_dump()
   }
   
   FILE *f=fopen(STATUS_FILE,"w");
-  if (!f) return -1;
+  if (!f) {
+    perror("fopen() on STATUS_FILE for write");
+    return -1;
+  }
 
   if (status_dump_epoch==0) status_dump_epoch=gettime_ms();
   
@@ -109,8 +111,11 @@ int status_dump()
 	  "var seconds_since_load = 0;\n"
 	  "setInterval(function() { seconds_since_load++; document.getElementById('time_since_load').innerHTML = seconds_since_load; }, 1000);\n"
 	  "</script>\n"
-	  "<body><h1>LBARD Status</h1>\nLBARD version %s, status dump @ T=%lldms (<span id=time_since_load>0</span> seconds ago)\n<p>\n",
-	  VERSION_STRING,gettime_ms()-status_dump_epoch);
+	  "<body><h1>LBARD Status</h1>\nLBARD status dump produced @ T=%lldms (fetched <span id=time_since_load>0</span> seconds ago)\n<p>\n",
+	  gettime_ms()-status_dump_epoch);
+
+  fprintf(f,"<p>LBARD Version commit:%s branch:%s [MD5: %s] @ %s\n<p>\n",
+	  GIT_VERSION_STRING,GIT_BRANCH,VERSION_STRING,BUILD_DATE);    
   
   struct b order[bundle_count];
   int i,n;
