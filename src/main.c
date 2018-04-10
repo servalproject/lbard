@@ -511,43 +511,44 @@ int main(int argc, char **argv)
 	  my_time_stratum++;
       } else my_time_stratum=0x0100;
       // Send time packet
-      if (udp_time&&(timesocket!=-1)) {
+      if (udp_time&&(timesocket!=-1))
 	{
-	  // Occassionally announce our time
-	  // T + (our stratum) + (64 bit seconds since 1970) +
-	  // + (24 bit microseconds)
-	  // = 1+1+8+3 = 13 bytes
-	  struct timeval tv;
-	  gettimeofday(&tv,NULL);    
-	  
-	  unsigned char msg_out[1024];
-	  int offset=0;
-	  append_timestamp(msg_out,&offset);
-	  
-	  // Now broadcast on every interface to port 0x5401
-	  // Oh that's right, UDP sockets don't have an easy way to do that.
-	  // We could interrogate the OS to ask about all interfaces, but we
-	  // can instead get away with having a single simple broadcast address
-	  // supplied as part of the timeserver command line argument.
-	  struct sockaddr_in addr;
-	  bzero(&addr, sizeof(addr)); 
-	  addr.sin_family = AF_INET; 
-	  addr.sin_port = htons(0x5401);
-	  int i;
-	  for(i=0;time_broadcast_addrs[i];i++) {
-	    addr.sin_addr.s_addr = inet_addr(time_broadcast_addrs[i]);
-	    errno=0;
-	    sendto(timesocket,msg_out,offset,
-		   MSG_DONTROUTE|MSG_DONTWAIT
+	  {
+	    // Occassionally announce our time
+	    // T + (our stratum) + (64 bit seconds since 1970) +
+	    // + (24 bit microseconds)
+	    // = 1+1+8+3 = 13 bytes
+	    struct timeval tv;
+	    gettimeofday(&tv,NULL);    
+	    
+	    unsigned char msg_out[1024];
+	    int offset=0;
+	    append_timestamp(msg_out,&offset);
+	    
+	    // Now broadcast on every interface to port 0x5401
+	    // Oh that's right, UDP sockets don't have an easy way to do that.
+	    // We could interrogate the OS to ask about all interfaces, but we
+	    // can instead get away with having a single simple broadcast address
+	    // supplied as part of the timeserver command line argument.
+	    struct sockaddr_in addr;
+	    bzero(&addr, sizeof(addr)); 
+	    addr.sin_family = AF_INET; 
+	    addr.sin_port = htons(0x5401);
+	    int i;
+	    for(i=0;time_broadcast_addrs[i];i++) {
+	      addr.sin_addr.s_addr = inet_addr(time_broadcast_addrs[i]);
+	      errno=0;
+	      sendto(timesocket,msg_out,offset,
+		     MSG_DONTROUTE|MSG_DONTWAIT
 #ifdef MSG_NOSIGNAL
-		   |MSG_NOSIGNAL
+		     |MSG_NOSIGNAL
 #endif	       
-		   ,(const struct sockaddr *)&addr,sizeof(addr));
+		     ,(const struct sockaddr *)&addr,sizeof(addr));
+	    }
+	    // printf("--- Sent %d time announcement packets.\n",i);
 	  }
-	  // printf("--- Sent %d time announcement packets.\n",i);
-	}
-
-	// Check for time packet
+	  
+	  // Check for time packet
 	if (timesocket!=-1)
 	  {
 	    unsigned char msg[1024];
@@ -567,6 +568,7 @@ int main(int argc, char **argv)
 	    }
 	  }	
 	}
+      
 	if (httpsocket!=-1)
 	  {
 	    struct sockaddr cliaddr;
@@ -605,7 +607,7 @@ int main(int argc, char **argv)
 	  last_status_time=time(0)+2;
 	  status_dump();
 	}
-  }
+    }
     if ((serial_errors>20)&&reboot_when_stuck) {
       // If we are unable to write to the serial port repeatedly for a while,
       // we could be facing funny serial port behaviour bugs that we see on the MR3020.
