@@ -216,7 +216,7 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
 
     usleep(100000);
     count = read_nonblock(serialfd,buffer,8192);
-    if (count) dump_bytes("presend",buffer,count);
+    if (count) dump_bytes(stderr,"presend",buffer,count);
     if (count) hfbarrett_receive_bytes(buffer,count);
     
     snprintf(message,8192,"AXNMSG%s%02d%s\r\n",
@@ -239,7 +239,7 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
       // Check that it gets accepted for TX. If we see EV04, then something is still
       // being sent, and we have to wait and try again.
       count = read_nonblock(serialfd,buffer,8192);
-      // if (count) dump_bytes("postsend",buffer,count);
+      // if (count) dump_bytes(stderr,"postsend",buffer,count);
       if (count) hfbarrett_receive_bytes(buffer,count);
       if (strstr((const char *)buffer,"OK")
 	  &&(!strstr((const char *)buffer,"EV"))) {

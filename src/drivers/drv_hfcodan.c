@@ -42,9 +42,12 @@ int hfcodanbarrett_radio_detect(int fd)
   write_all(fd,clr,3); // Clear any partial command
   sleep(1); // give the radio the chance to respond
   ssize_t count = read_nonblock(fd,buf,8192);  // read and ignore any stuff
+  fprintf(stderr,"XXX - Sending VER command\n");
   write_all(fd,"VER\r",4); // ask Codan radio for version
   sleep(1); // give the radio the chance to respond
   count = read_nonblock(fd,buf,8192);  // read reply
+  dump_bytes(stderr,"VER response",buf,count);
+  fprintf(stderr,"Received %d bytes in reply.\n",(int)count);
   // If we get a version string -> Codan HF
   if (sscanf((char *)buf,"VER\r\nCICS: V%d.%d",&verhi,&verlo)==2) {
     fprintf(stderr,"Codan HF Radio running CICS V%d.%d\n",
@@ -73,7 +76,7 @@ int hfcodanbarrett_radio_detect(int fd)
       write(fd,setup_string[i],strlen(setup_string[i]));
       usleep(200000);
       count = read_nonblock(fd,buf,8192);  // read reply
-      dump_bytes(setup_string[i],buf,count);
+      dump_bytes(stderr,setup_string[i],buf,count);
     }    
     return 0;
   }
@@ -260,7 +263,7 @@ int hfcodan_send_packet(int serialfd,unsigned char *out, int len)
 
       unsigned char buffer[8192];
       int count = read_nonblock(serialfd,buffer,8192);
-      // if (count) dump_bytes("postsend",buffer,count);
+      // if (count) dump_bytes(stderr,"postsend",buffer,count);
       if (count) hfcodan_receive_bytes(buffer,count);
       if (strstr((const char *)buffer,"AMD CALL FINISHED")) {
 	not_ready=0;

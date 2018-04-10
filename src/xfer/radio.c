@@ -131,7 +131,7 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   offset+=FEC_LENGTH;
 
   if (debug_radio_tx) {
-    dump_bytes("sending packet",buffer,offset);
+    dump_bytes(stdout,"sending packet",buffer,offset);
   }
   
   assert( offset <= (FEC_MAX_BYTES+FEC_LENGTH) );
@@ -180,12 +180,12 @@ int saw_packet(unsigned char *packet_data,int packet_bytes,int rssi,
 	       char *my_sid_hex,char *prefix,
 	       char *servald_server,char *credential)
 {
-  if (debug_radio) dump_bytes("packet before decode_rs",packet_data,packet_bytes);
+  if (debug_radio) dump_bytes(stdout,"packet before decode_rs",packet_data,packet_bytes);
   
   int rs_error_count = decode_rs_8(packet_data,NULL,0,
 				   FEC_MAX_BYTES-packet_bytes+FEC_LENGTH);
   
-  if (debug_radio) dump_bytes("received packet",packet_data,packet_bytes);
+  if (debug_radio) dump_bytes(stdout,"received packet",packet_data,packet_bytes);
 
   char sender_prefix[128];
   bytes_to_prefix(&packet_data[0],sender_prefix);

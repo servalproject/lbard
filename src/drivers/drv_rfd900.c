@@ -425,7 +425,7 @@ int rfd900_send_packet(int serialfd,unsigned char *out, int offset)
   escaped[elen++]='!'; escaped[elen++]='!';
   
   if (debug_radio_tx) {
-    dump_bytes("sending packet",escaped,elen);    
+    dump_bytes(stdout,"sending packet",escaped,elen);    
   }  
   
   if (write_all(serialfd,escaped,elen)==-1) {

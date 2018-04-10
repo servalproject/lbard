@@ -518,7 +518,7 @@ int saw_piece(char *peer_prefix,int for_me,
 	   manifest,&manifest_len)) {
 
 	// Display decompressed manifest
-	dump_bytes("Decompressed Manifest",manifest,manifest_len);
+	dump_bytes(stdout,"Decompressed Manifest",manifest,manifest_len);
 	
 	insert_result=
 	  rhizome_update_bundle(manifest,manifest_len,
@@ -584,8 +584,8 @@ int saw_piece(char *peer_prefix,int for_me,
 	fprintf(stderr,"Failed to insert bundle %s*/%lld (result=%d)\n",
 		partials[i].bid_prefix,
 		partials[i].bundle_version,insert_result);
-	dump_bytes("manifest",manifest,manifest_len);
-	dump_bytes("payload",
+	dump_bytes(stdout,"manifest",manifest,manifest_len);
+	dump_bytes(stdout,"payload",
 		   partials[i].body_segments->data,
 		   partials[i].body_length);
 

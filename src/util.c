@@ -173,16 +173,16 @@ int ascii64_decode(char *in, unsigned char *out, int out_len,int radio_type)
   return out_ofs;
 }
 
-int dump_bytes(char *msg, unsigned char *bytes, int length)
+int dump_bytes(FILE *f,char *msg, unsigned char *bytes, int length)
 {
-  printf("%s:\n", msg);
+  fprintf(f,"%s:\n", msg);
   for (int i = 0; i < length; i += 16)
   {
-    printf("%04X: ", i);
+    fprintf(f,"%04X: ", i);
     for (int j = 0; j < 16; j++)
       if (i + j < length)
-        printf(" %02X", bytes[i + j]);
-    printf("  ");
+        fprintf(f," %02X", bytes[i + j]);
+    fprintf(f,"  ");
     for (int j = 0; j < 16; j++)
     {
       int c;
@@ -194,9 +194,9 @@ int dump_bytes(char *msg, unsigned char *bytes, int length)
         c = '.';
       if (c > 0x7d)
         c = '.';
-      printf("%c", c);
+      fprintf(f,"%c", c);
     }
-    printf("\n");
+    fprintf(f,"\n");
   }
   return 0;
 }
