@@ -29,6 +29,7 @@ int hfcodan_read_byte(int i,unsigned char c)
     clients[i].buffer_count=0;
   } else if ((c!='\n')&&(c!='\r')&&c) {
     // fprintf(stderr,"Radio #%d received character 0x%02x\n",i,c);
+
     // First echo the character back
     write(clients[i].socket,&c,1);
     
@@ -36,14 +37,18 @@ int hfcodan_read_byte(int i,unsigned char c)
       clients[i].buffer[clients[i].buffer_count++]=c;
   } else {
     if (clients[i].buffer_count) {
+
+      // Print CRLF
+      write(clients[i].socket,"\r\n",2);
+      
       clients[i].buffer[clients[i].buffer_count]=0;
       fprintf(stderr,"Codan HF Radio #%d sent command '%s'\n",i,clients[i].buffer);
 
       // Process the command here
       if (!strcasecmp("VER",(char *)clients[i].buffer)) {
 	// Claim to be an ALE 3G capable radio
-	write(clients[i].socket,"CICS V3.38\r\n",
-	      strlen("CICS V3.38\r\n"));
+	write(clients[i].socket,"CICS: V3.37\r\n",
+	      strlen("CICS: V3.37\r\n"));
       } else {
 	// Complain about unknown commands
 	write(clients[i].socket,

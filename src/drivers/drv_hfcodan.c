@@ -42,12 +42,9 @@ int hfcodanbarrett_radio_detect(int fd)
   write_all(fd,clr,3); // Clear any partial command
   sleep(1); // give the radio the chance to respond
   ssize_t count = read_nonblock(fd,buf,8192);  // read and ignore any stuff
-  fprintf(stderr,"XXX - Sending VER command\n");
   write_all(fd,"VER\r",4); // ask Codan radio for version
   sleep(1); // give the radio the chance to respond
   count = read_nonblock(fd,buf,8192);  // read reply
-  dump_bytes(stderr,"VER response",buf,count);
-  fprintf(stderr,"Received %d bytes in reply.\n",(int)count);
   // If we get a version string -> Codan HF
   if (sscanf((char *)buf,"VER\r\nCICS: V%d.%d",&verhi,&verlo)==2) {
     fprintf(stderr,"Codan HF Radio running CICS V%d.%d\n",
