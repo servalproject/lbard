@@ -66,3 +66,8 @@ int hfcodan_read_byte(int i,unsigned char c)
 
   return 0;
 }
+
+int hfcodan_heartbeat(int client)
+{
+  return 0;
+}

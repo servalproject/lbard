@@ -121,3 +121,11 @@ int rfd900_read_byte(int client,unsigned char byte)
 
   return 0;
 }
+
+int rfd900_heartbeat(int client)
+{
+  // Pretend to be reporting GPIO status so that lbard thinks the radio is alive.
+  unsigned char heartbeat[9]={0xce,0xec,0xff,0xff,0xff,0xff,0xff,0xff,0xdd};
+  write(clients[client].socket,heartbeat, sizeof(heartbeat));
+  return 0;
+}
