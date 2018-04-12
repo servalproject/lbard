@@ -27,6 +27,8 @@ RADIO TYPE: HFCODAN,"hfcodan","Codan HF with ALE",hfcodanbarrett_radio_detect,hf
 #include "hf.h"
 #include "radios.h"
 
+int hfbarrett_initialise(int serialfd);
+
 // Used for distinguishing between Codan and Barrett HF radios
 unsigned char barrett_e0_string[6]={0x13,'E','0',13,10,0x11};
 
@@ -66,20 +68,7 @@ int hfcodanbarrett_radio_detect(int fd)
     radio_set_type(RADIOTYPE_HFBARRETT);
     radio_set_feature(RADIO_ALE_2G);
 
-    // Tell Barrett radio we want to know when various events occur.
-    char *setup_string[7]={"ARAMDM1\r\n","ARAMDP1\r\n",
-			   "ARCALL1\r\n","ARLINK1\r\n",
-			   "ARLTBL1\r\n","ARMESS1\r\n",
-			   "ARSTAT1\r\n",
-    };
-    int i;
-    for(i=0;i<7;i++) {
-      write(fd,setup_string[i],strlen(setup_string[i]));
-      usleep(200000);
-      count = read_nonblock(fd,buf,8192);  // read reply
-      dump_bytes(stderr,setup_string[i],buf,count);
-    }    
-    return 0;
+    return hfbarrett_initialise(fd);
   }
   return -1;
 }

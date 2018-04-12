@@ -29,6 +29,49 @@ RADIO TYPE: HFBARRETT,"hfbarrett","Barrett HF with ALE",hfcodanbarrett_radio_det
 
 char barrett_link_partner_string[1024]="";
 
+int hfbarrett_initialise(int serialfd)
+{
+  // See "2050 RS-232 ALE Commands" document from Barrett for more information on the
+  // available commands.
+  
+  // XXX - Issue AXENABT to enable ALE?
+  // XXX - Issue AXALRM0 to disable audible alarms when operating? (or 1 to enable them?)
+  // XXX - Issue AICTBL to get current ALE channel list?
+  // XXX - Issue AIATBL to get current ALE address list
+  //       (and use a "serval" prefix on the 0-15 char alias names to auto-pick the parties to talk to?)
+  //       (or should it be AINTBL to get ALE network addresses?)
+  // XXX - Issue AISTBL to get channel scan list?
+  // XXX - Issue ARAMDM1 to register for ALE AMD message notifications?
+  // XXX - Issue ARLINK1 to register for ALE LINK notifications?
+  // XXX - ARLTBL1 to register for ALE LINK table notifications?
+  // XXX - ARMESS1 to register for ALE event notifications?
+  // XXX - ARSTAT1 to register for ALE status change notifications?
+
+  int count;
+  unsigned char buf[8192];
+    
+  // Tell Barrett radio we want to know when various events occur.
+  char *setup_string[7]
+    ={
+    "ARAMDM1\r\n", // Register for AMD messages
+    "ARAMDP1\r\n", // Register for phone messages
+    "ARCALL1\r\n", // Register for new calls
+    "ARLINK1\r\n", // Hear about ALE link notifications
+    "ARLTBL1\r\n", // Hear about ALE link table events
+    "ARMESS1\r\n", // Hear about ALE event notifications
+    "ARSTAT1\r\n", // Hear about ALE status change notifications
+  };
+  int i;
+  for(i=0;i<7;i++) {
+    write(serialfd,setup_string[i],strlen(setup_string[i]));
+    usleep(200000);
+    count = read_nonblock(serialfd,buf,8192);  // read reply
+    dump_bytes(stderr,setup_string[i],buf,count);
+  }    
+  
+  return 0;
+}
+
 int hfbarrett_serviceloop(int serialfd)
 {
   char cmd[1024];

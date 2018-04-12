@@ -2,6 +2,16 @@
 
 #include "fakecsmaradio.h"
 
+// Commands and responses we implement
+// "AXLINK'+<link partner> make connection to peer
+//     (modem doesn't respond preemptively, must be queried with AILTBL)
+// "AILTBL" - query current ALE link status
+//   "AILTBL" - ALE not connected/no longer connected
+//   "AILTBL"+<linkpartner> - ALE link established to this partner
+// "AXNMGS"+<linkpartner>+<two digit message length in decimal>+<message text>
+//    OK or EV response after sending
+//    "AIAMDM"+<message> - ALE message received
+
 unsigned char barrett_e0_string[6]={0x13,'E','0',13,10,0x11};
 
 int hfbarrett_read_byte(int i,unsigned char c)
