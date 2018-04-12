@@ -959,10 +959,12 @@ int main(int argc,char **argv)
 
     long long now = gettime_ms();
     if (last_heartbeat_time<(now-500)) {
-      // Pretend to be reporting GPIO status so that lbard thinks the radio is alive.
-      unsigned char heartbeat[9]={0xce,0xec,0xff,0xff,0xff,0xff,0xff,0xff,0xdd};
       for(int i=0;i<client_count;i++) {
-	write(clients[i].socket,heartbeat, sizeof(heartbeat));
+	switch(clients[i].radio_type) {
+	case RADIO_RFD900: rfd900_heartbeat(i); break;
+	case RADIO_HFCODAN: hfcodan_heartbeat(i); break;
+	case RADIO_HFBARRETT: hfbarrett_heartbeat(i); break;
+	}
       }
       last_heartbeat_time=now;
     }

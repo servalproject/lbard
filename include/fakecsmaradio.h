@@ -19,6 +19,9 @@ long long gettime_ms();
 int rfd900_read_byte(int client,unsigned char byte);
 int hfcodan_read_byte(int client,unsigned char c);
 int hfbarrett_read_byte(int client,unsigned char c);
+int rfd900_heartbeat(int client);
+int hfcodan_heartbeat(int client);
+int hfbarrett_heartbeat(int client);
 
 #include "fec-3.0.1/fixed.h"
 void encode_rs_8(data_t *data, data_t *parity,int pad);
