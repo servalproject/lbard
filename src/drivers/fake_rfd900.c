@@ -129,3 +129,33 @@ int rfd900_heartbeat(int client)
   write(clients[client].socket,heartbeat, sizeof(heartbeat));
   return 0;
 }
+
+int rfd900_encapsulate_packet(int from,int to,
+			      unsigned char *packet,
+			      int *packet_len)
+{
+  // Append valid FEC
+  unsigned char parity[FEC_LENGTH];
+  encode_rs_8(packet,parity,FEC_MAX_BYTES-(*packet_len));
+  memcpy(&packet[(*packet_len)],parity,FEC_LENGTH);
+  (*packet_len)+=FEC_LENGTH;
+
+#if 0
+  dump_bytes(0,"With FEC",packet,*packet_len);
+#endif
+
+  int packet_len_in=*packet_len;
+  
+  // Then build and attach envelope
+  packet[(*packet_len)++]=0xaa;
+  packet[(*packet_len)++]=0x55;
+  packet[(*packet_len)++]=200; // RSSI of this frame
+  packet[(*packet_len)++]=100; // Average RSSI remote side
+  packet[(*packet_len)++]=28; // Temperature of this radio
+  packet[(*packet_len)++]=packet_len_in; // length of this packet
+  packet[(*packet_len)++]=0xff;  // 16-bit RX buffer space (always claim 4095 bytes)
+  packet[(*packet_len)++]=0x0f;
+  packet[(*packet_len)++]=0x55;	
+
+  return 0;
+}

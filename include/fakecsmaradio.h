@@ -16,12 +16,6 @@
 int filter_and_enqueue_packet_for_client(int from,int to, long long delivery_time,
 					 uint8_t *packet_in,int packet_len);
 long long gettime_ms();
-int rfd900_read_byte(int client,unsigned char byte);
-int hfcodan_read_byte(int client,unsigned char c);
-int hfbarrett_read_byte(int client,unsigned char c);
-int rfd900_heartbeat(int client);
-int hfcodan_heartbeat(int client);
-int hfbarrett_heartbeat(int client);
 
 #include "fec-3.0.1/fixed.h"
 void encode_rs_8(data_t *data, data_t *parity,int pad);
@@ -64,3 +58,18 @@ extern int client_count;
 
 int rfd900_setbitrate(char *b);
 int release_pending_packets(int i);
+
+int rfd900_read_byte(int client,unsigned char byte);
+int hfcodan_read_byte(int client,unsigned char c);
+int hfbarrett_read_byte(int client,unsigned char c);
+int rfd900_heartbeat(int client);
+int hfcodan_heartbeat(int client);
+int hfbarrett_heartbeat(int client);
+int rfd900_encapsulate_packet(int from,int to,unsigned char *packet,
+			      int *packet_len);
+int hfcodan_encapsulate_packet(int from,int to,unsigned char *packet,
+			      int *packet_len);
+int hfbarrett_encapsulate_packet(int from,int to,unsigned char *packet,
+			      int *packet_len);
+
+

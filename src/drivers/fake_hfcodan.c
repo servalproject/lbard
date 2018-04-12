@@ -71,3 +71,10 @@ int hfcodan_heartbeat(int client)
 {
   return 0;
 }
+
+int hfcodan_encapsulate_packet(int from,int to,
+			       unsigned char *packet,
+			       int *packet_len)
+{
+  return 0;
+}

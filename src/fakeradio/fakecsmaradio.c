@@ -638,31 +638,20 @@ int filter_process_packet(int from,int to,
   }
 #endif
 
-  // Append valid FEC
-  unsigned char parity[FEC_LENGTH];
-  encode_rs_8(packet_out,parity,FEC_MAX_BYTES-out_len);
-  memcpy(&packet_out[out_len],parity,FEC_LENGTH);
-  out_len+=FEC_LENGTH;
-
-#if 0
-  if (out_len!=len) dump_bytes(0,"With FEC",packet_out,out_len);
-#endif
-  
   // Now update packet
   memcpy(packet,packet_out,out_len);
   *packet_len=out_len;
-
-  // Then build and attach envelope
-  packet[(*packet_len)++]=0xaa;
-  packet[(*packet_len)++]=0x55;
-  packet[(*packet_len)++]=200; // RSSI of this frame
-  packet[(*packet_len)++]=100; // Average RSSI remote side
-  packet[(*packet_len)++]=28; // Temperature of this radio
-  packet[(*packet_len)++]=out_len; // length of this packet
-  packet[(*packet_len)++]=0xff;  // 16-bit RX buffer space (always claim 4095 bytes)
-  packet[(*packet_len)++]=0x0f;
-  packet[(*packet_len)++]=0x55;	
-
+  
+  switch(clients[to].radio_type)
+    {
+    case RADIO_RFD900:
+      rfd900_encapsulate_packet(from,to,packet,packet_len); break;
+    case RADIO_HFCODAN:
+      hfcodan_encapsulate_packet(from,to,packet,packet_len); break;
+    case RADIO_HFBARRETT:
+      hfbarrett_encapsulate_packet(from,to,packet,packet_len); break;
+  }
+  
   if ((to==-1)&&out_len) {
     tx_log_transmitted_bytes+=out_len;
     tx_log_transmitted_packets++;
