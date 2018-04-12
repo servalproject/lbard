@@ -45,6 +45,10 @@ int hfcodanbarrett_radio_detect(int fd)
   write_all(fd,"VER\r",4); // ask Codan radio for version
   sleep(1); // give the radio the chance to respond
   count = read_nonblock(fd,buf,8192);  // read reply
+  int barrett_e0_seen=0;
+  for(int i=0;i<=(count-6);i++)
+    if (!memcmp(&buf[i],barrett_e0_string,6)) barrett_e0_seen=1;
+  
   // If we get a version string -> Codan HF
   if (sscanf((char *)buf,"VER\r\nCICS: V%d.%d",&verhi,&verlo)==2) {
     fprintf(stderr,"Codan HF Radio running CICS V%d.%d\n",
@@ -57,7 +61,7 @@ int hfcodanbarrett_radio_detect(int fd)
       radio_set_feature(RADIO_ALE_2G);
     radio_set_type(RADIOTYPE_HFCODAN);
     return 0;
-  } else if (!memcmp(buf,barrett_e0_string,6)) {
+  } else if (barrett_e0_seen) {
     fprintf(stderr,"Detected Barrett HF Radio.\n");
     radio_set_type(RADIOTYPE_HFBARRETT);
     radio_set_feature(RADIO_ALE_2G);
