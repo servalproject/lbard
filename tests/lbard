@@ -305,7 +305,7 @@ test_DetectCodanHF() {
 
 
 doc_DetectBarrettHF="LBARD detects Barrett HF radios"
-setup_DetectBarerttHF() {
+setup_DetectBarrettHF() {
    setup_servald
    assert_no_servald_processes
    foreach_instance +A +B +C +D create_single_identity
