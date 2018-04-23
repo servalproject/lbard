@@ -327,7 +327,7 @@ int rfd900_radio_detect(int fd)
    only legal at an EIRP of 3dBm or less, which allowing for a +3dB
    antanna means that 1dBm is the highest TX power that is realistically
    safe.
-
+ 
    Because of the above, we require that /dos/hipower.en exist on the file
    system as well as the switch being in the correct position.  The Mesh
    Extender default image does not include the /dos/hipower.en file, and it
@@ -374,7 +374,7 @@ int rfd900_set_tx_power(int serialfd)
   }
 
   if ((hipower_switch_set&&hipower_en&&(txpower==-1))||txpower==24) {
-    printf("Setting radio to hipower\n");
+    // printf("Setting radio to hipower\n");
     if (write_all(serialfd,"!H",3)==-1) serial_errors++; else serial_errors=0;
   } else if (txpower==30) {
     printf("Setting radio to maximum power (30dBm)\n");

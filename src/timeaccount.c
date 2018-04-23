@@ -53,7 +53,7 @@ struct time_excursion {
 
 
 #define MAX_TIME_EXCURSIONS 32
-#define TIME_EXCURSION_THRESHOLD 250
+#define TIME_EXCURSION_THRESHOLD 25
 int recent_count=0;
 struct time_excursion recent[MAX_TIME_EXCURSIONS];
 int alltime_count=0;
