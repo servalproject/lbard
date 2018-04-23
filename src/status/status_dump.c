@@ -71,6 +71,24 @@ int status_log(char *msg)
   return -1;
 }
 
+// The main job of this routine is to make sure that a character is safe for
+// including in HTML output.  So mostly no < or >, but we play it safe.
+int safechar(int c)
+{
+  if (c>='a'&&c<='z') return 1;
+  if (c>='A'&&c<='Z') return 1;
+  if (c>='0'&&c<='9') return 1;
+  switch (c) {
+  case '.': case ',': case '-': case '_': case '?':
+  case '!': case '@': case '#': case '$': case '%':
+  case '^': case '*': case '+': case '=': case '/':
+    return 1;
+  }
+
+  // Unsafe character
+  return 0;
+}
+
 int compare_b(const void *a,const void *b)
 {
   const struct b *aa=a;
@@ -187,6 +205,15 @@ int status_dump()
 	    char *to=bundles[bn].recipient;
 	    if ((!from)||(!from[0])) from="unknown";
 	    if ((!to)||(!to[0])) from="unknown";
+
+	    // Check for invalid characters in to/from
+	    for(int i=0;i<strlen(from);i++) {
+	      if (!safechar(from[i])) { from="CENSORED"; break; }
+	    }
+	    for(int i=0;i<strlen(to);i++) {
+	      if (!safechar(to[i])) { to="CENSORED"; break; }
+	    }
+	    
 	    if (!strncasecmp(bundles[bn].service,"MeshMS",6)) {
 	      // We show both from and to fields
 	    } else if (!strncasecmp(bundles[bn].service,"MeshMB",6)) {
