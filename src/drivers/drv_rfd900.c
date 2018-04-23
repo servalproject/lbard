@@ -406,15 +406,15 @@ int rfd900_send_packet(int serialfd,unsigned char *out, int offset)
   unsigned char escaped[2+offset*2+2];
   int elen=0;
   int i;
-
+  C;
   rfd900_set_tx_power(serialfd);
-
+  C;
   // Sometimes the ! gets eaten here. Solution is to
   // send a non-! character first, so that even if !-mode
   // is set, all works properly.  this will also stop us
   // accidentally doing !!, which will send a packet.
   write(serialfd,"C!C",3);
-
+  C;
   // Then stuff the escaped bytes to send
   for(i=0;i<offset;i++) {
     if (out[i]=='!') {
@@ -423,11 +423,12 @@ int rfd900_send_packet(int serialfd,unsigned char *out, int offset)
   }
   // Finally include TX packet command
   escaped[elen++]='!'; escaped[elen++]='!';
-  
+  C;
   if (debug_radio_tx) {
     dump_bytes(stdout,"sending packet",escaped,elen);    
   }  
-  
+
+  C;
   if (write_all(serialfd,escaped,elen)==-1) {
     serial_errors++;
     return -1;
