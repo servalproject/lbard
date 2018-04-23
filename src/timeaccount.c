@@ -46,7 +46,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "radios.h"
 
 struct time_excursion {
-  char *source;
+  char source[32];
   long long duration;
   long long when;
 };
@@ -61,7 +61,7 @@ struct time_excursion alltime[MAX_TIME_EXCURSIONS];
 
 long long accumulated_time=0;
 long long current_interval_start=0;
-char *current_interval_source=NULL;
+char current_interval_source[32]="(none)";
 
 int log_time(long long interval,char *source)
 {
@@ -71,7 +71,7 @@ int log_time(long long interval,char *source)
   // Shuffle down recent time excursions
   for(i=1;i<MAX_TIME_EXCURSIONS;i++)
     recent[i]=recent[i-1];
-  recent[0].source=source;
+  strncpy(recent[0].source,source,32);
   recent[0].duration=interval;
   recent[0].when=gettime_ms();
   if (recent_count<MAX_TIME_EXCURSIONS) recent_count++;
@@ -89,7 +89,7 @@ int log_time(long long interval,char *source)
   if (insert<0) insert=0;
   for(i=insert+1;i<MAX_TIME_EXCURSIONS;i++)
     alltime[i]=alltime[i-1];
-  alltime[insert].source=source;
+  strncpy(alltime[insert].source,source,32);
   alltime[insert].duration=interval;
   alltime[insert].when=gettime_ms();
   if (alltime_count<MAX_TIME_EXCURSIONS) alltime_count++;
@@ -122,7 +122,7 @@ int account_time(char *source)
 
   current_interval_start=gettime_ms();
   accumulated_time=0;
-  current_interval_source=source;
+  strncpy(current_interval_source,source,32);
 
   return 0;
   
