@@ -59,6 +59,9 @@ int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
       // Then update our internal timers accordingly
       if (time_slave&&(!monitor_mode)) {
 	struct timeval before,after;
+
+	account_time_pause();
+
 	gettimeofday(&before,NULL);
 	settimeofday(tv,NULL);
 	gettimeofday(&after,NULL);
@@ -69,6 +72,8 @@ int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
 	last_message_update_time+=delta;
 	congestion_update_time+=delta;
 
+	account_time_resume();
+	
 	if (delta<-2000) {
 	  // Time went backwards: This can cause trouble for servald alarms.
 	  // Best solution: Tell servald to stop and let runservald restart it.

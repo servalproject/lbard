@@ -14,6 +14,7 @@ RADIODRIVERS=		$(SRCDIR)/drivers/drv_*.c
 RADIOHEADERS=		$(SRCDIR)/drivers/drv_*.h
 
 SRCS=	$(SRCDIR)/main.c \
+	$(SRCDIR)/timeaccount.c \
 	\
 	$(SRCDIR)/rhizome/rhizome.c \
 	$(SRCDIR)/rhizome/bundle_cache.c \

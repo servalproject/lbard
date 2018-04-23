@@ -613,5 +613,8 @@ int sync_build_bar_in_slot(int slot,unsigned char *bid_bin,
 			   long long bundle_version);
 int append_generationid(unsigned char *msg_out,int *offset);
 
+int account_time_pause();
+int account_time_resume();
+int account_time(char *source);
 
 #include "util.h"

@@ -471,6 +471,8 @@ int main(int argc, char **argv)
 
     unsigned char msg_out[LINK_MTU];
 
+    account_time("ID regenerate");
+    
     // Refresh our instance ID every four minutes, so that any bundle list sync bugs
     // can only block transmission for a few minutes.
     if ((time(0)-last_instance_time)>240) {
@@ -480,11 +482,20 @@ int main(int argc, char **argv)
       last_instance_time=time(0);
     }
     
+    account_time("radio_read_bytes()");
+
     radio_read_bytes(serialfd,monitor_mode);
+
+    account_time("load_rhizome_db_async()");
+
     load_rhizome_db_async(servald_server,
 			  credential, token);
 
+    account_time("make_periodic_requests()");
+
     make_periodic_requests();
+
+    account_time("radio.serviceloop()");
 
     if (radio_get_type()>=0) {
       if (!radio_types[radio_get_type()].serviceloop) {
@@ -499,10 +510,13 @@ int main(int argc, char **argv)
       exit(-1);
     }
 
+    account_time("time server: reverse timeflow check");
+
     // Deal gracefully with clocks that run backwards from time to time.
     if (last_message_update_time>gettime_ms())
       last_message_update_time=gettime_ms();
     
+    account_time("time server: announce ");
     if ((gettime_ms()-last_message_update_time)>=message_update_interval) {
 
       if (!time_server) {
@@ -548,6 +562,9 @@ int main(int argc, char **argv)
 	    // printf("--- Sent %d time announcement packets.\n",i);
 	  }
 	  
+
+	  account_time("time server: rx ");
+
 	  // Check for time packet
 	if (timesocket!=-1)
 	  {
@@ -573,6 +590,7 @@ int main(int argc, char **argv)
 	  {
 	    struct sockaddr cliaddr;
 	    socklen_t addrlen;
+	    account_time("HTTP accept()");
 	    int s=accept(httpsocket,&cliaddr,&addrlen);
 	    if (s!=-1) {
 	      // HTTP request socket
@@ -583,10 +601,13 @@ int main(int argc, char **argv)
 	      // for one new connection.  We also don't allow the request
 	      // to linger: if it doesn't contain the request almost immediately,
 	      // we reject it with a timeout error.
+	      account_time("http_process()");
 	      http_process(&cliaddr,servald_server,credential,my_sid_hex,s);
 	    }
 	  }
 
+	account_time("update_my_message()");
+	
 	if ((!monitor_mode)&&(radio_ready())) {
 	  update_my_message(serialfd,
 			    my_sid,my_sid_hex,
@@ -599,6 +620,8 @@ int main(int argc, char **argv)
 	  else
 	    last_message_update_time=gettime_ms();
 	}
+
+	account_time("status_dump()");
 	
 	// Update the state file to help debug things
 	// (but not too often, since it is SLOW on the MR3020s
@@ -608,18 +631,28 @@ int main(int argc, char **argv)
 	  status_dump();
 	}
     }
+
+    account_time("stuck serial reboot check");
+
     if ((serial_errors>20)&&reboot_when_stuck) {
       // If we are unable to write to the serial port repeatedly for a while,
       // we could be facing funny serial port behaviour bugs that we see on the MR3020.
       // In which case, if authorised, ask the MR3020 to reboot
       system("reboot");
     }
+
+    account_time("usleep()");
     
     usleep(10000);
+
+    account_time("show_progress()");
 
     if (time(0)>last_summary_time) {
       last_summary_time=time(0);
       show_progress(stderr,0);
    }
+
+    account_time("End of loop");
+    
   }
 }
