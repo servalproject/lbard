@@ -2,6 +2,22 @@
 
 #include "fakecsmaradio.h"
 
+struct barrett_radio_state {
+
+  // These flags reflect the identically named Barrett RS-232 commands
+  // that enable/disable various notification functions
+  int aramdm;
+  int aramdp;
+  int arcall;
+  int arlink;
+  int arltbl;
+  int armess;
+  int arstat;
+
+  // The set of channels
+
+  // The list of radios 
+  
 // Commands and responses we implement
 // "AXLINK'+<link partner> make connection to peer
 //     (modem doesn't respond preemptively, must be queried with AILTBL)
@@ -12,7 +28,12 @@
 //    OK or EV response after sending
 //    "AIAMDM"+<message> - ALE message received
 
+};
+
+struct barrett_radio_state barrett[MAX_CLIENTS];
+
 unsigned char barrett_e0_string[6]={0x13,'E','0',13,10,0x11};
+unsigned char barrett_ok_string[6]={0x13,'O','K',13,10,0x11};
 
 int hfbarrett_read_byte(int i,unsigned char c)
 {
@@ -41,6 +62,76 @@ int hfbarrett_read_byte(int i,unsigned char c)
 	// Send ALE message
 	// XXX- implement me!
 	fprintf(stderr,"Saw AXNMSG command\n");
+      } else if (!strncasecmp("ARAMDM",(char *)clients[i].buffer,6)) {
+	// [un]Register for AMD messages
+	switch (clients[i].buffer[6]) {
+	case '1': case '0':
+	  barrett[i].aramdm=clients[i].buffer[6]-'0';
+	  write(clients[i].socket,barrett_ok_string,6);
+	  break;
+	default:
+	  write(clients[i].socket,barrett_e0_string,6);
+	}
+      } else if (!strncasecmp("ARAMDP",(char *)clients[i].buffer,6)) {
+	// [un]Register for phone messages
+	switch (clients[i].buffer[6]) {
+	case '0': case '1':
+	  barrett[i].aramdp=clients[i].buffer[6]-'0';
+	  write(clients[i].socket,barrett_ok_string,6);
+	  break;
+	default:
+	  write(clients[i].socket,barrett_e0_string,6);
+	}
+      } else if (!strncasecmp("ARCALL",(char *)clients[i].buffer,6)) {
+	// [un]Register for new calls
+	switch (clients[i].buffer[6]) {
+	case '0': case '1':
+	  barrett[i].arcall=clients[i].buffer[6]-'0';
+	  write(clients[i].socket,barrett_ok_string,6);
+	  break;
+	default:
+	  write(clients[i].socket,barrett_e0_string,6);
+	}
+      } else if (!strncasecmp("ARLINK",(char *)clients[i].buffer,6)) {
+	// [un]Register for new calls
+	switch (clients[i].buffer[6]) {
+	case '0': case '1':
+	  barrett[i].arlink=clients[i].buffer[6]-'0';
+	  write(clients[i].socket,barrett_ok_string,6);
+	  break;
+	default:
+	  write(clients[i].socket,barrett_e0_string,6);
+	}
+      } else if (!strncasecmp("ARLTBL",(char *)clients[i].buffer,6)) {
+	// [un]Register for new calls
+	switch (clients[i].buffer[6]) {
+	case '0': case '1':
+	  barrett[i].arltbl=clients[i].buffer[6]-'0';
+	  write(clients[i].socket,barrett_ok_string,6);
+	  break;
+	default:
+	  write(clients[i].socket,barrett_e0_string,6);
+	}
+      } else if (!strncasecmp("ARMESS",(char *)clients[i].buffer,6)) {
+	// [un]Register for new calls
+	switch (clients[i].buffer[6]) {
+	case '0': case '1':
+	  barrett[i].armess=clients[i].buffer[6]-'0';
+	  write(clients[i].socket,barrett_ok_string,6);
+	  break;
+	default:
+	  write(clients[i].socket,barrett_e0_string,6);
+	}
+      } else if (!strncasecmp("ARSTAT",(char *)clients[i].buffer,6)) {
+	// [un]Register for new calls
+	switch (clients[i].buffer[6]) {
+	case '0': case '1':
+	  barrett[i].arstat=clients[i].buffer[6]-'0';
+	  write(clients[i].socket,barrett_ok_string,6);
+	  break;
+	default:
+	  write(clients[i].socket,barrett_e0_string,6);
+	}
       } else {
 	// Complain about unknown commands
 	fprintf(stderr,"Responding with Barrett E0 string\n");
