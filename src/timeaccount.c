@@ -132,6 +132,9 @@ int account_time(char *source)
 int show_time_accounting(FILE *f)
 {
   C;
+
+  fprintf(stderr,"f=%p, recent_count=%d, alltime_count=%d\n",
+	  f,recent_count,alltime_count);
   
   fprintf(f,
 	  "<h1>Processor Time accounting</h1>\n"
@@ -139,21 +142,25 @@ int show_time_accounting(FILE *f)
 	  "<table border=1 padding=2>\n"
 	  "<tr><th>Function</th><th>Duration</th><th>Time ago</th>\n");
 
+  C;
   for(int i=0;i<recent_count;i++)
     if (recent[i].source)
       fprintf(f,"<tr><td>%s</td><td>%lld ms</td><td> T-%lldms</td></tr>\n",
 	      recent[i].source,recent[i].duration,
 	      gettime_ms()-recent[i].when);
+  C;
   fprintf(f,
 	  "</table><h2>All time longest time excursions</h2>\n"
 	  "<table border=1 padding=2>\n"
 	  "<tr><th>Function</th><th>Duration</th><th>Time ago</th>\n");
   
+  C;
   for(int i=0;i<alltime_count;i++)
     if (alltime[i].source)
       fprintf(f,"<tr><td>%s</td><td>%lld ms</td><td> T-%lldms</td></tr>\n",
 	      alltime[i].source,alltime[i].duration,
 	      gettime_ms()-alltime[i].when);
+  C;
   fprintf(f,"</table>\n");
 
   C;
