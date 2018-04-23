@@ -122,12 +122,17 @@ int account_time(char *source)
   current_interval_start=gettime_ms();
   accumulated_time=0;
   current_interval_source=source;
+
+  fprintf(stderr,"account_time(\"%s\")\n",source);
+  
   return 0;
   
 }
 
 int show_time_accounting(FILE *f)
 {
+  C;
+  
   fprintf(f,
 	  "<h1>Processor Time accounting</h1>\n"
 	  "<h2>Recent time excursions</h2>\n"
@@ -151,5 +156,7 @@ int show_time_accounting(FILE *f)
 	      gettime_ms()-alltime[i].when);
   fprintf(f,"</table>\n");
 
+  C;
+  
   return 0;
 }
