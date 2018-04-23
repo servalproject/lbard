@@ -181,20 +181,41 @@ int status_dump()
 	  }
 	  
 	  if (peer_records[i]->tx_bundle!=-1) {
+	    int bn=peer_records[i]->tx_bundle;
 	    char bid[10];
+	    char *from=bundles[bn].sender;
+	    char *to=bundles[bn].recipient;
+	    if ((!from)||(!from[0])) from="unknown";
+	    if ((!to)||(!to[0])) from="unknown";
+	    if (!strncasecmp(bundles[bn].service,"MeshMS",6)) {
+	      // We show both from and to fields
+	    } else if (!strncasecmp(bundles[bn].service,"MeshMB",6)) {
+	      // Recipient is "public"
+	      to="public";
+	    } else {
+	      // All others have no sender or recipient
+	      from=NULL;
+	      to=NULL;
+	    }
 	    int j;
-	    for(j=0;j<8;j++) bid[j]=bundles[peer_records[i]->tx_bundle].bid_hex[j];
+	    for(j=0;j<8;j++) bid[j]=bundles[bn].bid_hex[j];
 	    bid[8]='*'; bid[9]=0;
-	    fprintf(f,"%s/%lld (from M=%d/P=%d)",
-		    bid,bundles[peer_records[i]->tx_bundle].version,
-		    peer_records[i]->tx_bundle_manifest_offset_hard_lower_bound,
-		    peer_records[i]->tx_bundle_body_offset_hard_lower_bound);
+	    {
+	      fprintf(f,"%s/%lld ",
+		      bid,bundles[bn].version);
+	      if (from&&to) {
+		fprintf(stderr,"(%s %s -> %s) ",bundles[bn].service,from,to);
+	      }
+	      fprintf(f,"(from M=%d/P=%d)",
+		      peer_records[i]->tx_bundle_manifest_offset_hard_lower_bound,
+		      peer_records[i]->tx_bundle_body_offset_hard_lower_bound);
+	    }
 	    if (bundlelogfile&&(fn==0))
 	      fprintf(bundlelogfile,"%lld:T+%lldms:PEERXFER:%s*:%s/%lld (from M=%d/P=%d):%s",
 		      (long long)now,
 		      (long long)(gettime_ms()-start_time),		  
 		      peer_records[i]->sid_prefix,
-		      bid,bundles[peer_records[i]->tx_bundle].version,
+		      bid,bundles[bn].version,
 		      peer_records[i]->tx_bundle_manifest_offset_hard_lower_bound,
 		      peer_records[i]->tx_bundle_body_offset_hard_lower_bound,
 		      ctime(&now));	    
