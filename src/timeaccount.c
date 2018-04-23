@@ -155,11 +155,17 @@ int show_time_accounting(FILE *f)
 	  "<tr><th>Function</th><th>Duration</th><th>Time ago</th>\n");
   
   C;
-  for(int i=0;i<alltime_count;i++)
+  for(int i=0;i<alltime_count;i++) {
+    fprintf(stderr,"i=%d",i); fflush(stderr);
+    fprintf(stderr,", alltime[i]=%p",(void *)&alltime[i]); fflush(stderr);
+    fprintf(stderr,", alltime[i].source=%p",alltime[i].source); fflush(stderr);
+    fprintf(stderr,", alltime[i].source=\"%s\"",alltime[i].source); fflush(stderr);
+    fprintf(stderr,"\n");
     if (alltime[i].source)
       fprintf(f,"<tr><td>%s</td><td>%lld ms</td><td> T-%lldms</td></tr>\n",
 	      alltime[i].source,alltime[i].duration,
 	      gettime_ms()-alltime[i].when);
+  }
   C;
   fprintf(f,"</table>\n");
 
