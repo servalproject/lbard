@@ -86,6 +86,7 @@ int log_time(long long interval,char *source)
       }
     }
   }
+  if (insert<0) insert=0;
   for(i=insert+1;i<MAX_TIME_EXCURSIONS;i++)
     alltime[i]=alltime[i-1];
   alltime[insert].source=source;
@@ -123,7 +124,7 @@ int account_time(char *source)
   accumulated_time=0;
   current_interval_source=source;
 
-  fprintf(stderr,"account_time(\"%s\")\n",source);
+  fprintf(stderr,"account_time(\"%s\") (pointer is %p)\n",source,source);
   
   return 0;
   
