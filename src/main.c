@@ -614,8 +614,6 @@ int main(int argc, char **argv)
 			    LINK_MTU,msg_out,
 			    servald_server,credential);
 
-	  C;
-	  
 	  // Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
 	  if (message_update_interval_randomness)
 	    last_message_update_time=gettime_ms()+(random()%message_update_interval_randomness);
