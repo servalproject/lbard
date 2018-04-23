@@ -60,6 +60,9 @@ int register_bundle(char *service,
 {
   int i;
 
+  // XXX - Find and store feed name (= subscriber public name) for displaying when
+  // explaining a MeshMS or MeshMB transfer on :21506 status page.
+  
   // Calculate the key required for the bundle tree used to efficiently determine which
   // bundles a pair of peers have in common, and thus also the bundles each needs to
   // send to the other.

@@ -348,6 +348,8 @@ int status_dump()
       }
 
       msg_count=0;
+
+      show_time_accounting(f);
       
       fprintf(f,"</body>\n");
       
