@@ -97,17 +97,17 @@ int log_rssi_graph(FILE *f,struct peer_state *p)
   fprintf(f,
 	  "var theData = {\n"
 	  "  labels: [");
-  for(int i=239;i>0;i--) fprintf(f,"%d,",i); fprintf(f,"0],\n");
+  for(int i=59;i>0;i--) fprintf(f,"%d,",i); fprintf(f,"0],\n");
 
-  int bins[240];
-  for(int i=0;i<240;i++) bins[i]=0;
+  int bins[60];
+  for(int i=0;i<60;i++) bins[i]=0;
   long long now=gettime_ms();
   for(int i=0;i<p->rssi_log_count;i++)
     {
       if (p->recent_rssi_times[i]>(now-60000)) {
 	long long agems=now-p->recent_rssi_times[i];
-	int x=240-(agems/250);
-	if (x>=0&&x<=240)
+	int x=60-(agems/1000);
+	if (x>=0&&x<=60)
 	  {
 	    if (p->recent_rssis[i]>bins[x]) bins[x]=p->recent_rssis[i];
 	  }
@@ -120,8 +120,8 @@ int log_rssi_graph(FILE *f,struct peer_state *p)
 	  "borderColor: '#0000ff',\n"
 	  "borderWidth: 1,\n"
 	  "data: [");
-  for(int i=0;i<240;i++) fprintf(f,"%d,",bins[i]);
-  fprintf(f,"}]};\n");
+  for(int i=0;i<60;i++) fprintf(f,"%d,",bins[i]);
+  fprintf(f,"]}]};\n");
 
   
   fprintf(f,
