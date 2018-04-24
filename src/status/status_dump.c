@@ -233,7 +233,7 @@ int status_dump()
       qsort(order,bundle_count,sizeof(struct b),compare_b);
       
       // Show peer reachability with indication of activity
-      fprintf(f,"<h2>Mesh Extenders Reachable via Radio</h2>\n<table border=1 padding=2 spacing=2><tr><th>Mesh Extender ID</th><th>Performance</th><th>Realtime Signal Strength</th><th>Sending</th></tr>\n");
+      fprintf(f,"<h2>Mesh Extenders Reachable via Radio</h2>\n<table border=1 padding=2 spacing=2><tr><th>Mesh Extender ID</th><th>Performance</th><th>Receive Signal Strength (RSSI)</th><th>Sending</th></tr>\n");
       for (i=0;i<peer_count;i++) {
 	long long age=(time(0)-peer_records[i]->last_message_time);
 	float mean_rssi=-1;
