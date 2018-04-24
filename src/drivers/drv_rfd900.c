@@ -61,7 +61,6 @@ long long congestion_update_time=0;
 #define RADIO_RXBUFFER_SIZE 64+MAX_PACKET_SIZE
 unsigned char radio_rx_buffer[RADIO_RXBUFFER_SIZE];
 
-int radio_temperature=-1;
 int last_rx_rssi=-1;
 unsigned char *packet_data=NULL;
 
@@ -223,6 +222,7 @@ int rfd900_receive_bytes(unsigned char *bytes,int count)
 			  radio_rx_buffer[RADIO_RXBUFFER_SIZE-REPORT_LENGTH+4+2],
 			  radio_rx_buffer[RADIO_RXBUFFER_SIZE-REPORT_LENGTH+4+3],
 			  0};
+      radio_last_heartbeat_time=gettime_ms();
       radio_temperature=atoi(tempstring);
       printf("Radio temperature = %dC, frequency band = %c%c\n",
 	     radio_temperature,

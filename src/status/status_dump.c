@@ -43,6 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "lbard.h"
 #include "serial.h"
 #include "version.h"
+#include "radio_type.h"
 
 #define RESOLVE_SIDS 1
 #define SHOW_BUNDLE_STORE 2
@@ -210,7 +211,13 @@ int status_dump()
 
       fprintf(f,"<p>LBARD Version commit:%s branch:%s [MD5: %s] @ %s\n<p>\n",
 	      GIT_VERSION_STRING,GIT_BRANCH,VERSION_STRING,BUILD_DATE);    
-  
+
+      fprintf(f,"Radio detected as '%s'.\n",radio_types[radio_get_type()].name);
+      if (radio_last_heartbeat_time)
+	fprintf(f,"Last heartbeat received at T-%lld.\n",radio_last_heartbeat_time);
+      if (radio_temperature!=9999)
+	fprintf(f," Radio temperature %dC\n",radio_temperature);
+      
       struct b order[bundle_count];
       int i,n;
       

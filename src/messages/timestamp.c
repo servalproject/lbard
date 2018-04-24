@@ -72,6 +72,7 @@ int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
 	last_message_update_time+=delta;
 	congestion_update_time+=delta;
 	last_status_time+=delta;
+	radio_last_heartbeat_time+=delta;
 
 	account_time_resume();
 	

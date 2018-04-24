@@ -357,6 +357,10 @@ extern char *servald_server;
 extern char *credential;
 extern char *prefix;
 
+extern long long radio_last_heartbeat_time;
+extern int radio_temperature;
+extern time_t last_status_time;
+
 int saw_piece(char *peer_prefix,int for_me,
 	      char *bid_prefix, unsigned char *bid_prefix_bin,
 	      long long version,
@@ -445,7 +449,8 @@ int register_bundle(char *service,
 		    long long length,
 		    char *filehash,
 		    char *sender,
-		    char *recipient);
+		    char *recipient,
+		    char *name);
 long long size_byte_to_length(unsigned char size_byte);
 char *bundle_recipient_if_known(char *bid_prefix);
 int rhizome_log(char *service,

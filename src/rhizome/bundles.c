@@ -56,7 +56,8 @@ int register_bundle(char *service,
 		    long long length,
 		    char *filehash,
 		    char *sender,
-		    char *recipient)
+		    char *recipient,
+		    char *name)
 {
   int i;
 
@@ -76,9 +77,9 @@ int register_bundle(char *service,
     printf(">>> %s We now have bundle %s*,"
 	   " service=%s, version=%s,"
 	   " sender=%s,"
-	   " recipient=%s\n",
+	   " recipient=%s, feedname=%s\n",
 	   timestamp_str(),
-	   bid,service,version,sender,recipient);
+	   bid,service,version,sender,recipient,name);
 
   // Is it the OTA bundle?
   if (otabid&&(!strcasecmp(bid,otabid))) {

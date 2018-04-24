@@ -153,6 +153,7 @@ int load_rhizome_db_async(char *servald_server,
 			  ,fields[10] // file hash
 			  ,fields[11] // sender
 			  ,fields[12] // recipient
+			  ,fields[13] // Name
 			  );
 	} 
       }
