@@ -71,12 +71,12 @@ int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
 	  after.tv_sec*1000+(after.tv_usec/1000)
 	  -
 	  before.tv_sec*1000+(before.tv_usec/1000);
-	last_message_update_time+=delta;
-	congestion_update_time+=delta;
-	last_status_time+=delta;
-	radio_last_heartbeat_time+=delta;
+	if (last_message_update_time) last_message_update_time+=delta;
+	if (congestion_update_time) congestion_update_time+=delta;
+	if (last_status_time) last_status_time+=delta;
+	if (radio_last_heartbeat_time) radio_last_heartbeat_time+=delta;
 	log_rssi_timewarp(delta);
-	status_dump_epoch+=delta;
+	if (status_dump_epoch) status_dump_epoch+=delta;
 	
 	account_time_resume();
 	
