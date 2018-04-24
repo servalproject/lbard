@@ -143,7 +143,7 @@ int show_time_accounting(FILE *f)
 	      recent[i].source,recent[i].duration,
 	      gettime_ms()-recent[i].when);
   fprintf(f,
-	  "</table><h2>All time longest time excursions</h2>\n"
+	  "</table><tr><td><h2>All time longest time excursions</h2>\n"
 	  "</td><td><table border=1 padding=2>\n"
 	  "<tr><th>Function</th><th>Duration</th><th>Time ago</th>\n");
   
@@ -153,7 +153,7 @@ int show_time_accounting(FILE *f)
 	      alltime[i].source,alltime[i].duration,
 	      gettime_ms()-alltime[i].when);
   }
-  fprintf(f,"</table></tr></table>\n");
+  fprintf(f,"</table></td></tr></table>\n");
 
   return 0;
 }
