@@ -92,26 +92,41 @@ int log_rssi_graph(FILE *f,struct peer_state *p)
   fprintf(f,
 	  "<canvas id=\"peer%p\" width=\"240\" height=\"64\"></canvas>\n"
 	  "<script>\n"
-	  "var ctx = document.getElementById(\"peer%p\");\n"
-	  "var myChart = new Chart(ctx, {\n"
-	  "  type: 'line',\n"
-	  "  data: [\n",
+	  "var ctx = document.getElementById(\"peer%p\");\n",
 	  p,p);
+  fprintf(f,
+	  "var theData = {\n"
+	  "  labels: [");
+  for(int i=239;i>0;i--) fprintf(f,"%d,",i); fprintf(f,"0],\n");
+
+  int bins[240];
+  for(int i=0;i<240;i++) bins[i]=0;
   long long now=gettime_ms();
-  int count=0;
   for(int i=0;i<p->rssi_log_count;i++)
     {
       if (p->recent_rssi_times[i]>(now-60000)) {
-	if (count) fprintf(f,",");
-	fprintf(f,"{ x: %lld, y: %d }\n",
-		(p->recent_rssi_times[i]-now)/250,
-		p->recent_rssis[i]);
-	count++;
+	long long agems=now-p->recent_rssi_times[i];
+	int x=240-(agems/250);
+	if (x>=0&&x<=240)
+	  {
+	    if (p->recent_rssis[i]>bins[x]) bins[x]=p->recent_rssis[i];
+	  }
       }
     }
-  fprintf(f,"],\n"
-	  "options: { elements: { line: { tension: 0, } } }\n"
-	  ")};\n");
+
+  fprintf(f,"datasets: [{\n"
+	  "label: 'RSSI',\n"
+	  "backgroundColor: '#0000ff',\n"
+	  "borderColor: '#0000ff',\n"
+	  "borderWidth: 1,\n"
+	  "data: [");
+  for(int i=0;i<240;i++) fprintf(f,"%d,",bins[i]);
+  fprintf(f,"}]};\n");
+
+  
+  fprintf(f,
+	  "var theOptions = { scales: { xAxes: [ { display: false, barPercentage: 1, categoryPercentage: 1 }]}, legend: { display: false}, animation: { duration: 0 }, hover: { animationDuration: 0}, responsiveAnimationDuration: 0, elements: { line: { tension: 0, } } };\n"
+	  "var myChart = new Chart.Bar(ctx, { type: 'bar', data: theData , options: theOptions });\n");
   fprintf(f,"</script>\n");
 	  
   return 0;

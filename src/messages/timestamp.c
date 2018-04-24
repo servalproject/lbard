@@ -42,6 +42,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+extern long long status_dump_epoch;
+
 long long next_time_update_allowed_after=0;
 
 int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
@@ -74,6 +76,7 @@ int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
 	last_status_time+=delta;
 	radio_last_heartbeat_time+=delta;
 	log_rssi_timewarp(delta);
+	status_dump_epoch+=delta;
 	
 	account_time_resume();
 	
