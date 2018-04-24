@@ -199,6 +199,10 @@ int status_dump()
 	return -1;
       }
 
+      char my_sid_hex_prefix[25];
+      for(int i=0;i<24;i++) my_sid_hex_prefix[i]=my_sid_hex[i];
+      my_sid_hex_prefix[24]=0;
+      
       fprintf(f,
 	      "<html>\n<head>\n<title>Mesh Extender Packet Radio Link Status</title>\n"
 	      "<meta http-equiv=\"refresh\" content=\"2\" />\n</head>\n<body>\n"
@@ -207,8 +211,8 @@ int status_dump()
 	      "var seconds_since_load = 0;\n"
 	      "setInterval(function() { seconds_since_load++; document.getElementById('time_since_load').innerHTML = seconds_since_load; }, 1000);\n"
 	      "</script>\n"
-	      "<body><h1>LBARD Status for %s</h1>\nLBARD status dump produced @ T=%lldms (fetched <span id=time_since_load>0</span> seconds ago)\n<p>\n",
-	      my_sid_hex,gettime_ms()-status_dump_epoch);
+	      "<body><h1>LBARD Status for %s*</h1>\nLBARD status dump produced @ T=%lldms (fetched <span id=time_since_load>0</span> seconds ago)\n<p>\n",
+	      my_sid_hex_prefix,gettime_ms()-status_dump_epoch);
 
       fprintf(f,"<p>LBARD Version commit:%s branch:%s [MD5: %s] @ %s\n<p>\n",
 	      GIT_VERSION_STRING,GIT_BRANCH,VERSION_STRING,BUILD_DATE);    
