@@ -52,8 +52,8 @@ struct time_excursion {
 };
 
 
-#define MAX_TIME_EXCURSIONS 32
-#define TIME_EXCURSION_THRESHOLD 25
+#define MAX_TIME_EXCURSIONS 16
+#define TIME_EXCURSION_THRESHOLD 250
 int recent_count=0;
 struct time_excursion recent[MAX_TIME_EXCURSIONS];
 int alltime_count=0;
@@ -80,7 +80,7 @@ int log_time(long long interval,char *source)
   int insert=-1;
   for(i=0;i<MAX_TIME_EXCURSIONS;i++) {
     if(i<alltime_count) {
-      if (alltime[i].duration<interval) {
+      if (alltime[i].duration<=interval) {
 	insert=i;
 	break;
       }
@@ -147,11 +147,6 @@ int show_time_accounting(FILE *f)
 	  "<tr><th>Function</th><th>Duration</th><th>Time ago</th>\n");
   
   for(int i=0;i<alltime_count;i++) {
-    fprintf(stderr,"i=%d",i); fflush(stderr);
-    fprintf(stderr,", alltime[i]=%p",(void *)&alltime[i]); fflush(stderr);
-    fprintf(stderr,", alltime[i].source=%p",alltime[i].source); fflush(stderr);
-    fprintf(stderr,", alltime[i].source=\"%s\"",alltime[i].source); fflush(stderr);
-    fprintf(stderr,"\n");
     if (alltime[i].source)
       fprintf(f,"<tr><td>%s</td><td>%lld ms</td><td> T-%lldms</td></tr>\n",
 	      alltime[i].source,alltime[i].duration,
