@@ -276,6 +276,25 @@ int status_dump()
       fprintf(f,"<pre>\n");
       show_progress(f,1);
       fprintf(f,"</pre>\n");
+
+      fprintf(f,"<h2>Mesh Extenders Radio Transmit Queues</h2>\n<table border=1 padding=2 spacing=2><tr><th>Bundle</th></tr>\n");
+      for (i=0;i<peer_count;i++) {
+	long long age=(time(0)-peer_records[i]->last_message_time);
+	
+	if (age<=30) {
+	  fprintf(f,"<tr><td><b>Peer %s*</b></td></tr>\n",peer_records[i]->sid_prefix);
+
+	  for(int j=0;j<peer_records[i]->tx_queue_len;j++) {
+	    if (peer_records[i]->tx_bundle!=-1) {
+	      fprintf(f,"<tr><td>");
+	      describe_bundle(fn,f,NULL,i,peer_records[i]->tx_queue_bundles[j],
+			      // Don't show transfer progress, just bundle info
+			      -1,-1);
+	      fprintf(f,"</tr>\n");
+	    }
+	  }
+	}
+      }
       
       // And EEPROM data (copy from /tmp/eeprom.data)
       {
