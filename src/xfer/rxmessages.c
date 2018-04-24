@@ -79,7 +79,7 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
       p=peer_records[i]; peer_index=i; break;
     }
   }
-
+  
   if (!p) {
     p=calloc(1,sizeof(struct peer_state));
     for(int i=0;i<4;i++) p->sid_prefix_bin[i]=msg[i];
@@ -111,6 +111,9 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
   // Update RSSI log for this sender
   p->rssi_accumulator+=rssi;
   p->rssi_counter++;
+
+  // Log recently received packets, so that we can show RSSI history for received packets
+  log_rssi(p,rssi);	 
   
   while(offset<len) {
     if (debug_pieces||debug_message_pieces) {

@@ -73,7 +73,8 @@ int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
 	congestion_update_time+=delta;
 	last_status_time+=delta;
 	radio_last_heartbeat_time+=delta;
-
+	log_rssi_timewarp(delta);
+	
 	account_time_resume();
 	
 	if (delta<-2000) {

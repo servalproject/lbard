@@ -38,6 +38,7 @@ SRCS=	$(SRCDIR)/main.c \
 	$(SRCDIR)/status/progress.c \
 	$(SRCDIR)/status/monitor.c \
 	$(SRCDIR)/status/status_dump.c \
+	$(SRCDIR)/status/rssi.c \
 	\
 	$(SRCDIR)/energy_experiment.c \
 	\

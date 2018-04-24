@@ -98,12 +98,18 @@ struct peer_state {
   int last_message_number;
 
   time_t last_timestamp_received;
-  
+
   // Used to log RSSI of receipts from this sender, so that we can show in the stats display
   int rssi_accumulator;
   int rssi_counter;
   // Used to show number of missed packets in the stats display
   int missed_packet_count;
+
+  // Enough for 2 packets per second for a full minute
+#define RSSI_LOG_SIZE 120
+  int rssi_log_count;
+  int recent_rssis[RSSI_LOG_SIZE];
+  long long recent_rssi_times[RSSI_LOG_SIZE];
   
 #ifdef SYNC_BY_BAR
   // BARs we have seen from them.
@@ -622,5 +628,8 @@ int account_time_pause();
 int account_time_resume();
 int account_time(char *source);
 int show_time_accounting(FILE *f);
+
+int log_rssi(struct peer_state *p,int rssi);
+int log_rssi_timewarp(long long delta);
 
 #include "util.h"
