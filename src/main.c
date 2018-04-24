@@ -626,6 +626,7 @@ int main(int argc, char **argv)
 	// Update the state file to help debug things
 	// (but not too often, since it is SLOW on the MR3020s
 	//  XXX fix all those linear searches, and it will be fine!)
+	if (last_status_time>time(0)) last_status_time=time(0);
 	if (time(0)>last_status_time) {
 	  last_status_time=time(0)+2;
 	  status_dump();
