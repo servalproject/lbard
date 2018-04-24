@@ -255,7 +255,7 @@ int status_dump()
 		  peer_records[i]->sid_prefix,colour,
 		  age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
 	  fprintf(f,"<td>\n");
-	  log_rssi_graph(f,peer_records[i]);
+	  if (!fn) log_rssi_graph(f,peer_records[i]);
 	  fprintf(f,"</td>\n");
 	  fprintf(f,"<td>");
 	  if (bundlelogfile) {
