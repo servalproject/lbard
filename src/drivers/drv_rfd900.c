@@ -263,6 +263,7 @@ int rfd900_receive_bytes(unsigned char *bytes,int count)
       {
 	// Found RFD900 CSMA envelope: packet was immediately before this
 	int packet_bytes=radio_rx_buffer[RADIO_RXBUFFER_SIZE-4];
+	radio_last_heartbeat_time=gettime_ms();
 	radio_temperature=radio_rx_buffer[RADIO_RXBUFFER_SIZE-5];
 	last_rx_rssi=radio_rx_buffer[RADIO_RXBUFFER_SIZE-7];
 	
