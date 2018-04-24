@@ -126,7 +126,7 @@ int log_rssi_graph(FILE *f,struct peer_state *p)
   
   fprintf(f,
 	  "var theOptions = { scales: { xAxes: [ { display: false, barPercentage: 1, categoryPercentage: 1 }]}, legend: { display: false}, animation: { duration: 0 }, hover: { animationDuration: 0}, responsiveAnimationDuration: 0, elements: { line: { tension: 0, } } };\n"
-	  "var myChart = new Chart.Bar(ctx, { type: 'bar', data: theData , options: theOptions });\n");
+	  "document.addEventListener('DOMContentLoaded', function() { var myChart = new Chart.Bar(ctx, { type: 'bar', data: theData , options: theOptions })}, false);\n");
   fprintf(f,"</script>\n");
 	  
   return 0;
