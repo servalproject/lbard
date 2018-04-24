@@ -295,6 +295,7 @@ int status_dump()
 	  }
 	}
       }
+      fprintf(f,"</table>\n");
       
       // And EEPROM data (copy from /tmp/eeprom.data)
       {
