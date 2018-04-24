@@ -69,7 +69,7 @@ int log_time(long long interval,char *source)
   if (interval<TIME_EXCURSION_THRESHOLD) return 0;
 
   // Shuffle down recent time excursions
-  for(i=1;i<MAX_TIME_EXCURSIONS;i++)
+  for(i=MAX_TIME_EXCURSIONS;i>0;i--)
     recent[i]=recent[i-1];
   strncpy(recent[0].source,source,32);
   recent[0].duration=interval;
@@ -87,7 +87,7 @@ int log_time(long long interval,char *source)
     }
   }
   if (insert<0) insert=0;
-  for(i=insert+1;i<MAX_TIME_EXCURSIONS;i++)
+  for(i=MAX_TIME_EXCURSIONS;i>insert;i--)
     alltime[i]=alltime[i-1];
   strncpy(alltime[insert].source,source,32);
   alltime[insert].duration=interval;
