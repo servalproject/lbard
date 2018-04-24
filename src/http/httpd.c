@@ -178,6 +178,10 @@ int http_process(struct sockaddr *cliaddr,
 	write_all(socket,m,strlen(m));
 	close(socket);
 	return 0;	
+      } else if (!strcasecmp(uri,"/js/Chart.min.js")) {
+	http_send_file(socket,"/etc/serval/Chart.min.js","text/javascript");
+	close(socket);
+	return 0;
       } else if (!strcasecmp(uri,"/")) {
 	// Report on current peer status
 	http_report_network_status(socket,0);

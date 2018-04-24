@@ -77,3 +77,43 @@ int log_rssi_timewarp(long long delta)
     }
   return 0;
 }
+
+int log_rssi_graph(FILE *f,struct peer_state *p)
+{
+  /*
+    Draw a graph showing the recent RSSI strength of each peer.
+    We only show the last 60 seconds worth, even if we have a longer
+    time series.
+    We normalise the values to fit the range 56-255, i.e., a range of 200 "units",
+    which are not currently in dBm or similar. We should change this later.
+    Also would be nice to know the actual noise floor as well, so that we can show
+    the link margin, since that is really what we care about.
+  */
+  fprintf(f,
+	  "<canvas id=\"peer%p\" width=\"240\" height=\"64\"></canvas>\n"
+	  "<script>\n"
+	  "var ctx = document.getElementById(\"peer%p\");\n"
+	  "var myChart = new Chart(ctx, {\n"
+	  "  type: 'line',\n"
+	  "  data: [\n",
+	  p,p);
+  long long now=gettime_ms();
+  int count=0;
+  for(int i=0;i<p->rssi_log_count;i++)
+    {
+      if (p->recent_rssi_times[i]>(now-60000)) {
+	if (count) fprintf(f,",");
+	fprintf(f,"{ x: %lld, y: %d }\n",
+		(p->recent_rssi_times[i]-now)/250,
+		p->recent_rssis[i]);
+	count++;
+      }
+    }
+  fprintf(f,"],\n"
+	  "options: { elements: { line: { tension: 0, } } }\n"
+	  ")};\n");
+  fprintf(f,"</script>\n");
+	  
+  return 0;
+
+}

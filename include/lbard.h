@@ -631,5 +631,6 @@ int show_time_accounting(FILE *f);
 
 int log_rssi(struct peer_state *p,int rssi);
 int log_rssi_timewarp(long long delta);
+int log_rssi_graph(FILE *f,struct peer_state *p);
 
 #include "util.h"

@@ -202,6 +202,7 @@ int status_dump()
       fprintf(f,
 	      "<html>\n<head>\n<title>Mesh Extender Packet Radio Link Status</title>\n"
 	      "<meta http-equiv=\"refresh\" content=\"2\" />\n</head>\n<body>\n"
+	      "<script src=\"js/Chart.min.js\"></script>\n"
 	      "<script>\n"
 	      "var seconds_since_load = 0;\n"
 	      "setInterval(function() { seconds_since_load++; document.getElementById('time_since_load').innerHTML = seconds_since_load; }, 1000);\n"
@@ -228,7 +229,7 @@ int status_dump()
       qsort(order,bundle_count,sizeof(struct b),compare_b);
       
       // Show peer reachability with indication of activity
-      fprintf(f,"<h2>Mesh Extenders Reachable via Radio</h2>\n<table border=1 padding=2 spacing=2><tr><th>Mesh Extender ID</th><th>Performance</th><th>Sending</th></tr>\n");
+      fprintf(f,"<h2>Mesh Extenders Reachable via Radio</h2>\n<table border=1 padding=2 spacing=2><tr><th>Mesh Extender ID</th><th>Performance</th><th>Realtime Signal Strength</th><th>Sending</th></tr>\n");
       for (i=0;i<peer_count;i++) {
 	long long age=(time(0)-peer_records[i]->last_message_time);
 	float mean_rssi=-1;
@@ -246,9 +247,13 @@ int status_dump()
 	
 	if (age<=30) {
 	  time_t now=time(0);
-	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"%s\">%lld sec, %d/%d received (%2.1f%% loss), mean RSSI = %.0f</td><td>",
+	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"%s\">%lld sec, %d/%d received (%2.1f%% loss), mean RSSI = %.0f</td>\n",
 		  peer_records[i]->sid_prefix,colour,
 		  age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
+	  fprintf(f,"<td>\n");
+	  log_rssi_graph(f,peer_records[i]);
+	  fprintf(f,"</td>\n");
+	  fprintf(f,"<td>");
 	  if (bundlelogfile) {
 	    fprintf(stderr,"Writing PEERSTATUS line...\n");
 	    fprintf(bundlelogfile,"%lld:T+%lldms:PEERSTATUS:%s*:%lld:%d/%d:%.0f:%s",
