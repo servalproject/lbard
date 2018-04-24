@@ -146,7 +146,7 @@ int show_time_accounting(FILE *f)
   fprintf(f,
 	  "</table></td>\n"
 	  "<td><h2>All time longest time excursions</h2>\n"
-	  "</td><td><table border=1 padding=2>\n"
+	  "<table border=1 padding=2>\n"
 	  "<tr><th>Function</th><th>Duration</th><th>Time ago</th>\n");
   
   for(int i=0;i<alltime_count;i++) {
