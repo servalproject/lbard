@@ -133,9 +133,10 @@ int show_time_accounting(FILE *f)
   fprintf(f,
 	  "<h1>Processor Time accounting</h1>\n"
 	  "<table><tr><td>\n"
+
 	  "<h2>Recent time excursions</h2>\n"
 	  "<table border=1 padding=2>\n"
-	  "<tr><th>Function</th><th>Duration</th><th>Time ago</th>\n");
+	  "<tr><th>Function</th><th>Duration</th><th>Time ago</th></tr>\n");
 
   for(int i=0;i<recent_count;i++)
     if (recent[i].source)
@@ -143,7 +144,8 @@ int show_time_accounting(FILE *f)
 	      recent[i].source,recent[i].duration,
 	      gettime_ms()-recent[i].when);
   fprintf(f,
-	  "</table><tr><td><h2>All time longest time excursions</h2>\n"
+	  "</table></td>\n"
+	  "<td><h2>All time longest time excursions</h2>\n"
 	  "</td><td><table border=1 padding=2>\n"
 	  "<tr><th>Function</th><th>Duration</th><th>Time ago</th>\n");
   
