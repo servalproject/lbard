@@ -198,7 +198,7 @@ char *home_page="\n"
 "      }\n"
 "      }\n"
 "      x.busy=true;\n"
-"      r.open(\"GET\", \"/\"+d, true);\n"
+"      r.open(\"GET\", \"/status/\"+d, true);\n"
 "      r.send();\n"
 "      \n"
 "      }\n"
@@ -324,7 +324,7 @@ int status_dump()
     }
   }
   
-  fclose(bundlelogfile);
+  if (bundlelogfile) fclose(bundlelogfile);
 
   if (status_dump_epoch==0) status_dump_epoch=gettime_ms();  
 
@@ -541,9 +541,11 @@ int http_report_network_status(int socket,char *topic)
 {
   if (socket==-1) return -1;
 
+  fprintf(stderr,"Request for status page '%s'\n",topic);
+  
   // Get filename we need
   char filename[1024];
-  snprintf(filename,1024,"%s%s",TMPDIR,topic);
+  snprintf(filename,1024,"%s/%s",TMPDIR,topic);
   
   // Which topic do we need the status for?
   int t=-1;
@@ -552,6 +554,7 @@ int http_report_network_status(int socket,char *topic)
   if (!topics[t].name[0]) {
     // Illegal topic
     char m[1024];
+    fprintf(stderr,"404 for unknown status page '%s'\n",topic);
     snprintf(m,1024,"HTTP/1.0 404 File not found\nServer: Serval LBARD\n\nCould not read file '%s'\n",filename);
     write_all(socket,m,strlen(m));
     return -1;
@@ -581,17 +584,21 @@ int http_report_network_status(int socket,char *topic)
     // Update file
     FILE *f=fopen(filename,"w");
     if (!f) {
+      fprintf(stderr,"500 for unknown status page '%s', filename='%s'\n",topic,filename);
+      perror("fopen");
       char *m="HTTP/1.0 500 Couldn't create temporary file\nServer: Serval LBARD\n\nCould not create temporariy file";
       write_all(socket,m,strlen(m));
       
       return -1;
     }
     // Call function to get file updated
+    //    fprintf(stderr,"Regenerating status page '%s'\n",topic);
     topics[t].func(f,topic);
     fclose(f);
     topics[t].last_time=gettime_ms();
   }
 
+  //  fprintf(stderr,"200 for known status page '%s'\n",topic);
   return http_send_file(socket,filename,"text/html");  
 }
 
