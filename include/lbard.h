@@ -588,7 +588,7 @@ int hf_radio_ready(void);
 int hf_radio_pause_for_turnaround(void);
 int hf_radio_send_now(void);
 int eeprom_read(int fd);
-int http_report_network_status(int socket,int flags);
+int http_report_network_status(int socket,char *topic);
 int http_report_network_status_json(int socket);
 int http_send_file(int socket,char *filename,char *mime_type);
 int send_status_home_page(int socket);

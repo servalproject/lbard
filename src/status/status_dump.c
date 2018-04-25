@@ -46,12 +46,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "radio_type.h"
 
 #define RESOLVE_SIDS 1
-#define SHOW_BUNDLE_STORE 2
 
-#define STATUS_FILE "/tmp/lbard_status.html"
-#define STATUS_FILE_WITH_NAMES "/tmp/lbard_status_n.html"
-#define STATUS_FILE_WITH_NAMES_AND_BUNDLES "/tmp/lbard_status_bn.html"
-#define STATUS_FILE_WITH_BUNDLES "/tmp/lbard_status_b.html"
+#define TMPDIR "/tmp"
 
 struct b {
   int order;
@@ -288,8 +284,8 @@ int send_status_home_page(int socket)
 
 int status_dump()
 {
-  int fn;
-
+  int i;
+  
   if (last_peer_log>time(0)) last_peer_log=time(0);
   
   // Periodically record list of peers in bundle log, if we are maintaining one
@@ -306,250 +302,297 @@ int status_dump()
     }
   }
 
-  if (status_dump_epoch==0) status_dump_epoch=gettime_ms();  
-  
-  for(fn=0;fn<=3;fn++)
-    {
-      FILE *f=NULL;
-      char *fname=STATUS_FILE;
-      switch(fn)
-	{
-	case RESOLVE_SIDS: fname=STATUS_FILE_WITH_NAMES;
-	  break;
-	case RESOLVE_SIDS+SHOW_BUNDLE_STORE: fname=STATUS_FILE_WITH_NAMES_AND_BUNDLES;
-	  break;
-	case SHOW_BUNDLE_STORE: fname=STATUS_FILE_WITH_BUNDLES;
-	  break;
-	}
-      f=fopen(fname,"w");
-      if (!f) {
-	perror("fopen() on STATUS_FILE for write");
-	return -1;
+  for (i=0;i<peer_count;i++) {
+    long long age=(time(0)-peer_records[i]->last_message_time);
+    float mean_rssi=-1;
+    if (peer_records[i]->rssi_counter) mean_rssi=peer_records[i]->rssi_accumulator*1.0/peer_records[i]->rssi_counter;
+    int missed_packets=peer_records[i]->missed_packet_count;
+    int received_packets=peer_records[i]->rssi_counter;
+    
+    if (age<=30) {
+      time_t now=time(0);
+
+      if (bundlelogfile) {
+	fprintf(bundlelogfile,"%lld:T+%lldms:PEERSTATUS:%s*:%lld:%d/%d:%.0f:%s",
+		(long long)now,
+		(long long)(gettime_ms()-start_time),		  
+		peer_records[i]->sid_prefix,
+		age,received_packets,received_packets+missed_packets,mean_rssi,
+		ctime(&now));
+	fprintf(stderr,"Wrote PEERSTATUS line.\n");
       }
-
-      char my_sid_hex_prefix[25];
-      for(int i=0;i<24;i++) my_sid_hex_prefix[i]=my_sid_hex[i];
-      my_sid_hex_prefix[24]=0;
-      
-      fprintf(f,
-	      "<html>\n<head>\n<title>Mesh Extender Packet Radio Link Status</title>\n"
-	      "<meta http-equiv=\"refresh\" content=\"2\" />\n</head>\n<body>\n"
-	      "<script src=\"js/Chart.min.js\"></script>\n"
-	      "<script>\n"
-	      "var seconds_since_load = 0;\n"
-	      "setInterval(function() { seconds_since_load++; document.getElementById('time_since_load').innerHTML = seconds_since_load; }, 1000);\n"
-	      "</script>\n"
-	      "<body><h1>LBARD Status for %s*</h1>\nLBARD status dump produced @ T=%lldms (fetched <span id=time_since_load>0</span> seconds ago)\n<p>\n",
-	      my_sid_hex_prefix,gettime_ms()-status_dump_epoch);
-
-      fprintf(f,"<p>LBARD Version commit:%s branch:%s [MD5: %s] @ %s\n<p>\n",
-	      GIT_VERSION_STRING,GIT_BRANCH,VERSION_STRING,BUILD_DATE);    
-
-      fprintf(f,"Radio detected as '%s'.\n",radio_types[radio_get_type()].name);
-      if (radio_last_heartbeat_time)
-	fprintf(f,"Last heartbeat received at T-%lld.\n",radio_last_heartbeat_time);
-      if (radio_temperature!=9999)
-	fprintf(f," Radio temperature %dC\n",radio_temperature);
-      
-      struct b order[bundle_count];
-      int i,n;
-      
-      for (i=0;i<bundle_count;i++) {
-	order[i].order=i;
-	order[i].priority=bundles[i].last_priority;
-      }
-      qsort(order,bundle_count,sizeof(struct b),compare_b);
-      
-      // Show peer reachability with indication of activity
-      fprintf(f,"<h2>Mesh Extenders Reachable via Radio</h2>\n<table border=1 padding=2 spacing=2><tr><th>Mesh Extender ID</th><th>Performance</th><th>Receive Signal Strength (RSSI)</th><th>Sending</th></tr>\n");
-      for (i=0;i<peer_count;i++) {
-	long long age=(time(0)-peer_records[i]->last_message_time);
-	float mean_rssi=-1;
-	if (peer_records[i]->rssi_counter) mean_rssi=peer_records[i]->rssi_accumulator*1.0/peer_records[i]->rssi_counter;
-	int missed_packets=peer_records[i]->missed_packet_count;
-	int received_packets=peer_records[i]->rssi_counter;
-	float percent_received=0;
-	if (received_packets+missed_packets) {
-	  percent_received=received_packets*100.0/(received_packets+missed_packets);
-	}
-	char *colour="#00ff00";
-	if (percent_received<10) colour="#ff4f00";
-	else if (percent_received<50) colour="#ffff00";
-	else if (percent_received<80) colour="#c0c0c0";
-	
-	if (age<=30) {
-	  time_t now=time(0);
-	  fprintf(f,"<tr><td>%s*</td><td bgcolor=\"%s\">%lld sec, %d/%d received (%2.1f%% loss), mean RSSI = %.0f</td>\n",
-		  peer_records[i]->sid_prefix,colour,
-		  age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
-	  fprintf(f,"<td>\n");
-	  if (!fn) log_rssi_graph(f,peer_records[i]);
-	  fprintf(f,"</td>\n");
-	  fprintf(f,"<td>");
-	  if (bundlelogfile) {
-	    fprintf(stderr,"Writing PEERSTATUS line...\n");
-	    fprintf(bundlelogfile,"%lld:T+%lldms:PEERSTATUS:%s*:%lld:%d/%d:%.0f:%s",
-		    (long long)now,
-		    (long long)(gettime_ms()-start_time),		  
-		    peer_records[i]->sid_prefix,
-		    age,received_packets,received_packets+missed_packets,mean_rssi,
-		    ctime(&now));
-	    fprintf(stderr,"Wrote PEERSTATUS line.\n");
-	  }
-	  
-	  if (peer_records[i]->tx_bundle!=-1) {
-	    describe_bundle(fn,f,bundlelogfile,i,peer_records[i]->tx_bundle,
-			    peer_records[i]->tx_bundle_manifest_offset_hard_lower_bound,
-			    peer_records[i]->tx_bundle_body_offset_hard_lower_bound);
-	  }
-	  fprintf(f,"</td></tr>\n");
-	}
-
-	if (fn==3) {
-	  // Reset packet RX stats for next round
-	  peer_records[i]->missed_packet_count=0;
-	  peer_records[i]->rssi_counter=0;
-	  peer_records[i]->rssi_accumulator=0;
-	}
-      }
-      fprintf(f,"</table>\n");
-      if (bundlelogfile&&(fn==3)) fclose(bundlelogfile);
-      
-      // Show current transfer progress bars
-      fprintf(f,"<h2>Current Bundles being received</h2>\n");
-      fprintf(f,"<pre>\n");
-      show_progress(f,1);
-      fprintf(f,"</pre>\n");
-
-      fprintf(f,"<h2>Mesh Extenders Radio Transmit Queues</h2>\n<table border=1 padding=2 spacing=2><tr><th>Bundle</th></tr>\n");
-      for (i=0;i<peer_count;i++) {
-	long long age=(time(0)-peer_records[i]->last_message_time);
-	
-	if (age<=30) {
-	  fprintf(f,"<tr><td><b>Peer %s*</b></td></tr>\n",peer_records[i]->sid_prefix);
-
-	  for(int j=0;j<peer_records[i]->tx_queue_len;j++) {
-	    if (peer_records[i]->tx_bundle!=-1) {
-	      fprintf(f,"<tr><td>");
-	      describe_bundle(fn,f,NULL,i,peer_records[i]->tx_queue_bundles[j],
-			      // Don't show transfer progress, just bundle info
-			      -1,-1);
-	      fprintf(f,"</tr>\n");
-	    }
-	  }
-	}
-      }
-      fprintf(f,"</table>\n");
-      
-      // And EEPROM data (copy from /tmp/eeprom.data)
-      {
-	char buffer[16384];
-	FILE *e=fopen("/tmp/eeprom.data","r");
-	if (e) {
-	  fprintf(f,"<h2>EEPROM Radio information</h2>\n<pre>\n");
-	  int bytes=fread(buffer,1,16384,e);
-	  if (bytes>0) fwrite(buffer,bytes,1,f);
-	  fclose(e);
-	  fprintf(f,"</pre>\n");
-	}
-      }
-
-      if (fn&SHOW_BUNDLE_STORE) {
-	fprintf(f,"<h2>Bundles in local store</h2>\n<table border=1 padding=2 spacing=2><tr><th>Bundle #</th><th>BID Prefix</th><th>Service</th><th>Bundle version</th><th>Bundle length</th><th>Last calculated priority</th><th># peers who don't have this bundle</th></tr>\n");
-	for (n=0;n<bundle_count;n++) {
-	  i=order[n].order;
-	  fprintf(f,"<tr><td>#%d</td><td>%s</td><td>%s</td><td>%lld</td><td>%lld</td><td>0x%08llx (%lld)</td><td>%d</td></tr>\n",
-		  i,
-		  bundles[i].bid_hex,
-		  bundles[i].service,
-		  bundles[i].version,
-		  bundles[i].length,
-		  bundles[i].last_priority,bundles[i].last_priority,
-		  bundles[i].num_peers_that_dont_have_it);
-	}
-	fprintf(f,"</table>\n");
-	fflush(f);
-	
-#ifdef SYNC_BY_BAR
-	fprintf(f,"<h2>Bundles held by peers</h2>\n<table border=1 padding=2 spacing=2><tr><th>Peer</th><th>Bundle prefix</th><th>Bundle version</th></tr>\n");
-
-	for(peer=0;peer<peer_count;peer++) {
-	  // Don't show timed out peers
-	  if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
-	    continue;
-	  
-	  char *peer_prefix=peer_records[peer]->sid_prefix;
-	  for(i=0;i<peer_records[peer]->bundle_count;i++) {
-	    if (peer_records[peer]->partials[i].bid_prefix) {
-	      // Here is a bundle in flight
-	      char *bid_prefix=peer_records[peer]->bid_prefixes[i];
-	      long long version=peer_records[peer]->versions[i];
-	      fprintf(f,"<tr><td>%s*</td><td>%s*</td><td>%-18lld</td></tr>\n",
-		      peer_prefix?peer_prefix:"<no peer prefix>",
-		      bid_prefix?bid_prefix:"<no bid prefix>",version);
-	    }
-	  }
-	}
-	fprintf(f,"</table>\n");
-	fflush(f);
-#endif
-
-	fprintf(f,"<h2>Bundles in flight</h2>\n<table border=1 padding=2 spacing=2><tr><th>Bundle prefix</th><th>Bundle version</th><th>Progress<th></tr>\n");
-	
-	for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
-	  if (partials[i].bid_prefix) {
-	    // Here is a bundle in flight
-	    char *bid_prefix=partials[i].bid_prefix;
-	    long long version=partials[i].bundle_version;
-	    char progress_string[80];
-	    generate_progress_string(&partials[i],
-				     progress_string,sizeof(progress_string));
-	    fprintf(f,"<tr><td>%s*</td><td>%-18lld</td><td>[%s]</td></tr>\n",
-		    bid_prefix,version,
-		    progress_string);
-	  }
-	}
-	fprintf(f,"</table>\n");
-	fflush(f);
-	
-	fprintf(f,"<h2>Announced material</h2>\n<table border=1 padding=2 spacing=2><tr><th>Time</th><th>Announced content</th></tr>\n");
-	long long now=gettime_ms();
-	for(i=0;i<msg_count;i++) {
-	  fprintf(f,"<tr><td>T-%lldms</td><td>%s</td></tr>\n",
-		  now-msg_times[i],msgs[i]);
-	  free(msgs[i]); msgs[i]=NULL;
-	}
-	fprintf(f,"</table>\n");
-      }
-
-      msg_count=0;
-
-      show_time_accounting(f);
-      
-      fprintf(f,"</body>\n");
-      
-      fclose(f);
     }
+  }
+  
+  fclose(bundlelogfile);
+
+  if (status_dump_epoch==0) status_dump_epoch=gettime_ms();  
+
+  return 0;
+}
+  
+
+int status_dump_meinfo(FILE *f,char *topic)
+{
+  fprintf(f,"<p>LBARD Version commit:%s branch:%s [MD5: %s] @ %s\n<p>\n",
+	  GIT_VERSION_STRING,GIT_BRANCH,VERSION_STRING,BUILD_DATE);    
+
+  // XXX - Display file system RW/RO status
+
+  // XXX - Display servald dead/alive status
+  
+  return 0;
+}
+
+int status_dump_radioinfo(FILE *f, char *topic)
+{
+  fprintf(f,"Radio detected as '%s'.\n",radio_types[radio_get_type()].name);
+  if (radio_last_heartbeat_time)
+    fprintf(f,"Last heartbeat received at T-%lld.\n",radio_last_heartbeat_time);
+  if (radio_temperature!=9999)
+    fprintf(f," Radio temperature %dC\n",radio_temperature);
+
+  // And EEPROM data (copy from /tmp/eeprom.data)
+  char buffer[16384];
+  FILE *e=fopen("/tmp/eeprom.data","r");
+  if (e) {
+    fprintf(f,"<h3>EEPROM Radio information</h3>\n<pre>\n");
+    int bytes=fread(buffer,1,16384,e);
+    if (bytes>0) fwrite(buffer,bytes,1,f);
+    fclose(e);
+    fprintf(f,"</pre>\n");
+  }
 
   return 0;
 }
 
-int http_report_network_status(int socket,int flags)
+int status_dump_radiolinks(FILE *f, char *topic)
 {
-  if (socket!=-1)
-    {
-      switch(flags) {
-      case RESOLVE_SIDS:
-	return http_send_file(socket,STATUS_FILE_WITH_NAMES,"text/html");
-      case RESOLVE_SIDS|SHOW_BUNDLE_STORE:
-	return http_send_file(socket,STATUS_FILE_WITH_NAMES_AND_BUNDLES,"text/html");
-      case SHOW_BUNDLE_STORE:
-	return http_send_file(socket,STATUS_FILE_WITH_BUNDLES,"text/html");
-      default:
-	return http_send_file(socket,STATUS_FILE,"text/html");
+  int i;
+  
+  // Show peer reachability with indication of activity
+  fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>Mesh Extender ID</th><th>Performance</th><th>Receive Signal Strength (RSSI)</th><th>Sending</th></tr>\n");
+  for (i=0;i<peer_count;i++) {
+    long long age=(time(0)-peer_records[i]->last_message_time);
+    float mean_rssi=-1;
+    if (peer_records[i]->rssi_counter) mean_rssi=peer_records[i]->rssi_accumulator*1.0/peer_records[i]->rssi_counter;
+    int missed_packets=peer_records[i]->missed_packet_count;
+    int received_packets=peer_records[i]->rssi_counter;
+    float percent_received=0;
+    if (received_packets+missed_packets) {
+      percent_received=received_packets*100.0/(received_packets+missed_packets);
+    }
+    char *colour="#00ff00";
+    if (percent_received<10) colour="#ff4f00";
+    else if (percent_received<50) colour="#ffff00";
+    else if (percent_received<80) colour="#c0c0c0";
+    
+    if (age<=30) {
+      fprintf(f,"<tr><td>%s*</td><td bgcolor=\"%s\">%lld sec, %d/%d received (%2.1f%% loss), mean RSSI = %.0f</td>\n",
+	      peer_records[i]->sid_prefix,colour,
+	      age,received_packets,received_packets+missed_packets,100-percent_received,mean_rssi);
+      fprintf(f,"<td>\n");
+      log_rssi_graph(f,peer_records[i]);
+      fprintf(f,"</td>\n");
+      fprintf(f,"<td>");
+      
+      if (peer_records[i]->tx_bundle!=-1) {
+	describe_bundle(RESOLVE_SIDS,
+			f,NULL,i,peer_records[i]->tx_bundle,
+			peer_records[i]->tx_bundle_manifest_offset_hard_lower_bound,
+			peer_records[i]->tx_bundle_body_offset_hard_lower_bound);
+      }
+      fprintf(f,"</td></tr>\n");
+    }
+    
+    // Reset packet RX stats for next round
+    peer_records[i]->missed_packet_count=0;
+    peer_records[i]->rssi_counter=0;
+    peer_records[i]->rssi_accumulator=0;
+  }
+  fprintf(f,"</table>\n");
+
+  return 0;
+}
+
+int status_dump_bundlerx(FILE *f,char *topic)
+{
+  int i;
+  
+  // Show current transfer progress bars
+  fprintf(f,"<pre>\n");
+  show_progress(f,1);
+  fprintf(f,"</pre>\n");
+
+  fprintf(f,"<h3>Bundles in flight</h3>\n<table border=1 padding=2 spacing=2><tr><th>Bundle prefix</th><th>Bundle version</th><th>Progress<th></tr>\n");
+  
+  for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
+    if (partials[i].bid_prefix) {
+      // Here is a bundle in flight
+      char *bid_prefix=partials[i].bid_prefix;
+      long long version=partials[i].bundle_version;
+      char progress_string[80];
+      generate_progress_string(&partials[i],
+			       progress_string,sizeof(progress_string));
+      fprintf(f,"<tr><td>%s*</td><td>%-18lld</td><td>[%s]</td></tr>\n",
+	      bid_prefix,version,
+	      progress_string);
+    }
+  }
+  fprintf(f,"</table>\n");
+  fflush(f);
+  
+  fprintf(f,"<h3>Announced material</h3>\n<table border=1 padding=2 spacing=2><tr><th>Time</th><th>Announced content</th></tr>\n");
+  long long now=gettime_ms();
+  for(i=0;i<msg_count;i++) {
+    fprintf(f,"<tr><td>T-%lldms</td><td>%s</td></tr>\n",
+	    now-msg_times[i],msgs[i]);
+    free(msgs[i]); msgs[i]=NULL;
+  }
+  msg_count=0;
+  fprintf(f,"</table>\n");
+
+  return 0;
+}
+
+int status_dump_txqueue(FILE *f, char *topic)
+{
+  int i;
+  fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>Bundle</th></tr>\n");
+  for (i=0;i<peer_count;i++) {
+    long long age=(time(0)-peer_records[i]->last_message_time);
+    
+    if (age<=30) {
+      fprintf(f,"<tr><td><b>Peer %s*</b></td></tr>\n",peer_records[i]->sid_prefix);
+      
+      for(int j=0;j<peer_records[i]->tx_queue_len;j++) {
+	if (peer_records[i]->tx_bundle!=-1) {
+	  fprintf(f,"<tr><td>");
+	  describe_bundle(RESOLVE_SIDS
+			  ,f,NULL,i,peer_records[i]->tx_queue_bundles[j],
+			  // Don't show transfer progress, just bundle info
+			  -1,-1);
+	  fprintf(f,"</tr>\n");
+	}
       }
     }
-  else return 0;
+  }
+  fprintf(f,"</table>\n");
+
+  return 0;
+}
+
+int status_dump_bundlelist(FILE *f,char *topic)
+{
+  int i,n;
+  struct b order[bundle_count];
+  for (i=0;i<bundle_count;i++) {
+    order[i].order=i;
+    order[i].priority=bundles[i].last_priority;
+  }
+  qsort(order,bundle_count,sizeof(struct b),compare_b);
+  
+  fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>Bundle #</th><th>BID Prefix</th><th>Service</th><th>Bundle version</th><th>Bundle length</th><th>Last calculated priority</th><th># peers who don't have this bundle</th></tr>\n");
+  for (n=0;n<bundle_count;n++) {
+    i=order[n].order;
+    fprintf(f,"<tr><td>#%d</td><td>%s</td><td>%s</td><td>%lld</td><td>%lld</td><td>0x%08llx (%lld)</td><td>%d</td></tr>\n",
+	    i,
+	    bundles[i].bid_hex,
+	    bundles[i].service,
+	    bundles[i].version,
+	    bundles[i].length,
+	    bundles[i].last_priority,bundles[i].last_priority,
+	    bundles[i].num_peers_that_dont_have_it);
+  }
+  fprintf(f,"</table>\n");
+  fflush(f);
+
+  return 0;
+}
+
+int status_dump_diags(FILE *f,char *topic)
+{
+  show_time_accounting(f);
+      
+  return 0;
+}
+
+// Keep track of when each topic was last updated, and
+// how often we should update them.
+struct topic_report {
+  char name[16];
+  time_t last_time;
+  int update_interval;
+  int (*func)(FILE *f,char *);
+};
+
+struct topic_report topics[]={
+  {"meinfo",0,1000,status_dump_meinfo},
+  {"radiolinks",0,1000,status_dump_radiolinks},
+  {"txqueue",0,3000,status_dump_txqueue},
+  {"bundlerx",0,2000,status_dump_bundlerx},
+  {"bundlelist",0,10000,status_dump_bundlelist},
+  {"radioinfo",0,5000,status_dump_radioinfo},
+  {"diags",0,2000,status_dump_diags},
+  {"",-1,-1}
+};
+
+int http_report_network_status(int socket,char *topic)
+{
+  if (socket==-1) return -1;
+
+  // Get filename we need
+  char filename[1024];
+  snprintf(filename,1024,"%s%s",TMPDIR,topic);
+  
+  // Which topic do we need the status for?
+  int t=-1;
+  for(t=0;topics[t].name[0];t++)
+    if (!strcmp(topic,topics[t].name)) break;
+  if (!topics[t].name[0]) {
+    // Illegal topic
+    char m[1024];
+    snprintf(m,1024,"HTTP/1.0 404 File not found\nServer: Serval LBARD\n\nCould not read file '%s'\n",filename);
+    write_all(socket,m,strlen(m));
+    return -1;
+  }
+
+  long long age=-1;
+  if (topics[t].last_time) {
+    if (topics[t].last_time>gettime_ms()) {
+      // Last update was in the future, so assume time has
+      // run backwards, and thus we should refresh.
+      age=-1;
+    } else {
+      age=gettime_ms()-topics[t].last_time;
+      // If update was more than 1 minute ago, then assume that
+      // it is either stale and needs and update, or something
+      // funny has happend with time updates, and we should
+      // update it anyway.
+      if (age>60000) age=-1;
+    }
+  }
+  
+  // Make file as needing refreshing if the file doesn't exist.
+  FILE *f=fopen(filename,"r");
+  if (!f) age=-1; else fclose(f);
+
+  if (age<0||age>=topics[t].update_interval) {
+    // Update file
+    FILE *f=fopen(filename,"w");
+    if (!f) {
+      char *m="HTTP/1.0 500 Couldn't create temporary file\nServer: Serval LBARD\n\nCould not create temporariy file";
+      write_all(socket,m,strlen(m));
+      
+      return -1;
+    }
+    // Call function to get file updated
+    topics[t].func(f,topic);
+    fclose(f);
+    topics[t].last_time=gettime_ms();
+  }
+
+  return http_send_file(socket,filename,"text/html");  
 }
 
 time_t last_json_network_status_call=0;

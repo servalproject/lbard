@@ -188,19 +188,9 @@ int http_process(struct sockaddr *cliaddr,
 	send_status_home_page(socket);
 	close(socket);
 	return 0;	
-      } else if (!strcasecmp(uri,"/n")) {
+      } else if (!strncasecmp(uri,"/status/",8)) {
 	// Report on current peer status
-	http_report_network_status(socket,1);
-	close(socket);
-	return 0;	
-      } else if (!strcasecmp(uri,"/b")) {
-	// Report on current peer status
-	http_report_network_status(socket,2);
-	close(socket);
-	return 0;	
-      } else if (!strcasecmp(uri,"/bn")) {
-	// Report on current peer status
-	http_report_network_status(socket,3);
+	http_report_network_status(socket,&uri[8]);
 	close(socket);
 	return 0;	
       } else if (!strcasecmp(uri,"/avacado/testmode1")) {
@@ -252,6 +242,7 @@ int http_process(struct sockaddr *cliaddr,
 	return 0;	
       }
     }
+  fprintf(stderr,"Saw unknown HTTP request '%s'\n",uri);
   char *m="HTTP/1.0 400 Couldn't parse message\nServer: Serval LBARD\n\n";
   write_all(socket,m,strlen(m));
   close(socket);
