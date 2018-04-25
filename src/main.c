@@ -600,7 +600,7 @@ int main(int argc, char **argv)
 	    int s=accept(httpsocket,&cliaddr,&addrlen);
 	    if (s!=-1) {
 	      // HTTP request socket
-	      printf("HTTP Socket connection\n");
+	      //	      printf("HTTP Socket connection\n");
 	      // Process socket
 	      // XXX This is synchronous to keep things simple,
 	      // which is part of why we only check every second or so

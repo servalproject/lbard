@@ -118,11 +118,11 @@ int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
   strncpy(toname,find_sender_name(to),128);
   fromname[32]=0; toname[32]=0;
   
-  // Clip sender and recipient SIDs to 16 chars
-  from[16]='*';
-  to[16]='*';
-  from[17]=0;
-  to[17]=0;
+  // Clip sender and recipient SIDs to 8 chars (32 bits)
+  from[8]='*';
+  to[8]='*';
+  from[9]=0;
+  to[9]=0;
   
   // Check for invalid characters in to/from
   for(int i=0;i<strlen(from);i++) {
@@ -572,7 +572,7 @@ int http_report_network_status(int socket,char *topic)
 {
   if (socket==-1) return -1;
 
-  fprintf(stderr,"Request for status page '%s'\n",topic);
+  //  fprintf(stderr,"Request for status page '%s'\n",topic);
   
   // Get filename we need
   char filename[1024];
