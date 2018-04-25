@@ -638,7 +638,7 @@ int update_mesh_extender_health(FILE *f)
     if (f) fprintf(f,"<p><span style='background-color: #ff0000'>Last contact with Serval DNA %.1f seconds ago</span>\n",since_last);
   }
 
-  if (badfs) {
+  if (badfs&&fix_badfs) {
     // Make sure clock chenanigens can't cause us trouble
     if (last_fsfix_attempt>gettime_ms()) last_fsfix_attempt=gettime_ms();
     if ((gettime_ms()-last_fsfix_attempt)>60000) last_fsfix_attempt=gettime_ms()-60000;

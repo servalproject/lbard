@@ -354,6 +354,7 @@ extern char *bundlelog_filename;
 extern int debug_noprioritisation;
 extern int radio_silence_count;
 extern int meshms_only;
+extern int fix_badfs;
 extern long long min_version;
 extern int time_slave;
 extern long long start_time;

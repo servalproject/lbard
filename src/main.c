@@ -67,6 +67,9 @@ int debug_noprioritisation=0;
 int debug_bundlelog=0;
 char *bundlelog_filename=NULL;
 
+int fix_badfs=0;
+
+
 long long radio_last_heartbeat_time=0;
 int radio_temperature=9999;
 
@@ -373,6 +376,7 @@ int main(int argc, char **argv)
       else if (!strcasecmp("sync",argv[n])) debug_sync=1;
       else if (!strcasecmp("sync_keys",argv[n])) debug_sync_keys=1;
       else if (!strcasecmp("udptime",argv[n])) udp_time=1;
+      else if (!strcasecmp("fixfs",argv[n])) fix_badfs=1;
       else if (!strncasecmp("bundlelog=",argv[n],10)) {
 	bundlelog_filename=strdup(&argv[n][10]);
 	debug_bundlelog=1;
