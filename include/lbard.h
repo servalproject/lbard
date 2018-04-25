@@ -366,6 +366,8 @@ extern char *prefix;
 extern long long radio_last_heartbeat_time;
 extern int radio_temperature;
 extern time_t last_status_time;
+extern long long last_servald_contact;
+
 
 int saw_piece(char *peer_prefix,int for_me,
 	      char *bid_prefix, unsigned char *bid_prefix_bin,

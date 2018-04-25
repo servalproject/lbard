@@ -49,6 +49,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #define TMPDIR "/tmp"
 
+int mesh_extender_sad=0;
+
 struct b {
   int order;
   long long priority;
@@ -67,6 +69,8 @@ int status_log(char *msg)
   }
   return -1;
 }
+
+int update_mesh_extender_health(FILE *f);
 
 // The main job of this routine is to make sure that a character is safe for
 // including in HTML output.  So mostly no < or >, but we play it safe.
@@ -368,9 +372,11 @@ int status_dump_meinfo(FILE *f,char *topic)
   fprintf(f,"<p>LBARD Version commit:%s branch:%s [MD5: %s] @ %s\n<p>\n",
 	  GIT_VERSION_STRING,GIT_BRANCH,VERSION_STRING,BUILD_DATE);    
 
-  // XXX - Display file system RW/RO status
-
-  // XXX - Display servald dead/alive status
+  update_mesh_extender_health(NULL);
+  
+  if (mesh_extender_sad) {
+    fprintf(f,"<p><span style='background-color: #ff0000'>This Mesh Extender is currently suffering from %d problem(s).<br>See diagnostics section on this page for more details.</span>\n",mesh_extender_sad);
+  }
   
   return 0;
 }
@@ -541,8 +547,100 @@ int status_dump_bundlelist(FILE *f,char *topic)
   return 0;
 }
 
+int update_mesh_extender_health(FILE *f)
+{
+  mesh_extender_sad=0;
+
+  // XXX - Display file system RW/RO status
+  int servalvar_status=-1;
+  int serval_status=-1;
+  int dos_status=-1;
+  char cmd[1024];
+  snprintf(cmd,1024,"mount >%s/mount.log",TMPDIR);
+  system(cmd);
+  snprintf(cmd,1024,"%s/mount.log",TMPDIR);
+  FILE *mf=fopen(cmd,"r");
+  if (mf) {
+    char line[1024];
+    line[0]=0; fgets(line,1024,mf);
+    while(line[0]) {
+      char path[1024];
+      char opts[1024];
+      if (sscanf(line,"%[^ ] on %*[^ ] type %*[^ ] (%[^)]",path,opts)==2)
+	{
+	  int rw=0;
+	  int ro=0;
+	  if (opts[0]=='r'&&opts[1]=='w') rw=1;
+	  if (opts[0]=='r'&&opts[1]=='o') ro=1;
+	  if (!strcasecmp("/serval-var",path)) {
+	    if (rw) servalvar_status=0;
+	    if (ro) servalvar_status=1;
+	  }
+	  if (!strcasecmp("/serval",path)) {
+	    if (rw) serval_status=0;
+	    if (ro) serval_status=1;
+	  }
+	  if (!strcasecmp("/dos",path)) {
+	    if (rw) dos_status=0;
+	    if (ro) dos_status=1;
+	  }
+	}
+      line[0]=0; fgets(line,1024,mf);
+    }
+    fclose(mf);
+  }
+  switch (dos_status) {
+  case 0: break; // ok
+  case 1: // Read only
+    if (f) fprintf(f,"<p><span style=\"background-color: #ff0000\">/dos partition mounted read only. Problem with USB or SD card?</span>\n");
+    mesh_extender_sad++;
+    break;
+  case -1: // not mounted
+    mesh_extender_sad++;
+    if (f) fprintf(f,"<p><span style=\"background-color: #ff0000\">No /dos partition. USB or SD card missing?</span>\n");
+    break;
+  }
+  switch (serval_status) {
+  case 0: break; // ok
+  case 1: // Read only
+    mesh_extender_sad++;
+    if (f) fprintf(f,"<p><span style=\"background-color: #ff0000\">/serval partition mounted read only. Problem with USB or SD card?</span>\n");
+    break;
+  case -1: // not mounted
+    mesh_extender_sad++;
+    if (f) fprintf(f,"<p><span style=\"background-color: #ff0000\">No /serval partition. USB or SD card missing?</span>\n");
+    break;
+  }
+  switch (servalvar_status) {
+  case 0: break; // ok
+  case 1: // Read only
+    mesh_extender_sad++;
+    if (f) fprintf(f,"<p><span style=\"background-color: #ff0000\">/serval-var partition mounted read only. Problem with USB or SD card?</span>\n");
+    break;
+  case -1: // not mounted
+    mesh_extender_sad++;
+    if (f) fprintf(f,"<p><span style=\"background-color: #ff0000\">No /serval-var partition. USB or SD card missing?</span>\n");
+    break;
+  }
+  
+  // Display servald dead/alive status
+  // (inferred from when we last heard anything from it.
+  //  this will therefore have some latency, because we don't need to ask
+  //  servald things all the time.)
+  if (last_servald_contact>gettime_ms()) last_servald_contact=gettime_ms();
+  float since_last=(gettime_ms()-last_servald_contact)/1000.0;
+  if (since_last<10) 
+    { if (f) fprintf(f,"<p>Last contact with Serval DNA %.1f seconds ago\n",since_last); }
+  else {
+    mesh_extender_sad++;
+    if (f) fprintf(f,"<p><span style='background-color: #ff0000'>Last contact with Serval DNA %.1f seconds ago</span>\n",since_last);
+  }
+  return 0; 
+}
+
 int status_dump_diags(FILE *f,char *topic)
 {
+  update_mesh_extender_health(f);
   show_time_accounting(f);
       
   return 0;

@@ -70,6 +70,8 @@ char *bundlelog_filename=NULL;
 long long radio_last_heartbeat_time=0;
 int radio_temperature=9999;
 
+long long last_servald_contact=0;
+
 // If either of these is not -1, then we try to set them
 // for the attached radio.
 int txpower=-1;

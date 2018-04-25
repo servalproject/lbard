@@ -132,6 +132,8 @@ int load_rhizome_db_async(char *servald_server,
     switch(r) {
     case 0: // Got a line
       {
+	last_servald_contact=gettime_ms();
+
 	char fields[14][8192];
 	int n=parse_json_line(load_rhizome_db_line,fields,14);
 	if (n==14) {
@@ -240,7 +242,8 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
   }
   else
     printf("http result code = %d\n",result_code);
-    
+
+  last_servald_contact=gettime_ms();
   
   return 0;
 }

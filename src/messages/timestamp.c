@@ -77,6 +77,7 @@ int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
 	if (radio_last_heartbeat_time) radio_last_heartbeat_time+=delta;
 	log_rssi_timewarp(delta);
 	if (status_dump_epoch) status_dump_epoch+=delta;
+	if (last_servald_contact) last_servald_contact+=delta;
 	
 	account_time_resume();
 	
