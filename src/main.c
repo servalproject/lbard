@@ -159,6 +159,9 @@ int main(int argc, char **argv)
 {  
   start_time = gettime_ms();
 
+  // Ignore broken socket connections
+  signal(SIGPIPE, SIG_IGN);
+  
   /* Catch SIGABORT, for compatibility with test framework (expects return code 0
      on SIGSTOP */
   struct sigaction sig;
