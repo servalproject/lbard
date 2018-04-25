@@ -547,10 +547,13 @@ int status_dump_bundlelist(FILE *f,char *topic)
   return 0;
 }
 
+long long last_fsfix_attempt=0;
+
 int update_mesh_extender_health(FILE *f)
 {
   mesh_extender_sad=0;
-
+  int badfs=0;
+  
   // XXX - Display file system RW/RO status
   int servalvar_status=-1;
   int serval_status=-1;
@@ -603,22 +606,21 @@ int update_mesh_extender_health(FILE *f)
   switch (serval_status) {
   case 0: break; // ok
   case 1: // Read only
-    mesh_extender_sad++;
-    if (f) fprintf(f,"<p><span style=\"background-color: #ff0000\">/serval partition mounted read only. Problem with USB or SD card?</span>\n");
+    mesh_extender_sad++; badfs++;    if (f) fprintf(f,"<p><span style=\"background-color: #ff0000\">/serval partition mounted read only. Problem with USB or SD card?</span>\n");
     break;
   case -1: // not mounted
-    mesh_extender_sad++;
+    mesh_extender_sad++; badfs++;
     if (f) fprintf(f,"<p><span style=\"background-color: #ff0000\">No /serval partition. USB or SD card missing?</span>\n");
     break;
   }
   switch (servalvar_status) {
   case 0: break; // ok
   case 1: // Read only
-    mesh_extender_sad++;
+    mesh_extender_sad++; badfs++;
     if (f) fprintf(f,"<p><span style=\"background-color: #ff0000\">/serval-var partition mounted read only. Problem with USB or SD card?</span>\n");
     break;
   case -1: // not mounted
-    mesh_extender_sad++;
+    mesh_extender_sad++; badfs++;
     if (f) fprintf(f,"<p><span style=\"background-color: #ff0000\">No /serval-var partition. USB or SD card missing?</span>\n");
     break;
   }
@@ -635,6 +637,19 @@ int update_mesh_extender_health(FILE *f)
     mesh_extender_sad++;
     if (f) fprintf(f,"<p><span style='background-color: #ff0000'>Last contact with Serval DNA %.1f seconds ago</span>\n",since_last);
   }
+
+  if (badfs) {
+    // Make sure clock chenanigens can't cause us trouble
+    if (last_fsfix_attempt>gettime_ms()) last_fsfix_attempt=gettime_ms();
+    if ((gettime_ms()-last_fsfix_attempt)>60000) last_fsfix_attempt=gettime_ms()-60000;
+    // Consider calling script to try to fix sad filesystems.
+    if ((gettime_ms()-last_fsfix_attempt)>=60000) {
+      // It's been a while since we tried fixing it, so try again.
+      system("/etc/serval/fixfs");
+      last_fsfix_attempt=gettime_ms();
+    }
+  }
+  
   return 0; 
 }
 
