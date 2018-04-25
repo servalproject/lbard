@@ -158,6 +158,134 @@ int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
   return 0;
 }
 
+
+char *home_page="\n"
+"  <html>\n"
+"  <head>\n"
+"    <title>Mesh Extender Packet Radio Link Status</title>\n"
+"    <script src=\"js/Chart.min.js\"></script>\n"
+"    <script>\n"
+"      // Update Time since page load\n"
+"      var seconds_since_load = 0;\n"
+"      var seconds_since_update = 0;\n"
+"      setInterval(function() {\n"
+"      seconds_since_load++; seconds_since_update++;\n"
+"      document.getElementById('time_since_load').innerHTML = seconds_since_load;\n"
+"      document.getElementById('time_since_update').innerHTML = seconds_since_update;\n"
+"      }, 1000);\n"
+"\n"
+"      \n"
+"      function toggleElement(e) {\n"
+"      var x = document.getElementById(e);\n"
+"      if (x.style.display === \"none\") {\n"
+"      // Make visible again, and immediately request fresh data.\n"
+"      x.busy=false; // clear any pending request for updated content\n"
+"      x.innerHTML=\"Loading...\";\n"
+"      x.style.display=\"block\";\n"
+"      refreshDiv(x); // then trigger a refresh\n"
+"      } else x.style.display=\"none\";\n"
+"      }\n"
+"\n"
+"      function refreshDiv(d) {\n"
+"      var x = document.getElementById(d);\n"
+"      if (x.style.display === \"none\") return;\n"
+"      if (x.busy === true) return;\n"
+"      // x.innerHTML=\n"
+"      \n"
+"      var r = new XMLHttpRequest();\n"
+"      r.onreadystatechange=function() {\n"
+"      if (r.readyState==4 && r.status==200) {\n"
+"      x.innerHTML = r.responseText;\n"
+"      x.busy=false;\n"
+"      // Reset indication of when we last received information from LBARD / servald\n"
+"      seconds_since_update=0;\n"
+"      }\n"
+"      }\n"
+"      x.busy=true;\n"
+"      r.open(\"GET\", \"/\"+d, true);\n"
+"      r.send();\n"
+"      \n"
+"      }\n"
+"      \n"
+"      function periodicRefresh() {\n"
+"\n"
+"        // Update the contents of any visible information section\n"
+"        refreshDiv('meinfo');\n"
+"        refreshDiv('radiolinks');\n"
+"        refreshDiv('txqueue');\n"
+"        refreshDiv('bundlerx');\n"
+"      // Bundle list can take a long time, so only refresh when making it visible again\n"
+"//        refreshDiv('bundlelist');\n"
+"        refreshDiv('radioinfo');\n"
+"        refreshDiv('diags');\n"
+"      }\n"
+"\n"
+"      var periodicTimer = setInterval(\"periodicRefresh()\",2000);\n"
+"      \n"
+"    </script>\n"
+"  </head>\n"
+"  <body>\n"
+"    <h1>LBARD Status for %s*</h1>\n"
+"\n"
+"    Page first loaded <span id=time_since_load>0</span> seconds ago.\n"
+"    <br>\n"
+"    Last update from Mesh Extender received <span id=time_since_update>0</span> seconds ago.\n"
+"    <p>\n"
+"      \n"
+"    <div>\n"
+"      <button onClick=\"toggleElement('meinfo')\">Mesh Extender Info</button>\n"
+"      <button onClick=\"toggleElement('radiolinks')\">Radio Links</button>\n"
+"      <button onClick=\"toggleElement('txqueue')\">Transmit Queues</button>\n"
+"      <button onClick=\"toggleElement('bundlerx')\">Receive Progress</button>\n"
+"      <button onClick=\"toggleElement('bundlelist')\">Received Bundles</button>\n"
+"      <button onClick=\"toggleElement('radioinfo')\">Radio Configuration</button>\n"
+"      <button onClick=\"toggleElement('diags')\">Diagnostic Information</button>\n"
+"    </div>\n"
+"    \n"
+"    <h2>Mesh Extender Information</h2>\n"
+"    <div style=\"display:block\" id=meinfo>Loading...</div>\n"
+"    <h2>Mesh Extenders Reachable by Radio</h2>\n"
+"    <div style=\"display:block\" id=radiolinks>Loading...</div>\n"
+"    <h2>Bundle Transmit Queue</h2>\n"
+"    <div style=\"display:none\" id=txqueue>Loading...</div>\n"
+"    <h2>Bundle Receive Progress</h2>\n"
+"    <div style=\"display:none\" id=bundlerx>Loading...</div>\n"
+"    <h2>Received Bundle List</h2>\n"
+"    <div style=\"display:none\" id=bundlelist>Loading...</div>\n"
+"    <h2>Radio Configuration Information</h2>\n"
+"    <div style=\"display:none\" id=radioinfo>Loading...</div>\n"
+"    <h2>Mesh Extender Diagnostics</h2>\n"
+"    <div style=\"display:none\" id=diags>Loading...</div>\n"
+"  </body>\n"
+"</html>\n"
+;
+
+int send_status_home_page(int socket)
+{
+  // Get SID prefix
+  char my_sid_hex_prefix[17];
+  for(int i=0;i<16;i++) my_sid_hex_prefix[i]=my_sid_hex[i];
+  my_sid_hex_prefix[16]=0;
+
+  // Render into main status page
+  char home_page_data[strlen(home_page)+100];
+  snprintf(home_page_data,strlen(home_page)+99,home_page,my_sid_hex_prefix);
+
+  // Now prepare HTTP response header
+  char header[1024];
+  snprintf(header,1024,
+	   "HTTP/1.0 200 OK\n"
+	   "Server: Serval LBARD\n"
+	   "Content-length: %d\n"
+	   "\n",(int)strlen(home_page_data));
+
+  // Now send it all
+  write_all(socket,header,strlen(header));
+  write_all(socket,home_page_data,strlen(home_page_data));
+  
+  return 0;
+}
+
 int status_dump()
 {
   int fn;

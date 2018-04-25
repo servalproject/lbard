@@ -183,8 +183,9 @@ int http_process(struct sockaddr *cliaddr,
 	close(socket);
 	return 0;
       } else if (!strcasecmp(uri,"/")) {
-	// Report on current peer status
-	http_report_network_status(socket,0);
+	// Display default home page
+	// (now uses javascript to show individual parts of the page)
+	send_status_home_page(socket);
 	close(socket);
 	return 0;	
       } else if (!strcasecmp(uri,"/n")) {
