@@ -44,6 +44,50 @@ extern char *my_sid_hex;
 #include "sync.h"
 #include "lbard.h"
 
+#define MAX_SENDERS 16384
+char *senders[MAX_SENDERS];
+char *sender_names[MAX_SENDERS];
+int sender_count=0;
+
+char *find_sender_name(char *sender)
+{
+  // XXX - Linear search! Will be very slow with many senders.
+  // XXX - Replace with more efficient search strategy.
+  for(int i=0;i<sender_count;i++)
+    if (!strcasecmp(sender,senders[i]))
+      return sender_names[i];
+  return "";
+}
+
+int register_sender(char *sender,char *feedname)
+{
+  // XXX - See above: Replace with more efficiently searchable list format.
+  int i;
+  for(i=0;i<sender_count;i++) {
+    if (!strcasecmp(sender,senders[i])) {
+      // It is this sender
+      if (strcmp(sender_names[i],feedname)) {
+	free(sender_names[i]); sender_names[i]=strdup(feedname);
+      }
+      return 0;
+    }
+  }
+  if (i>=MAX_SENDERS) {
+    // Too many senders.  Random replace.
+    i=random()%MAX_SENDERS;
+    free(senders[i]); free(sender_names[i]);
+    senders[i]=strdup(sender);
+    sender_names[i]=strdup(feedname);
+    return 0;
+  }
+
+  senders[sender_count]=strdup(sender);
+  sender_names[sender_count++]=strdup(feedname);
+
+  return 0;
+}
+
+
 struct bundle_record bundles[MAX_BUNDLES];
 int bundle_count=0;
 int ignored_bundles=0;
@@ -81,6 +125,10 @@ int register_bundle(char *service,
 	   timestamp_str(),
 	   bid,service,version,sender,recipient,name);
 
+  if ((!strcmp(service,"MeshMB1"))&&name&&name[0]&&sender&&sender[0]) {
+    register_sender(sender,name);
+  }
+  
   // Is it the OTA bundle?
   if (otabid&&(!strcasecmp(bid,otabid))) {
     printf(">>>>>> OTA bundle spotted.\n");

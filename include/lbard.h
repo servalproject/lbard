@@ -593,6 +593,8 @@ int http_report_network_status_json(int socket);
 int http_send_file(int socket,char *filename,char *mime_type);
 int send_status_home_page(int socket);
 
+char *find_sender_name(char *sender);
+
 char *timestamp_str(void);
 int _report_file(const char *filename,const char *file,
 		 const int line,const char *function);

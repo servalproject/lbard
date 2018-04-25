@@ -105,17 +105,24 @@ int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
   char bid[10];
   char from[128];
   char to[128];
+  char fromname[128];
+  char toname[128];
   strncpy(from,bundles[bn].sender,127);
   strncpy(to,bundles[bn].recipient,127);
 
   if (!from[0]) strcpy(from,"unknown");
   if (!to[0]) strcpy(to,"unknown");
 
-  // XXX Resolve SIDs to names if requested
-
-  // Clip sender and recipient names
-  from[16]=0;
-  to[16]=0;
+  // Try to resolve SIDs to names
+  strncpy(fromname,find_sender_name(from),128);
+  strncpy(toname,find_sender_name(to),128);
+  fromname[32]=0; toname[32]=0;
+  
+  // Clip sender and recipient SIDs to 16 chars
+  from[16]='*';
+  to[16]='*';
+  from[17]=0;
+  to[17]=0;
   
   // Check for invalid characters in to/from
   for(int i=0;i<strlen(from);i++) {
@@ -142,7 +149,11 @@ int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
     fprintf(f,"%s/%lld ",
 	    bid,bundles[bn].version);
     if (from[0]&&to[0]&&(fn&RESOLVE_SIDS)) {
-      fprintf(f,"(%s %s -> %s)",bundles[bn].service,from,to);
+      if (fromname[0]||toname[0]) {
+	fprintf(f,"(%s '%s' -> '%s')",bundles[bn].service,fromname[0]?fromname:from,toname[0]?toname:to);
+	fprintf(f,"<br>(%s -> %s)",from,to);
+      } else 
+	fprintf(f,"(%s %s -> %s)",bundles[bn].service,from,to);
     }
     if (manifest_offset>=0)
       fprintf(f," (from M=%d/P=%d)",manifest_offset,body_offset);
