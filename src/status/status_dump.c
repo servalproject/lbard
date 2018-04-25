@@ -103,28 +103,37 @@ int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
 		    int manifest_offset,int body_offset)
 {
   char bid[10];
-  char *from=bundles[bn].sender;
-  char *to=bundles[bn].recipient;
-  if ((!from)||(!from[0])) from="unknown";
-  if ((!to)||(!to[0])) from="unknown";
+  char from[128];
+  char to[128];
+  strncpy(from,bundles[bn].sender,127);
+  strncpy(to,bundles[bn].recipient,127);
+
+  if (!from[0]) strcpy(from,"unknown");
+  if (!to[0]) strcpy(to,"unknown");
+
+  // XXX Resolve SIDs to names if requested
+
+  // Clip sender and recipient names
+  from[16]=0;
+  to[16]=0;
   
   // Check for invalid characters in to/from
   for(int i=0;i<strlen(from);i++) {
-    if (!safechar(from[i])) { from="CENSORED"; break; }
+    if (!safechar(from[i])) { strcpy(from,"CENSORED"); break; }
   }
   for(int i=0;i<strlen(to);i++) {
-    if (!safechar(to[i])) { to="CENSORED"; break; }
+    if (!safechar(to[i])) { strcpy(to,"CENSORED"); break; }
   }
   
   if (!strncasecmp(bundles[bn].service,"MeshMS",6)) {
     // We show both from and to fields
   } else if (!strncasecmp(bundles[bn].service,"MeshMB",6)) {
     // Recipient is "public"
-    to="public";
+    strcpy(to,"public");
   } else {
     // All others have no sender or recipient
-    from=NULL;
-    to=NULL;
+    from[0]=0;
+    to[0]=0;
   }
   int j;
   for(j=0;j<8;j++) bid[j]=bundles[bn].bid_hex[j];
@@ -132,8 +141,8 @@ int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
   {
     fprintf(f,"%s/%lld ",
 	    bid,bundles[bn].version);
-    if (from&&to&&(fn&RESOLVE_SIDS)) {
-      fprintf(stderr,"(%s %s -> %s)",bundles[bn].service,from,to);
+    if (from[0]&&to[0]&&(fn&RESOLVE_SIDS)) {
+      fprintf(f,"(%s %s -> %s)",bundles[bn].service,from,to);
     }
     if (manifest_offset>=0)
       fprintf(f," (from M=%d/P=%d)",manifest_offset,body_offset);
@@ -143,13 +152,14 @@ int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
   
   if (manifest_offset>=0)
     if (bundlelogfile&&(fn==0))
-      fprintf(bundlelogfile,"%lld:T+%lldms:PEERXFER:%s*:%s/%lld (from M=%d/P=%d):%s",
-	      (long long)now,
-	      (long long)(gettime_ms()-start_time),		  
-	      peer_records[peerid]->sid_prefix,
-	      bid,bundles[bn].version,
-	      manifest_offset,body_offset,
-	      ctime(&now));
+      if (peerid>-1)
+	fprintf(bundlelogfile,"%lld:T+%lldms:PEERXFER:%s*:%s/%lld (from M=%d/P=%d):%s",
+		(long long)now,
+		(long long)(gettime_ms()-start_time),		  
+		peer_records[peerid]->sid_prefix,
+		bid,bundles[bn].version,
+		manifest_offset,body_offset,
+		ctime(&now));
 
   return 0;
 }
@@ -176,6 +186,7 @@ char *home_page="\n"
 "      if (x.style.display === \"none\") {\n"
 "      // Make visible again, and immediately request fresh data.\n"
 "      x.busy=false; // clear any pending request for updated content\n"
+"      x.style.backgroundColor='#ffffff';\n"					   
 "      x.innerHTML=\"Loading...\";\n"
 "      x.style.display=\"block\";\n"
 "      refreshDiv(e); // then trigger a refresh\n"
@@ -193,11 +204,13 @@ char *home_page="\n"
 "      if (r.readyState==4 && r.status==200) {\n"
 "      x.innerHTML = r.responseText;\n"
 "      x.busy=false;\n"
+"      x.style.backgroundColor='#ffffff';\n"					   
 "      // Reset indication of when we last received information from LBARD / servald\n"
 "      seconds_since_update=0;\n"
 "      }\n"
 "      }\n"
 "      x.busy=true;\n"
+"      x.style.backgroundColor='#cfcfcf';\n"					   
 "      r.open(\"GET\", \"/status/\"+d, true);\n"
 "      r.send();\n"
 "      \n"
@@ -499,13 +512,13 @@ int status_dump_bundlelist(FILE *f,char *topic)
   }
   qsort(order,bundle_count,sizeof(struct b),compare_b);
   
-  fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>Bundle #</th><th>BID Prefix</th><th>Service</th><th>Bundle version</th><th>Bundle length</th><th>Last calculated priority</th><th># peers who don't have this bundle</th></tr>\n");
+  fprintf(f,"<table border=1 padding=2 spacing=2><tr><th>Bundle #</th><th>Bundle</th><th>Bundle version</th><th>Bundle length</th><th>Priority</th><th># peers without it</th></tr>\n");
   for (n=0;n<bundle_count;n++) {
     i=order[n].order;
-    fprintf(f,"<tr><td>#%d</td><td>%s</td><td>%s</td><td>%lld</td><td>%lld</td><td>0x%08llx (%lld)</td><td>%d</td></tr>\n",
-	    i,
-	    bundles[i].bid_hex,
-	    bundles[i].service,
+    fprintf(f,"<tr><td>#%d</td><td>",i);
+    describe_bundle(RESOLVE_SIDS ,f,NULL,i,-1,-1,-1);
+    
+    fprintf(f,"</td><td>%lld</td><td>%lld</td><td>0x%08llx (%lld)</td><td>%d</td></tr>\n",
 	    bundles[i].version,
 	    bundles[i].length,
 	    bundles[i].last_priority,bundles[i].last_priority,
