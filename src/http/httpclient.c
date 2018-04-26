@@ -253,7 +253,7 @@ int base64_append(char *out,int *out_offset,unsigned char *bytes,int count)
 
 int http_get_simple(char *server_and_port, char *auth_token,
 		    char *path, FILE *outfile, int timeout_ms,
-		    long long *last_read_time)
+		    long long *last_read_time, int outputHeaders)
 {
   // Send simple HTTP request to server, and write result into outfile.
 
@@ -314,6 +314,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
   while(len<1024) {
     r=read_nonblock(sock,&line[len],1);
     if (r==1) {
+      if (outputHeaders) fputc(line[len],outfile);
       if ((line[len]=='\n')||(line[len]=='\r')) {
 	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;

@@ -240,6 +240,15 @@ int http_process(struct sockaddr *cliaddr,
 	http_report_network_status_json(socket);
 	close(socket);
 	return 0;	
+      } else {
+	// Unknown URL -- Pass to servald on port 4110
+	FILE *fsock=fdopen(socket,"w");
+	if (fsock) {
+	  long long last_read_time=0;
+	  int result=http_get_simple(servald_server,NULL,"/",fsock,2000,&last_read_time,1);
+	  fclose(fsock);
+	  if (result==200) return 0;
+	}
       }
     }
   fprintf(stderr,"Saw unknown HTTP request '%s'\n",uri);

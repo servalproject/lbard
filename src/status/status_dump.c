@@ -528,7 +528,7 @@ int status_dump_servaldinfo(FILE *f,char *topic)
   long long last_read_time=0;
 
   fprintf(f,"<table border=1><tr><td>\n");
-  int result=http_get_simple("127.0.0.1:4110",NULL,"/",f,2000,&last_read_time);
+  int result=http_get_simple(servald_server,NULL,"/",f,2000,&last_read_time,0);
   if (result==-1) {
     fprintf(f,"<h3>ERROR: Could not connect to Serval DNA</h3>\n");
   } else if (result!=200)

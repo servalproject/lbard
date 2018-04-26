@@ -417,7 +417,7 @@ ssize_t read_nonblock(int fd, void *buf, size_t len);
 
 int http_get_simple(char *server_and_port, char *auth_token,
 		    char *path, FILE *outfile, int timeout_ms,
-		    long long *last_read_time);
+		    long long *last_read_time, int outputheaders);
 int http_post_bundle(char *server_and_port, char *auth_token,
 		     char *path,
 		     unsigned char *manifest_data, int manifest_length,

@@ -298,7 +298,7 @@ int make_periodic_requests(void)
 	    fprintf(stderr,"   Making HTTP request\n");
 	    int result=http_get_simple(server_and_port,auth_token,
 				       url,outfile,3000, // 3 sec timeout
-				       &last_read_time);
+				       &last_read_time,0);
 	    fprintf(stderr,"   HTTP result code is %d\n",result);
 	    if (result<200||result>209)
 	      fprintf(stderr,"%s:%d: HTTP Result of %03d during fetch of '%s'\n",

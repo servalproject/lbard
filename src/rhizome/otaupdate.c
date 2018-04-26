@@ -61,7 +61,7 @@ int process_ota_bundle(char *bid,char *version)
     return -1;
   }
   int result_code=http_get_simple(servald_server,
-			      credential,path,f,5000,NULL);
+				  credential,path,f,5000,NULL,0);
   fclose(f); f=NULL;
   if(result_code!=200) {
     fprintf(stderr,"http request failed (%d). URLPATH:%s\n",result_code,path);
