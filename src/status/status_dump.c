@@ -587,24 +587,25 @@ int update_mesh_extender_health(FILE *f)
     char line[1024];
     line[0]=0; fgets(line,1024,mf);
     while(line[0]) {
+      char dev[1024];
       char path[1024];
       char opts[1024];
-      if (sscanf(line,"%[^ ] on %*[^ ] type %*[^ ] (%[^)]",path,opts)==2)
+      if (sscanf(line,"%[^ ] on %[^ ] type %*[^ ] (%[^)]",dev,path,opts)==3)
 	{
 	  int rw=0;
 	  int ro=0;
 	  if (opts[0]=='r'&&opts[1]=='w') rw=1;
 	  if (opts[0]=='r'&&opts[1]=='o') ro=1;
 	  if (!strcasecmp("/serval-var",path)) {
-	    if (rw) servalvar_status=0;
+	    if (rw&&(dev[0]=='/')) servalvar_status=0;
 	    if (ro) servalvar_status=1;
 	  }
 	  if (!strcasecmp("/serval",path)) {
-	    if (rw) serval_status=0;
+	    if (rw&&(dev[0]=='/')) serval_status=0;
 	    if (ro) serval_status=1;
 	  }
 	  if (!strcasecmp("/dos",path)) {
-	    if (rw) dos_status=0;
+	    if (rw&&(dev[0]=='/')) dos_status=0;
 	    if (ro) dos_status=1;
 	  }
 	}
