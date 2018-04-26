@@ -205,7 +205,7 @@ int connect_to_port(char *host,int port)
   }
 
   if (connect(sock,(struct sockaddr *)&addr,sizeof(struct sockaddr)) == -1) {
-    perror("connect() to port failed");
+    // perror("connect() to port failed");
     close(sock);
     return -1;
   }
@@ -264,27 +264,39 @@ int http_get_simple(char *server_and_port, char *auth_token,
 
   long long timeout_time=gettime_ms()+timeout_ms;
   
-  if (strlen(auth_token)>500) return -1;
+  if (auth_token&&strlen(auth_token)>500) return -1;
   if (strlen(path)>500) return -1;
   
   char request[2048];
   char authdigest[1024];
   int zero=0;
-  
-  bzero(authdigest,1024);
-  base64_append(authdigest,&zero,(unsigned char *)auth_token,strlen(auth_token));
+
+  if (auth_token) {
+    bzero(authdigest,1024);
+    base64_append(authdigest,&zero,(unsigned char *)auth_token,strlen(auth_token));
+  }
 
   // Build request
-  snprintf(request,2048,
-	   "GET %s HTTP/1.1\n"
-	   "Authorization: Basic %s\n"
-	   "Host: %s:%d\n"
-	   "Accept: */*\n"
-	   "\n",
-	   path,
-	   authdigest,
-	   server_name,server_port);
-
+  if (auth_token)
+    snprintf(request,2048,
+	     "GET %s HTTP/1.1\n"
+	     "Authorization: Basic %s\n"
+	     "Host: %s:%d\n"
+	     "Accept: */*\n"
+	     "\n",
+	     path,
+	     authdigest,
+	     server_name,server_port);
+  else
+    snprintf(request,2048,
+	     "GET %s HTTP/1.1\n"
+	     "Host: %s:%d\n"
+	     "Accept: */*\n"
+	     "\n",
+	     path,
+	     server_name,server_port);
+    
+  
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
 

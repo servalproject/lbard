@@ -201,7 +201,7 @@ char *home_page="\n"
 "      if (x.style.display === \"none\") {\n"
 "      // Make visible again, and immediately request fresh data.\n"
 "      x.busy=false; // clear any pending request for updated content\n"
-"      x.style.backgroundColor='#ffffff';\n"					   
+"      x.style.backgroundColor='#efefef';\n"
 "      x.innerHTML=\"Loading...\";\n"
 "      x.style.display=\"block\";\n"
 "      refreshDiv(e); // then trigger a refresh\n"
@@ -219,7 +219,7 @@ char *home_page="\n"
 "      if (r.readyState==4 && r.status==200) {\n"
 "      x.innerHTML = r.responseText;\n"
 "      x.busy=false;\n"
-"      x.style.backgroundColor='#ffffff';\n"					   
+"      x.style.backgroundColor='#efefef';\n"					   
 "      // Reset indication of when we last received information from LBARD / servald\n"
 "      seconds_since_update=0;\n"
 "      }\n"
@@ -237,6 +237,7 @@ char *home_page="\n"
 "        // Update the contents of any visible information section\n"
 "        refreshDiv('meinfo');\n"
 "        refreshDiv('radiolinks');\n"
+"        refreshDiv('servaldinfo');\n"
 "        refreshDiv('txqueue');\n"
 "        refreshDiv('bundlerx');\n"
 "        // Bundle list can take a long time, so refresh less frequently\n"
@@ -256,7 +257,7 @@ char *home_page="\n"
 "    </script>\n"
 "  </head>\n"
 "  <body>\n"
-"    <h1>LBARD Status for %s*</h1>\n"
+"    <h1>Serval Mesh Extender Status<br>SID: %s*</h1>\n"
 "\n"
 "    Page first loaded <span id=time_since_load>0</span> seconds ago.\n"
 "    <br>\n"
@@ -266,6 +267,7 @@ char *home_page="\n"
 "    <div>\n"
 "      <button onClick=\"toggleElement('meinfo')\">Mesh Extender Info</button>\n"
 "      <button onClick=\"toggleElement('radiolinks')\">Radio Links</button>\n"
+"      <button onClick=\"toggleElement('servaldinfo')\">Wi-Fi Links</button>\n"
 "      <button onClick=\"toggleElement('txqueue')\">Transmit Queues</button>\n"
 "      <button onClick=\"toggleElement('bundlerx')\">Receive Progress</button>\n"
 "      <button onClick=\"toggleElement('bundlelist')\">Stored Bundles</button>\n"
@@ -277,6 +279,8 @@ char *home_page="\n"
 "    <div style=\"display:block\" id=meinfo>Loading...</div>\n"
 "    <h2>Mesh Extenders Reachable by Radio</h2>\n"
 "    <div style=\"display:block\" id=radiolinks>Loading...</div>\n"
+"    <h2>Serval DNA status (shows Wi-Fi links)</h2>\n"
+"    <span style=\"display:none\" id=servaldinfo>Loading...</span>\n"
 "    <h2>Bundle Transmit Queue</h2>\n"
 "    <div style=\"display:none\" id=txqueue>Loading...</div>\n"
 "    <h2>Bundle Receive Progress</h2>\n"
@@ -519,6 +523,22 @@ int status_dump_txqueue(FILE *f, char *topic)
   return 0;
 }
 
+int status_dump_servaldinfo(FILE *f,char *topic)
+{
+  long long last_read_time=0;
+
+  fprintf(f,"<table border=1><tr><td>\n");
+  int result=http_get_simple("127.0.0.1:4110",NULL,"/",f,2000,&last_read_time);
+  if (result==-1) {
+    fprintf(f,"<h3>ERROR: Could not connect to Serval DNA</h3>\n");
+  } else if (result!=200)
+    {
+      fprintf(f,"HTTP Fetch error:  HTTP Result Code: %d\n",result);
+    }
+  fprintf(f,"</td></tr></table>\n");
+  return 0;
+}
+
 int status_dump_bundlelist(FILE *f,char *topic)
 {
   int i,n;
@@ -673,6 +693,7 @@ struct topic_report {
 struct topic_report topics[]={
   {"meinfo",0,1000,status_dump_meinfo},
   {"radiolinks",0,1000,status_dump_radiolinks},
+  {"servaldinfo",0,2000,status_dump_servaldinfo},
   {"txqueue",0,3000,status_dump_txqueue},
   {"bundlerx",0,2000,status_dump_bundlerx},
   {"bundlelist",0,10000,status_dump_bundlelist},
