@@ -523,6 +523,11 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     if (priority>p->tx_bundle_priority) {
       // Bump current tx_bundle to TX queue, and substitute with this one.
       // (substitution happens below)
+      if (p->tx_bundle!=bundles[p->tx_bundle].index) {
+	fprintf(stderr,"WARNING: Bundle #%d has index set to %d\n",
+		p->tx_bundle,bundles[p->tx_bundle].index);
+	bundles[p->tx_bundle].index=p->tx_bundle;
+      }
       peer_queue_bundle_tx(p,&bundles[p->tx_bundle],
 			   p->tx_bundle_priority);
       p->tx_bundle=-1;
