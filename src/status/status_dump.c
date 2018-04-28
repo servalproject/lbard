@@ -514,7 +514,7 @@ int status_dump_txqueue(FILE *f, char *topic)
       
       for(int j=0;j<peer_records[i]->tx_queue_len;j++) {
 	if (peer_records[i]->tx_bundle!=-1) {
-	  fprintf(f,"<tr><td>");
+	  fprintf(f,"<tr><td>#%d ",peer_records[i]->tx_queue_bundles[j]);
 	  describe_bundle(RESOLVE_SIDS
 			  ,f,NULL,i,peer_records[i]->tx_queue_bundles[j],
 			  // Don't show transfer progress, just bundle info
