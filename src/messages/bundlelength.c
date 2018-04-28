@@ -94,7 +94,12 @@ int message_parser_4C(struct peer_state *sender,char *sender_prefix,
 
   offset++;
   
-  if (length-offset<(1+8+8+4)) return -3;
+  if (length-offset<(1+8+8+4)) {
+    fprintf(stderr,"Error parsing message type 0x4C at offset 0x%x: length-offset=%d-%d=%d, but expected at least 1+8+8+4=21 bytes.\n",
+	    offset,length,offset,length-offset);
+    dump_bytes(stderr,"complete packet",msg,length);
+    return -3;
+  }
   int bid_prefix_offset=offset;
   char bid_prefix[2*8+1+1];
   snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
