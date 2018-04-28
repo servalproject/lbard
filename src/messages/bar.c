@@ -105,12 +105,12 @@ int message_parser_42(struct peer_state *sender,unsigned char *prefix,
 		      unsigned char *msg,int length)
 {
   int offset=0;
-  offset++;
   if (length-offset<BAR_LENGTH) {
     fprintf(stderr,"Ignoring runt BAR (len=%d instead of %d)\n",
 	    length-offset,BAR_LENGTH);
     return -2;
   }
+  offset++;
   // BAR announcement
   unsigned char *bid_prefix_bin=&msg[offset];
   char bid_prefix[8*2+1+1];
