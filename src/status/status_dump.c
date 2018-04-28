@@ -444,7 +444,7 @@ int status_dump_radiolinks(FILE *f, char *topic)
       
       if (peer_records[i]->tx_bundle!=-1) {
 	describe_bundle(RESOLVE_SIDS,
-			f,NULL,i,peer_records[i]->tx_bundle,
+			f,NULL,peer_records[i]->tx_bundle,i,
 			peer_records[i]->tx_bundle_manifest_offset_hard_lower_bound,
 			peer_records[i]->tx_bundle_body_offset_hard_lower_bound);
       }
@@ -515,7 +515,7 @@ int status_dump_txqueue(FILE *f, char *topic)
 	if (peer_records[i]->tx_bundle!=-1) {
 	  fprintf(f,"<tr><td>#%d ",peer_records[i]->tx_queue_bundles[j]);
 	  describe_bundle(RESOLVE_SIDS
-			  ,f,NULL,i,peer_records[i]->tx_queue_bundles[j],
+			  ,f,NULL,peer_records[i]->tx_queue_bundles[j],i,
 			  // Don't show transfer progress, just bundle info
 			  -1,-1);
 	  fprintf(f,"</tr>\n");
