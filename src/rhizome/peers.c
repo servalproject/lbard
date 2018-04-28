@@ -432,8 +432,15 @@ int peer_queue_list_dump(struct peer_state *p)
 
 int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int priority)
 {
-  // Find point of insertion
   int i;
+
+  // Don't queue if already in the queue
+  for(i=0;i<p->tx_queue_len;i++) 
+    {
+      if (p->tx_queue_bundles[i]==b->index) return 0;
+    }
+  
+  // Find point of insertion
   for(i=0;i<p->tx_queue_len;i++) 
     if (p->tx_queue_priorities[i]<priority) { break; }
 
