@@ -640,4 +640,8 @@ int log_rssi(struct peer_state *p,int rssi);
 int log_rssi_timewarp(long long delta);
 int log_rssi_graph(FILE *f,struct peer_state *p);
 
+#define RESOLVE_SIDS 1
+int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
+		    int manifest_offset,int body_offset);
+
 #include "util.h"

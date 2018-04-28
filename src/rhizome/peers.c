@@ -433,7 +433,15 @@ int peer_queue_list_dump(struct peer_state *p)
 int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int priority)
 {
   int i;
+  int pn=-1;
 
+  for(i=0;i<pn;i++) if (p==peer_records[i]) pn=i;
+
+  printf("Queueing bundle #%d ",b->index);
+  if (pn>-1)
+    describe_bundle(RESOLVE_SIDS,stdout,NULL,b->index,pn,-1,-1);
+  printf(" for transmission to %s*\n",p->sid_prefix);
+  
   // Don't queue if already in the queue
   for(i=0;i<p->tx_queue_len;i++) 
     {

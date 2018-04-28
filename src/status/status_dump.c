@@ -45,7 +45,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "version.h"
 #include "radio_type.h"
 
-#define RESOLVE_SIDS 1
 
 #define TMPDIR "/tmp"
 
