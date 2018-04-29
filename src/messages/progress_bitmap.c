@@ -70,7 +70,7 @@ int sync_schedule_progress_report_bitmap(int peer, int partial)
   if (!monitor_mode) {
     if (report_queue_message[slot]) {
       fprintf(stderr,"Replacing report_queue message '%s' with 'progress report' (BITMAP)\n",
-	      report_queue_message[slot]);
+	      slot>=0?(report_queue_message[slot]?report_queue_message[slot]:"< report_queue_message=slot >"):"< slot<0 >");
       free(report_queue_message[slot]);
       report_queue_message[slot]=NULL;
     } else {

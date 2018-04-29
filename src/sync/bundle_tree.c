@@ -398,7 +398,7 @@ int sync_tell_peer_we_have_bundle_by_id(int peer,unsigned char *bid,long long ve
   if (!monitor_mode) {
     if (report_queue_message[slot]) {
       fprintf(stderr,"Replacing report_queue message '%s' with 'BAR'\n",
-	      report_queue_message[slot]);
+	      slot>=0?(report_queue_message[slot]?report_queue_message[slot]:"< report_queue_message=slot >"):"< slot<0 >");
       free(report_queue_message[slot]);
       report_queue_message[slot]=NULL;
     } else

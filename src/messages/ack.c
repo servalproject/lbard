@@ -86,7 +86,7 @@ int sync_schedule_progress_report(int peer, int partial, int randomJump)
 
   if (report_queue_message[slot]) {
     fprintf(stderr,"Replacing report_queue message '%s' with 'progress report' (ACK)\n",
-	    report_queue_message[slot]);
+	    slot>=0?(report_queue_message[slot]?report_queue_message[slot]:"< report_queue_message=slot >"):"< slot<0 >");
     free(report_queue_message[slot]);
     report_queue_message[slot]=NULL;
   } else {
