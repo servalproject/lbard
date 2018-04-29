@@ -596,6 +596,19 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
 
 int sync_dequeue_bundle(struct peer_state *p,int bundle)
 {
+  if (!p) return -1;
+  
+  int peer=0;
+  for(peer=0;peer<peer_count;peer++)
+    if (p==peer_records[peer]) break;
+  if (peer>=peer_count) return -1;
+  
+  printf("Dequeuing TX of bundle #%d (",bundle);
+  describe_bundle(RESOLVE_SIDS,stdout,NULL,bundle,
+		  peer,-1,-1);
+  printf(") to %s*\n",p->sid_prefix);
+  
+  
   if (bundle==p->tx_bundle) {
     // Delete this entry in queue
     p->tx_bundle=-1;
