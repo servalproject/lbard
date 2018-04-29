@@ -221,8 +221,8 @@ int saw_piece(char *peer_prefix,int for_me,
   }
   for(int i=0;i<bundle_count;i++) {
     if (!strncasecmp(bid_prefix,bundles[i].bid_hex,strlen(bid_prefix))) {
-      if (debug_pieces) printf("We have version %lld of BID=%s*.  %s is offering us version %lld\n",
-	      bundles[i].version,bid_prefix,peer_prefix,version);
+      if (debug_pieces) printf("We have version %lld of BID=%s*.  %s is offering %s version %lld\n",
+			       bundles[i].version,bid_prefix,peer_prefix,for_me?"us":"someone else",version);
       if (version<=bundles[i].version) {
 	// We have this version already: mark it for announcement to sender,
 	// and then return immediately.
@@ -235,6 +235,9 @@ int saw_piece(char *peer_prefix,int for_me,
 	  sync_tell_peer_we_have_this_bundle(peer,i);
 	}
 
+	// Even if it wasn't addressed to us, we now know that this peer doesn't have the bundle.
+	sync_queue_bundle(peer_records[peer],i);
+	
 	// Update progress bitmaps for all peers whenver we see a piece received that we
 	// think that they might want.  This stops us from resending the same piece later.
 	if (bundle_number>=0) {

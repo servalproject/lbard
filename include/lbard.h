@@ -526,6 +526,7 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
 			      char *servald_server,char *credential);
 int sync_tell_peer_we_have_this_bundle(int peer, int bundle);
 int sync_tell_peer_we_have_the_bundle_of_this_partial(int peer, int partial);
+int sync_queue_bundle(struct peer_state *p,int bundle);
 int sync_schedule_progress_report(int peer, int partial, int randomJump);
 int sync_schedule_progress_report_bitmap(int peer, int partial);
 int bundle_calculate_tree_key(sync_key_t *sync_key,
