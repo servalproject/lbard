@@ -68,6 +68,7 @@ int debug_bundlelog=0;
 char *bundlelog_filename=NULL;
 
 int fix_badfs=0;
+int nostun=0;
 
 
 long long radio_last_heartbeat_time=0;
@@ -377,6 +378,7 @@ int main(int argc, char **argv)
       else if (!strcasecmp("sync_keys",argv[n])) debug_sync_keys=1;
       else if (!strcasecmp("udptime",argv[n])) udp_time=1;
       else if (!strcasecmp("fixfs",argv[n])) fix_badfs=1;
+      else if (!strcasecmp("nostun",argv[n])) nostun=1;
       else if (!strncasecmp("bundlelog=",argv[n],10)) {
 	bundlelog_filename=strdup(&argv[n][10]);
 	debug_bundlelog=1;
@@ -658,7 +660,7 @@ int main(int argc, char **argv)
 
     account_time("stun_serviceloop()");
 
-    stun_serviceloop();
+    if (!nostun) stun_serviceloop();
 
     account_time("usleep()");
     
