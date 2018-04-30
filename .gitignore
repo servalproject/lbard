@@ -18,3 +18,5 @@ tty.txt
 status.json
 lbard.monitor.*.txt
 .DS_Store
+src/xfer/message_handlers.c
+src/xfer/radio_types.c
