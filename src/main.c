@@ -476,6 +476,17 @@ int main(int argc, char **argv)
       while(my_instance_id==0)
 	urandombytes((unsigned char *)&my_instance_id,sizeof(unsigned int));
       last_instance_time=time(0);
+        else if (! strncasecmp("periodicrequests=", argv[n], 17)) 
+        {
+          // Setup periodic RESTful API requests to create a static
+          // proxy of RESTful content requests that can be accessed
+          // by web clients of a mesh extender
+          LOG_NOTE("periodicrequests: %s", &argv[n][17]);
+          fprintf(
+            stderr,
+            "Periodic RESTful request configuration file is '%s'\n",
+            &argv[n][17]);
+          setup_periodic_requests(&argv[n][17]);
     }
     
     radio_read_bytes(serialfd,monitor_mode);
