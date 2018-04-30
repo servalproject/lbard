@@ -8,6 +8,8 @@
 #include <sys/time.h>
 #include <netdb.h>
 
+int set_nonblock(int fd);
+
 /*
 A minimal command line tool that listens for incoming broadcast packets on port 4043,
 and replies with the address of other peers that have sent a broadcast packet from the same
@@ -65,11 +67,12 @@ int stun_serviceloop(){
     uint8_t buff[1024];
     addr.addr_len = sizeof addr.store;
 
+    set_nonblock(fd);
     ssize_t r = recvfrom(fd, buff, sizeof buff, 0, &addr.addr, &addr.addr_len);
     if (r<0){
-      fprintf(stderr, "\nrecvfrom() = %zd (%d)\n", r, errno);
-      close(fd);
-      fd = -1;
+//      fprintf(stderr, "\nrecvfrom() = %zd (%d)\n", r, errno);
+//      close(fd);
+//      fd = -1;
       return -1;
     }
     if (buff[0]==STUN_MSG)
