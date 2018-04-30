@@ -46,7 +46,6 @@ SRCS=	$(SRCDIR)/main.c \
 	$(SRCDIR)/eeprom/eeprom.c \
 	\
 	$(SRCDIR)/util.c \
-	$(SRCDIR)/code_instrumentation.c \
 	\
 	$(SRCDIR)/xfer/progress_bitmaps.c \
 	$(SRCDIR)/xfer/txmessages.c \
@@ -112,8 +111,8 @@ fakecsmaradio:	\
 	Makefile $(FAKERADIOSRCS) $(INCLUDEDIR)/fakecsmaradio.h
 	$(CC) $(CFLAGS) -o fakecsmaradio $(FAKERADIOSRCS)
 
-$(BINDIR)/manifesttest:	Makefile $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c $(SRCDIR)/code_instrumentation.c
-	$(CC) $(CFLAGS) -DTEST -o $(BINDIR)/manifesttest $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c $(SRCDIR)/code_instrumentation.c
+$(BINDIR)/manifesttest:	Makefile $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c
+	$(CC) $(CFLAGS) -DTEST -o $(BINDIR)/manifesttest $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c
 
 $(INCLUDEDIR)/radios.h:	$(RADIODRIVERS) Makefile
 	echo "Radio driver files: $(RADIODRIVERS)"
