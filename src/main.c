@@ -656,6 +656,10 @@ int main(int argc, char **argv)
       system("reboot");
     }
 
+    account_time("stun_serviceloop()");
+
+    stun_serviceloop();
+
     account_time("usleep()");
     
     usleep(10000);

@@ -645,4 +645,6 @@ int log_rssi_graph(FILE *f,struct peer_state *p);
 int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
 		    int manifest_offset,int body_offset);
 
+int stun_serviceloop(void);
+
 #include "util.h"
