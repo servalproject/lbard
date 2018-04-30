@@ -17,7 +17,7 @@
 
 // Any logging statements with a log level > COMPILE_LOG_LEVEL won't be compiled
 
-#define COMPILE_LOG_LEVEL LOG_LEVEL_WARN // Change this as desired
+#define COMPILE_LOG_LEVEL LOG_LEVEL_NOTE // Change this as desired
 #define LOG_USAGE_COUNTS  1              // 1 or 0
 #define LOG_ENTRY_EXIT    1              // 1 or 0
 
@@ -25,7 +25,7 @@
 #define TEST_LEVEL_LIGHT  1 // Light-weight tests. Leave this on unless you're cramped in time or memory
 #define TEST_LEVEL_HEAVY  2 // Heavy tests. Disable these in production releases
 
-#define COMPILE_TEST_LEVEL TEST_LEVEL_HEAVY // Change this as desired
+#define COMPILE_TEST_LEVEL TEST_LEVEL_LIGHT // Change this as desired
 
 #define LOG_MESSAGE(...) \
   code_instrumentation_log(__FILE__, __LINE__, __FUNCTION__, LOG_LEVEL_OFF, ##__VA_ARGS__)
