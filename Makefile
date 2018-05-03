@@ -50,6 +50,7 @@ SRCS=	$(SRCDIR)/main.c \
 	$(SRCDIR)/eeprom/eeprom.c \
 	\
 	$(SRCDIR)/util.c \
+	$(SRCDIR)/code_instrumentation.c \
 	\
 	$(SRCDIR)/xfer/progress_bitmaps.c \
 	$(SRCDIR)/xfer/txmessages.c \
@@ -115,14 +116,15 @@ fakecsmaradio:	\
 	Makefile $(FAKERADIOSRCS) $(INCLUDEDIR)/fakecsmaradio.h
 	$(CC) $(CFLAGS) -o fakecsmaradio $(FAKERADIOSRCS)
 
-$(BINDIR)/manifesttest:	Makefile $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c
-	$(CC) $(CFLAGS) -DTEST -o $(BINDIR)/manifesttest $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c
+$(BINDIR)/manifesttest:	Makefile $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c $(SRCDIR)/code_instrumentation.c
+	$(CC) $(CFLAGS) -DTEST -o $(BINDIR)/manifesttest $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c $(SRCDIR)/code_instrumentation.c
 
 $(INCLUDEDIR)/radios.h:	$(RADIODRIVERS) Makefile
 	echo "Radio driver files: $(RADIODRIVERS)"
 	echo '#include "radio_type.h"' > $(INCLUDEDIR)/radios.h
 	echo "" >> $(INCLUDEDIR)/radios.h
-	grep "^RADIO TYPE:" src/drivers/*.c | cut -f3 -d: | cut -f1 -d, | awk '{ printf("#define RADIOTYPE_%s %d\n",$$1,n); n++; }' >> $(INCLUDEDIR)/radios.h
+	echo "#define RADIOTYPE_MIN 0" >> $(INCLUDEDIR)/radios.h
+	grep "^RADIO TYPE:" src/drivers/*.c | cut -f3 -d: | cut -f1 -d, | awk '{ printf("#define RADIOTYPE_%s %d\n",$$1,n); n++; } END { printf("#define RADIOTYPE_MAX %d\n",n-1); }' >> $(INCLUDEDIR)/radios.h
 	echo "" >> $(INCLUDEDIR)/radios.h
 	for fn in `(cd $(SRCDIR); echo drivers/drv_*.h)`; do echo "#include \"$$fn\""; done >> $(INCLUDEDIR)/radios.h
 	echo "" >> $(INCLUDEDIR)/radios.h
