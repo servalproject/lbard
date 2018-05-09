@@ -158,7 +158,7 @@ int partial_update_recent_senders(struct partial_bundle *p,char *sender_prefix_h
   }
   while (0);
   
-  return -1;
+  return retVal;
 }
 
 int clear_partial(struct partial_bundle *p)

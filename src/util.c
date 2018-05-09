@@ -144,7 +144,7 @@ int chartohex(int c)
   LOG_EXIT;
 #endif  
 
-  return -1;
+  return retVal;
 }
 
 int hextochar(int h)
