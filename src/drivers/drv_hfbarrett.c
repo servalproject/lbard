@@ -86,15 +86,18 @@ int hfbarrett_initialise(int serialfd)
   // as soon as we connect to another.
   peer_keepalive_interval=5*60;
   
-  return 0;
+  return 1;
 }
 
 int hfbarrett_serviceloop(int serialfd)
 {
+	printf("\nNew hfbarrett_serviceloop\n"); //debug
   char cmd[1024];
   
   switch(hf_state) {
+
   case HF_DISCONNECTED:
+		printf("hf_state=HF_DISCONNECTED\n"); //debug
     // Currently disconnected. If the current time is later than the next scheduled
     // call-out time, then pick a hf station to call
 
@@ -117,7 +120,9 @@ int hfbarrett_serviceloop(int serialfd)
       }
     }
     break;
+
   case HF_CALLREQUESTED:
+		printf("hf_state=HF_CALLREQUESTED\n"); //debug
     // Probe periodically with AILTBL to get link table, because the modem doesn't
     // preemptively tell us when we get a link established
     if (time(0)!=last_link_probe_time)  {
@@ -125,9 +130,13 @@ int hfbarrett_serviceloop(int serialfd)
       last_link_probe_time=time(0);
     }
     break;
+
   case HF_CONNECTING:
+		printf("hf_state=HF_CONNECTING\n"); //debug
     break;
+
   case HF_ALELINK:
+		printf("hf_state=HF_ALELINK\n"); //debug
     // Probe periodically with AILTBL to get link table, because the modem doesn't
     // preemptively tell us when we lose a link
     if (time(0)!=last_link_probe_time)  {
@@ -135,9 +144,13 @@ int hfbarrett_serviceloop(int serialfd)
       last_link_probe_time=time(0);
     }
     break;
+
   case HF_DISCONNECTING:
+		printf("hf_state=HF_DISCONNECTING\n"); //debug
     break;
+
   default:
+		printf("hf_state=none of the states\n"); //debug
     break;
   }
   

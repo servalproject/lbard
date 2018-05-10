@@ -205,12 +205,10 @@ int autodetect_radio_type(int fd)
 
   for(int i=0;radio_types[i].id>=0;i++)
     {
-      fprintf(stderr,"Autodetecting radio type #%d (%s, %s)\n",
-	      i,radio_types[i].name,radio_types[i].description);
-      if (radio_types[i].autodetect(fd)==1) {
-	fprintf(stderr,"Radio is a %s (%s)\n",
-		radio_types[i].name,radio_types[i].description);
-	return 0;
+      fprintf(stderr,"Autodetecting radio type #%d (%s, %s)\n", i,radio_types[i].name,radio_types[i].description);
+			if (radio_types[i].autodetect(fd)==1) {
+				fprintf(stderr,"Radio is a %s (%s)\n", radio_types[i].name,radio_types[i].description);
+				return 0;
       }
     }
 
