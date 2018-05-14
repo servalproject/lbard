@@ -91,8 +91,9 @@ int radio_read_bytes(int serialfd,int monitor_mode)
 
   errno=0;
   
-  if (count>0)
+  if (count>0){
     radio_receive_bytes(buf,count,monitor_mode);
+	}
   else
     {
       if (0&&debug_radio_rx) {

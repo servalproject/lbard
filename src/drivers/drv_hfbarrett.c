@@ -62,8 +62,9 @@ int hfbarrett_initialise(int serialfd)
   unsigned char buf[8192];
     
   // Tell Barrett radio we want to know when various events occur.
-  char *setup_string[7]
+  char *setup_string[8]
     ={
+		"AIATBL\r\n", //Ask for all valid ale addresses
     "ARAMDM1\r\n", // Register for AMD messages
     "ARAMDP1\r\n", // Register for phone messages
     "ARCALL1\r\n", // Register for new calls
@@ -73,7 +74,7 @@ int hfbarrett_initialise(int serialfd)
     "ARSTAT1\r\n", // Hear about ALE status change notifications
   };
   int i;
-  for(i=0;i<7;i++) {
+  for(i=0; i<8; i++) {
     write(serialfd,setup_string[i],strlen(setup_string[i]));
     usleep(200000);
     count = read_nonblock(serialfd,buf,8192);  // read reply
