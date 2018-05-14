@@ -40,7 +40,6 @@ int hfcodanbarrett_radio_detect(int fd)
   unsigned char buf[8192];
   unsigned clr[3]={21,13,10};
   int verhi,verlo;
-  serial_setup_port_with_speed(fd,9600);
   write_all(fd,clr,3); // Clear any partial command
   sleep(1); // give the radio the chance to respond
   ssize_t count = read_nonblock(fd,buf,8192);  // read and ignore any stuff

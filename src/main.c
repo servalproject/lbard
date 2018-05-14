@@ -326,7 +326,7 @@ int main(int argc, char **argv)
 	
 
   int n=6;
-	printf("argc=%d\n", argc);
+
   while (n<argc) {
     if (argv[n]) {
       if (!strcasecmp("monitor",argv[n])) monitor_mode=1;
