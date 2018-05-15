@@ -34,22 +34,14 @@ station "103" 5 minutes every 2 hours
 #include "lbard.h"
 #include "hf.h"
 
-int hf_read_configuration(char *filename)
+int hf_parse_linkcandidate(char *line)
 {  
-  FILE *f=fopen(filename,"r");
-  if (!f) {
-    fprintf(stderr,"Could not read HF radio configuration from '%s'\n",filename);
-    perror("fopen");
-    exit(-1);
-  }
-
-  char line[1024];
   int offset;
   char station_name[1024];
   int minutes,hours,seconds;
 
-  line[0]=0; fgets(line,1024,f);
-  while(line[0]) {
+  printf("parsing HF ALE call list: %s\n",line);
+
     if ((line[0]=='#')||(line[0]<' ')) {
       // ignore blank lines and # comments
     } else if (sscanf(line,"wait %d seconds%n",&seconds,&offset)==1) {
@@ -87,9 +79,6 @@ int hf_read_configuration(char *filename)
       fprintf(stderr,"  Offending line: %s\n",line);
       exit(-1);	
     }
-    line[0]=0; fgets(line,1024,f);
-  }
-  fclose(f);
 
   has_hf_plan=1;
   fprintf(stderr,"Configured %d stations.\n",hf_station_count);

@@ -77,8 +77,8 @@ int hfbarrett_initialise(int serialfd)
   for(i=0; i<8; i++) {
     write(serialfd,setup_string[i],strlen(setup_string[i]));
     usleep(200000);
-    count = read_nonblock(serialfd,buf,8192);  // read reply
-    dump_bytes(stderr,setup_string[i],buf,count);
+ //   count = read_nonblock(serialfd,buf,8192);  // read reply
+ //   dump_bytes(stderr,setup_string[i],buf,count);
   }    
 
   // Consider a peer active we have had contact with them in the
@@ -113,6 +113,7 @@ int hfbarrett_serviceloop(int serialfd)
 	write(serialfd,"\r\n",2);
 	
 	snprintf(cmd,1024,"AXLINK%s\r\n",hf_stations[next_station].name);
+  printf("sending '%s' to try to make ALE call.\n",cmd);
 	write(serialfd,cmd,strlen(cmd));
 	hf_state = HF_CALLREQUESTED;
       
@@ -164,15 +165,17 @@ int hfbarrett_process_line(char *l)
   while(l[0]&&l[0]<' ') l++;
   while(l[0]&&(l[strlen(l)-1]<' ')) l[strlen(l)-1]=0;
   
-  //  fprintf(stderr,"Barrett radio says (in state 0x%04x): %s\n",hf_state,l);
+  fprintf(stderr,"Barrett radio says (in state 0x%04x): %s\n",hf_state,l);
 
   if ((!strcmp(l,"EV00"))&&(hf_state==HF_CALLREQUESTED)) {
     // Syntax error in our request to call.
+    printf("Saw EV00 response. Marking call disconnected.\n");
     hf_state = HF_DISCONNECTED;
     return 0;
   }
   if ((!strcmp(l,"E0"))&&(hf_state==HF_CALLREQUESTED)) {
     // Syntax error in our request to call.
+    printf("Saw E0 response. Marking call disconnected.\n");
     hf_state = HF_DISCONNECTED;
     return 0;
   }
@@ -199,6 +202,7 @@ int hfbarrett_process_line(char *l)
       ale_inprogress=0;
 
       // We have to also wait for the > prompt again
+      printf("Timed out trying to connect. Marking call disconnected.\n");
       hf_state=HF_DISCONNECTED;
   } else if ((sscanf(l,"AILTBL%s",tmp)==1)&&(hf_state!=HF_ALELINK)) {
     // Link established

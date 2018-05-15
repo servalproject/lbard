@@ -581,7 +581,7 @@ int uhf_serviceloop(int fd);
 int radio_send_message_rfd900(int serialfd,unsigned char *out, int offset);
 int uhf_receive_bytes(unsigned char *bytes,int count);
 
-int hf_read_configuration(char *filename);
+int hf_parse_linkcandidate(char *description);
 int hf_serviceloop(int fd);
 int hf_codan_receive_bytes(unsigned char *bytes,int count);
 int radio_send_message_codanhf(int serialfd,unsigned char *out, int len);
