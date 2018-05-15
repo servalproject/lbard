@@ -76,11 +76,6 @@ int hfcodan_serviceloop(int serialfd)
 {
   char cmd[1024];
   
-  if (!has_hf_plan) {
-    fprintf(stderr,"You must specify a HF radio plan via the hfplan= command line option.\n");
-    exit(-1);
-  }
-
   switch(hf_state) {
   case HF_DISCONNECTED:
     // Currently disconnected. If the current time is later than the next scheduled

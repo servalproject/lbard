@@ -360,8 +360,6 @@ int main(int argc, char **argv)
       else if (!strcasecmp("rebootwhenstuck",argv[n])) reboot_when_stuck=1;
       else if (!strcasecmp("timeslave",argv[n])) time_slave=1;
       else if (!strcasecmp("timemaster",argv[n])) time_server=1;
-      else if (!strncasecmp("hfplan=",argv[n],7))
-        hf_read_configuration(&argv[n][7]);
       else if (!strncasecmp("timebroadcast=",argv[n],14))
         time_broadcast_addrs[0]=strdup(&argv[n][14]);
       else if (!strcasecmp("logrejects",argv[n])) debug_insert=1;
