@@ -484,6 +484,8 @@ int main(int argc, char **argv)
 
   while(1) {
 
+		printf("Entering the main loop\n"); //debug
+
     unsigned char msg_out[LINK_MTU];
 
     account_time("ID regenerate");

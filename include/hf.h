@@ -11,7 +11,8 @@
 #define RADIO_ALE_3G (1<<1)
 
 struct hf_station {
-  char *name;
+	char *index; //2 digits matching the ALE ID and the name of the radio (alias) in (internal radio settings)  
+	char *name; //alias
   int link_time_target; // minutes
   int line_time_interval; // hours
 
