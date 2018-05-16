@@ -75,6 +75,8 @@ int stun_serviceloop(){
 //      fd = -1;
       return -1;
     }
+    fprintf(stderr,"received Succinct Data STUN packet. byte[0]=0x%02x\n",buff[0]);
+    
     if (buff[0]==STUN_MSG)
 	return 0;
     {
