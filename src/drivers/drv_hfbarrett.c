@@ -182,11 +182,48 @@ int hfbarrett_process_line(char *l)
 
   char tmp[8192];
 
+	if (sscanf(l, "AIATBL%s", tmp)==1){ 
+		//AIATBL[II][T][LL][Alias]
+		//where:
+		//[II](00-99) Address index in ALE memory map
+		//[T]Address type (1: self, 2: other) 
+		//[LL](00-15) Address alias length
+		//[Alias]Address alias (up to 15 basic 38 ASCII subset characters)
+
+		fprintf(stderr,"Barrett radio sent its ALE available addresses '%s'\n",&tmp[0]);
+
+		//itself
+		if (sscanf(&tmp[2], "1%s", tmp)==1){
+			printf("the first address is myself\n");
+			
+			struct hf_station self_hf_station;
+
+			//index			
+			char idx[2];
+			idx[2]='\0';
+			str_part(idx, l, 6, 2);
+			self_hf_station.index = idx;
+			printf("the first index is: %s\n", self_hf_station.index);
+			//name (alias)
+			char str_alias_size[2];
+			str_alias_size[2]='\0';
+			str_part(str_alias_size, l, 9, 2);
+			int alias_size = atoi(str_alias_size);
+			printf("the alias length is: %d\n", alias_size);
+			char station_alias[alias_size];
+			station_alias[alias_size] = '\0';
+			str_part(station_alias, l, 11, alias_size);
+			strcpy(self_hf_station.name, station_alias);
+			printf("the first name is: %s\n", self_hf_station.name);
+			
+		}
+	}
+
   if (sscanf(l,"AIAMDM%s",tmp)==1) {
     fprintf(stderr,"Barrett radio saw ALE AMD message '%s'\n",&tmp[6]);
     hf_process_fragment(&tmp[6]);
   }
-  
+
   if ((!strcmp(l,"AILTBL"))&&(hf_state==HF_ALELINK)) {
       if (hf_link_partner>-1) {
 	// Mark link partner as having been attempted now, so that we can
@@ -337,4 +374,14 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
   
   return 0;
 }
+
+int str_part(char str_part[], char string[], int index_first_char, int length){
+	int i;
+	printf("%s   %d\n", str_part, length);
+	for(i=0; i<length; i++)
+		printf("i=%d\n", i);
+		str_part[i]=string[index_first_char + i];
+	return 0;
+}
+
 
