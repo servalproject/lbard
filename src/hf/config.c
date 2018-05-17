@@ -33,9 +33,54 @@ station "103" 5 minutes every 2 hours
 #include "sync.h"
 #include "lbard.h"
 #include "hf.h"
+#include "config.h"
 
-int hf_parse_linkcandidate(char *line)
+int hf_parse_linkcandidate(char *l)
 {  
+	char tmp[8192];
+	int l_pointer = 6;
+	int alias_size;
+
+	while(l[l_pointer] != 0)
+		{
+		struct hf_station new_hf_station;
+		//get index			
+		str_part(tmp, l, l_pointer, 2);
+		str_copy(new_hf_station.index, tmp);				
+
+		//get alias
+		// Parameters after the name will have to bo extracted as well.
+		// So far name = alias
+			//get the name size
+		str_part(tmp, l, l_pointer + 3, 2);
+		alias_size = atoi(tmp);
+			//get the alias
+		str_part(tmp, l, l_pointer + 5, alias_size);
+		
+
+		// **************
+		// Code to extact parameters from address
+		//*************
+		
+		str_copy(new_hf_station.name, tmp);
+
+		//add the station at hf_stations table. Self radio will be put fiste (hf_stations[0])		
+		str_part(tmp, l, l_pointer + 2, 1);
+		printf("tmp is %s\n", tmp);
+		if (!strcmp(tmp, "1")){ //self radio
+			self_hf_station = new_hf_station;
+		} else{ //other radio
+			hf_stations[hf_station_count] = new_hf_station;
+			hf_station_count++;
+		}
+
+		//pointer at the beginning of the next command
+		l_pointer = l_pointer + 5 + alias_size; 
+
+	}
+	return 0;
+}
+/*
   int offset;
   char station_name[1024];
   int minutes,hours,seconds;
@@ -84,4 +129,25 @@ int hf_parse_linkcandidate(char *line)
   fprintf(stderr,"Configured %d stations.\n",hf_station_count);
   
   return 0;
+
+}*/
+
+int str_part(char *str_part, char *string, int index_first_char, int length){
+	int i;
+	//printf("%s   %d\n", str_part, length);
+	for(i=0; i<length; i++){
+		str_part[i]=string[index_first_char + i];
+	}
+	str_part[length]='\0';
+	return 0;
+}
+
+int str_copy(char *dest, char *source){
+	int i = 0;
+	while(source[i]!=0){
+		dest[i] = source[i];
+		i++;
+	}
+	dest[i]=0;
+	return 0;
 }

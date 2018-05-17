@@ -56,6 +56,7 @@ int hf_callout_interval=5; // minutes
 
 struct hf_station hf_stations[MAX_HF_STATIONS];
 int hf_station_count=0;
+struct hf_station self_hf_station;
 
 int has_hf_plan=0;
 
