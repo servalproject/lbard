@@ -190,32 +190,13 @@ int hfbarrett_process_line(char *l)
 		//[LL](00-15) Address alias length
 		//[Alias]Address alias (up to 15 basic 38 ASCII subset characters)
 
-		fprintf(stderr,"Barrett radio sent its ALE available addresses '%s'\n",&tmp[0]);
-
-		//itself
-		if (sscanf(&tmp[2], "1%s", tmp)==1){
-			printf("the first address is myself\n");
-			
-			struct hf_station self_hf_station;
-
-			//index			
-			char idx[2];
-			idx[2]='\0';
-			str_part(idx, l, 6, 2);
-			self_hf_station.index = idx;
-			printf("the first index is: %s\n", self_hf_station.index);
-			//name (alias)
-			char str_alias_size[2];
-			str_alias_size[2]='\0';
-			str_part(str_alias_size, l, 9, 2);
-			int alias_size = atoi(str_alias_size);
-			printf("the alias length is: %d\n", alias_size);
-			char station_alias[alias_size];
-			station_alias[alias_size] = '\0';
-			str_part(station_alias, l, 11, alias_size);
-			strcpy(self_hf_station.name, station_alias);
-			printf("the first name is: %s\n", self_hf_station.name);
-			
+		hf_parse_linkcandidate(l);
+		//display all the hf radios
+		printf("The self hf Barrett radio is: %s\n", self_hf_station.name);		
+		int i;		
+		for (i=0; i<hf_station_count; i++){
+			printf("stations are %s\n", hf_stations[i].name);
+			printf ("and one station!\n");
 		}
 	}
 
@@ -279,9 +260,9 @@ int hfbarrett_receive_bytes(unsigned char *bytes,int count)
 {
   int i;
   for(i=0;i<count;i++) {
-    if (bytes[i]==13||bytes[i]==10) {
-      hf_response_line[hf_rl_len]=0;
-      if (hf_rl_len) hfbarrett_process_line(hf_response_line);
+    if (bytes[i]==13||bytes[i]==10) { //end of command detected => if not null, line is processed by lbard
+      hf_response_line[hf_rl_len]=0; //	after the command we out a '\0' to have a proper string
+      if (hf_rl_len){ hfbarrett_process_line(hf_response_line);}
       hf_rl_len=0;
     } else {
       if (hf_rl_len<1024) hf_response_line[hf_rl_len++]=bytes[i];
@@ -374,14 +355,3 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
   
   return 0;
 }
-
-int str_part(char str_part[], char string[], int index_first_char, int length){
-	int i;
-	printf("%s   %d\n", str_part, length);
-	for(i=0; i<length; i++)
-		printf("i=%d\n", i);
-		str_part[i]=string[index_first_char + i];
-	return 0;
-}
-
-
