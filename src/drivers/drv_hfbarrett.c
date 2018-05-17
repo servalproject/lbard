@@ -95,7 +95,7 @@ int hfbarrett_serviceloop(int serialfd)
 	// errors here intermittantly).
 	write(serialfd,"\r\n",2);
 	
-	snprintf(cmd,1024,"AXLINK%s\r\n",hf_stations[next_station].name);
+	snprintf(cmd,1024,"AXLINK%s%s\r\n", hf_stations[next_station].index, self_hf_station.index);
   printf("sending '%s' to try to make ALE call.\n",cmd);
 	write(serialfd,cmd,strlen(cmd));
 	hf_state = HF_CALLREQUESTED;
