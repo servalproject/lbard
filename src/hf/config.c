@@ -64,7 +64,7 @@ int hf_parse_linkcandidate(char *l)
 		
 		str_copy(new_hf_station.name, tmp);
 
-		//add the station at hf_stations table. Self radio will be put fiste (hf_stations[0])		
+		//add the station at hf_stations table
 		str_part(tmp, l, l_pointer + 2, 1);
 		printf("tmp is %s\n", tmp);
 		if (!strcmp(tmp, "1")){ //self radio
