@@ -66,7 +66,6 @@ int hf_parse_linkcandidate(char *l)
 
 		//add the station at hf_stations table
 		str_part(tmp, l, l_pointer + 2, 1);
-		printf("tmp is %s\n", tmp);
 		if (!strcmp(tmp, "1")){ //self radio
 			self_hf_station = new_hf_station;
 		} else{ //other radio

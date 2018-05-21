@@ -179,8 +179,8 @@ int hfbarrett_process_line(char *l)
 		printf("The self hf Barrett radio is: %s\n", self_hf_station.name);		
 		int i;		
 		for (i=0; i<hf_station_count; i++){
-			printf("stations are %s\n", hf_stations[i].name);
-			printf ("and one station!\n");
+			printf("stations are:\n");
+			printf("* %s\n", hf_stations[i].name);
 		}
 	}
 
