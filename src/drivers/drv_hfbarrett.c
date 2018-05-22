@@ -28,6 +28,7 @@ RADIO TYPE: HFBARRETT,"hfbarrett","Barrett HF with ALE",hfcodanbarrett_radio_det
 #include "radios.h"
 
 char barrett_link_partner_string[1024]="";
+int previous_state=-1;
 
 int hfbarrett_initialise(int serialfd)
 {
@@ -75,14 +76,13 @@ int hfbarrett_initialise(int serialfd)
 
 int hfbarrett_serviceloop(int serialfd)
 {
-	printf("\nNew hfbarrett_serviceloop\n"); //debug
+	//printf("\nNew hfbarrett_serviceloop\n"); //debug
   char cmd[1024];
   
   switch(hf_state) {
 
-  case HF_DISCONNECTED:
-		printf("hf_state=HF_DISCONNECTED\n"); //debug
-    // Currently disconnected. If the current time is later than the next scheduled
+  case HF_DISCONNECTED: //1
+		// Currently disconnected. If the current time is later than the next scheduled
     // call-out time, then pick a hf station to call
 
     // Wait until we are allowed our first call before doing so
@@ -107,9 +107,8 @@ int hfbarrett_serviceloop(int serialfd)
     }
     break;
 
-  case HF_CALLREQUESTED:
-		printf("hf_state=HF_CALLREQUESTED\n"); //debug
-    // Probe periodically with AILTBL to get link table, because the modem doesn't
+  case HF_CALLREQUESTED: //2
+		// Probe periodically with AILTBL to get link table, because the modem doesn't
     // preemptively tell us when we get a link established
     if (time(0)!=last_link_probe_time)  {
       write(serialfd,"AILTBL\r\n",8);
@@ -117,13 +116,12 @@ int hfbarrett_serviceloop(int serialfd)
     }
     break;
 
-  case HF_CONNECTING:
-		printf("hf_state=HF_CONNECTING\n"); //debug
+  case HF_CONNECTING: //3
+		
     break;
 
-  case HF_ALELINK:
-		printf("hf_state=HF_ALELINK\n"); //debug
-    // Probe periodically with AILTBL to get link table, because the modem doesn't
+  case HF_ALELINK: //4
+		// Probe periodically with AILTBL to get link table, because the modem doesn't
     // preemptively tell us when we lose a link
     if (time(0)!=last_link_probe_time)  {
       write(serialfd,"AILTBL\r\n",8);
@@ -131,15 +129,23 @@ int hfbarrett_serviceloop(int serialfd)
     }
     break;
 
-  case HF_DISCONNECTING:
-		printf("hf_state=HF_DISCONNECTING\n"); //debug
+  case HF_DISCONNECTING: //5
+		
     break;
 
+	case HF_ALESENDING: //6
+
+		break;
+
   default:
-		printf("hf_state=none of the states\n"); //debug
+		
     break;
   }
-  
+
+	if (previous_state!=hf_state){
+		fprintf(stderr,"Barrett radio is in state 0x%04x\n",hf_state);
+		previous_state=hf_state;
+  }
   return 0;
 }
 
