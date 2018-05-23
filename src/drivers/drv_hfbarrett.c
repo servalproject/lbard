@@ -231,7 +231,6 @@ int hfbarrett_process_line(char *l)
       hf_state=HF_DISCONNECTED;
   } else if ((sscanf(l,"AILTBL%s",tmp)==1)&&(hf_state!=HF_ALELINK)) {
     // Link established
-		printf("\ntmp is %s\n", tmp);
     barrett_link_partner_string[0]=tmp[4];
     barrett_link_partner_string[1]=tmp[5];
     barrett_link_partner_string[2]=tmp[2];
@@ -244,8 +243,6 @@ int hfbarrett_process_line(char *l)
     for(i=0;i<hf_station_count;i++){
 			strcpy(tmp, hf_stations[i].index);
 			strcat(tmp, self_hf_station.index);
-			printf("\nbarrett_link_partner_string is %s\n",barrett_link_partner_string);
-			printf("\ntmp is %s\n", tmp);
       if (!strcmp(barrett_link_partner_string, tmp)){ 
 			hf_link_partner=i;
 		  hf_stations[hf_link_partner].consecutive_connection_failures=0;
@@ -329,7 +326,6 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
     if (count) dump_bytes(stderr,"presend",buffer,count);
     if (count) hfbarrett_receive_bytes(buffer,count);
     
-		printf("AXNMSG%s%02d%s\n", barrett_link_partner_string, (int)strlen(fragment),fragment);
     snprintf(message,8192,"AXNMSG%s%02d%s\r\n",
 	     barrett_link_partner_string,
 	     (int)strlen(fragment),fragment);
