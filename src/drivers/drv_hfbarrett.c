@@ -52,19 +52,19 @@ int hfbarrett_initialise(int serialfd)
   unsigned char buf[8192];
     
   // Tell Barrett radio we want to know when various events occur.
-  char *setup_string[8]
+  char *setup_string[1]
     ={
 		"AIATBL\r\n", //Ask for all valid ale addresses
-    "ARAMDM1\r\n", // Register for AMD messages
+    /*"ARAMDM1\r\n", // Register for AMD messages
     "ARAMDP1\r\n", // Register for phone messages
     "ARCALL1\r\n", // Register for new calls
     "ARLINK1\r\n", // Hear about ALE link notifications
     "ARLTBL1\r\n", // Hear about ALE link table events
     "ARMESS1\r\n", // Hear about ALE event notifications
-    "ARSTAT1\r\n", // Hear about ALE status change notifications
+    "ARSTAT1\r\n", // Hear about ALE status change notifications*/
   };
   int i;
-  for(i=0; i<8; i++) {
+  for(i=0; i<1; i++) {
     write(serialfd,setup_string[i],strlen(setup_string[i]));
     usleep(200000);
  //   count = read_nonblock(serialfd,buf,8192);  // read reply
@@ -214,19 +214,27 @@ int hfbarrett_process_line(char *l)
       hf_state=HF_DISCONNECTED;
   } else if ((sscanf(l,"AILTBL%s",tmp)==1)&&(hf_state!=HF_ALELINK)) {
     // Link established
+		printf("\ntmp is %s\n", tmp);
     barrett_link_partner_string[0]=tmp[4];
     barrett_link_partner_string[1]=tmp[5];
     barrett_link_partner_string[2]=tmp[2];
     barrett_link_partner_string[3]=tmp[3];
     barrett_link_partner_string[4]=0;
 
+		
     int i;
     hf_link_partner=-1;
-    for(i=0;i<hf_station_count;i++)
-      if (!strcmp(barrett_link_partner_string,hf_stations[i].name))
-	{ hf_link_partner=i;
-	  hf_stations[hf_link_partner].consecutive_connection_failures=0;
-	  break; }
+    for(i=0;i<hf_station_count;i++){
+			strcpy(tmp, hf_stations[i].index);
+			strcat(tmp, self_hf_station.index);
+			printf("\nbarrett_link_partner_string is %s\n",barrett_link_partner_string);
+			printf("\ntmp is %s\n", tmp);
+      if (!strcmp(barrett_link_partner_string, tmp)){ 
+			hf_link_partner=i;
+		  hf_stations[hf_link_partner].consecutive_connection_failures=0;
+		  break; 
+			}
+		}
 
     if (((hf_state&0xff)!=HF_CONNECTING)
 	&&((hf_state&0xff)!=HF_CALLREQUESTED)) {
@@ -250,6 +258,8 @@ int hfbarrett_receive_bytes(unsigned char *bytes,int count)
 {
   int i;
   for(i=0;i<count;i++) {
+    if (bytes[i]==0x011) printf("XON\n");
+		if (bytes[i]==0x013) printf("XOFF\n");
     if (bytes[i]==13||bytes[i]==10) { //end of command detected => if not null, line is processed by lbard
       hf_response_line[hf_rl_len]=0; //	after the command we out a '\0' to have a proper string
       if (hf_rl_len){ hfbarrett_process_line(hf_response_line);}
@@ -300,6 +310,7 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
     if (count) dump_bytes(stderr,"presend",buffer,count);
     if (count) hfbarrett_receive_bytes(buffer,count);
     
+		printf("AXNMSG%s%02d%s\n", barrett_link_partner_string, (int)strlen(fragment),fragment);
     snprintf(message,8192,"AXNMSG%s%02d%s\r\n",
 	     barrett_link_partner_string,
 	     (int)strlen(fragment),fragment);
