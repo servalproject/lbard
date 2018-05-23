@@ -1,0 +1,19 @@
+export SERVALINSTANCE_PATH=/tmp/serval$1
+rm -fr $SERVALINSTANCE_PATH
+mkdir -p $SERVALINSTANCE_PATH
+rm $SERVALINSTANCE_PATH/serval.conf
+cat <<EOF >$SERVALINSTANCE_PATH/serval.conf
+rhizome.http.enable=1
+api.restful.users.lbard.password=lbard
+EOF
+../serval-dna/servald keyring add
+../serval-dna/servald stop
+../serval-dna/servald start
+PORT=`cat $SERVALINSTANCE_PATH/proc/http_port`
+echo HTTP port is $PORT
+SID=`../serval-dna/servald keyring list | tail -1 | cut -f1 -d:`
+SSID=`../serval-dna/servald keyring list | tail -1 | cut -f2 -d:`
+echo identity is $SID $SSID
+../lbard localhost:${PORT} lbard:lbard $SID $SSID $2
+../serval-dna/servald stop
+
