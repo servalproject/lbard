@@ -53,19 +53,19 @@ int hfbarrett_initialise(int serialfd)
   unsigned char buf[8192];
     
   // Tell Barrett radio we want to know when various events occur.
-  char *setup_string[1]
+  char *setup_string[8]
     ={
 		"AIATBL\r\n", //Ask for all valid ale addresses
-    /*"ARAMDM1\r\n", // Register for AMD messages
+    "ARAMDM1\r\n", // Register for AMD messages
     "ARAMDP1\r\n", // Register for phone messages
     "ARCALL1\r\n", // Register for new calls
     "ARLINK1\r\n", // Hear about ALE link notifications
     "ARLTBL1\r\n", // Hear about ALE link table events
     "ARMESS1\r\n", // Hear about ALE event notifications
-    "ARSTAT1\r\n", // Hear about ALE status change notifications*/
+    "ARSTAT1\r\n", // Hear about ALE status change notifications
   };
   int i;
-  for(i=0; i<1; i++) {
+  for(i=0; i<8; i++) {
     write(serialfd,setup_string[i],strlen(setup_string[i]));
     usleep(200000);
  //   count = read_nonblock(serialfd,buf,8192);  // read reply
@@ -77,8 +77,7 @@ int hfbarrett_initialise(int serialfd)
 
 int hfbarrett_serviceloop(int serialfd)
 {
-	//printf("\nNew hfbarrett_serviceloop\n"); //debug
-  char cmd[1024];
+	char cmd[1024];
   
   switch(hf_state) {
 
@@ -135,8 +134,8 @@ int hfbarrett_serviceloop(int serialfd)
 		// Probe periodically with AILTBL to get link table, because the modem doesn't
     // preemptively tell us when we lose a link
     if (time(0)!=last_link_probe_time)  { //once a second
-      write(serialfd,"AILTBL\r\n",8);
-      last_link_probe_time=time(0);
+      //write(serialfd,"AILTBL\r\n",8);
+			last_link_probe_time=time(0);
     }
     break;
 
@@ -182,6 +181,12 @@ int hfbarrett_process_line(char *l)
     hf_state = HF_DISCONNECTED;
     return 0;
   }
+	if ((!strcmp(l,"EV08"))&&(hf_state==HF_ALELINK)) {
+    // Unknown error but tests have shown it is because the radio is receiving or transmiting
+    printf("Saw EV08 response. Sleep for 4 seconds\n");
+		sleep(4);
+    return 0;
+  }
 
   char tmp[8192];
 
@@ -204,7 +209,7 @@ int hfbarrett_process_line(char *l)
 	}
 
   if (sscanf(l,"AIAMDM%s",tmp)==1) {
-    fprintf(stderr,"Barrett radio saw ALE AMD message '%s'\n",&tmp[6]);
+    fprintf(stderr,"Barrett radio saw ALE AMD message '%s'  !!!!!!!!!!!!!!!!!!!!!!!!\n",&tmp[6]);
     hf_process_fragment(&tmp[6]);
   }
 
@@ -232,8 +237,7 @@ int hfbarrett_process_line(char *l)
     barrett_link_partner_string[2]=tmp[2];
     barrett_link_partner_string[3]=tmp[3];
     barrett_link_partner_string[4]=0;
-
-		
+	
     int i;
     hf_link_partner=-1;
     for(i=0;i<hf_station_count;i++){
@@ -317,6 +321,7 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
 
     usleep(100000);
     count = read_nonblock(serialfd,buffer,8192);
+		printf("buffer1 is:%s\n", buffer);
     if (count) dump_bytes(stderr,"presend",buffer,count);
     if (count) hfbarrett_receive_bytes(buffer,count);
     
@@ -340,7 +345,8 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
       // Check that it gets accepted for TX. If we see EV04, then something is still
       // being sent, and we have to wait and try again.
       count = read_nonblock(serialfd,buffer,8192);
-      // if (count) dump_bytes(stderr,"postsend",buffer,count);
+			printf("buffer2 is:%s\n", buffer);
+      if (count) dump_bytes(stderr,"postsend",buffer,count);
       if (count) hfbarrett_receive_bytes(buffer,count);
       if (strstr((const char *)buffer,"OK")
 	  &&(!strstr((const char *)buffer,"EV"))) {
