@@ -25,6 +25,7 @@
  * ---------------------------------------------------------------------- */
 
 #include "sha3.h"
+#include "code_instrumentation.h"
 
 static const  uint8_t keccakf_rndc[24][8] = {
   {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01}, {0x00,0x00,0x00,0x00,0x00,0x00,0x80,0x82},
@@ -83,19 +84,25 @@ void sha3_report_(uint8_t v[8],int line)
 #endif
 
 typedef union rotate64_ {
-	uint8_t bytes[8];
+        uint8_t bytes[8];
 } rotate64;
-				
+                                
  rotate64 rotate;
 
 void rotate_left(void)
 {
-  uint8_t i,bit63=rotate.bytes[7]>>7;
-  for(i=7;i<8;i--) {
-    rotate.bytes[i]=rotate.bytes[i]<<1;
-    if (i&&(rotate.bytes[i-1]&0x80)) rotate.bytes[i]|=1;		
+  LOG_ENTRY;
+
+  uint8_t i, bit63 = rotate.bytes[7] >> 7;
+  for (i = 7; i < 8; i--) {
+    rotate.bytes[i] = rotate.bytes[i] << 1;
+    if (i && (rotate.bytes[i-1] & 0x80)) {
+      rotate.bytes[i] |= 1;             
+    }
   }
-  rotate.bytes[0]|=bit63;
+  rotate.bytes[0] |= bit63;
+
+  LOG_EXIT;
 }
 
 /* generally called after SHA3_KECCAK_SPONGE_WORDS-ctx->capacityWords words 
@@ -105,59 +112,90 @@ uint8_t t[8], bc[5][8], t_out[8];
 uint8_t n, j, r, b,round_num;
 static void keccakf(void)
 {
+  LOG_ENTRY;
+
 #define KECCAK_ROUNDS 24
 
-    for(round_num = 0; round_num < KECCAK_ROUNDS; round_num++) {
-      /* Theta */
-      for(n = 0; n < 5; n++) {
-	for(b=0;b<8;b++) {
-	  bc[n][b] = ctx.s[n][b];
-	  bc[n][b]^=ctx.s[n + 5][b];
-	  bc[n][b]^=ctx.s[n + 10][b];
-	  bc[n][b]^=ctx.s[n + 15][b];
-	  bc[n][b]^=ctx.s[n + 20][b];
-	}
-	sha3_report(bc[n]);
+  for (round_num = 0; round_num < KECCAK_ROUNDS; round_num++) {
+    /* Theta */
+    for (n = 0; n < 5; n++) {
+      for (b = 0; b < 8; b++) {
+        bc[n][b] = ctx.s[n][b];
+        bc[n][b] ^= ctx.s[n + 5][b];
+        bc[n][b] ^= ctx.s[n + 10][b];
+        bc[n][b] ^= ctx.s[n + 15][b];
+        bc[n][b] ^= ctx.s[n + 20][b];
       }
-
-        for(n = 0; n < 5; n++) {
-	  for(b=0;b<8;b++) rotate.bytes[b] = bc[(n + 1) % 5][b];
-	  rotate_left();
-	  for(b=0;b<8;b++) t[b] = bc[(n + 4) % 5][b] ^ rotate.bytes[b];
-	  for(j = 0; j < 25; j += 5) {
-	    for(b=0;b<8;b++) ctx.s[j + n][b] ^= t[b];
-	    sha3_report(ctx.s[j + n]);
-	  }
-        }
-	
-        /* Rho Pi */
-        for(b=0;b<8;b++) t[b] = ctx.s[1][b];
-        for(n = 0; n < 24; n++) {
-	    j = keccakf_piln[n];
-            for(b=0;b<8;b++) bc[0][b] = ctx.s[j][b];
-	    for(b=0;b<8;b++) rotate.bytes[b]=t[b];
-	    for (r=0;r<keccakf_rotc[n];r++) rotate_left();
-	    for(b=0;b<8;b++) ctx.s[j][b] = rotate.bytes[b];
-	    sha3_report(ctx.s[j]);
-            for(b=0;b<8;b++) t[b] = bc[0][b];
-        }
-
-        /* Chi */
-        for(j = 0; j < 25; j += 5) {
-	  for(n = 0; n < 5; n++) {
-                for(b=0;b<8;b++) bc[n][b] = ctx.s[j + n][b];
-		sha3_report(bc[n]);
-	  }
-            for(n = 0; n < 5; n++) {
-	      for(b=0;b<8;b++) ctx.s[j + n][b] ^= (~bc[(n + 1) % 5][b]) & bc[(n + 2) % 5][b];
-		sha3_report(ctx.s[j+n]);
-	    }
-        }
-
-        /* Iota */
-        for(b=0;b<8;b++) ctx.s[0][b] ^= keccakf_rndc[round_num][7-b];
-	sha3_report(ctx.s[0]);
+      sha3_report(bc[n]);
     }
+
+    for (n = 0; n < 5; n++) {
+      for (b = 0;b < 8; b++) {
+        rotate.bytes[b] = bc[(n + 1) % 5][b];
+      }
+      rotate_left();
+      for (b = 0;b < 8; b++) {
+        t[b] = bc[(n + 4) % 5][b] ^ rotate.bytes[b];
+      }
+      for (j = 0; j < 25; j += 5) {
+        for (b = 0;b < 8; b++) {
+          ctx.s[j + n][b] ^= t[b];
+        }
+        sha3_report(ctx.s[j + n]);
+      }
+    }
+        
+    /* Rho Pi */
+    for (b = 0; b < 8; b++) {
+      t[b] = ctx.s[1][b];
+    }
+
+    for (n = 0; n < 24; n++) {
+      j = keccakf_piln[n];
+      for (b = 0; b < 8; b++) {
+        bc[0][b] = ctx.s[j][b];
+      }
+      for (b = 0; b < 8; b++) {
+        rotate.bytes[b]=t[b];
+      }
+      for (r = 0; r < keccakf_rotc[n]; r++) {
+        rotate_left();
+      }
+      for (b = 0; b < 8; b++) {
+        ctx.s[j][b] = rotate.bytes[b];
+      }
+      sha3_report(ctx.s[j]);
+      for (b = 0; b < 8; b++) {
+        t[b] = bc[0][b];
+      }
+    }
+
+    /* Chi */
+    for (j = 0; j < 25; j += 5) {
+      for (n = 0; n < 5; n++) {
+            for (b = 0; b < 8; b++) {
+              bc[n][b] = ctx.s[j + n][b];
+            }
+            sha3_report(bc[n]);
+      }
+      for (n = 0; n < 5; n++) {
+        for (b = 0; b < 8; b++) {
+          ctx.s[j + n][b] ^= (~bc[(n + 1) % 5][b]) & bc[(n + 2) % 5][b];
+        }
+        sha3_report(ctx.s[j+n]);
+      }
+    }
+
+    /* Iota */
+    for (b = 0; b < 8; b++) {
+      ctx.s[0][b] ^= keccakf_rndc[round_num][7-b];
+    }
+
+    sha3_report(ctx.s[0]);
+  }
+    
+  LOG_EXIT;
+
 }
 
 /* *************************** Public Inteface ************************ */
@@ -165,20 +203,32 @@ static void keccakf(void)
 /* For Init or Reset call these: */
 void sha3_Init256(void)
 {
-    memset(&ctx, 0, sizeof(ctx));
-    ctx.capacityWords = 2 * 256 / (8 * sizeof(uint64_t));
+  LOG_ENTRY;
+
+  memset(&ctx, 0, sizeof(ctx));
+  ctx.capacityWords = 2 * 256 / (8 * sizeof(uint64_t));
+
+  LOG_EXIT;
 }
 
 void sha3_Init384(void)
 {
-    memset(&ctx, 0, sizeof(ctx));
-    ctx.capacityWords = 2 * 384 / (8 * sizeof(uint64_t));
+  LOG_ENTRY;
+
+  memset(&ctx, 0, sizeof(ctx));
+  ctx.capacityWords = 2 * 384 / (8 * sizeof(uint64_t));
+
+  LOG_EXIT;
 }
 
 void sha3_Init512(void)
 {
-    memset(&ctx, 0, sizeof(ctx));
-    ctx.capacityWords = 2 * 512 / (8 * sizeof(uint64_t));
+  LOG_ENTRY;
+
+  memset(&ctx, 0, sizeof(ctx));
+  ctx.capacityWords = 2 * 512 / (8 * sizeof(uint64_t));
+
+  LOG_EXIT;
 }
 
  uint32_t old_tail;
@@ -189,32 +239,57 @@ void sha3_Init512(void)
 
 void sha3_Update(void *bufIn, size_t len)
 {
+
+  LOG_ENTRY;
+
+  do {
+
+    if (! bufIn) {
+      LOG_ERROR("bufIn is null");
+      break;
+    }
+
     /* 0...7 -- how much is needed to have a word */
     buf = bufIn;
 
-    SHA3_TRACE_BUF("called to update with:", buf, len);
+    LOG_TRACE("called to update with: %s, %d", buf, (int) len);
 
-    SHA3_ASSERT(ctx.byteIndex < 8);
-    SHA3_ASSERT(ctx.wordIndex < sizeof(ctx.s) / sizeof(ctx.s[0]));
+    if (ctx.byteIndex >= 8) {
+      LOG_ERROR("ctx.byteIndex >= 8");
+      break;
+    }
+
+    if (ctx.wordIndex >= sizeof(ctx.s) / sizeof(ctx.s[0])) {
+      LOG_ERROR("ctx.wordIndex >= sizeof(ctx.s) / sizeof(ctx.s[0])");
+      break;
+    }
 
     // An 8-bit oriented implementation makes this all much simpler!
     // We just add bytes, and run rounds whenever we have a multiple of
     // 8 bytes received.
     while (len--) {
       ctx.saved[ctx.byteIndex++] = *(buf++);
-      if (ctx.byteIndex==8) {	
-	// Save complete word, and run keccakf()
-	for(b=0;b<8;b++) ctx.s[ctx.wordIndex][b] ^= ctx.saved[b];
+      if (ctx.byteIndex == 8) {   
+        // Save complete word, and run keccakf()
+        for (b = 0; b < 8; b++) {
+          ctx.s[ctx.wordIndex][b] ^= ctx.saved[b];
+        }
         ctx.byteIndex = 0;
-        for(b=0;b<8;b++) ctx.saved[b] = 0;
-	if(++ctx.wordIndex ==
-	   (SHA3_KECCAK_SPONGE_WORDS - ctx.capacityWords)) {
-	  keccakf();
-	  ctx.wordIndex = 0;
+        for (b = 0; b < 8; b++) {
+          ctx.saved[b] = 0;
+        }
+        if(++ctx.wordIndex ==
+           (SHA3_KECCAK_SPONGE_WORDS - ctx.capacityWords)) {
+          keccakf();
+          ctx.wordIndex = 0;
         }
 
       }
     }
+  }
+  while (0);
+
+  LOG_EXIT;
 
 }
 
@@ -228,26 +303,31 @@ void sha3_Update(void *bufIn, size_t len)
 
 void sha3_Finalize(void)
 {
+  LOG_ENTRY;
   
-    SHA3_TRACE("called with %d bytes in the buffer", ctx.byteIndex);
+  LOG_NOTE("called with %d bytes in the buffer", ctx.byteIndex);
 
-    /* Append 2-bit suffix 01, per SHA-3 spec. Instead of 1 for padding we
-     * use 1<<2 below. The 0x02 below corresponds to the suffix 01.
-     * Overall, we feed 0, then 1, and finally 1 to start padding. Without
-     * M || 01, we would simply use 1 to start padding. */
+  /* Append 2-bit suffix 01, per SHA-3 spec. Instead of 1 for padding we
+   * use 1<<2 below. The 0x02 below corresponds to the suffix 01.
+   * Overall, we feed 0, then 1, and finally 1 to start padding. Without
+   * M || 01, we would simply use 1 to start padding. */
 
-    for(b=0;b<8;b++) ctx.s[ctx.wordIndex][b]^=ctx.saved[b];
+  for (b = 0; b < 8; b++) {
+    ctx.s[ctx.wordIndex][b]^=ctx.saved[b];
+  }
 
 #ifndef SHA3_USE_KECCAK
-    /* SHA3 version */
-    ctx.s[ctx.wordIndex][ctx.byteIndex] ^= (ctx.saved[ctx.byteIndex] ^ 0x06);    
+  /* SHA3 version */
+  ctx.s[ctx.wordIndex][ctx.byteIndex] ^= (ctx.saved[ctx.byteIndex] ^ 0x06);    
 #else
-    /* For testing the "pure" Keccak version */
-    ctx.s[ctx.wordIndex][ctx.byteIndex] ^= ctx.saved[7] ^ 1; 
+  /* For testing the "pure" Keccak version */
+  ctx.s[ctx.wordIndex][ctx.byteIndex] ^= ctx.saved[7] ^ 1; 
 #endif
 
-    ctx.s[SHA3_KECCAK_SPONGE_WORDS - ctx.capacityWords - 1][7] ^= 0x80;
-    keccakf();
+  ctx.s[SHA3_KECCAK_SPONGE_WORDS - ctx.capacityWords - 1][7] ^= 0x80;
+  keccakf();
+
+  LOG_EXIT;
 
     // return (ctx.sb);
 }

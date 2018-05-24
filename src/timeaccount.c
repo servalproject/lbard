@@ -44,6 +44,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "serial.h"
 #include "version.h"
 #include "radios.h"
+#include "code_instrumentation.h"
 
 struct time_excursion {
   char source[32];
@@ -54,75 +55,122 @@ struct time_excursion {
 
 #define MAX_TIME_EXCURSIONS 16
 #define TIME_EXCURSION_THRESHOLD 250
-int recent_count=0;
+int recent_count = 0;
 struct time_excursion recent[MAX_TIME_EXCURSIONS];
-int alltime_count=0;
+int alltime_count = 0;
 struct time_excursion alltime[MAX_TIME_EXCURSIONS];
 
-long long accumulated_time=0;
-long long current_interval_start=0;
-char current_interval_source[32]="(none)";
+long long accumulated_time = 0;
+long long current_interval_start = 0;
+char current_interval_source[32] = "(none)";
 
-int log_time(long long interval,char *source)
+int log_time(long long interval, char *source)
 {
-  int i;
-  if (interval<TIME_EXCURSION_THRESHOLD) return 0;
+  int retVal = -1;
 
-  // Shuffle down recent time excursions
-  for(i=MAX_TIME_EXCURSIONS;i>0;i--)
-    recent[i]=recent[i-1];
-  strncpy(recent[0].source,source,32);
-  recent[0].duration=interval;
-  recent[0].when=gettime_ms();
-  if (recent_count<MAX_TIME_EXCURSIONS) recent_count++;
+  LOG_ENTRY;
 
-  // Insert into all time list
-  int insert=-1;
-  for(i=0;i<MAX_TIME_EXCURSIONS;i++) {
-    if(i<alltime_count) {
-      if (alltime[i].duration<=interval) {
-	insert=i;
-	break;
+  do {
+
+    if (! source) {
+      LOG_ERROR("source is null");
+      break;
+    }
+
+    if (interval < TIME_EXCURSION_THRESHOLD) {
+      retVal = 0;
+      break;
+    }
+
+    // Shuffle down recent time excursions
+    int i;
+    for (i = MAX_TIME_EXCURSIONS; i > 0; i--) {
+      recent[i]=recent[i-1];
+    }
+
+    strncpy(recent[0].source, source, sizeof(recent[0].source));
+
+    recent[0].duration = interval;
+    recent[0].when = gettime_ms();
+    if (recent_count < MAX_TIME_EXCURSIONS) {
+      recent_count++;
+    }
+
+    // Insert into all time list
+    int insert = -1;
+    for (i = 0; i < MAX_TIME_EXCURSIONS; i++) {
+      if (i < alltime_count) {
+        if (alltime[i].duration <= interval) {
+          insert=i;
+          break; // for
+        }
       }
     }
+
+    if (insert < 0) {
+      insert = 0;
+    }
+
+    for (i = MAX_TIME_EXCURSIONS; i > insert; i--) {
+      alltime[i] = alltime[i-1];
+    }
+
+    strncpy(alltime[insert].source,source, sizeof(alltime[insert].source));
+    alltime[insert].duration = interval;
+    alltime[insert].when = gettime_ms();
+    if (alltime_count < MAX_TIME_EXCURSIONS) {
+      alltime_count++;
+    }
+
   }
-  if (insert<0) insert=0;
-  for(i=MAX_TIME_EXCURSIONS;i>insert;i--)
-    alltime[i]=alltime[i-1];
-  strncpy(alltime[insert].source,source,32);
-  alltime[insert].duration=interval;
-  alltime[insert].when=gettime_ms();
-  if (alltime_count<MAX_TIME_EXCURSIONS) alltime_count++;
+  while (0);
+
+  LOG_EXIT;
 
   return 0;
 }
 
 int account_time_pause()
-{
-  accumulated_time+=(gettime_ms()-current_interval_start);
+{  
+  LOG_ENTRY;
+
+  accumulated_time += (gettime_ms() - current_interval_start);
+
+  LOG_EXIT;
+
   return 0;
 }
 
 int account_time_resume()
 {
-  current_interval_start=gettime_ms();
+  LOG_ENTRY;
+
+  current_interval_start = gettime_ms();
+
+  LOG_EXIT;
+
   return 0;
 }
 
 int account_time(char *source)
 {
+
+  LOG_ENTRY;
+
   if (current_interval_start) {
     // Close of current interval
-    long long interval_duration=gettime_ms()-current_interval_start;
-    interval_duration+=accumulated_time;
-    accumulated_time=0;
+    long long interval_duration = gettime_ms() - current_interval_start;
+    interval_duration += accumulated_time;
+    accumulated_time = 0;
 
-    log_time(interval_duration,current_interval_source);
+    log_time(interval_duration, current_interval_source);
   }
 
-  current_interval_start=gettime_ms();
-  accumulated_time=0;
-  strncpy(current_interval_source,source,32);
+  current_interval_start = gettime_ms();
+  accumulated_time = 0;
+  strncpy(current_interval_source, source, sizeof(current_interval_source));
+
+  LOG_EXIT;
 
   return 0;
   
