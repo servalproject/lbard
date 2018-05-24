@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <string.h>
 #include <netdb.h>
 
 int set_nonblock(int fd);
