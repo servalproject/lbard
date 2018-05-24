@@ -63,6 +63,8 @@ int hf_parse_linkcandidate(char *l)
 		//*************
 		
 		str_copy(new_hf_station.name, tmp);
+			//set the time to wait between call tentatives
+		new_hf_station.next_link_time = 0; //should be got from the alias
 
 		//add the station at hf_stations table
 		str_part(tmp, l, l_pointer + 2, 1);

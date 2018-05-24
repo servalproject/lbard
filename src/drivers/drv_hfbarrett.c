@@ -28,7 +28,8 @@ RADIO TYPE: HFBARRETT,"hfbarrett","Barrett HF with ALE",hfcodanbarrett_radio_det
 #include "radios.h"
 
 char barrett_link_partner_string[1024]="";
-int previous_state=-1;
+int previous_state=-1; //debug variable
+time_t ALElink_establishment_time=25; //should be got from the alias?
 
 int hfbarrett_ready_test(void)
 {
@@ -108,29 +109,39 @@ int hfbarrett_serviceloop(int serialfd)
     if ((hf_station_count>0)&&(time(0)>=hf_next_call_time)) {
       int next_station = hf_next_station_to_call();
       if (next_station>-1) {
-	// Ensure we have a clear line for new command (we were getting some
-	// errors here intermittantly).
-	write(serialfd,"\r\n",2);
+				// Ensure we have a clear line for new command (we were getting some
+				// errors here intermittantly).
+				write(serialfd,"\r\n",2);
 	
-	snprintf(cmd,1024,"AXLINK%s%s\r\n", hf_stations[next_station].index, self_hf_station.index);
-  printf("sending '%s' to try to make ALE call.\n",cmd);
-	write(serialfd,cmd,strlen(cmd));
+				snprintf(cmd,1024,"AXLINK%s%s\r\n", hf_stations[next_station].index, self_hf_station.index);
+				printf("sending '%s' to try to make ALE call.\n",cmd);
+				write(serialfd,cmd,strlen(cmd));
 
-	hf_state = HF_CALLREQUESTED;
-      
-	fprintf(stderr,"HF: Attempting to call station #%d '%s'\n",
-		next_station,hf_stations[next_station].name);
-      }
+				hf_state = HF_CALLREQUESTED;
+						
+				fprintf(stderr,"HF: Attempting to call station #%d '%s'\n",
+			next_station,hf_stations[next_station].name);
+      	hf_next_call_time=time(0)+ALElink_establishment_time;
+			} 				
     }
+		// Probe periodically with AILTBL to get link table, because the modem doesn't
+    // preemptively tell us when we get a link established 
+		else if (time(0)!=last_link_probe_time) { //once a second
+			printf("No radio to call yet or no registered radio\n");  
+      write(serialfd,"AILTBL\r\n",8);
+      last_link_probe_time=time(0);
+    } 
     break;
 
   case HF_CALLREQUESTED: //2
 		// Probe periodically with AILTBL to get link table, because the modem doesn't
     // preemptively tell us when we get a link established
-    if (time(0)!=last_link_probe_time)  {
+    if (time(0)!=last_link_probe_time)  { //once a second
       write(serialfd,"AILTBL\r\n",8);
       last_link_probe_time=time(0);
     }
+		if (time(0)>=hf_next_call_time) //no reply from the called station
+			hf_state = HF_DISCONNECTED;
     break;
 
   case HF_CONNECTING: //3
@@ -140,7 +151,7 @@ int hfbarrett_serviceloop(int serialfd)
   case HF_ALELINK: //4
 		// Probe periodically with AILTBL to get link table, because the modem doesn't
     // preemptively tell us when we lose a link
-    if (time(0)!=last_link_probe_time)  {
+    if (time(0)!=last_link_probe_time)  { //once a second
       write(serialfd,"AILTBL\r\n",8);
       last_link_probe_time=time(0);
     }
@@ -177,12 +188,14 @@ int hfbarrett_process_line(char *l)
   if ((!strcmp(l,"EV00"))&&(hf_state==HF_CALLREQUESTED)) {
     // Syntax error in our request to call.
     printf("Saw EV00 response. Marking call disconnected.\n");
+		hf_next_call_time=time(0); //AXLINK failed, no call have been tried
     hf_state = HF_DISCONNECTED;
     return 0;
   }
   if ((!strcmp(l,"E0"))&&(hf_state==HF_CALLREQUESTED)) {
     // Syntax error in our request to call.
     printf("Saw E0 response. Marking call disconnected.\n");
+		hf_next_call_time=time(0); //AXLINK failed, no call have been tried
     hf_state = HF_DISCONNECTED;
     return 0;
   }
@@ -199,11 +212,11 @@ int hfbarrett_process_line(char *l)
 
 		hf_parse_linkcandidate(l);
 		//display all the hf radios
-		printf("The self hf Barrett radio is: %s\n", self_hf_station.name);		
+		printf("The self hf Barrett radio is: \n%s, index=%s\n", self_hf_station.name, self_hf_station.index);		
+		printf("The registered stations are:\n");		
 		int i;		
 		for (i=0; i<hf_station_count; i++){
-			printf("stations are:\n");
-			printf("* %s\n", hf_stations[i].name);
+			printf("%s, index=%s\n", hf_stations[i].name, hf_stations[i].index);
 		}
 	}
 

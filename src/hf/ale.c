@@ -57,6 +57,7 @@ int hf_callout_interval=5; // minutes
 struct hf_station hf_stations[MAX_HF_STATIONS];
 int hf_station_count=0;
 struct hf_station self_hf_station;
+time_t timeout_call_a_radio_again = 100;
 
 int has_hf_plan=0;
 
@@ -110,7 +111,10 @@ int hf_next_station_to_call(void)
 {
   int i;
   for(i=0;i<hf_station_count;i++) {
-    if (time(0)>hf_stations[i].next_link_time) return i;
+    if (time(0)>hf_stations[i].next_link_time){ 
+			hf_stations[i].next_link_time = time(0) + timeout_call_a_radio_again;
+			return i;
+		}
   }
   if (hf_station_count) return random()%hf_station_count; else return -1;
 }
