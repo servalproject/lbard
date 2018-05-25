@@ -34,9 +34,12 @@ struct barrett_radio_state barrett[MAX_CLIENTS];
 
 unsigned char barrett_e0_string[6]={0x13,'E','0',13,10,0x11};
 unsigned char barrett_ok_string[6]={0x13,'O','K',13,10,0x11};
+unsigned char test1[6]={0x13,'O','K',13,10,0};
+unsigned char *test2="HELLO";
 
 int hfbarrett_read_byte(int i,unsigned char c)
 {
+	hfbarrett_formate_response(test2);
   if (c==0x15) {
     // Control-U -- clear input buffer
     clients[i].buffer_count=0;
@@ -132,6 +135,9 @@ int hfbarrett_read_byte(int i,unsigned char c)
 	default:
 	  write(clients[i].socket,barrett_e0_string,6);
 	}
+      } 
+			else if (!strncasecmp("AIATBL",(char *)clients[i].buffer,6)) {
+				
       } else {
 	// Complain about unknown commands
 	fprintf(stderr,"Responding with Barrett E0 string\n");
@@ -156,4 +162,19 @@ int hfbarrett_encapsulate_packet(int from,int to,
 				 int *packet_len)
 {
   return 0;
+}
+
+int hfbarrett_formate_response(unsigned char* response){
+	int formated_response_size=strlen(response)+4;
+	printf("response size is: %d\n",formated_response_size);
+	unsigned char formated_response[formated_response_size];
+	formated_response[0]=0x13;
+	formated_response[1]=0;
+	strcat(formated_response, response);
+	formated_response[formated_response_size-3]=13;
+	formated_response[formated_response_size-2]=10;
+	formated_response[formated_response_size-1]=0x11;
+	printf("response is: %s\n",formated_response);
+	response = formated_response;
+	return 0;
 }

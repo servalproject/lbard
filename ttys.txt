@@ -1,5 +1,5 @@
-/dev/pts/2
-/dev/pts/3
 /dev/pts/4
 /dev/pts/5
 /dev/pts/6
+/dev/pts/7
+/dev/pts/8
