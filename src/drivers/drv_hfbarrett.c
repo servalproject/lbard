@@ -29,7 +29,7 @@ RADIO TYPE: HFBARRETT,"hfbarrett","Barrett HF with ALE",hfcodanbarrett_radio_det
 
 char barrett_link_partner_string[1024]="";
 int previous_state=-1; //debug variable
-time_t ALElink_establishment_time=25; //should be got from the alias?
+time_t ALElink_establishment_time=25; //should get it from the alias?
 
 int hfbarrett_ready_test(void)
 {
