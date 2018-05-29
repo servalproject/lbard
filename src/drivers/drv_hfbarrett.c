@@ -272,8 +272,8 @@ int hfbarrett_receive_bytes(unsigned char *bytes,int count)
 {
   int i;
   for(i=0;i<count;i++) {
-    if (bytes[i]==0x011) printf("XON\n");
-		if (bytes[i]==0x013) printf("XOFF\n");
+    //if (bytes[i]==0x011) printf("XON\n");
+		//if (bytes[i]==0x013) printf("XOFF\n");
     if (bytes[i]==13||bytes[i]==10) { //end of command detected => if not null, line is processed by lbard
       hf_response_line[hf_rl_len]=0; //	after the command we out a '\0' to have a proper string
       if (hf_rl_len){ hfbarrett_process_line(hf_response_line);}
