@@ -34,12 +34,14 @@ struct barrett_radio_state barrett[MAX_CLIENTS];
 
 unsigned char barrett_e0_string[6]={0x13,'E','0',13,10,0x11};
 unsigned char barrett_ok_string[6]={0x13,'O','K',13,10,0x11};
+unsigned char AIATBL_resp[30]={0x13,'A','I','A','T','B','L','0','0','1','1','5','F','A','K','E','B','A','R','2','0','2','A','0','0','2','4',13,10,0x11};
+//tests
 unsigned char test1[6]={0x13,'O','K',13,10,0};
-unsigned char *test2="HELLO";
+unsigned char test2[5]={'H','E','L','L','O'};
+char* test3="TEST3";
 
 int hfbarrett_read_byte(int i,unsigned char c)
 {
-	hfbarrett_formate_response(test2);
   if (c==0x15) {
     // Control-U -- clear input buffer
     clients[i].buffer_count=0;
@@ -135,9 +137,8 @@ int hfbarrett_read_byte(int i,unsigned char c)
 	default:
 	  write(clients[i].socket,barrett_e0_string,6);
 	}
-      } 
-			else if (!strncasecmp("AIATBL",(char *)clients[i].buffer,6)) {
-				
+      } else if (!strncasecmp("AIATBL",(char *)clients[i].buffer,6)) {
+	write(clients[i].socket,AIATBL_resp,30);	
       } else {
 	// Complain about unknown commands
 	fprintf(stderr,"Responding with Barrett E0 string\n");
@@ -163,7 +164,7 @@ int hfbarrett_encapsulate_packet(int from,int to,
 {
   return 0;
 }
-
+/*
 int hfbarrett_formate_response(unsigned char* response){
 	int formated_response_size=strlen(response)+4;
 	printf("response size is: %d\n",formated_response_size);
@@ -178,3 +179,23 @@ int hfbarrett_formate_response(unsigned char* response){
 	response = formated_response;
 	return 0;
 }
+
+unsigned char* char_array_to_uchar_array(char *char_array){
+	int unsc_array_size=strlen(char_array);
+	unsigned char res[unsc_array_size];
+	int i;
+	for (i=0; i<unsc_array_size; i++){
+		res[i]=char_array[i];
+	}
+	return res;
+}
+
+char* uchar_array_to_char_array(unsigned char *u_char_array, int size){
+	int i;
+	char res[size+1];
+	for (i=0;i<size; i++){
+		res[i]=u_char_array[i];
+	}
+	res[size]=0;
+	return res;
+}*/
