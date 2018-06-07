@@ -33,6 +33,9 @@ RADIO TYPE: OUTERNET,"outernet","Outernet.is broadcast satellite",outernet_radio
 // Import serial_port string from main.c
 extern char *serial_port;
 
+// Address of IP link
+struct sockaddr_in addr_uplink;
+
 int outernet_radio_detect(int fd)
 {
   /*
@@ -47,7 +50,7 @@ int outernet_radio_detect(int fd)
     will parse from the serial_port string.    
   */
 
-  fprintf(stderr,"outernet detect\n");
+  LOG_NOTE("Beginning Outernet auto detection");
   
   int retVal=-1;
   
@@ -59,19 +62,20 @@ int outernet_radio_detect(int fd)
   LOG_ENTRY;
   
   do {
-  
-    if (sscanf(serial_port,"outernet://%[^/]:%d",hostname,&port)==2) {
+    int fields=sscanf(serial_port,"outernet://%[^:]:%d",hostname,&port);
+    LOG_NOTE("Parsed %d fields",fields);
+    if (fields==2) {
       fprintf(stderr,"Parsed Outernet URI. Host='%s', port='%d'\n",hostname,port);
       LOG_NOTE("Parsed Outernet URI. Host='%s', port='%d'\n",hostname,port);
       
-      if (!inet_aton(hostname,&hostaddr)) {
+      if (inet_aton(hostname,&hostaddr)==1) {
 	LOG_NOTE("Parsed hostname as IPv4 address");
       } else {
-	
+
+	LOG_NOTE("Attempting to resolve hostname '%s' to IP address",hostname);
 	struct hostent *he=gethostbyname(hostname);
 	
 	if (!he) {
-	  fprintf(stderr,"Failed to resolve hostname '%s' to IP",hostname);
 	  LOG_ERROR("Failed to resolve hostname '%s' to IP",hostname);
 	  break;
 	}
@@ -82,14 +86,22 @@ int outernet_radio_detect(int fd)
 	  LOG_ERROR("Could not get IP for hostname '%s' (h_addr_list empty)",hostname);
 	  break;
 	}
+
+	// XXX - We assume IPv4 addressing here! We should support IPv6 as well
+	if (he->h_addrtype!=AF_INET) {
+	  LOG_ERROR("Address of '%s' is not IPv4",hostname);
+	  break;
+	}
 	
 	hostaddr=*addr_list[0];
       }
+
+      fprintf(stderr,"Host address of '%s' is %08x\n",hostname,hostaddr.s_addr);
       
-      struct sockaddr_in addr_us,addr_them;
+      struct sockaddr_in addr_us;
       
       bzero((char *) &addr_us, sizeof(struct sockaddr_in));
-      bzero((char *) &addr_them, sizeof(struct sockaddr_in));
+      bzero((char *) &addr_uplink, sizeof(struct sockaddr_in));
       
       // Set up address for our side of the socket
       addr_us.sin_family = AF_INET;
@@ -97,24 +109,33 @@ int outernet_radio_detect(int fd)
       addr_us.sin_addr.s_addr = htonl(INADDR_ANY);
       
       // Setup address for Outernet's server
-      addr_them.sin_family = AF_INET;
-      addr_them.sin_port = htons(port);
-      addr_them.sin_addr.s_addr = hostaddr.s_addr;
+      addr_uplink.sin_family = AF_INET;
+      addr_uplink.sin_port = htons(port);
+      addr_uplink.sin_addr.s_addr = hostaddr.s_addr;
       
-      int s;
-      if ((s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+      if ((fd=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 	{
 	  perror("Failed to create UDP socket");
 	  LOG_ERROR("Failed to create UDP socket");
 	  break;
 	}    
-    }
 
-    // XXX to the other missing steps
-    
-    // Successfully connected
-    radio_set_type(RADIOTYPE_OUTERNET);
-    retVal=1; // successfully autodetected, stop auto-detect process
+      if( bind(fd, (struct sockaddr*)&addr_us, sizeof(struct sockaddr_in) ) == -1)
+	{
+	  perror("Failed to bind UDP socket");
+	  LOG_ERROR("Failed to bind UDP socket");
+	  break;
+	}
+      
+      // XXX to the other missing steps
+      
+      // Successfully connected
+      LOG_NOTE("Detected radio as Outernet");
+      radio_set_type(RADIOTYPE_OUTERNET);
+      retVal=1; // successfully autodetected, stop auto-detect process
+    } else {
+      LOG_NOTE("URI is not for outernet uplink: '%s'",serial_port);
+    }
   }
   while(0);
   
