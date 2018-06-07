@@ -53,6 +53,7 @@ int always_ready(void)
 int message_update_interval=INITIAL_AVG_PACKET_TX_INTERVAL-(INITIAL_PACKET_TX_INTERVAL_RANDOMNESS/2);  // ms
 int message_update_interval_randomness=INITIAL_PACKET_TX_INTERVAL_RANDOMNESS;
 long long last_message_update_time=0;
+long long next_message_update_time=0;
 long long congestion_update_time=0;
 
 #define MAX_PACKET_SIZE 255

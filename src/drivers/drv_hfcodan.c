@@ -62,7 +62,7 @@ int hfcodanbarrett_radio_detect(int fd)
       // Codan radio supports only ALE 2G (90 x 6-bit chars per message)
       radio_set_feature(RADIO_ALE_2G);
     radio_set_type(RADIOTYPE_HFCODAN);
-    return 0;
+    return 1; // indicate successfully initialised
   } else if (barrett_e0_seen) {
     fprintf(stderr,"Detected Barrett HF Radio.\n");
     radio_set_type(RADIOTYPE_HFBARRETT);

@@ -174,7 +174,12 @@ int serial_setup_port(int fd)
   */
 
   serial_setup_port_with_speed(fd,9600); 
-  
+
+  return autodetect_radio_type(fd);
+}
+
+int autodetect_radio_type(int fd)
+{
   
   fprintf(stderr,"Attempting to detect radio type...\n");
 

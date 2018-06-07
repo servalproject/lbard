@@ -47,6 +47,8 @@ int outernet_radio_detect(int fd)
     will parse from the serial_port string.    
   */
 
+  fprintf(stderr,"outernet detect\n");
+  
   int retVal=-1;
   
   char hostname[1024]="";
@@ -107,6 +109,12 @@ int outernet_radio_detect(int fd)
 	  break;
 	}    
     }
+
+    // XXX to the other missing steps
+    
+    // Successfully connected
+    radio_set_type(RADIOTYPE_OUTERNET);
+    retVal=1; // successfully autodetected, stop auto-detect process
   }
   while(0);
   

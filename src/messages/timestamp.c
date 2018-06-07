@@ -71,7 +71,7 @@ int saw_timestamp(char *sender_prefix,int stratum, struct timeval *tv)
 	  after.tv_sec*1000+(after.tv_usec/1000)
 	  -
 	  before.tv_sec*1000+(before.tv_usec/1000);
-	if (last_message_update_time) last_message_update_time+=delta;
+	if (next_message_update_time) next_message_update_time+=delta;
 	if (congestion_update_time) congestion_update_time+=delta;
 	if (last_status_time) last_status_time+=delta;
 	if (radio_last_heartbeat_time) radio_last_heartbeat_time+=delta;

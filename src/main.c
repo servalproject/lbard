@@ -391,6 +391,7 @@ int main(int argc, char **argv)
     }
     
     last_message_update_time = 0;
+    next_message_update_time = 0;
     congestion_update_time = 0;
     
     my_sid_hex = "000000000000000000000000000000000";
@@ -484,6 +485,9 @@ int main(int argc, char **argv)
       // Has a :, so assume it is a URI kind of thing
       fprintf(stderr,"Serial port looks like a URI, not (yet) opening/connecting\n");
       LOG_NOTE("Serial port looks like a URI, not (yet) opening/connecting\n");
+
+      // So skip serial port fiddling, and go direct to auto detection routines
+      autodetect_radio_type(serialfd);
     } else {
       serialfd = open(serial_port,O_RDWR);
       if (serialfd < 0) {
@@ -910,13 +914,13 @@ int main(int argc, char **argv)
       // Deal gracefully with clocks that run backwards from time to time.
       if (last_message_update_time > gettime_ms())
       {
-        LOG_WARN("Clock went backwards");
+        LOG_WARN("Clock went backwards: clock delta=%lld",last_message_update_time-gettime_ms());
         last_message_update_time = gettime_ms();
       }
       
       account_time("time server: announce ");
       
-      if ((gettime_ms() - last_message_update_time) >= message_update_interval) 
+      if (gettime_ms() >= next_message_update_time)
       {
         if (! time_server) 
         {
@@ -1042,11 +1046,11 @@ int main(int argc, char **argv)
           // Vary next update time by upto 250ms, to prevent radios getting lock-stepped.
           if (message_update_interval_randomness)
           {
-            last_message_update_time = gettime_ms() + (random()%message_update_interval_randomness);
+            next_message_update_time = gettime_ms() + (random()%message_update_interval_randomness) + message_update_interval;
           }
           else
           {
-            last_message_update_time = gettime_ms();
+            next_message_update_time = gettime_ms() + message_update_interval;
           }
         }
     

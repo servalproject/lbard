@@ -200,11 +200,10 @@ extern int my_time_stratum;
 extern int radio_transmissions_byus;
 extern int radio_transmissions_seen;
 extern long long last_message_update_time;
+extern long long next_message_update_time;
 extern long long congestion_update_time;
 extern int message_update_interval;
 extern int message_update_interval_randomness;
-extern long long last_message_update_time;
-extern long long congestion_update_time;
 
 extern int monitor_mode;
 
@@ -646,5 +645,6 @@ int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
 		    int manifest_offset,int body_offset);
 
 int stun_serviceloop(void);
+int autodetect_radio_type(int fd);
 
 #include "util.h"
