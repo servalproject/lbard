@@ -342,7 +342,7 @@ test_DetectBarrettHF() {
    fork_terminate_all
 }
 
-doc_OuternetSetup="LBARD connects to Outernet uplink server"
+doc_OuternetSetup="LBARD Outernet uplink mode starts up"
 setup_OuternetSetup() {
    setup_servald
    assert_no_servald_processes
@@ -377,6 +377,54 @@ test_OuternetSetup() {
    wait_until --timeout=10 grep "Codan HF Radio running CICS" C_LBARDERR
    wait_until --timeout=10 grep "Codan HF Radio running CICS" D_LBARDERR
 
+   fork_terminate %lbardA %lbardB %lbardC %lbardD 
+   fork_terminate_all
+}
+
+
+doc_OuternetUplink="LBARD uplinks to Outernet gateway"
+setup_OuternetUplink() {
+   setup_servald
+   assert_no_servald_processes
+   foreach_instance +A +B +C +D create_single_identity
+   foreach_instance +A +B +C +D start_servald_server
+   get_servald_restful_http_server_port PORTA +A
+   get_servald_restful_http_server_port PORTB +B
+   get_servald_restful_http_server_port PORTC +C
+   get_servald_restful_http_server_port PORTD +D
+   # Start the fake radio daemon.
+   fork %fakeradio fakecsmaradio rfd900,rfd900,rfd900,rfd900 ttys.txt "$1"
+   fork %fakeouternet fakeouternet
+   wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
+   tty1=$(sed -n 1p ttys.txt)
+   tty2=$(sed -n 2p ttys.txt)
+   tty3=$(sed -n 3p ttys.txt)
+   tty4=$(sed -n 4p ttys.txt)
+   # Start four lbard daemons, isolated from each other, with one as uplink to Outernet gateway
+   set_instance +A
+   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$IDA" outernet://127.0.0.1:20310 pull
+   # Insert a file to server A, which we will want to see received by the others via Outernet interface
+   set_instance +A
+   rhizome_add_file file1 50
+   set_instance +B
+   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" /dev/null pull
+   set_instance +C
+   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" /dev/null pull
+   set_instance +D
+   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" /dev/null pull
+}
+test_OuternetUplink() {
+   # Test that all radios are detected
+   wait_until --timeout=10 grep "Radio is a outernet (Outernet.is broadcast satellite)" A_LBARDERR
+
+   all_bundles_received() {
+      bundle_received_by $BID:$VERSION +B &&
+      bundle_received_by $BID:$VERSION +C &&
+      bundle_received_by $BID:$VERSION +D
+   }
+   wait_until all_bundles_received
+
+   
    fork_terminate %lbardA %lbardB %lbardC %lbardD 
    fork_terminate_all
 }
