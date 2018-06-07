@@ -127,7 +127,7 @@ int log_time(long long interval, char *source)
 
   LOG_EXIT;
 
-  return 0;
+  return retVal;
 }
 
 int account_time_pause()
