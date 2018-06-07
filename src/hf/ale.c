@@ -137,7 +137,7 @@ int hf_radio_pause_for_turnaround(void)
   // We add a random 1 - 10 seconds to avoid lock-step failure modes,
   // e.g., where both radios keep trying to talk to each other at
   // the same time.
-  hf_next_packet_time=time(0)+radio_types[radio_get_type()].hf_turnaround_delay+(random()%10);
+  hf_next_packet_time=time(0)+radio_types[radio_get_type()].hf_turnaround_delay+(random()%10)+30; //+30 for debug, time to detect for transmitting radio if message is sent
 
   fprintf(stderr,"  [%s] Delaying %ld seconds to allow other side to send.\n",
 	  timestamp_str(),hf_next_packet_time-time(0));

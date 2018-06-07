@@ -92,6 +92,7 @@ ssize_t read_nonblock(int fd, void *buf, size_t len)
 
 ssize_t write_all(int fd, const void *buf, size_t len)
 {
+  dump_bytes(stderr,"writing bytes to modem",buf,len);
   ssize_t written = write(fd, buf, len);
   if (written == -1)
     { perror("write_all(): written == -1");

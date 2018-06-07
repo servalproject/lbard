@@ -5,6 +5,7 @@
 #define HF_ALELINK 4
 #define HF_DISCONNECTING 5
 #define HF_ALESENDING 6
+#define HF_ALELINKCONFUSED 7
 #define HF_COMMANDISSUED 0x100
 
 #define RADIO_ALE_2G (1<<0)

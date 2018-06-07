@@ -34,7 +34,9 @@ struct barrett_radio_state barrett[MAX_CLIENTS];
 
 unsigned char barrett_e0_string[6]={0x13,'E','0',13,10,0x11};
 unsigned char barrett_ok_string[6]={0x13,'O','K',13,10,0x11};
-unsigned char AIATBL_resp[30]={0x13,'A','I','A','T','B','L','0','0','1','1','5','F','A','K','E','B','A','R','2','0','2','A','0','0','2','4',13,10,0x11};
+unsigned char AIATBL_resp[50]={0x13,'A','I','A','T','B','L','0','0','1','1','5','F','A','K','1','B','A','R','2','0','2','A','0','0','2','4',
+'0','1','2','1','5','F','A','K','2','B','A','R','2','0','2','A','0','0','2','4',13,10,0x11};
+unsigned char AILTBL_resp[14]={0x13,'A','I','L','T','B','L', 13 ,10 ,0x11};
 //tests
 unsigned char test1[6]={0x13,'O','K',13,10,0};
 unsigned char test2[5]={'H','E','L','L','O'};
@@ -138,8 +140,13 @@ int hfbarrett_read_byte(int i,unsigned char c)
 	  write(clients[i].socket,barrett_e0_string,6);
 	}
       } else if (!strncasecmp("AIATBL",(char *)clients[i].buffer,6)) {
-	write(clients[i].socket,AIATBL_resp,30);	
-      } else {
+	write(clients[i].socket,AIATBL_resp,50);	
+      }	else if (!strncasecmp("AXLINK",(char *)clients[i].buffer,6)) {
+	printf("link establishment\n");	
+	sleep(4);
+      }	else if (!strncasecmp("AILTBL",(char *)clients[i].buffer,6)) {
+	write(clients[i].socket,AIATBL_resp,14);	
+      }else {
 	// Complain about unknown commands
 	fprintf(stderr,"Responding with Barrett E0 string\n");
 	write(clients[i].socket,barrett_e0_string,6);
