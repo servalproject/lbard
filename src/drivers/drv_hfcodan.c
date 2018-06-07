@@ -37,6 +37,9 @@ unsigned char barrett_e0_string[6]={0x13,'E','0',13,10,0x11};
 // when sending a valid Codan command.
 int hfcodanbarrett_radio_detect(int fd)
 {
+  // We require a serial port
+  if (fd==-1) return -1;
+  
   unsigned char buf[8192];
   unsigned clr[3]={21,13,10};
   int verhi,verlo;

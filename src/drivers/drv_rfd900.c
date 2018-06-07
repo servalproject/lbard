@@ -308,9 +308,12 @@ int rfd900_radio_detect(int fd)
      XXX - Allow txfreq and txpower options to override the stored defaults for now.
   */
 
-  serial_setup_port_with_speed(fd,230400);
-
+  // We require a serial port
+  if (fd==-1) return -1;
+  
   fprintf(stderr,"WARNING: Assuming RFD900 radio without probing.\n");
+
+  serial_setup_port_with_speed(fd,230400);
 
   radio_set_type(RADIOTYPE_RFD900);
   
