@@ -47,63 +47,71 @@ int outernet_radio_detect(int fd)
     will parse from the serial_port string.    
   */
 
+  int retVal=-1;
+  
   char hostname[1024]="";
   int port=-1;
 
   struct in_addr hostaddr={0};
+
+  LOG_ENTRY;
   
-  if (sscanf(serial_port,"outernet://%[^/]:%d",hostname,&port)==2) {
-    fprintf(stderr,"Parsed Outernet URI. Host='%s', port='%d'\n",hostname,port);
-    LOG_NOTE("Parsed Outernet URI. Host='%s', port='%d'\n",hostname,port);
-
-    if (!inet_aton(hostname,&hostaddr)) {
-      LOG_NOTE("Parsed hostname as IPv4 address");
-    } else {
-    
-      struct hostent *he=gethostbyname(hostname);
+  do {
+  
+    if (sscanf(serial_port,"outernet://%[^/]:%d",hostname,&port)==2) {
+      fprintf(stderr,"Parsed Outernet URI. Host='%s', port='%d'\n",hostname,port);
+      LOG_NOTE("Parsed Outernet URI. Host='%s', port='%d'\n",hostname,port);
       
-      if (!he) {
-	fprintf(stderr,"Failed to resolve hostname '%s' to IP",hostname);
-	LOG_ERROR("Failed to resolve hostname '%s' to IP",hostname);
-	exit(-1);
+      if (!inet_aton(hostname,&hostaddr)) {
+	LOG_NOTE("Parsed hostname as IPv4 address");
+      } else {
+	
+	struct hostent *he=gethostbyname(hostname);
+	
+	if (!he) {
+	  fprintf(stderr,"Failed to resolve hostname '%s' to IP",hostname);
+	  LOG_ERROR("Failed to resolve hostname '%s' to IP",hostname);
+	  break;
+	}
+	struct in_addr **addr_list=(struct in_addr **) he->h_addr_list;
+	
+	if (!addr_list) {
+	  fprintf(stderr,"Could not get IP for hostname '%s' (h_addr_list empty)",hostname);
+	  LOG_ERROR("Could not get IP for hostname '%s' (h_addr_list empty)",hostname);
+	  break;
+	}
+	
+	hostaddr=*addr_list[0];
       }
-      struct in_addr **addr_list=(struct in_addr **) he->h_addr_list;
       
-      if (!addr_list) {
-	fprintf(stderr,"Could not get IP for hostname '%s' (h_addr_list empty)",hostname);
-	LOG_ERROR("Could not get IP for hostname '%s' (h_addr_list empty)",hostname);
-	exit(-1);
-      }
-
-      hostaddr=*addr_list[0];
+      struct sockaddr_in addr_us,addr_them;
+      
+      bzero((char *) &addr_us, sizeof(struct sockaddr_in));
+      bzero((char *) &addr_them, sizeof(struct sockaddr_in));
+      
+      // Set up address for our side of the socket
+      addr_us.sin_family = AF_INET;
+      addr_us.sin_port = htons(port);
+      addr_us.sin_addr.s_addr = htonl(INADDR_ANY);
+      
+      // Setup address for Outernet's server
+      addr_them.sin_family = AF_INET;
+      addr_them.sin_port = htons(port);
+      addr_them.sin_addr.s_addr = hostaddr.s_addr;
+      
+      int s;
+      if ((s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+	{
+	  perror("Failed to create UDP socket");
+	  LOG_ERROR("Failed to create UDP socket");
+	  break;
+	}    
     }
-    
-    struct sockaddr_in addr_us,addr_them;
-
-    bzero((char *) &addr_us, sizeof(struct sockaddr_in));
-    bzero((char *) &addr_them, sizeof(struct sockaddr_in));
-
-    // Set up address for our side of the socket
-    addr_us.sin_family = AF_INET;
-    addr_us.sin_port = htons(port);
-    addr_us.sin_addr.s_addr = htonl(INADDR_ANY);
-
-    // Setup address for Outernet's server
-    addr_them.sin_family = AF_INET;
-    addr_them.sin_port = htons(port);
-    addr_them.sin_addr.s_addr = hostaddr.s_addr;
-    
-    int s;
-    if ((s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
-    {
-      perror("Failed to create UDP socket");
-      LOG_ERROR("Failed to create UDP socket");
-      exit(-1);
-    }
-    
   }
+  while(0);
   
-  return -1;
+  LOG_EXIT;
+  return retVal;
 }
 
 int outernet_check_if_ready(void)
