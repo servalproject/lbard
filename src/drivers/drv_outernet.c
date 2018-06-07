@@ -1,4 +1,38 @@
+/*
+  The Outernet Uplink driver is a bit different to the other drives.
+  Whereas the others send one bundle at a time, and use the normal
+  mechanism for doing so, we must cope with the fact that we have 
+  a uni-directional communications link.  This means that we need to
+  periodically assess the highest priority bundles we hold, and know
+  which ones we have recently uplinked, and which we have not.
 
+  There is some care required to tune this appropriately.
+  It is important that small new bundles with high priority are transmitted
+  as soon as possible, so that early warning of disaster messages can
+  be received in a timely manner.
+  Also, because the satellite link may end up with lost packets, we need
+  to both interleave and apply some level of redundancy.  We will use 3+1
+  RAID5-style parity, together with a 1:5 interleave, i.e., we will uplink
+  five bundles simultaneously, with one packet from each being sent, and for
+  every 3 packets, we will provide one parity packet.  This means that at
+  least six consecutive packets must be lost before there will be a problem
+  with reception.  However, it is of course possible that problems will still
+  occur, and so we must retransmit high priority bundles repeatedly.  For now,
+  this will be managed by having the Rhizome database for the uplink side having
+  to exercise restraint at the number of bundles that it is pushing.  To also
+  help minimise latency, the five simultaneous upload lanes will be allocated
+  to different bundle sizes, similar to how Rhizome over Wi-Fi works, so that
+  a large bundle can continue to be uplinked without preventing the immediate
+  uplink of new small bundles.  
+
+  Thus, for each of the five uplink lanes, we should produce a list of the bundles
+  in it, and uplink them endlessly in a loop.  When a new bundle is detected (or
+  a new version of an old bundle), it should most likely be immediately uplinked.
+
+  The remaining question is whether we should use the priority score of the bundles
+  within a lane to affect the frequency of uplink of each, i.e., so that high
+  priority bundles can be uplinked repeatedly over a relatively short period of time.
+*/
 /*
 The following specially formatted comments tell the LBARD build environment about this radio.
 See radio_type for the meaning of each field.
@@ -35,6 +69,64 @@ extern char *serial_port;
 
 // Address of IP link
 struct sockaddr_in addr_uplink;
+
+// TX queues for each lane.
+struct outernet_lane_tx_queue {
+  int bundle_numbers[MAX_BUNDLES];
+  int queue_len;
+
+  // Size of bundles this lane handles
+  int min_size;
+  int max_size;
+
+  // Flattened form of bundle we are currently uplinking.
+  int serialised_bundle_number;
+  unsigned char *serialised_bundle;
+  int serialised_len;
+  int serialised_offset;
+};
+
+#define UPLINK_LANES 5
+struct outernet_lane_tx_queue *lane_queues[UPLINK_LANES]={NULL};
+
+int outernet_lane_queue_setup(void)
+{
+  LOG_ENTRY;
+
+  int retVal=0;
+  
+  do {
+    // Allocate queues
+    for(int i=0;i<UPLINK_LANES;i++) {
+      if (!lane_queues[i]) {
+	lane_queues[i]=calloc(sizeof(struct outernet_lane_tx_queue),1);
+	if (!lane_queues[i]) {
+	  LOG_ERROR("calloc() of lane_queue[%d] failed. Out of memory?",i);
+	  retVal=-1;
+	}
+	else {
+	  /* Set size thresholds for each lane.
+	     We will use the following cut points:
+	     Lane 0 - < 1KiB
+	     Lane 1 - < 4KiB
+	     Lane 2 - < 16KiB
+	     Lane 3 - < 64KiB
+	     Lane 4 - All others.
+	     (i.e., 1KiB << (lane * 2))
+	  */
+	  if (i) lane_queues[i]->min_size=1+ (1<<(10+i+i));
+	  else lane_queues[i]->min_size=0;
+	  lane_queues[i]->max_size=(1<<(10+(i+1)+(i+1)))-1;
+	  // Not currently uplinking anything
+	  lane_queues[i]->serialised_bundle_number=-1;
+	}
+      }
+    }
+
+  } while(0);
+  return retVal;
+  LOG_EXIT;
+}
 
 int outernet_radio_detect(int fd)
 {
