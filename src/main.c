@@ -217,6 +217,8 @@ void crash_handler(int signal)
 
 unsigned int option_flags=0;
 
+char *serial_port = "/dev/null";
+
 int main(int argc, char **argv)
 {
   int exitVal = 0;
@@ -335,8 +337,6 @@ int main(int argc, char **argv)
       exitVal = energy_experiment_calibrate(port, broadcast_address, exp_string);
       break;
     }
-
-    char *serial_port = "/dev/null";
 
     if 
     (
