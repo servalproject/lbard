@@ -471,26 +471,39 @@ int main(int argc, char **argv)
       servald_server = argv[1];
       LOG_NOTE("servald_server = %s", servald_server);
     }
-    
+
+    /*
+      The serial port is normally exactly that. However,
+      for internet-mediated transports, the serial port is
+      also allowed to be a network address.  Basically if
+      the serial port name contains a :, i.e., looks like a
+      URI, then we don't try to open the port.
+    */
     int serialfd = -1;
-    serialfd = open(serial_port,O_RDWR);
-    if (serialfd < 0) {
-      LOG_ERROR("cannot open serial port: %d", serialfd);
-      perror("Opening serial port in main");
-      exitVal = -1;
-      break;
-    }
+    if (strstr(serial_port,":")) {
+      // Has a :, so assume it is a URI kind of thing
+      fprintf(stderr,"Serial port looks like a URI, not (yet) opening/connecting\n");
+      LOG_NOTE("Serial port looks like a URI, not (yet) opening/connecting\n");
+    } else {
+      serialfd = open(serial_port,O_RDWR);
+      if (serialfd < 0) {
+	LOG_ERROR("cannot open serial port: %d", serialfd);
+	perror("Opening serial port in main");
+	exitVal = -1;
+	break;
+      }
 
-    if (serial_setup_port(serialfd))
-    {
-      LOG_ERROR("cannot set up serial port");
-      fprintf(stderr,"Failed to setup serial port. Exiting.\n");
-      exitVal = -1;
-      break;
+      if (serial_setup_port(serialfd))
+	{
+	  LOG_ERROR("cannot set up serial port");
+	  fprintf(stderr,"Failed to setup serial port. Exiting.\n");
+	  exitVal = -1;
+	  break;
+	}
+      
+      fprintf(stderr,"Serial port open as fd %d\n",serialfd);
+      LOG_NOTE("Serial port open as fd %d",serialfd);
     }
-
-    fprintf(stderr,"Serial port open as fd %d\n",serialfd);
-    LOG_NOTE("Serial port open as fd %d",serialfd);
         
     int n = 6;
     while (n < argc) 
