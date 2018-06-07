@@ -116,6 +116,12 @@ fakecsmaradio:	\
 	Makefile $(FAKERADIOSRCS) $(INCLUDEDIR)/fakecsmaradio.h
 	$(CC) $(CFLAGS) -o fakecsmaradio $(FAKERADIOSRCS)
 
+FAKEOUTERNETSRCS=	$(SRCDIR)/fakeradio/fakeouternet.c \
+			$(SRCDIR)/code_instrumentation.c
+fakeouternet:	\
+	Makefile $(FAKEOUTERNETSRCS) $(INCLUDEDIR)/code_instrumentation.h
+	$(CC) $(CFLAGS) -o fakeouternet $(FAKEOUTERNETSRCS)
+
 $(BINDIR)/manifesttest:	Makefile $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c $(SRCDIR)/code_instrumentation.c
 	$(CC) $(CFLAGS) -DTEST -o $(BINDIR)/manifesttest $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c $(SRCDIR)/code_instrumentation.c
 
