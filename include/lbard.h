@@ -316,6 +316,9 @@ extern int peer_count;
 extern struct bundle_record bundles[MAX_BUNDLES];
 extern int bundle_count;
 
+extern int fresh_bundles[MAX_BUNDLES];
+extern int fresh_bundle_count;
+
 extern char *bid_of_cached_bundle;
 extern long long cached_version;
 // extern int cached_manifest_len;

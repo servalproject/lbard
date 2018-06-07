@@ -87,6 +87,16 @@ int register_sender(char *sender,char *feedname)
   return 0;
 }
 
+int fresh_bundles[MAX_BUNDLES];
+int fresh_bundle_count=0;
+int note_new_or_updated_bundle(int bundle_number)
+{
+  if (fresh_bundle_count<MAX_BUNDLES) {
+    fresh_bundles[fresh_bundle_count++]=bundle_number;
+    return 0;
+  }
+  return 1;
+}
 
 struct bundle_record bundles[MAX_BUNDLES];
 int bundle_count=0;
@@ -280,10 +290,12 @@ int register_bundle(char *service,
   rhizome_log(service,bid,version,author,originated_here,length,filehash,sender,recipient,
 	      "Bundle registered");
 
+  // Add it to the list of bundles that have been added/updated,
+  // for link types that need it (currently only Outernet uplink)
+  note_new_or_updated_bundle(bundle_number); 
+  
   // Now work out if the bundle is our over-the-air update bundle.
   // If so, then download the bundle to disk, and mark it for update
-  
-
   
   return 0;
 }
