@@ -1,0 +1,4 @@
+export SERVALINSTANCE_PATH=/tmp/serval$1
+shift
+../serval-dna/servald $*
+
