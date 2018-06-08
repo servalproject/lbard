@@ -415,7 +415,7 @@ setup_OuternetUplink() {
 }
 test_OuternetUplink() {
    # Test that all radios are detected
-   wait_until --timeout=10 grep "Radio is a outernet (Outernet.is broadcast satellite)" A_LBARDERR
+   wait_until --timeout=20 grep "Radio is a outernet (Outernet.is broadcast satellite)" A_LBARDERR
 
    all_bundles_received() {
       bundle_received_by $BID:$VERSION +B &&

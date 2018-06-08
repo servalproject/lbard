@@ -64,6 +64,15 @@ RADIO TYPE: OUTERNET,"outernet","Outernet.is broadcast satellite",outernet_radio
 #include "radios.h"
 #include "code_instrumentation.h"
 
+long long last_uplink_packet_time=0;
+int last_uplink_lane=-1;
+
+#define MAX_MTU 255
+unsigned char outernet_packet[MAX_MTU];
+int outernet_packet_len=0;
+int outernet_mtu=200;
+int outernet_sequence_number=0;
+
 // Import serial_port string from main.c
 extern char *serial_port;
 
@@ -91,9 +100,8 @@ struct outernet_lane_tx_queue *lane_queues[UPLINK_LANES]={NULL};
 
 int outernet_lane_queue_setup(void)
 {
-  LOG_ENTRY;
-
   int retVal=0;
+  LOG_ENTRY;
   
   do {
     // Allocate queues
@@ -129,8 +137,8 @@ int outernet_lane_queue_setup(void)
     }
 
   } while(0);
-  return retVal;
   LOG_EXIT;
+  return retVal;
 }
 
 int outernet_uplink_next_in_queue(int lane)
@@ -147,8 +155,8 @@ int outernet_uplink_next_in_queue(int lane)
      queue for the lane.
   */
 
-  LOG_ENTRY;
   int retVal=0;
+  LOG_ENTRY;
   
   do {
     int bundle=-1;
@@ -188,7 +196,7 @@ int outernet_uplink_next_in_queue(int lane)
        2 bytes = length of encoded manifest,
        followed by manifest and body.
     */       
-    int serialised_len=2+cached_manifest_encoded_len+cached_body_len;
+    int serialised_len=2+cached_manifest_encoded_len+cached_body_len+MAX_MTU*4;
     unsigned char *serialised_data=malloc(serialised_len);
     if (!serialised_data) {
       LOG_ERROR("Could not allocate buffer for serialised data for bundle #%d (manifest len=%d, body len=%d)",
@@ -202,6 +210,10 @@ int outernet_uplink_next_in_queue(int lane)
     serialised_data[1]=(cached_manifest_encoded_len>>0)&0xff;
     bcopy(cached_manifest_encoded,&serialised_data[2],cached_manifest_encoded_len);
     bcopy(cached_body,&serialised_data[2+cached_manifest_encoded_len],cached_body_len);
+    // Put a safe empty region at the end, so the last parity block can be correctly
+    // calculated, regardless of the length of the serialised bundle modulo parity block
+    // size.
+    bzero(&serialised_data[2+cached_manifest_encoded_len+cached_body_len],MAX_MTU*4);
 
     // Store in lane
     lane_queues[lane]->serialised_bundle=serialised_data;
@@ -212,8 +224,8 @@ int outernet_uplink_next_in_queue(int lane)
 	     bundle,lane);
     
   } while(0);
-  return retVal;
   LOG_EXIT;
+  return retVal;
 }
 
 
@@ -267,8 +279,8 @@ int outernet_upline_queue_triage(void)
      we don't have to be quite so careful about run time and memory use here.
   */
 
-  LOG_ENTRY;
   int retVal=0;
+  LOG_ENTRY;
 
   // Go through newly arrived/updated bundles
   if (fresh_bundle_count) 
@@ -321,8 +333,8 @@ int outernet_upline_queue_triage(void)
 
   fresh_bundle_count=0;
 
-  return retVal;
   LOG_EXIT;
+  return retVal;
 }
 
 int outernet_radio_detect(int fd)
@@ -438,16 +450,6 @@ int outernet_check_if_ready(void)
   return -1;
 }
 
-long long last_uplink_packet_time=0;
-int last_uplink_lane=-1;
-
-#define MAX_MTU 255
-unsigned char outernet_packet[MAX_MTU];
-int outernet_packet_len=0;
-int outernet_mtu=200;
-int outernet_sequence_number=0;
-
-
 /*
   For simplicity, we don't want to have separate parity packets.
   Rather, we want a constant amount of data in each packet, and 
@@ -483,8 +485,8 @@ int outernet_sequence_number=0;
  
 int outernet_uplink_build_packet(int lane)
 {
-  LOG_ENTRY;
   int retVal=0;
+  LOG_ENTRY;
 
   do {
     if (lane<0||lane>4) { retVal=-1; break;}
@@ -504,23 +506,81 @@ int outernet_uplink_build_packet(int lane)
 
     // Work out where parity zone lies, i.e., which 3 packets
     // worth of data.
-    int parity_zone_size=data_bytes*3;
+    int parity_zone_size=data_bytes*4;
     int parity_zone_start=lane_queues[lane]->serialised_offset
       -(lane_queues[lane]->serialised_offset%parity_zone_size);
     // Within that, work out where the parity stripe lies, i.e.,
     // which third of a packet offset.
-    int parity_stripe_offset=
+    int parity_stripe_number=
       (lane_queues[lane]->serialised_offset-parity_zone_start)
       /data_bytes;
-    LOG_NOTE("serialised_offset=%d, parity_zone_start=%d, parity_stripe_offset=%d",
+    LOG_NOTE("serialised_offset=%d, parity_zone_start=%d, parity_stripe_number=%d, data_bytes=%d, parity_bytes=%d",
 	     lane_queues[lane]->serialised_offset,
-	     parity_zone_start,parity_stripe_offset);
+	     parity_zone_start,parity_stripe_number,
+	     data_bytes,parity_bytes);
+
+    /* Generate the parity stripe for this zone.
+       For each block of data, we XOR together 1/3 of each of the other 
+       three data blocks in the parity zone to produce the parity stripe.
+       
+    */
+    unsigned char *dataStart=&lane_queues[lane]->serialised_bundle[parity_zone_start];
+    unsigned char parity_stripe[MAX_MTU];
+    unsigned char *srcA,*srcB,*srcC;
+    switch (parity_stripe_number) {
+    case 0:
+      srcA=&dataStart[data_bytes*1+parity_bytes*0];
+      srcB=&dataStart[data_bytes*2+parity_bytes*0];
+      srcC=&dataStart[data_bytes*3+parity_bytes*0];
+      break;
+    case 1:
+      srcA=&dataStart[data_bytes*0+parity_bytes*0];
+      srcB=&dataStart[data_bytes*2+parity_bytes*1];
+      srcC=&dataStart[data_bytes*3+parity_bytes*1];
+      break;
+    case 2:
+      srcA=&dataStart[data_bytes*0+parity_bytes*1];
+      srcB=&dataStart[data_bytes*1+parity_bytes*1];
+      srcC=&dataStart[data_bytes*3+parity_bytes*2];
+      break;
+    case 3:
+      srcA=&dataStart[data_bytes*0+parity_bytes*2];
+      srcB=&dataStart[data_bytes*1+parity_bytes*2];
+      srcC=&dataStart[data_bytes*2+parity_bytes*2];
+      break;
+    }
+    for(int i=0;i<parity_bytes;i++) parity_stripe[i]=srcA[i]^srcB[i]^srcC[i];
+
+    // Glue everything together:
+
+    bcopy(&lane_queues[lane]->serialised_bundle[lane_queues[lane]->serialised_offset],&outernet_packet[2+1],data_bytes);
+    bcopy(parity_stripe,&outernet_packet[2+1+data_bytes],parity_bytes);
     
+    // Sequence number
+    int seq=outernet_sequence_number&0x3fff;
+    // Start of bundle marker
+    if (!lane_queues[lane]->serialised_offset) seq|=0x4000;
+
+    lane_queues[lane]->serialised_offset+=data_bytes;
+    outernet_sequence_number++;
+    if (lane_queues[lane]->serialised_offset>=lane_queues[lane]->serialised_len) {
+      // Last packet in bundle
+      seq|=0x8000;
+      // So get ready for next one
+      outernet_uplink_lane_dequeue_current(lane);
+    }
+
+    outernet_packet[0]=(seq>>0)&0xff;
+    outernet_packet[1]=(seq>>8)&0xff;
+    outernet_packet[2]=outernet_mtu;
+
+    outernet_packet_len=2+1+data_bytes+parity_bytes;
+    dump_bytes(stderr,"Packet for uplink",outernet_packet,outernet_packet_len);
     
   } while(0);
   
-  return retVal;
   LOG_EXIT;
+  return retVal;
 }
 				 
 
@@ -557,29 +617,34 @@ int outernet_serviceloop(int serialfd)
       if (last_uplink_lane<0||last_uplink_lane>4) last_uplink_lane=0;
       if (lane_queues[last_uplink_lane]) {
 	// Make sure we have something to uplink
-	if (lane_queues[last_uplink_lane]->serialised_bundle_number==-1)
+	if (lane_queues[last_uplink_lane]->serialised_bundle_number==-1) {
+	  LOG_NOTE("Nothing queued in lane #%d, so trying to queue something",last_uplink_lane);
 	  outernet_uplink_next_in_queue(last_uplink_lane);
+	}
 	// If still nothing to uplink, then do nothing, i.e.,
 	// resend last packet.  Else, replace packet content.
-	if (lane_queues[last_uplink_lane]->serialised_bundle_number==-1)
+	if (lane_queues[last_uplink_lane]->serialised_bundle_number!=-1) {
+	  LOG_NOTE("Something in the queue for lane #%d",last_uplink_lane);
 	  outernet_uplink_build_packet(last_uplink_lane);
+	}
       }
     }
   } while(0);
   
-  return 0;
   LOG_EXIT;
+  return 0;
 }
 
 int outernet_receive_bytes(unsigned char *bytes,int count)
 { 
-
+  // This driver uses a UDP outbound only arrangement, so nothing to do here.
   return 0;
 }
 
 int outernet_send_packet(int serialfd,unsigned char *out, int len)
 {
-  
+  // Packets in this driver are sent from the service loop, because it doesn't
+  // use the normal LBARD bi-directional protocol.
   return 0;
 }
 
