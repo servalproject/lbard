@@ -271,39 +271,44 @@ int outernet_upline_queue_triage(void)
   int retVal=0;
 
   // Go through newly arrived/updated bundles
-  LOG_NOTE("Examining %d fresh bundles.",fresh_bundle_count);
+  if (fresh_bundle_count) 
+    LOG_NOTE("Examining %d fresh bundles.",fresh_bundle_count);
   for(int i=0;i<fresh_bundle_count;i++) {
     int b=fresh_bundles[i];
     int lane;
+    LOG_NOTE("Triaging fresh bundle: bundle #%d",b);
+    LOG_NOTE("bundles[b].length=%lld",bundles[b].length);
     for(lane=0;lane<5;lane++) {
-      if ((bundles[b].length>=lane_queues[lane]->min_size)
-	  &&(bundles[b].length<=lane_queues[lane]->max_size)) {
-	LOG_NOTE("Newly received bundle #%d of length %d goes in lane #%d\n",
-		 b,bundles[b].length,lane);
-	if (lane_queues[lane]->queue_len>=MAX_BUNDLES) {
-	  LOG_ERROR("Uplink lane #%d is full. This should not be possible.",lane);
-	  break;
-	}
-	int bb;
-	// Check if already queued
-	for(bb=0;bb<lane_queues[lane]->queue_len;bb++)
-	  if (b==lane_queues[lane]->bundle_numbers[bb]) {
-	    LOG_NOTE("Bundle #%d remains in lane #%d after update.",
-		     b,lane);
+      if (lane_queues[lane]) {
+	if ((bundles[b].length>=lane_queues[lane]->min_size)
+	    &&(bundles[b].length<=lane_queues[lane]->max_size)) {
+	  LOG_NOTE("Newly received bundle #%d of length %d goes in lane #%d\n",
+		   b,bundles[b].length,lane);
+	  if (lane_queues[lane]->queue_len>=MAX_BUNDLES) {
+	    LOG_ERROR("Uplink lane #%d is full. This should not be possible.",lane);
 	    break;
 	  }
-	if (bb==lane_queues[lane]->queue_len) {
+	  int bb;
+	  // Check if already queued
+	  for(bb=0;bb<lane_queues[lane]->queue_len;bb++)
+	    if (b==lane_queues[lane]->bundle_numbers[bb]) {
+	      LOG_NOTE("Bundle #%d remains in lane #%d after update.",
+		       b,lane);
+	      break;
+	    }
+	  if (bb==lane_queues[lane]->queue_len) {
 	    LOG_NOTE("Bundle #%d added to uplink lane #%d.",
 		     b,lane);
 	    lane_queues[lane]->bundle_numbers[lane_queues[lane]->queue_len++]=b;
-	} else {
-	  // This bundle wasn't previously in this lane, so check
-	  // the other lanes, in case it has changed size and needs
-	  // to move from one lane to another
-	  for(int l=0;l<5;l++)
-	    if (l!=lane) outernet_uplink_lane_dequeue_bundle(l,b);
+	  } else {
+	    // This bundle wasn't previously in this lane, so check
+	    // the other lanes, in case it has changed size and needs
+	    // to move from one lane to another
+	    for(int l=0;l<5;l++)
+	      if (l!=lane) outernet_uplink_lane_dequeue_bundle(l,b);
+	  }
+	  break;
 	}
-	break;
       }
     }
     if (lane==5) {
@@ -416,6 +421,7 @@ int outernet_radio_detect(int fd)
       // Successfully connected
       LOG_NOTE("Detected radio as Outernet");
       radio_set_type(RADIOTYPE_OUTERNET);
+      outernet_lane_queue_setup();
       retVal=1; // successfully autodetected, stop auto-detect process
     } else {
       LOG_NOTE("URI is not for outernet uplink: '%s'",serial_port);
