@@ -196,8 +196,9 @@ int outernet_uplink_next_in_queue(int lane)
        2 bytes = length of encoded manifest,
        followed by manifest and body.
     */       
-    int serialised_len=2+cached_manifest_encoded_len+cached_body_len+MAX_MTU*4;
-    unsigned char *serialised_data=malloc(serialised_len);
+    int serialised_len=2+cached_manifest_encoded_len+cached_body_len;
+    // (but allow extra space for a complete parity zone, so that packet building is simpler)
+    unsigned char *serialised_data=malloc(serialised_len+MAX_MTU*4);
     if (!serialised_data) {
       LOG_ERROR("Could not allocate buffer for serialised data for bundle #%d (manifest len=%d, body len=%d)",
 		bundle,cached_manifest_encoded_len,cached_body_len);
@@ -217,9 +218,10 @@ int outernet_uplink_next_in_queue(int lane)
 
     // Store in lane
     lane_queues[lane]->serialised_bundle=serialised_data;
-    lane_queues[lane]->serialised_len=serialised_len;
     lane_queues[lane]->serialised_offset=0;
     lane_queues[lane]->serialised_bundle_number=bundle;
+    lane_queues[lane]->serialised_len=serialised_len;
+
     LOG_NOTE("Bundle #%d serialised and ready for uplink in lane #%d",
 	     bundle,lane);
     
@@ -514,10 +516,11 @@ int outernet_uplink_build_packet(int lane)
     int parity_stripe_number=
       (lane_queues[lane]->serialised_offset-parity_zone_start)
       /data_bytes;
-    LOG_NOTE("serialised_offset=%d, parity_zone_start=%d, parity_stripe_number=%d, data_bytes=%d, parity_bytes=%d",
+    LOG_NOTE("serialised_offset=%d, parity_zone_start=%d, parity_stripe_number=%d, data_bytes=%d, parity_bytes=%d, serialised_len=%d",
 	     lane_queues[lane]->serialised_offset,
 	     parity_zone_start,parity_stripe_number,
-	     data_bytes,parity_bytes);
+	     data_bytes,parity_bytes,
+	     lane_queues[lane]->serialised_len	     );
 
     /* Generate the parity stripe for this zone.
        For each block of data, we XOR together 1/3 of each of the other 
@@ -563,7 +566,10 @@ int outernet_uplink_build_packet(int lane)
 
     lane_queues[lane]->serialised_offset+=data_bytes;
     outernet_sequence_number++;
-    if (lane_queues[lane]->serialised_offset>=lane_queues[lane]->serialised_len) {
+    // Send to end of serialised bundle + rounded out to end of parity zone, to make sure end of
+    // bundle is protected as well as the rest of it is.
+    if ((lane_queues[lane]->serialised_offset>=lane_queues[lane]->serialised_len)
+        &&(parity_stripe_number==3)) {
       // Last packet in bundle
       seq|=0x8000;
       // So get ready for next one
