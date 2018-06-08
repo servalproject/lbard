@@ -432,11 +432,134 @@ int outernet_check_if_ready(void)
   return -1;
 }
 
+long long last_uplink_packet_time=0;
+int last_uplink_lane=-1;
+
+#define MAX_MTU 255
+unsigned char outernet_packet[MAX_MTU];
+int outernet_packet_len=0;
+int outernet_mtu=200;
+int outernet_sequence_number=0;
+
+
+/*
+  For simplicity, we don't want to have separate parity packets.
+  Rather, we want a constant amount of data in each packet, and 
+  a constant amount of parity.  That way, we can use a simple 
+  offset pointer, and it will get us the right piece of data, and
+  calculate the right piece of parity. This relies on the MTU not
+  changing during the uplink of a bundle, as it will mess up all
+  the calculations.
+  
+  The packets need to include the sequence number and lane number,
+  and also a unique identifier for the bundle. Ideally that
+  identifier should be the same for if the same bundle is sent
+  again, so that we can recover from high levels of packet loss
+  through repetition of the whole bundle.  The trade-off is that
+  we then need to spend more bytes on the identifier, which we 
+  have to be careful of, because our MTU is likely to be only
+  around 200 bytes.  The more bandwidth efficient approach, but
+  at the expense of being able to use re-transmissions of the whole
+  bundle, is to simply mark packets as start and/or end packets,
+  similar to how we do in normal LBARD radio packets.  These two
+  bits can be merged in with the sequence number.
+
+  So, we then need in each packet:
+
+  1 byte = data unit size, i.e., the fixed number of data bytes
+  per packet. Used to calculate parity regions.
+  2 bytes = sequence number (16K values = ~6 hour turn over), plus
+  start/end of bundle markers.
+  n bytes = data.
+  n/3 bytes = parity stripe.
+
+*/
+ 
+int outernet_uplink_build_packet(int lane)
+{
+  LOG_ENTRY;
+  int retVal=0;
+
+  do {
+    if (lane<0||lane>4) { retVal=-1; break;}
+    if (!lane_queues[lane]) { retVal=-1; break;}
+    if (lane_queues[lane]->serialised_bundle_number==-1)
+       { retVal=-1; break;}
+  
+    // 3/4 of the usable bytes are available for data
+    int data_bytes=(outernet_mtu-3)*3/4;
+    int parity_bytes=data_bytes/3;
+    if (parity_bytes*3!=data_bytes) {
+      LOG_ERROR("Parity stripe size problem. MTU=%d, data_bytes=%d, parity_bytes=%d",
+		outernet_mtu,data_bytes,parity_bytes);
+      retVal=-1;
+      break;
+    }
+
+    // Work out where parity zone lies, i.e., which 3 packets
+    // worth of data.
+    int parity_zone_size=data_bytes*3;
+    int parity_zone_start=lane_queues[lane]->serialised_offset
+      -(lane_queues[lane]->serialised_offset%parity_zone_size);
+    // Within that, work out where the parity stripe lies, i.e.,
+    // which third of a packet offset.
+    int parity_stripe_offset=
+      (lane_queues[lane]->serialised_offset-parity_zone_start)
+      /data_bytes;
+    LOG_NOTE("serialised_offset=%d, parity_zone_start=%d, parity_stripe_offset=%d",
+	     lane_queues[lane]->serialised_offset,
+	     parity_zone_start,parity_stripe_offset);
+    
+    
+  } while(0);
+  
+  return retVal;
+  LOG_EXIT;
+}
+				 
+
 int outernet_serviceloop(int serialfd)
 {
   LOG_ENTRY;
-  
-  outernet_upline_queue_triage();
+
+  do {
+    // Check if the uplink queues need updating due to the arrival
+    // of new or updated bundles.
+    // XXX - We don't currently have a means of deleting bundles
+    // from lane queues that we no longer have.
+    outernet_upline_queue_triage();
+    
+    if ((gettime_ms()-last_uplink_packet_time)<0) {
+      // Time went backwards.
+      last_uplink_packet_time=gettime_ms();
+    }
+    if ((gettime_ms()-last_uplink_packet_time)>1000) {
+      // 1000 ms have passed, so send next uplink packet.
+      // Note that if some lanes don't have anything to send,
+      // we don't just send the next thing for another lane,
+      // because the interlacing of lanes is to separate successive
+      // packets in time for a single lane sufficiently to provide
+      // some tolerance against fade.
+      // Thus if we have nothing to send for the current lane, we
+      // send whatever it was we sent last time.  Thus we gain some
+      // further redundancy.  This could of course be greatly
+      // improved, for example by remembering the last n packets
+      // for each lane, and sending older ones, so that we have a
+      // longer effective window.  But for now, the goal is to prove
+      // the concept, and get something that works reasonably.
+      last_uplink_lane++;
+      if (last_uplink_lane<0||last_uplink_lane>4) last_uplink_lane=0;
+      if (lane_queues[last_uplink_lane]) {
+	// Make sure we have something to uplink
+	if (lane_queues[last_uplink_lane]->serialised_bundle_number==-1)
+	  outernet_uplink_next_in_queue(last_uplink_lane);
+	// If still nothing to uplink, then do nothing, i.e.,
+	// resend last packet.  Else, replace packet content.
+	if (lane_queues[last_uplink_lane]->serialised_bundle_number==-1)
+	  outernet_uplink_build_packet(last_uplink_lane);
+      }
+    }
+  } while(0);
   
   return 0;
   LOG_EXIT;
