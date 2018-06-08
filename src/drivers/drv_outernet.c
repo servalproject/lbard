@@ -116,14 +116,206 @@ int outernet_lane_queue_setup(void)
 	  */
 	  if (i) lane_queues[i]->min_size=1+ (1<<(10+i+i));
 	  else lane_queues[i]->min_size=0;
-	  lane_queues[i]->max_size=(1<<(10+(i+1)+(i+1)))-1;
+	  if (i<4) 
+	    lane_queues[i]->max_size=(1<<(10+(i+1)+(i+1)))-1;
+	  else
+	    lane_queues[i]->max_size=0x7fffffff;	    
 	  // Not currently uplinking anything
 	  lane_queues[i]->serialised_bundle_number=-1;
+
+	  LOG_NOTE("Outernet uplink lane #%d successfully initialised.",i);
 	}
       }
     }
 
   } while(0);
+  return retVal;
+  LOG_EXIT;
+}
+
+int outernet_uplink_next_in_queue(int lane)
+{
+  /* Pick the first item in the queue, serialise it, and mark
+     it ready for uplinking.
+
+     We then put that item to the end of the queue, so that we 
+     round-robin through all the items in the lane's queue.
+
+     XXX -- We should have a prioritisation scheme, once we have
+     a means of setting the priority of the bundles. For now this
+     has to be managed by not having too many bundles in the
+     queue for the lane.
+  */
+
+  LOG_ENTRY;
+  int retVal=0;
+  
+  do {
+    int bundle=-1;
+    
+    // Work out next bundle
+    if (lane<0||lane>4) { retVal=-1; break; } // lane exists?
+    if (!lane_queues[lane]->queue_len) break; // lane has a queue?
+
+    if (lane_queues[lane]->serialised_bundle_number!=-1) {
+      LOG_ERROR("Must dequeue bundle being transmitted before calling outernet_upline_next_in_queue() for lane #%d",lane);
+      retVal=-1;
+      break;
+    }
+    
+    // Get bundle # of head of queue
+    bundle=lane_queues[lane]->bundle_numbers[0];
+    // Move head of queue to tail of queue
+    int n;
+    for(n=0;n<lane_queues[lane]->queue_len-1;n++)
+      lane_queues[lane]->bundle_numbers[n]
+	=lane_queues[lane]->bundle_numbers[n+1];
+    lane_queues[lane]->bundle_numbers[n]=bundle;
+    
+    // Get requested bundle in the bundle cache
+    if (prime_bundle_cache(bundle,
+			   my_sid_hex,servald_server,credential))
+      {
+	LOG_ERROR("Failed to prime bundle cache for bundle #%d",bundle);
+      }
+    if (cached_body_len<0||cached_manifest_encoded_len<0) {
+      retVal=-1;
+      break;
+    }
+    
+    /* Build serialised version.
+       We use a very simple file format:
+       2 bytes = length of encoded manifest,
+       followed by manifest and body.
+    */       
+    int serialised_len=2+cached_manifest_encoded_len+cached_body_len;
+    unsigned char *serialised_data=malloc(serialised_len);
+    if (!serialised_data) {
+      LOG_ERROR("Could not allocate buffer for serialised data for bundle #%d (manifest len=%d, body len=%d)",
+		bundle,cached_manifest_encoded_len,cached_body_len);
+      retVal=-1;
+      break;
+    }
+
+    // Set the fields in the serialised data
+    serialised_data[0]=(cached_manifest_encoded_len>>0)&0xff;
+    serialised_data[1]=(cached_manifest_encoded_len>>0)&0xff;
+    bcopy(cached_manifest_encoded,&serialised_data[2],cached_manifest_encoded_len);
+    bcopy(cached_body,&serialised_data[2+cached_manifest_encoded_len],cached_body_len);
+
+    // Store in lane
+    lane_queues[lane]->serialised_bundle=serialised_data;
+    lane_queues[lane]->serialised_len=serialised_len;
+    lane_queues[lane]->serialised_offset=0;
+    lane_queues[lane]->serialised_bundle_number=bundle;
+    LOG_NOTE("Bundle #%d serialised and ready for uplink in lane #%d",
+	     bundle,lane);
+    
+  } while(0);
+  return retVal;
+  LOG_EXIT;
+}
+
+
+int outernet_uplink_lane_dequeue_current(int lane)
+{
+  LOG_ENTRY;
+
+  lane_queues[lane]->serialised_bundle_number=-1;
+  if (lane_queues[lane]->serialised_bundle)
+    free(lane_queues[lane]->serialised_bundle);
+  lane_queues[lane]->serialised_bundle=NULL;
+  
+  outernet_uplink_next_in_queue(lane);
+  
+  return 0;
+  LOG_EXIT;
+}
+
+int outernet_uplink_lane_dequeue_bundle(int lane,int bundle)
+{
+  LOG_ENTRY;
+  // Remove from active uplink if it was being uplinked.
+  if (lane_queues[lane]->serialised_bundle_number==bundle) {
+    LOG_NOTE("Stopping uplink of bundle #%d in lane #%d",
+	     bundle,lane);
+    outernet_uplink_lane_dequeue_current(lane);
+  }
+
+  // Remove the bundle from the queue, if present.
+  for(int n=0;n<lane_queues[lane]->queue_len;n++)
+    {
+      if (lane_queues[lane]->bundle_numbers[n]==bundle) {
+	LOG_NOTE("Removing bundle #%d from outernet uplink lane #%d",
+		 bundle,lane);
+	for(int m=n;m<(lane_queues[lane]->queue_len-1);m++)
+	  lane_queues[lane]->bundle_numbers[m]=
+	    lane_queues[lane]->bundle_numbers[m+1];
+	lane_queues[lane]->queue_len--;
+	break;
+      }
+    }
+
+  return 0;
+  LOG_EXIT;
+}
+
+int outernet_upline_queue_triage(void)
+{
+  /* Look at new/updated bundles, and update the uplink lane queues.
+     NOTE: As the uplink server will typically run on well resourced hardware,
+     we don't have to be quite so careful about run time and memory use here.
+  */
+
+  LOG_ENTRY;
+  int retVal=0;
+
+  // Go through newly arrived/updated bundles
+  LOG_NOTE("Examining %d fresh bundles.",fresh_bundle_count);
+  for(int i=0;i<fresh_bundle_count;i++) {
+    int b=fresh_bundles[i];
+    int lane;
+    for(lane=0;lane<5;lane++) {
+      if ((bundles[b].length>=lane_queues[lane]->min_size)
+	  &&(bundles[b].length<=lane_queues[lane]->max_size)) {
+	LOG_NOTE("Newly received bundle #%d of length %d goes in lane #%d\n",
+		 b,bundles[b].length,lane);
+	if (lane_queues[lane]->queue_len>=MAX_BUNDLES) {
+	  LOG_ERROR("Uplink lane #%d is full. This should not be possible.",lane);
+	  break;
+	}
+	int bb;
+	// Check if already queued
+	for(bb=0;bb<lane_queues[lane]->queue_len;bb++)
+	  if (b==lane_queues[lane]->bundle_numbers[bb]) {
+	    LOG_NOTE("Bundle #%d remains in lane #%d after update.",
+		     b,lane);
+	    break;
+	  }
+	if (bb==lane_queues[lane]->queue_len) {
+	    LOG_NOTE("Bundle #%d added to uplink lane #%d.",
+		     b,lane);
+	    lane_queues[lane]->bundle_numbers[lane_queues[lane]->queue_len++]=b;
+	} else {
+	  // This bundle wasn't previously in this lane, so check
+	  // the other lanes, in case it has changed size and needs
+	  // to move from one lane to another
+	  for(int l=0;l<5;l++)
+	    if (l!=lane) outernet_uplink_lane_dequeue_bundle(l,b);
+	}
+	break;
+      }
+    }
+    if (lane==5) {
+      LOG_WARN("Newly received bundle #%d of length %d doesn't match any lane, so will not be uplinked\n",
+	       b,bundles[b].length);
+      retVal++;
+      if (retVal<1) retVal=1;
+    }
+  }
+
+  fresh_bundle_count=0;
+
   return retVal;
   LOG_EXIT;
 }
@@ -242,9 +434,12 @@ int outernet_check_if_ready(void)
 
 int outernet_serviceloop(int serialfd)
 {
-
+  LOG_ENTRY;
+  
+  outernet_upline_queue_triage();
   
   return 0;
+  LOG_EXIT;
 }
 
 int outernet_receive_bytes(unsigned char *bytes,int count)
