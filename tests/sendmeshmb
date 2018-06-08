@@ -1,0 +1,1 @@
+./doservald 1 meshmb send `./doservald 1 keyring list | tail -1 | cut -f2 -d:` "hello"
