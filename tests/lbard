@@ -394,7 +394,7 @@ setup_OuternetUplink() {
    get_servald_restful_http_server_port PORTD +D
    # Start the fake radio daemon.
    fork %fakeradio fakecsmaradio rfd900,rfd900,rfd900,rfd900 ttys.txt "$1"
-   fork %fakeouternet fakeouternet 56001 $_tfw_tmp/outernet.sock
+   fork %fakeouternet fakeouternet 61001 $_tfw_tmp/outernet.sock
    wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
    tty1=$(sed -n 1p ttys.txt)
    tty2=$(sed -n 2p ttys.txt)
