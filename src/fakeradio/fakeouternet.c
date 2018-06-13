@@ -2,6 +2,11 @@
   Simulate an Outernet satellite uplink and Outernet receiver, to allow
   automated tests of the Outernet data path.
 
+  The outernet service send acknowledgement UDP packets that match that
+  which was sent.
+
+  The receiver side writes the received packets to a named UNIX socket.
+
 */
 
 #include <unistd.h>
@@ -9,6 +14,7 @@
 #include <fcntl.h>
 #include <sys/uio.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <time.h>
 #include <termios.h>
 #include <stdlib.h>
@@ -23,11 +29,13 @@
 #include "code_instrumentation.h"
 
 int fd=-1;
+int named_socket=-1;
 
 int setup_udp(int port)
 {
   /* Open UDP socket for receiving packets for uplink, and as source
      for UDP packet announcements as we pretend to be the receiver.
+
   */
 
   int retVal=-1;
@@ -73,6 +81,44 @@ int setup_udp(int port)
   return retVal;
 }
 
+int setup_named_socket(char *sock_path)
+{
+  int retVal=0;
+  LOG_ENTRY;
+  do {
+    named_socket = socket( AF_UNIX, SOCK_DGRAM, 0 );
+    
+    if( named_socket < 0 ) {
+      LOG_ERROR("socket() failed: (%i) %m", errno );
+      retVal=-1; break;
+    }
+    
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    if (setsockopt(named_socket, SOL_SOCKET, SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
+      LOG_ERROR("setsockopt failed: (%i) %m", errno );
+      retVal=-1; break;
+    }
+    
+    unlink(sock_path);
+    
+    // Bind to unix socket
+    struct sockaddr_un sun;
+    sun.sun_family = AF_UNIX;
+    snprintf( sun.sun_path, sizeof( sun.sun_path ), "%s", sock_path );
+    
+    if( -1 == bind( named_socket, (struct sockaddr *)&sun, sizeof( struct sockaddr_un ))) {
+      LOG_ERROR("bind failed: (%i) %m", errno );
+      retVal=-1; break;
+    }
+  } while (0);
+    
+  LOG_EXIT;
+  return retVal;  
+}
+
+
 int main(int argc,char **argv)
 {
   char buffer[8192];
@@ -84,8 +130,15 @@ int main(int argc,char **argv)
   
   int retVal=-1;
   do {
+
+    if (argc!=3) {
+      LOG_ERROR("You must provide UDP port and named socket path on command line.");
+      break;
+    }
+    
     // Get UDP port ready
-    if (setup_udp(0x4f55)) break; // OU in HEX for port number
+    if (setup_udp(atoi(argv[1]))) break; // OU in HEX for port number
+    if (setup_named_socket(argv[2])) break; // OU in HEX for port number
 
     while(1) {
       // Check for incoming UDP packets, and bounce them back out again
