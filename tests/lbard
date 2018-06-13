@@ -402,7 +402,7 @@ setup_OuternetUplink() {
    tty4=$(sed -n 4p ttys.txt)
    # Start four lbard daemons, isolated from each other, with one as uplink to Outernet gateway
    set_instance +A
-   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$IDA" outernet://127.0.0.1:20310 pull
+   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$IDA" outernet://127.0.0.1:61001 pull
    # Insert a file to server A, which we will want to see received by the others via Outernet interface
    set_instance +A
    rhizome_add_file file1 50
