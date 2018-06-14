@@ -68,6 +68,12 @@ int hfbarrett_initialise(int serialfd)
     count = read_nonblock(serialfd,buf,8192);  // read reply
     dump_bytes(stderr,setup_string[i],buf,count);
   }    
+
+  // Consider a peer active we have had contact with them in the
+  // past 5 minutes.
+  // XXX - Ideally we should forceably mark inactive an HF peer
+  // as soon as we connect to another.
+  peer_keepalive_interval=5*60;
   
   return 0;
 }
