@@ -142,17 +142,25 @@ int main(int argc,char **argv)
 
     while(1) {
       // Check for incoming UDP packets, and bounce them back out again
-      // on 127.255.255.255
+      // on the named socket
+      // XXX - We should add latency to simulate the space segment.
       struct sockaddr_in sender;
       socklen_t sender_len=sizeof(sender);
       int len=recvfrom(fd,buffer,sizeof(buffer),0,(struct sockaddr *)&sender,&sender_len);
       if (len==-1) break;
       if (len>0) {
 	printf("Received UDP packet of %d bytes\n",len);
-	int result=sendto(fd,buffer,len,0,(struct sockaddr *)&broadcast,sizeof(broadcast));
+	// Echo back to sender
+	int result=sendto(fd,buffer,len,0,(struct sockaddr *)&sender,sender_len);
 	if (result) {
-	  perror("sendto() failed");
+	  perror("sendto(UDP) failed");
 	}
+	// Write to named socket
+	result=sendto(named_socket,buffer,len,0,0,0);
+	if (result) {
+	  perror("sendto(UNIXDOMAIN) failed");
+	}
+	
       } else {
 	usleep(10000);
       }
