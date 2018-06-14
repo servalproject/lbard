@@ -32,19 +32,39 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "lbard.h"
 #include "radios.h"
 #include "hf.h"
+#include "code_instrumentation.h"
 
 int set_nonblock(int fd)
 {
-  int flags;
-  if ((flags = fcntl(fd, F_GETFL, NULL)) == -1)
-    { perror("set_nonblock: fcntl(n,F_GETFL,NULL)"); return -1; }
-  if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
-    { perror("set_nonblock: fcntl(n,F_SETFL,n|O_NONBLOCK)"); return -1; }
-  return 0;
+  int retVal=0;
+
+  LOG_ENTRY;
+
+  do {
+    if (fd==-1) break;
+      
+    int flags;
+    if ((flags = fcntl(fd, F_GETFL, NULL)) == -1)
+      {
+	perror("fcntl");
+	LOG_ERROR("set_nonblock: fcntl(%d,F_GETFL,NULL)",fd);
+	retVal=-1;
+	break;
+      }
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+    {
+      perror("fcntl");
+      LOG_ERROR("set_nonblock: fcntl(%d,F_SETFL,n|O_NONBLOCK)",fd);
+      return -1;
+    }
+  } while (0);
+  LOG_EXIT;
+  return retVal;
 }
 
 int set_block(int fd)
 {
+  if (fd==-1) return 0;
   int flags;
   if ((flags = fcntl(fd, F_GETFL, NULL)) == -1)
     { perror("set_block: fcntl(n,F_GETFL,NULL)"); return -1; }
