@@ -354,7 +354,7 @@ setup_OuternetSetup() {
    get_servald_restful_http_server_port PORTD +D
    # Start the fake radio daemon.
    fork %fakeradio fakecsmaradio hfcodan,hfcodan,hfcodan,hfcodan ttys.txt "$1"
-   fork %fakeouternet fakeouternet
+   fork %fakeouternet fakeouternet 61001 $_tfw_tmp/outernet.sock
    wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
    tty1=$(sed -n 1p ttys.txt)
    tty2=$(sed -n 2p ttys.txt)
@@ -407,11 +407,11 @@ setup_OuternetUplink() {
    set_instance +A
    rhizome_add_file file1 50
    set_instance +B
-   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" /dev/null "outernet=$_tfw_tmp/outernet.sock" pull
+   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" /dev/null "outernetrx=$_tfw_tmp/outernet.sock" pull
    set_instance +C
-   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" /dev/null "outernet=$_tfw_tmp/outernet.sock" pull
+   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" /dev/null "outernetrx=$_tfw_tmp/outernet.sock" pull
    set_instance +D
-   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" /dev/null "outernet=$_tfw_tmp/outernet.sock" pull
+   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" /dev/null "outernetrx=$_tfw_tmp/outernet.sock" pull
 }
 test_OuternetUplink() {
    # Test that all radios are detected

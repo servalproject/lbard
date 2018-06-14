@@ -218,6 +218,7 @@ void crash_handler(int signal)
 unsigned int option_flags=0;
 
 char *serial_port = "/dev/null";
+char *outernet_socketnamename=NULL;
 
 int main(int argc, char **argv)
 {
@@ -683,7 +684,12 @@ int main(int argc, char **argv)
           nostun = 1;
           LOG_NOTE("nostun set to 1");
         }        
-        else if (! strncasecmp("bundlelog=", argv[n], 10)) 
+        else if (! strncasecmp("outernetrx=", argv[n], 11)) 
+        {
+          outernet_socketnamename = strdup(&argv[n][11]);
+	  LOG_NOTE("Outernet socket name is '%s'",outernet_socketnamename);
+	}
+	else if (! strncasecmp("bundlelog=", argv[n], 10)) 
         {
           bundlelog_filename = strdup(&argv[n][10]);
           LOG_NOTE("bundlelog_filename: %s", bundlelog_filename);
