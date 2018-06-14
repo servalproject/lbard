@@ -607,6 +607,22 @@ int outernet_serviceloop(int serialfd)
       // Time went backwards.
       last_uplink_packet_time=gettime_ms();
     }
+
+    // Check for ACK packet from Outernet uplink
+    {
+      unsigned char rx_buf[4096];
+      int rx_bytes=4096;
+      set_nonblock(uplink_fd);
+      rx_bytes = recvfrom(uplink_fd, rx_buf, rx_bytes, 0, NULL, 0);
+      if (rx_bytes>0) LOG_NOTE("Received %d bytes from uplink",rx_bytes);
+      if  ((rx_bytes==outernet_packet_len)
+	   &&(!memcmp(rx_buf,outernet_packet,rx_bytes)))
+	{
+	  LOG_NOTE("My packet was acknowledge. I can now send the next.");
+	  last_uplink_packet_time=0;
+	}
+    }
+    
     if ((gettime_ms()-last_uplink_packet_time)>60000) {
       // 1 minute has passed, or we have received an ack for our last
       // packet, so send next uplink packet.

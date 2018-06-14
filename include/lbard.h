@@ -653,5 +653,6 @@ int stun_serviceloop(void);
 int autodetect_radio_type(int fd);
 int outernet_rx_setup(char *socket_filename);
 int outernet_rx_serviceloop(void);
+int set_nonblock(int fd);
 
 #include "util.h"
