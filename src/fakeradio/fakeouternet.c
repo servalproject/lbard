@@ -31,6 +31,34 @@
 int fd=-1;
 int named_socket=-1;
 
+int set_nonblock(int fd)
+{
+  int retVal=0;
+
+  LOG_ENTRY;
+
+  do {
+    if (fd==-1) break;
+      
+    int flags;
+    if ((flags = fcntl(fd, F_GETFL, NULL)) == -1)
+      {
+	perror("fcntl");
+	LOG_ERROR("set_nonblock: fcntl(%d,F_GETFL,NULL)",fd);
+	retVal=-1;
+	break;
+      }
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+    {
+      perror("fcntl");
+      LOG_ERROR("set_nonblock: fcntl(%d,F_SETFL,n|O_NONBLOCK)",fd);
+      return -1;
+    }
+  } while (0);
+  LOG_EXIT;
+  return retVal;
+}
+
 int setup_udp(int port)
 {
   /* Open UDP socket for receiving packets for uplink, and as source
@@ -51,12 +79,20 @@ int setup_udp(int port)
       hostaddr.sin_port = htons(port);
       hostaddr.sin_addr.s_addr = htonl(INADDR_ANY);
       
-      if ((fd=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+      LOG_NOTE("Checkpoint (fileno(stdin,stdout,stderr)=%d,%d,%d",fileno(stdin),fileno(stdout),fileno(stderr));
+      fd=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+      if (fd==0) {
+	LOG_NOTE("Er, socket() returned fd #0, which seems odd. Trying again.");
+	fd=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	LOG_NOTE("Got fd=%d on second try",fd);
+      }
+      if (fd == -1)
 	{
 	  perror("Failed to create UDP socket");
 	  LOG_ERROR("Failed to create UDP socket");
 	  break;
-	}    
+	}
+      LOG_NOTE("fd=%d",fd);
       
       if( bind(fd, (struct sockaddr*)&hostaddr, sizeof(struct sockaddr_in) ) == -1)
 	{
@@ -71,6 +107,8 @@ int setup_udp(int port)
 	LOG_NOTE("Failed to set SO_BROADCAST");
 	break;
       }
+
+      set_nonblock(fd);
       
       // Successfully connected
       LOG_NOTE("Established UDP socket");
@@ -86,6 +124,7 @@ int setup_named_socket(char *sock_path)
   int retVal=0;
   LOG_ENTRY;
   do {
+    
     named_socket = socket( AF_UNIX, SOCK_DGRAM, 0 );
     
     if( named_socket < 0 ) {
@@ -108,10 +147,14 @@ int setup_named_socket(char *sock_path)
     sun.sun_family = AF_UNIX;
     snprintf( sun.sun_path, sizeof( sun.sun_path ), "%s", sock_path );
     
+    LOG_NOTE("Checkpoint");
     if( -1 == bind( named_socket, (struct sockaddr *)&sun, sizeof( struct sockaddr_un ))) {
       LOG_ERROR("bind failed: (%i) %m", errno );
       retVal=-1; break;
     }
+
+    LOG_NOTE("Setup named socket.");
+    
   } while (0);
     
   LOG_EXIT;
@@ -121,7 +164,7 @@ int setup_named_socket(char *sock_path)
 
 int main(int argc,char **argv)
 {
-  char buffer[8192];
+  unsigned char buffer[8192];
   struct sockaddr_in broadcast;
   bzero(&broadcast,sizeof(broadcast));
   broadcast.sin_family = AF_INET;
@@ -138,16 +181,18 @@ int main(int argc,char **argv)
     
     // Get UDP port ready
     if (setup_udp(atoi(argv[1]))) break; // OU in HEX for port number
+    LOG_NOTE("argv[2]='%s'",argv[2]?argv[2]:"(null)");
     if (setup_named_socket(argv[2])) break; // OU in HEX for port number
 
     while(1) {
       // Check for incoming UDP packets, and bounce them back out again
       // on the named socket
       // XXX - We should add latency to simulate the space segment.
-      struct sockaddr_in sender;
-      socklen_t sender_len=sizeof(sender);
-      int len=recvfrom(fd,buffer,sizeof(buffer),0,(struct sockaddr *)&sender,&sender_len);
-      if (len==-1) break;
+      unsigned char sender_buf[1024];
+      struct sockaddr_in *sender=sender_buf;
+      socklen_t sender_len=sizeof(sender_buf);
+      int len=0;
+      len=recvfrom(fd,&buffer[0],1024,0,(struct sockaddr *)&sender,&sender_len);
       if (len>0) {
 	printf("Received UDP packet of %d bytes\n",len);
 	// Echo back to sender
@@ -163,7 +208,7 @@ int main(int argc,char **argv)
 	
       } else {
 	usleep(10000);
-      }
+      }      
     }
     
   } while(0);
