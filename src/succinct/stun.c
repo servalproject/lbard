@@ -50,6 +50,8 @@ int stun_serviceloop(){
       struct sockaddr_in in_addr;
       in_addr.sin_family = AF_INET;
       in_addr.sin_addr.s_addr = INADDR_ANY;
+      // XXX - We have a problem here for tests, because we hardwire
+      // this port.
       in_addr.sin_port = htons(4043);
 
       fd = socket(in_addr.sin_family, SOCK_DGRAM, 0);
@@ -59,8 +61,9 @@ int stun_serviceloop(){
       }
       int r;
       if ((r = bind(fd, (struct sockaddr *)&in_addr, sizeof in_addr))<0){
-        fprintf(stderr, "\nbind() = %d (%d)\n", fd, errno);
+        // fprintf(stderr, "\nbind() = %d (%d)\n", fd, errno);
         close(fd);
+	fd=-1;
         return 1;
       }
     }
