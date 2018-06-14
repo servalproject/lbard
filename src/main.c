@@ -218,7 +218,6 @@ void crash_handler(int signal)
 unsigned int option_flags=0;
 
 char *serial_port = "/dev/null";
-char *outernet_socketnamename=NULL;
 
 int main(int argc, char **argv)
 {
@@ -482,11 +481,11 @@ int main(int argc, char **argv)
       URI, then we don't try to open the port.
     */
     int serialfd = -1;
-    if (strstr(serial_port,":")) {
+    if (strstr(serial_port,":")&&(strcmp("/dev/null",serial_port))) {
       // Has a :, so assume it is a URI kind of thing
       fprintf(stderr,"Serial port looks like a URI, not (yet) opening/connecting\n");
       LOG_NOTE("Serial port looks like a URI, not (yet) opening/connecting\n");
-
+      
       // So skip serial port fiddling, and go direct to auto detection routines
       autodetect_radio_type(serialfd);
     } else {
@@ -509,7 +508,7 @@ int main(int argc, char **argv)
       fprintf(stderr,"Serial port open as fd %d\n",serialfd);
       LOG_NOTE("Serial port open as fd %d",serialfd);
     }
-        
+      
     int n = 6;
     while (n < argc) 
     {
@@ -686,8 +685,12 @@ int main(int argc, char **argv)
         }        
         else if (! strncasecmp("outernetrx=", argv[n], 11)) 
         {
-          outernet_socketnamename = strdup(&argv[n][11]);
-	  LOG_NOTE("Outernet socket name is '%s'",outernet_socketnamename);
+          char *outernet_socketname = strdup(&argv[n][11]);
+	  if (outernet_rx_setup(outernet_socketname)) {
+	    exitVal=-3;
+	    break;
+	  }
+	  LOG_NOTE("Outernet socket name is '%s'",outernet_socketname);
 	}
 	else if (! strncasecmp("bundlelog=", argv[n], 10)) 
         {

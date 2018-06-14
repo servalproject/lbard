@@ -649,5 +649,6 @@ int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
 
 int stun_serviceloop(void);
 int autodetect_radio_type(int fd);
+int outernet_rx_setup(char *socket_filename);
 
 #include "util.h"

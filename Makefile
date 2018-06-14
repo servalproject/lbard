@@ -68,6 +68,8 @@ SRCS=	$(SRCDIR)/main.c \
 	$(SRCDIR)/hf/ale.c \
 	$(SRCDIR)/hf/config.c \
 	\
+	$(SRCDIR)/outernetrx/outernetrx.c \
+	\
 	$(SRCDIR)/xfer/message_handlers.c \
 	$(MESSAGEHANDLERS) \
 
