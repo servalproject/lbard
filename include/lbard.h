@@ -81,6 +81,9 @@ struct partial_bundle {
   unsigned char request_manifest_bitmap[2];
 };
 
+#define DEFAULT_PEER_KEEPALIVE_INTERVAL 20
+extern int peer_keepalive_interval;
+
 struct peer_state {
   char *sid_prefix;
   unsigned char sid_prefix_bin[4];
@@ -94,7 +97,6 @@ struct peer_state {
   // if last_message_time is more than this many seconds ago, then they aren't
   // considered an active peer, and are excluded from rhizome rank calculations
   // and various other things.
-#define PEER_KEEPALIVE_INTERVAL 20
   int last_message_number;
 
   time_t last_timestamp_received;
@@ -650,5 +652,6 @@ int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
 int stun_serviceloop(void);
 int autodetect_radio_type(int fd);
 int outernet_rx_setup(char *socket_filename);
+int outernet_rx_serviceloop(void);
 
 #include "util.h"

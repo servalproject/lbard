@@ -228,7 +228,7 @@ int calculate_stored_bundle_priority(int i,int versus)
   int num_peers_that_dont_have_it=0;
 #ifdef SYNC_BY_BAR
   int peer;
-  time_t peer_observation_time_cutoff=time(0)-PEER_KEEPALIVE_INTERVAL;
+  time_t peer_observation_time_cutoff=time(0)-peer_keepalive_interval;
   for(peer=0;peer<peer_count;peer++) {
     if (peer_records[peer]->last_message_time>=peer_observation_time_cutoff)
       if (!peer_has_this_bundle_or_newer(peer,

@@ -221,7 +221,7 @@ int random_active_peer()
   for(;peer<peer_count;peer++)
     {
       if (!peer_records[peer]) continue;
-      if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL) {
+      if ((time(0)-peer_records[peer]->last_message_time)>peer_keepalive_interval) {
 	continue;
       }
       the_peer=peer;
@@ -231,7 +231,7 @@ int random_active_peer()
     for(peer=0;(peer<=last_peer_requested)&&(peer<peer_count);peer++)
       {
 	if (!peer_records[peer]) continue;
-	if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL) {
+	if ((time(0)-peer_records[peer]->last_message_time)>peer_keepalive_interval) {
 	  continue;
 	}
 	the_peer=peer;
@@ -244,7 +244,7 @@ int random_active_peer()
   for(peer=0;(peer<peer_count);peer++)
     {
       if (!peer_records[peer]) continue;
-      if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
+      if ((time(0)-peer_records[peer]->last_message_time)>peer_keepalive_interval)
 	continue;
       snprintf(&active_peers[apl],1024-apl,"%d, ",peer);
       apl=strlen(active_peers);
@@ -265,7 +265,7 @@ int active_peer_count()
 {
   int count=0;
   for(int peer=0;peer<peer_count;peer++)
-    if ((time(0)-peer_records[peer]->last_message_time)<=PEER_KEEPALIVE_INTERVAL)
+    if ((time(0)-peer_records[peer]->last_message_time)<=peer_keepalive_interval)
       count++;
   return count;
 }
@@ -297,7 +297,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
       // int most_complete_manifest_or_body=-1;
 
       // Don't request anything from a peer that we haven't heard from for a while
-      if ((time(0)-peer_records[peer]->last_message_time)>PEER_KEEPALIVE_INTERVAL)
+      if ((time(0)-peer_records[peer]->last_message_time)>peer_keepalive_interval)
 	continue;
 
       // If we got here, the peer is not currently sending us anything interesting.

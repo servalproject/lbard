@@ -70,6 +70,8 @@ int debug_noprioritisation = 0;
 int debug_bundlelog = 0;
 char *bundlelog_filename = NULL;
 
+int peer_keepalive_interval=DEFAULT_PEER_KEEPALIVE_INTERVAL;
+
 int fix_badfs = 0;
 int nostun = 0;
 
@@ -884,6 +886,10 @@ int main(int argc, char **argv)
       account_time("radio_read_bytes()");
       
       radio_read_bytes(serialfd, monitor_mode);
+
+      account_time("outernet_rx_serviceloop()");
+      
+      outernet_rx_serviceloop();
       
       account_time("load_rhizome_db_async()");
 
