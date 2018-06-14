@@ -423,12 +423,12 @@ int outernet_radio_detect(int fd)
 	  break;
 	}    
 
-      if( bind(fd, (struct sockaddr*)&addr_us, sizeof(struct sockaddr_in) ) == -1)
-	{
-	  perror("Failed to bind UDP socket");
-	  LOG_ERROR("Failed to bind UDP socket");
-	  break;
-	}
+      //      if( bind(fd, (struct sockaddr*)&addr_us, sizeof(struct sockaddr_in) ) == -1)
+      //	{
+      //	  perror("Failed to bind UDP socket");
+      //	  LOG_ERROR("Failed to bind UDP socket");
+      //	  break;
+      //	}
       
       // XXX to the other missing steps
       
