@@ -53,6 +53,28 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 int outernet_socket=-1;
 
+int outernet_rx_serviceloop(void)
+{
+  unsigned char buffer[4096];
+  ssize_t bytes_recv;
+  int retVal=0;
+  
+  LOG_ENTRY;
+
+  do {
+    bytes_recv = recvfrom( outernet_socket, buffer, sizeof(buffer), 0, 0, 0 );
+    while(bytes_recv>0) {
+      LOG_NOTE("Received %d bytes via Outernet UNIX domain socket",bytes_recv);
+      dump_bytes(stderr,"Packet",buffer,bytes_recv);
+      
+      bytes_recv = recvfrom( outernet_socket, buffer, sizeof(buffer), 0, 0, 0 );
+    }
+  } while(0);
+
+  LOG_EXIT;
+  return retVal;
+}
+
 int outernet_rx_setup(char *socket_filename)
 {
   int exitVal=0;
@@ -87,9 +109,9 @@ int outernet_rx_setup(char *socket_filename)
     struct sockaddr_un sun;
     sun.sun_family = AF_UNIX;
     snprintf( sun.sun_path, sizeof( sun.sun_path ), "%s", socket_filename );
-    
-    if( -1 == bind( outernet_socket, (struct sockaddr *)&sun, sizeof( struct sockaddr_un ))) {
-      LOG_ERROR("bind failed: (%i) %m", errno );
+
+    if( -1 == connect( outernet_socket, (struct sockaddr *)&sun, sizeof( struct sockaddr_un ))) {
+      LOG_ERROR("connect failed: (%i) %m", errno );
       exitVal=-1; break;
     }
   } while (0);
