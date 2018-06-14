@@ -607,8 +607,9 @@ int outernet_serviceloop(int serialfd)
       // Time went backwards.
       last_uplink_packet_time=gettime_ms();
     }
-    if ((gettime_ms()-last_uplink_packet_time)>1000) {
-      // 1000 ms have passed, so send next uplink packet.
+    if ((gettime_ms()-last_uplink_packet_time)>60000) {
+      // 1 minute has passed, or we have received an ack for our last
+      // packet, so send next uplink packet.
       // Note that if some lanes don't have anything to send,
       // we don't just send the next thing for another lane,
       // because the interlacing of lanes is to separate successive
@@ -621,6 +622,7 @@ int outernet_serviceloop(int serialfd)
       // for each lane, and sending older ones, so that we have a
       // longer effective window.  But for now, the goal is to prove
       // the concept, and get something that works reasonably.
+      
       last_uplink_lane++;
       if (last_uplink_lane<0||last_uplink_lane>4) last_uplink_lane=0;
       if (lane_queues[last_uplink_lane]) {
@@ -637,14 +639,21 @@ int outernet_serviceloop(int serialfd)
 	}
       }
 
-      // Uplink the packet
-      unsigned int sent_bytes;
-      sent_bytes = sendto(uplink_fd, outernet_packet, outernet_packet_len, 0, (struct sockaddr *)&addr_uplink, sizeof(struct sockaddr));
-      if ( sent_bytes != outernet_packet_len ) {
-	LOG_ERROR("[udp] sendto failed: pkt size %d, sent %d. (%i) %m ", outernet_packet_len, sent_bytes, errno );
-	retVal=-1; break;
-      } else LOG_NOTE("Packet of %d bytes uplinked.",outernet_packet_len);     
-      
+      if (outernet_packet_len>0) {
+	last_uplink_packet_time=gettime_ms();
+	
+	// Uplink the packet
+	unsigned int sent_bytes;
+	sent_bytes = sendto(uplink_fd, outernet_packet, outernet_packet_len, 0, (struct sockaddr *)&addr_uplink, sizeof(struct sockaddr));
+	if ( sent_bytes != outernet_packet_len ) {
+	  LOG_ERROR("[udp] sendto failed: pkt size %d, sent %d. (%i) %m ", outernet_packet_len, sent_bytes, errno );
+	  retVal=-1; break;
+	} else LOG_NOTE("Packet of %d bytes uplinked.",outernet_packet_len);     
+      } else {
+	// We had nothing to uplink just yet, so try again in 1 second (ie, set time out to 1 second
+	// before the 60 second timeout.
+	last_uplink_packet_time=gettime_ms()-60000+1000;	
+      }
     }
   } while(0);
   
