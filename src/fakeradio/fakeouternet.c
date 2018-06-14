@@ -31,6 +31,59 @@
 int fd=-1;
 int named_socket=-1;
 
+int dump_bytes(FILE *f,char *msg, unsigned char *bytes, int length)
+{
+  int retVal = -1;
+
+  LOG_ENTRY;
+
+  do 
+  {
+#if COMPILE_TEST_LEVEL >= TEST_LEVEL_LIGHT
+    if (! msg) 
+    {
+      LOG_ERROR("msg is null");
+      break;
+    }
+    if (! bytes) 
+    {
+      LOG_ERROR("bytes is null");
+      break;
+    }
+#endif
+    fprintf(f, "%s:\n", msg);
+    for (int i = 0; i < length; i += 16)
+    {
+      fprintf(f, "%04X: ", i);
+      for (int j = 0; j < 16; j++)
+        if (i + j < length)
+          fprintf(f, " %02X", bytes[i + j]);
+      fprintf(f, "  ");
+      for (int j = 0; j < 16; j++)
+      {
+        int c;
+        if (i + j < length)
+          c = bytes[i + j];
+        else
+          c = ' ';
+        if (c < ' ')
+          c = '.';
+        if (c > 0x7d)
+          c = '.';
+       fprintf(f, "%c", c);
+      }
+      fprintf(f, "\n");
+    }
+    retVal = 0;
+  }
+  while (0);
+
+  LOG_EXIT;
+
+  return retVal;
+}
+
+
 int set_nonblock(int fd)
 {
   int retVal=0;
@@ -195,6 +248,7 @@ int main(int argc,char **argv)
       len=recvfrom(fd,&buffer[0],1024,0,(struct sockaddr *)&sender,&sender_len);
       if (len>0) {
 	printf("Received UDP packet of %d bytes\n",len);
+	dump_bytes(stderr,"The packet",buffer,len);
 	// Echo back to sender
 	int result=sendto(fd,buffer,len,0,(struct sockaddr *)&sender,sender_len);
 	if (result) {

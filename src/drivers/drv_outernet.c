@@ -78,6 +78,7 @@ extern char *serial_port;
 
 // Address of IP link
 struct sockaddr_in addr_uplink;
+int uplink_fd=-1;
 
 // TX queues for each lane.
 struct outernet_lane_tx_queue {
@@ -416,7 +417,7 @@ int outernet_radio_detect(int fd)
       addr_uplink.sin_port = htons(port);
       addr_uplink.sin_addr.s_addr = hostaddr.s_addr;
       
-      if ((fd=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+      if ((uplink_fd=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 	{
 	  perror("Failed to create UDP socket");
 	  LOG_ERROR("Failed to create UDP socket");
@@ -592,6 +593,7 @@ int outernet_uplink_build_packet(int lane)
 
 int outernet_serviceloop(int serialfd)
 {
+  int retVal=0;
   LOG_ENTRY;
 
   do {
@@ -634,11 +636,20 @@ int outernet_serviceloop(int serialfd)
 	  outernet_uplink_build_packet(last_uplink_lane);
 	}
       }
+
+      // Uplink the packet
+      unsigned int sent_bytes;
+      sent_bytes = sendto(uplink_fd, outernet_packet, outernet_packet_len, 0, (struct sockaddr *)&addr_uplink, sizeof(struct sockaddr));
+      if ( sent_bytes != outernet_packet_len ) {
+	LOG_ERROR("[udp] sendto failed: pkt size %d, sent %d. (%i) %m ", outernet_packet_len, sent_bytes, errno );
+	retVal=-1; break;
+      } else LOG_NOTE("Packet of %d bytes uplinked.",outernet_packet_len);     
+      
     }
   } while(0);
   
   LOG_EXIT;
-  return 0;
+  return retVal;
 }
 
 int outernet_receive_bytes(unsigned char *bytes,int count)
