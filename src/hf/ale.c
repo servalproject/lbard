@@ -84,14 +84,15 @@ char *radio_type_description(int radio_type)
 }
 
 int hf_radio_check_if_ready(void)
-{
+{  
   if (time(0)>=hf_next_packet_time) {
     if (time(0)!=last_ready_report_time) {
       char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
       if (timestr[0]) timestr[strlen(timestr)-1]=0;
-      if (hf_state==HF_ALELINK)
-	fprintf(stderr,"  [%s] HF Radio cleared to transmit.\n",
+      if (hf_state==HF_ALELINK){
+	      fprintf(stderr,"  [%s] HF Radio cleared to transmit.\n",
 		timestr);
+		  }
     }
     last_ready_report_time=time(0);
     return 1;
@@ -132,7 +133,7 @@ int hf_radio_mark_ready(void)
 int hf_radio_pause_for_turnaround(void)
 {
   int radio_type=radio_get_type();
-  if (radio_type<0) return 0;
+  if (radio_type<0) return -1;
 
   // We add a random 1 - 10 seconds to avoid lock-step failure modes,
   // e.g., where both radios keep trying to talk to each other at
