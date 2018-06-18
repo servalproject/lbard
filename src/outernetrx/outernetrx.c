@@ -114,6 +114,8 @@ int outernet_rx_setup(char *socket_filename)
       LOG_ERROR("connect failed: (%i) %m", errno );
       exitVal=-1; break;
     }
+
+    LOG_NOTE("Opened unix socket '%s' for outernet rx",socket_filename);
   } while (0);
 
   LOG_EXIT;

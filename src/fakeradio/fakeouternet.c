@@ -25,6 +25,7 @@
 #include <ctype.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <sys/time.h>
 
 #include "code_instrumentation.h"
 
@@ -214,6 +215,39 @@ int setup_named_socket(char *sock_path)
   return retVal;  
 }
 
+long long gettime_ms()
+{
+  long long retVal = -1;
+
+  LOG_ENTRY;
+
+  do
+  {
+    struct timeval nowtv;
+
+    // If gettimeofday() fails or returns an invalid value, all else is lost!
+    if (gettimeofday(&nowtv, NULL) == -1)
+    {
+      LOG_ERROR("gettimeofday returned -1");
+      break;
+    }
+
+    if (nowtv.tv_sec < 0 || nowtv.tv_usec < 0 || nowtv.tv_usec >= 1000000)
+    {
+      LOG_ERROR("gettimeofday returned invalid value");
+      break;      
+    }
+
+    retVal = nowtv.tv_sec * 1000LL + nowtv.tv_usec / 1000;
+  }
+  while (0);
+
+  LOG_EXIT;
+
+  return retVal;
+}
+
+
 
 int main(int argc,char **argv)
 {
@@ -223,6 +257,16 @@ int main(int argc,char **argv)
   broadcast.sin_family = AF_INET;
   broadcast.sin_port = htons(0x4f4e);  // ON in HEX for port number
   broadcast.sin_addr.s_addr = 0xffffff7f; // 127.255.255.255
+
+  unsigned char sender_buf[1024];
+  struct sockaddr_in *sender=(struct sockaddr_in *)sender_buf;
+  socklen_t sender_len=sizeof(sender_buf);
+  
+  int queued_ack_len=0;
+  unsigned char queued_ack_body[8192];
+  long long queued_ack_release_time=0;
+  unsigned char queued_sender[1024];
+  int queued_sender_len;
   
   int retVal=-1;
   do {
@@ -233,35 +277,56 @@ int main(int argc,char **argv)
     }
     
     // Get UDP port ready
-    if (setup_udp(atoi(argv[1]))) break; // OU in HEX for port number
+    if (setup_udp(atoi(argv[1]))) break; 
     LOG_NOTE("argv[2]='%s'",argv[2]?argv[2]:"(null)");
-    if (setup_named_socket(argv[2])) break; // OU in HEX for port number
+    if (setup_named_socket(argv[2])) break; 
 
     while(1) {
       // Check for incoming UDP packets, and bounce them back out again
       // on the named socket
-      // XXX - We should add latency to simulate the space segment.
-      unsigned char sender_buf[1024];
-      struct sockaddr_in *sender=sender_buf;
-      socklen_t sender_len=sizeof(sender_buf);
+      sender_len=sizeof(sender_buf);
       int len=0;
-      len=recvfrom(fd,&buffer[0],1024,0,(struct sockaddr *)&sender,&sender_len);
+      len=recvfrom(fd,&buffer[0],1024,0,(struct sockaddr *)&sender_buf[0],&sender_len);
       if (len>0) {
 	printf("Received UDP packet of %d bytes\n",len);
+	dump_bytes(stderr,"The sender",&sender_buf[0],sender_len);
 	dump_bytes(stderr,"The packet",buffer,len);
-	// Echo back to sender
-	int result=sendto(fd,buffer,len,0,(struct sockaddr *)&sender,sender_len);
-	if (result) {
-	  perror("sendto(UDP) failed");
-	}
-	// Write to named socket
-	result=sendto(named_socket,buffer,len,0,0,0);
-	if (result) {
-	  perror("sendto(UNIXDOMAIN) failed");
-	}
+
+	// Wait 1000ms before acking packet
+	queued_ack_len=len;
+	memcpy(queued_ack_body,buffer,len);
+	queued_ack_release_time=gettime_ms()+1000;
+	memcpy(queued_sender,sender_buf,1024);
+	queued_sender_len=sender_len;
+
+	dump_bytes(stderr,"Queued sender",&queued_sender[0],queued_sender_len);
+	dump_bytes(stderr,"Queued packet",queued_ack_body,queued_ack_len);
 	
       } else {
 	usleep(10000);
+
+	if (queued_ack_len&&gettime_ms()>=queued_ack_release_time) {
+	  LOG_NOTE("Sending ACK of last packet: len=%d, slen=%d",queued_ack_len,queued_sender_len);
+	  dump_bytes(stderr,"Queued sender",&queued_sender[0],queued_sender_len);
+	  dump_bytes(stderr,"Queued packet",queued_ack_body,queued_ack_len);
+	  dump_bytes(stderr,"The packet",queued_ack_body,queued_ack_len);
+	  // Echo back to sender
+
+	  int result=sendto(fd,queued_ack_body,queued_ack_len,0,
+			    (struct sockaddr *)&queued_sender[0],queued_sender_len);
+	  if (result!=queued_ack_len) {
+	    perror("sendto(UDP) failed");
+	  } else LOG_NOTE("UDP socket send ok.");
+	  // Write to named socket
+	  result=sendto(named_socket,queued_ack_body,queued_ack_len,0,0,0);
+	  if (result) {
+	    perror("sendto(UNIXDOMAIN) failed");
+	    LOG_NOTE("result=%d",result);
+	  } else LOG_NOTE("UNIX socket send ok.");
+	  queued_ack_len=0;
+	}
+
+	
       }      
     }
     
