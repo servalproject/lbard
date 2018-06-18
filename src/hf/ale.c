@@ -99,8 +99,8 @@ int hf_radio_check_if_ready(void)
     if (time(0)!=last_ready_report_time) {
       char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
       if (timestr[0]) timestr[strlen(timestr)-1]=0;
-      fprintf(stderr,"  [%s] Wait %ld more seconds to allow other side to send.\n",
-	      timestr,hf_next_packet_time-time(0));
+      //fprintf(stderr,"  [%s] Wait %ld more seconds to allow other side to send.\n",
+	      //timestr,hf_next_packet_time-time(0));
     }
     last_ready_report_time=time(0);
     return 0;
