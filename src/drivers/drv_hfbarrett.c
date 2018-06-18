@@ -31,10 +31,13 @@ char barrett_link_partner_string[1024]="";
 int previous_state=-1;
 unsigned char pause_tx=0x013; //XOFF by default
 time_t ALElink_establishment_time=60; //should get it from the alias?
-int ale_link_just_established;
-int old_link=0;
 int message_failure=0;
 int ale_transmission=-1;
+int ale_command_state=-1;
+// -1: unknown
+//  0: not executed
+//  1: executed
+//  2: understood by the radio, but nothing has happened
 
 int hfbarrett_ready_test(void)
 {
@@ -77,7 +80,7 @@ int hfbarrett_initialise(int serialfd)
     "ARLTBL1\r\n", // Hear about ALE link table events
     "ARMESS1\r\n", // Hear about ALE event notifications
     "ARSTAT1\r\n", // Hear about ALE status change notifications
-		"AXALRM0\r\n", // Diable alarm sound when receibing a call
+		"AXALRM0\r\n", // Diable alarm sound when receiving a call
 		"AILTBL\r\n", // Ask for the current ALE link state
   };
   int i;
@@ -98,64 +101,19 @@ int hfbarrett_initialise(int serialfd)
 int hfbarrett_serviceloop(int serialfd)
 {
 	char cmd[1024];
+	unsigned char buffer[8192];
+  int count;
+  int time_to_abort;
 
   switch(hf_state) {
 
   case HF_DISCONNECTED: //1
   
     // The call requested has to abort, the radio is receiving a another call
-    if ((ale_inprogress==2)&&(previous_state==HF_CALLREQUESTED)){
+    if (previous_state==HF_CALLREQUESTED){
       printf("Aborting call\n");
       write_all(serialfd,"AXABORT\r\n",9);
     }
-
-    if((old_link==0)&&previous_state==-1){
-      printf("No link established on this radio. Letting time to the other radio abort its link, if it has one\n");
-      //sleep(10);
-    }
-    
-  /*  // Abort the link
-    if ((old_link==-1)&&(previous_state==-1)){
-      unsigned char buffer[8192];
-      int count;
-      int link=1;
-      int unknown_link_state;
-      int time_to_abort;
-	    printf("Aborting the current established ALE link\n");
-      sleep(2); //Be sure the other radio has detected the link establishment
-      while (link){
-        time_to_abort=0;
-        unknown_link_state=1;
-        write_all(serialfd,"AXTLNK00\r\n",10);
-        //if (!unknown_link_state) sleep(1);
-        while (unknown_link_state){
-          sleep(1);
-          write_all(serialfd,"AILTBL\r\n",8);
-				  init_buffer(buffer, 8192);
-				  count = read_nonblock(serialfd,buffer,8192);
-				  //if (count) dump_bytes(stderr,"received",buffer,count);
-				  if (count) hfbarrett_receive_bytes(buffer,count);
-				  //printf("buffer is: %s\n", buffer);
-				  if (strstr((const char *)buffer,"AILTBL\r")){
-				    unknown_link_state=0;
-				    link=0;
-				  }
-				  
-				  //Keep in updating the ale_inprogress variable
-				  if (strstr((const char *)buffer,"AISTAT12")||strstr((const char *)buffer,"AISTAT22")||strstr((const char *)buffer,"AISTAT32")){
-		        ale_inprogress=2;
-	        }else ale_inprogress=0;
-	        
-				  if (time_to_abort>=20){
-				    unknown_link_state=0;
-				    printf("Aborting failed. Retrying to abort again.\n");
-				  }
-				  time_to_abort++;
-			  }
-			}
-		  printf("Let time to the other radio to terminate\n");
-			sleep(10); //Let time to the other size to terminate
-		}*/
     
     // Wait until we are allowed our first call before doing so
     if (time(0)<last_outbound_call) return 0;
@@ -164,10 +122,8 @@ int hfbarrett_serviceloop(int serialfd)
     // Currently disconnected. If the current time is later than the next scheduled
     // If the radio is not receiving a message
     // call-out time, then pick a hf station to call
-    if (ale_inprogress==2){
-      //printf("The radio is receiving a message, it will not try to do a call request\n");
-    }
-    else if ((hf_link_partner==-1)&&(hf_station_count>0)&&(time(0)>=hf_next_call_time)) {
+
+    if ((ale_inprogress==0)&&(hf_link_partner==-1)&&(hf_station_count>0)&&(time(0)>=hf_next_call_time)) {
       int next_station = hf_next_station_to_call();
       if (next_station>-1) {
 			  // Ensure we have a clear line for new command (we were getting some
@@ -178,21 +134,30 @@ int hfbarrett_serviceloop(int serialfd)
 			  // A link will be established after the mesage is receied.
 			  init_buffer((unsigned char*)cmd, 1024);
 			  snprintf(cmd,1024,"AXNMSG%s%sCONNECTING\r\n", hf_stations[next_station].index, self_hf_station.index);
-			  //printf("sending '%s' to try to make ALE call.\n",cmd);
-			  
+			  //printf("sending '%s' to try to make ALE call.\n",cmd);			  
 			  
 	      // We add a random 0 - 4 seconds to avoid lock-step failure modes,
         // e.g., where both radios keep trying to talk to each other at
         // the same time.
 			  sleep(random()%4);
 			  
-			  write(serialfd,cmd,strlen(cmd));
+			  //Update the radio replies before sending cmd
+				count = read_nonblock(serialfd,buffer,8192);
+		  	if (count) hfbarrett_receive_bytes(buffer,count);
+			  
+			  // Recheck that, after the sleep(random), the radio is still idle
+			  // before sending
+			  if (ale_inprogress==0){
+			    write(serialfd,cmd,strlen(cmd));
 
-			  hf_state = HF_CALLREQUESTED;
+			    hf_state = HF_CALLREQUESTED;
 					
-			  fprintf(stderr,"HF: Attempting to call station #%d '%s'\n",
-		  next_station,hf_stations[next_station].name);
-      	hf_next_call_time=time(0)+ALElink_establishment_time;
+			    fprintf(stderr,"HF: Attempting to call station #%d '%s'\n",
+		    next_station,hf_stations[next_station].name);
+        	hf_next_call_time=time(0)+ALElink_establishment_time;
+        }else{
+          printf("The radio is not idle. The call request is not sent.\n");
+        }
 		  }
     }
     else if (hf_link_partner>-1)
@@ -231,35 +196,79 @@ int hfbarrett_serviceloop(int serialfd)
 		// Probe periodically with AILTBL to get link table, because the modem doesn't
     // preemptively tell us when we lose a link
 		
-    if (previous_state==HF_DISCONNECTED){
+		// Also in the case where previsou_state=-1
+		// because previous_state is only updeated at the end of the first service loop.
+		// So we are sure to cover the case of the first loop.
+    if ((previous_state==HF_DISCONNECTED)||(previous_state==-1)){
       printf("I have a link without asking for it. So I am the one receiving a message\n");
       hf_radio_pause_for_turnaround();
     }
 		
 		if (message_failure>10){
 		  printf("Receiving message failed more than 10 times. The link is not good. Reset radio\n");
-		  write(serialfd,"*",1);
+		  hf_state=HF_RADIOCONFUSED;
 		  message_failure=0;
-		  sleep(10);
+		  return -1;
 		}
 		
     if (time(0)!=last_link_probe_time)  { //once a second
 			last_link_probe_time=time(0);
     }
-    // An ALE link was established before LBARD started
-    // We start from scratch
-    if (previous_state == -1)
-      hf_state=HF_DISCONNECTED;
+    
+    if (previous_state!=HF_ALELINK){
+      fprintf(stderr,"ALE Link established with %s (station #%d), I will send a packet in %ld seconds\n",
+      barrett_link_partner_string,hf_link_partner,
+      hf_next_packet_time-time(0));
+    }
+
     
     break;
 
   case HF_DISCONNECTING: //5
-		
+    // Aborting ALE link nb 00.
+    // As LBARD established only one ALE link,
+    // it is the same thing as saying: abroting ALE link
+    
+    printf("Aborting the current established ALE link\n");
+    while (hf_link_partner>-1){
+      time_to_abort=0;
+      ale_command_state=0;
+      write_all(serialfd,"AXTLNK00\r\n",10);
+      while(ale_command_state==0){
+        sleep(1); //once a second
+        write_all(serialfd,"AILTBL\r\n",8);
+			  init_buffer(buffer, 8192);
+			  count = read_nonblock(serialfd,buffer,8192);
+			  
+			  // Looking at the radio responses and process line(s):
+			  if (count) hfbarrett_receive_bytes(buffer,count);
+        
+			  if (time_to_abort>=20){
+			    ale_command_state=2; //command executed but nothing has happened
+			    printf("Aborting failed. Retrying to abort again.\n");
+			  }
+			  time_to_abort++;
+		  }
+	  }
+	  hf_state=HF_DISCONNECTED;
+	  printf("Let time to the other radio to terminate\n");
+		sleep(10); //Let time to the other size to terminate
+    
     break;
 
 	case HF_ALESENDING: //6
 
 		break;
+
+  case HF_RADIOCONFUSED: //7
+    // We entenred a case where the radio is confused
+    // Sending "*" reboots the radio
+    printf("Rebooting the radio.\n");
+    write(serialfd,"*",1);
+    hf_state=HF_DISCONNECTED;
+    sleep(10);
+    
+    break;
 
   default:
 		
@@ -324,13 +333,6 @@ int hfbarrett_process_line(char *l)
     hf_process_fragment(&tmp[6]);
   }
 
-/*	if ((sscanf(l, "AISTAT%s", tmp)==1) &&(hf_state==HF_CALLREQUESTED) ){
-		if (tmp[1]=='2'){
-			printf("Another radio is calling. Marking this sent call disconnected\n");
-			ale_inprogress=2;
-			hf_state=HF_DISCONNECTED;
-		}
-	}*/
 	if (sscanf(l, "AISTAT%s", tmp)==1){
 		//idle
 		if (tmp[1]=='0'){
@@ -368,62 +370,52 @@ int hfbarrett_process_line(char *l)
 		    hf_stations[hf_link_partner].consecutive_connection_failures);
     }
     hf_link_partner=-1;
-    ale_inprogress=0;
 
     // We have to also wait for the > prompt again
     printf("Timed out trying to connect. Marking call disconnected.\n");
     hf_state=HF_DISCONNECTED;
   }
-	if ((sscanf(l,"AILTBL%s",tmp)==1)&&(hf_state!=HF_ALELINK)) {
+  
+	if ((sscanf(l,"AILTBL%s",tmp)==1)&&(hf_state!=HF_ALELINK)&&(hf_state!=HF_DISCONNECTING)) {
 
-	  //Not if it we are still in the initilisation
-	  //if (previous_state!=-1){
-      // Link established
-      barrett_link_partner_string[0]=tmp[4];
-      barrett_link_partner_string[1]=tmp[5];
-      barrett_link_partner_string[2]=tmp[2];
-      barrett_link_partner_string[3]=tmp[3];
-      barrett_link_partner_string[4]=0;
-	
-      int i;
-      //hf_link_partner=-1;
-      for(i=0;i<hf_station_count;i++){
-			  strcpy(tmp, hf_stations[i].index);
-			  strcat(tmp, self_hf_station.index);
-        if (!strcmp(barrett_link_partner_string, tmp)){ 
-				  hf_link_partner=i;
-				  hf_stations[hf_link_partner].consecutive_connection_failures=0;
-			    break; 
-			  }
+    // Link established
+    barrett_link_partner_string[0]=tmp[4];
+    barrett_link_partner_string[1]=tmp[5];
+    barrett_link_partner_string[2]=tmp[2];
+    barrett_link_partner_string[3]=tmp[3];
+    barrett_link_partner_string[4]=0;
+
+    int i;
+    for(i=0;i<hf_station_count;i++){
+		  strcpy(tmp, hf_stations[i].index);
+		  strcat(tmp, self_hf_station.index);
+      if (!strcmp(barrett_link_partner_string, tmp)){ 
+			  hf_link_partner=i;
+			  hf_stations[hf_link_partner].consecutive_connection_failures=0;
+		    break; 
 		  }
+	  }
 
-      if (((hf_state&0xff)!=HF_CONNECTING)
-	  &&((hf_state&0xff)!=HF_CALLREQUESTED)) {
-        // We have a link, but without us asking for it.
-        // So allow 10 seconds before trying to TX, else we start TXing immediately.
-      //hf_radio_pause_for_turnaround(); //done in HF_ALELINK state serviceloop 
-      } else hf_radio_mark_ready();
+    if (((hf_state&0xff)!=HF_CONNECTING)
+  &&((hf_state&0xff)!=HF_CALLREQUESTED)) {
+      // We have a link, but without us asking for it.
+      // So allow 10 seconds before trying to TX, else we start TXing immediately.
+    //hf_radio_pause_for_turnaround(); //done in HF_ALELINK state serviceloop 
+    } else hf_radio_mark_ready();
       
-      fprintf(stderr,"ALE Link established with %s (station #%d), I will send a packet in %ld seconds\n",
-	      barrett_link_partner_string,hf_link_partner,
-	      hf_next_packet_time-time(0));
-	      
-      hf_state=HF_ALELINK;   
-    //}
-    if (previous_state==-1)
-      old_link=1;
-    // In any case
+    hf_state=HF_ALELINK;   
+  
   }
   
- /* if ((sscanf(l,"AILTBL%s",tmp))==1&&(previous_state==-1) ) {
-    old_link=1;
-  }*/
-  
-  // The sleeping time at the end of the link aborting prevent us to do it:
   if ((!strcmp(l,"AIMESS3"))&&(hf_state==HF_CALLREQUESTED)){
     printf("No link established after the call request\n");
     hf_state=HF_DISCONNECTED;
     
+  }
+  
+  if ((hf_state==HF_DISCONNECTING)&&(!strcmp(l,"AILTBL"))){
+    hf_link_partner=-1;
+    ale_command_state=1; //we know the link has been aborted
   }
 
   return 0;
@@ -501,7 +493,7 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
 	     (int)strlen(fragment),fragment);
 
     int not_accepted=1;
-		int time_to_send;
+		int time_to_send_frag;
 		int unknown_mess_state;
     while (not_accepted) {
       if (time(0)>absolute_timeout) {
@@ -530,9 +522,14 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
 
 				// Look at the ALE indications sent byt the radio after the command to send 
 				// a message was sent until we know if the message has been sent or if it hasn't
-				time_to_send=0;
+				time_to_send_frag=0;
 				unknown_mess_state=1;
 				while(unknown_mess_state){
+				
+				  if(time_to_send_frag>60){
+				    printf("Something wrong occured with the radio.\n");
+				    hf_state=HF_RADIOCONFUSED;  
+				  }
 				
 				  //printf("Sleeping for upto %d more seconds while waiting for message to TX.\n",unknown_mess_state);
 					// Any ALE send will take a while, check the radio's responses every second
@@ -550,12 +547,12 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
 		 				if (timestr[0]) timestr[strlen(timestr)-1]=0;
 						fprintf(stderr,"  [%s] Sent %s",timestr,message);
 					}
-					else if (strstr((const char *)buffer,"AISTAT10")||strstr((const char *)buffer,"AISTAT20")||strstr((const char *)buffer,"AISTAT30")){
-						printf("Radio turned into idle before sending message. Aborting message.\n");
+					else if (ale_inprogress==0){
+					  printf("Radio turned into idle before sending message. Aborting message.\n");
 						write_all(serialfd,"AXABORT\r\n",9);
 						unknown_mess_state=0;
 					}
-					else if (strstr((const char *)buffer,"AISTAT12")||strstr((const char *)buffer,"AISTAT22")||strstr((const char *)buffer,"AISTAT32")){
+					else if (ale_inprogress==2){
 		        unknown_mess_state=0;
 		        printf("While trying to send a message, another message is received. Abort sending message and pause to listen to this message\n");
 		        write_all(serialfd,"AXABORT\r\n",9);
@@ -564,7 +561,7 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
 	        }
 	        
 	        
-					time_to_send++;
+					time_to_send_frag++;
 				}        
 			
       sleep(3); // Let time to the radio to be ready for the next step
