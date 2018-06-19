@@ -173,7 +173,7 @@ int setup_udp(int port)
   return retVal;
 }
 
-int setup_named_socket(char *sock_path)
+int setup_named_socket(void)
 {
   int retVal=0;
   LOG_ENTRY;
@@ -194,21 +194,8 @@ int setup_named_socket(char *sock_path)
       retVal=-1; break;
     }
     
-    unlink(sock_path);
-    
-    // Bind to unix socket
-    struct sockaddr_un sun;
-    sun.sun_family = AF_UNIX;
-    snprintf( sun.sun_path, sizeof( sun.sun_path ), "%s", sock_path );
-    
-    LOG_NOTE("Checkpoint");
-    if( -1 == bind( named_socket, (struct sockaddr *)&sun, sizeof( struct sockaddr_un ))) {
-      LOG_ERROR("bind failed: (%i) %m", errno );
-      retVal=-1; break;
-    }
+    LOG_NOTE("Setup named socket as fd#%d",named_socket);
 
-    LOG_NOTE("Setup named socket.");
-    
   } while (0);
     
   LOG_EXIT;
@@ -259,7 +246,6 @@ int main(int argc,char **argv)
   broadcast.sin_addr.s_addr = 0xffffff7f; // 127.255.255.255
 
   unsigned char sender_buf[1024];
-  struct sockaddr_in *sender=(struct sockaddr_in *)sender_buf;
   socklen_t sender_len=sizeof(sender_buf);
   
   int queued_ack_len=0;
@@ -267,21 +253,36 @@ int main(int argc,char **argv)
   long long queued_ack_release_time=0;
   unsigned char queued_sender[1024];
   int queued_sender_len;
+
+#define MAX_CLIENT_PATHS 1024
+  struct sockaddr_un client_paths[MAX_CLIENT_PATHS];
+  int client_path_count=0;
   
   int retVal=-1;
   do {
 
-    if (argc!=3) {
-      LOG_ERROR("You must provide UDP port and named socket path on command line.");
+    if (argc<3) {
+      LOG_ERROR("You must provide UDP port and at least one unix socket path on command line.");
       break;
     }
     
     // Get UDP port ready
-    if (setup_udp(atoi(argv[1]))) break; 
-    LOG_NOTE("argv[2]='%s'",argv[2]?argv[2]:"(null)");
-    if (setup_named_socket(argv[2])) break; 
+    if (setup_udp(atoi(argv[1]))) break;
+    // And UNIX socket
+    if (setup_named_socket()) break; 
 
+    // And build list of UNIX socket client paths to push the packets out to.
+    for(int i=2;i<argc;i++)
+      {
+	memset(&client_paths[client_path_count], 0, sizeof(struct sockaddr_un));
+	client_paths[client_path_count].sun_family = AF_UNIX;
+	strncpy(client_paths[client_path_count].sun_path, argv[i], sizeof(client_paths[0].sun_path) - 1);
+	LOG_NOTE("Added UNIX socket client path '%s'",argv[i]);
+	client_path_count++;
+      }
+    
     while(1) {
+
       // Check for incoming UDP packets, and bounce them back out again
       // on the named socket
       sender_len=sizeof(sender_buf);
@@ -310,19 +311,32 @@ int main(int argc,char **argv)
 	  dump_bytes(stderr,"Queued sender",&queued_sender[0],queued_sender_len);
 	  dump_bytes(stderr,"Queued packet",queued_ack_body,queued_ack_len);
 	  dump_bytes(stderr,"The packet",queued_ack_body,queued_ack_len);
-	  // Echo back to sender
 
+	  // Echo back to sender
 	  int result=sendto(fd,queued_ack_body,queued_ack_len,0,
 			    (struct sockaddr *)&queued_sender[0],queued_sender_len);
 	  if (result!=queued_ack_len) {
 	    perror("sendto(UDP) failed");
 	  } else LOG_NOTE("UDP socket send ok.");
-	  // Write to named socket
-	  result=sendto(named_socket,queued_ack_body,queued_ack_len,0,0,0);
-	  if (result) {
-	    perror("sendto(UNIXDOMAIN) failed");
-	    LOG_NOTE("result=%d",result);
-	  } else LOG_NOTE("UNIX socket send ok.");
+
+	  // Write to receiver named socket
+	  // (The client is expected to open the named socket to receive on.
+	  // This is specified to be /tmp/demod.socks.000 in the Outernet
+	  // documentation.  However for testing, we allow this to be configurable,
+	  // so that multiple tests (and maybe multiple receivers) can operate
+	  // simultaneously.
+	  for(int i=0;i<client_path_count;i++)
+	    {
+	      LOG_NOTE("Trying to send to '%s'\n",
+		       client_paths[i].sun_path);
+	      result=sendto(named_socket,queued_ack_body,queued_ack_len,0,
+			    (struct sockaddr *)&client_paths[i],
+			    sizeof(struct sockaddr_un));
+	      if (result) {
+		perror("sendto(UNIXDOMAIN) failed");
+		LOG_NOTE("Failed to send to UNIX socket '%s' (result=%d)",argv[2+i],result);
+	      } else LOG_NOTE("UNIX socket send ok to '%s'",argv[2+i]);
+	    }
 	  queued_ack_len=0;
 	}
 

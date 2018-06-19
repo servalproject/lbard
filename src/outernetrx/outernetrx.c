@@ -95,7 +95,23 @@ int outernet_rx_setup(char *socket_filename)
       exitVal=-1;
       break;
     }
-    
+
+    // UNIX domain datagram sockets have to be bound to their own end point
+    // as well.  This is a little odd, but it is how they work.
+    unlink(socket_filename);
+    struct sockaddr_un client_addr;
+    memset(&client_addr, 0, sizeof(client_addr));
+    client_addr.sun_family = AF_UNIX;
+    strncpy(client_addr.sun_path, socket_filename, 104);
+
+    if (bind(outernet_socket, (struct sockaddr *) &client_addr, sizeof(client_addr)))
+      {
+	perror("bind()");
+	LOG_ERROR("bind()ing UNIX socket client end point failed");
+	exitVal=-1;
+	break;
+      }
+
     struct timeval tv;
     tv.tv_sec = 0;
     tv.tv_usec = 1000;
@@ -105,16 +121,6 @@ int outernet_rx_setup(char *socket_filename)
       break;
     }
     
-    // Bind to unix socket
-    struct sockaddr_un sun;
-    sun.sun_family = AF_UNIX;
-    snprintf( sun.sun_path, sizeof( sun.sun_path ), "%s", socket_filename );
-
-    if( -1 == connect( outernet_socket, (struct sockaddr *)&sun, sizeof( struct sockaddr_un ))) {
-      LOG_ERROR("connect failed: (%i) %m", errno );
-      exitVal=-1; break;
-    }
-
     LOG_NOTE("Opened unix socket '%s' for outernet rx",socket_filename);
   } while (0);
 
