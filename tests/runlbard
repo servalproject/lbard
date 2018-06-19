@@ -1,4 +1,5 @@
 export SERVALINSTANCE_PATH=/tmp/serval$1
+../serval-dna/servald stop
 rm -fr $SERVALINSTANCE_PATH
 mkdir -p $SERVALINSTANCE_PATH
 rm $SERVALINSTANCE_PATH/serval.conf
@@ -11,10 +12,15 @@ EOF
 ../serval-dna/servald start
 PORT=`cat $SERVALINSTANCE_PATH/proc/http_port`
 echo HTTP port is $PORT
+if [ "x$PORT" = "x" ]; then
+  echo "WARNING: servald doesn't seem to be running. Try pkill servald and start everything again."
+  sleep 10
+fi
 SID=`../serval-dna/servald keyring list | tail -1 | cut -f1 -d:`
 SSID=`../serval-dna/servald keyring list | tail -1 | cut -f2 -d:`
 echo identity is $SID $SSID
 shift
+../serval-dna/servald status
 ../lbard localhost:${PORT} lbard:lbard $SID $SSID $*
 ../serval-dna/servald stop
 
