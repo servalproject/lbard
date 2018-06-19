@@ -89,6 +89,7 @@ extern char *credential;
 struct outernet_rx_bundle {
   unsigned int offset;
   unsigned int parity_zone_number;
+  unsigned int last_parity_zone_number;
   unsigned int data_size;
   unsigned char *data;
 #define MAX_DATA_BYTES 256
@@ -156,8 +157,6 @@ int outernet_rx_try_bundle_insert(int lane)
 			    servald_server,credential);
     LOG_NOTE("rhizome_update_bundle() returned %d",r);	     
 
-    // Then clear the lane
-    outernet_rx_lane_init(lane,1);
     
   } while(0);
   
@@ -179,7 +178,8 @@ int outernet_rx_lane_init(int i,int freeP)
     LOG_NOTE("Attempting to insert bundle received via outernet via lane_init()");
     outernet_rx_try_bundle_insert(i);
   }
-  
+
+  LOG_NOTE("Clearing lane #%d",i);
   outernet_rx_bundles[i].waitingForStart=1;
   outernet_rx_bundles[i].data_size=0;
   if (freeP&&outernet_rx_bundles[i].data) free(outernet_rx_bundles[i].data);
@@ -233,6 +233,8 @@ int outernet_rx_lane_commit_parity_zone(int lane)
 	   4*outernet_rx_bundles[lane].data_bytes);
     
     // Prepare for receiving the next parity zone
+    outernet_rx_bundles[lane].last_parity_zone_number=
+      outernet_rx_bundles[lane].parity_zone_number;
     outernet_rx_bundles[lane].parity_zone_number++;
     outernet_rx_bundles[lane].parity_zone_bitmap=0;        
     
@@ -416,11 +418,13 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
     // case counts as a start.
     outernet_rx_bundles[lane].waitingForStart=0;
 
-    if (parity_zone_number < outernet_rx_bundles[lane].parity_zone_number) {
+    if ((parity_zone_number < outernet_rx_bundles[lane].parity_zone_number)
+        && (parity_zone_number != outernet_rx_bundles[lane].last_parity_zone_number)) {
       // We seem to have gone backwards, which means that we have to
       // abandon the current transfer, as presumably we missed the end of the
       // last, and the start of this one.
-      LOG_NOTE("Clearing lane #%d RX state because parity_zone_number went backwards",lane);
+      LOG_NOTE("Clearing lane #%d RX state because parity_zone_number went backwards from %d to %d",
+	       lane,outernet_rx_bundles[lane].parity_zone_number,parity_zone_number);
       outernet_rx_lane_init(lane,1);
       break;
     }
@@ -444,8 +448,6 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
 	  // we should commit a parity zone after adding to it
 	  // each time
 	  outernet_rx_lane_update_parity_zone(lane);
-	  outernet_rx_bundles[lane].parity_zone_number++;
-	  outernet_rx_bundles[lane].parity_zone_bitmap=0;
 	}
       }
     if (parity_zone_number==outernet_rx_bundles[lane].parity_zone_number)  {
@@ -482,6 +484,9 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
     if (end_flag) {
       LOG_NOTE("Attempting to insert bundle received via outernet via end_flag");
       outernet_rx_try_bundle_insert(lane);
+      // Then clear the lane
+      outernet_rx_lane_init(lane,1);
+    
     }
     
     

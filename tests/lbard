@@ -407,7 +407,7 @@ setup_OuternetUplink() {
    fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$IDA" outernet://127.0.0.1:61001 pull
    # Insert a file to server A, which we will want to see received by the others via Outernet interface
    set_instance +A
-   rhizome_add_file file1 50
+   rhizome_add_file file1 500
    set_instance +B
    fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" /dev/null "outernetrx=$_tfw_tmp/outernetB.sock" pull
    set_instance +C
@@ -423,6 +423,83 @@ test_OuternetUplink() {
       bundle_received_by $BID:$VERSION +B &&
       bundle_received_by $BID:$VERSION +C &&
       bundle_received_by $BID:$VERSION +D
+   }
+   wait_until all_bundles_received
+
+   
+   fork_terminate %lbardA %lbardB %lbardC %lbardD 
+   fork_terminate_all
+}
+
+
+
+doc_OuternetUplink5="LBARD uplinks to Outernet gateway, five bundles at once"
+setup_OuternetUplink5() {
+   setup_servald
+   assert_no_servald_processes
+   foreach_instance +A +B +C +D create_single_identity
+   foreach_instance +A +B +C +D start_servald_server
+   get_servald_restful_http_server_port PORTA +A
+   get_servald_restful_http_server_port PORTB +B
+   get_servald_restful_http_server_port PORTC +C
+   get_servald_restful_http_server_port PORTD +D
+   # Start the fake radio daemon.
+   fork %fakeradio fakecsmaradio rfd900,rfd900,rfd900,rfd900 ttys.txt "$1"
+   rm $_tfw_tmp/outernet.sock
+   fork %fakeouternet fakeouternet 61001 $_tfw_tmp/outernetB.sock $_tfw_tmp/outernetC.sock $_tfw_tmp/outernetD.sock
+   wait_until --timeout=15 eval [ `ls $_tfw_tmp/outernet.sock | wc -l` -ge 0 ]
+   wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
+   tty1=$(sed -n 1p ttys.txt)
+   tty2=$(sed -n 2p ttys.txt)
+   tty3=$(sed -n 3p ttys.txt)
+   tty4=$(sed -n 4p ttys.txt)
+   # Start four lbard daemons, isolated from each other, with one as uplink to Outernet gateway
+   set_instance +A
+   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$IDA" outernet://127.0.0.1:61001 pull
+   # Insert a file to server A, which we will want to see received by the others via Outernet interface
+   set_instance +A
+   rhizome_add_file file1 100
+   BIDA=$BID
+   VERSIONA=$VERSION
+   rhizome_add_file file2 100
+   BIDB=$BID
+   VERSIONB=$VERSION
+   rhizome_add_file file3 100
+   BIDC=$BID
+   VERSIONc=$VERSION
+   rhizome_add_file file4 100
+   BIDD=$BID
+   VERSIOND=$VERSION
+   rhizome_add_file file5 100
+   BIDe=$BID
+   VERSIONE=$VERSION
+   set_instance +B
+   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" /dev/null "outernetrx=$_tfw_tmp/outernetB.sock" pull
+   set_instance +C
+   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" /dev/null "outernetrx=$_tfw_tmp/outernetC.sock" pull
+   set_instance +D
+   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" /dev/null "outernetrx=$_tfw_tmp/outernetD.sock" pull
+}
+test_OuternetUplink5() {
+   # Test that all radios are detected
+   wait_until --timeout=20 grep "Radio is a outernet (Outernet.is broadcast satellite)" A_LBARDERR
+
+   all_bundles_received() {
+      bundle_received_by $BIDA:$VERSIONA +B &&
+      bundle_received_by $BIDA:$VERSIONA +C &&
+      bundle_received_by $BIDA:$VERSIONA +D &&
+      bundle_received_by $BIDB:$VERSIONB +B &&
+      bundle_received_by $BIDB:$VERSIONB +C &&
+      bundle_received_by $BIDB:$VERSIONB +D &&
+      bundle_received_by $BIDC:$VERSIONC +B &&
+      bundle_received_by $BIDC:$VERSIONC +C &&
+      bundle_received_by $BIDC:$VERSIONC +D &&
+      bundle_received_by $BIDD:$VERSIOND +B &&
+      bundle_received_by $BIDD:$VERSIOND +C &&
+      bundle_received_by $BIDD:$VERSIOND +D &&
+      bundle_received_by $BIDE:$VERSIONE +B &&
+      bundle_received_by $BIDE:$VERSIONE +C &&
+      bundle_received_by $BIDE:$VERSIONE +D
    }
    wait_until all_bundles_received
 
