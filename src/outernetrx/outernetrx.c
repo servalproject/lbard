@@ -86,6 +86,7 @@ int outernet_socket=-1;
 struct outernet_rx_bundle {
   unsigned int offset;
   unsigned int parity_zone_number;
+  unsigned int data_size;
   unsigned char *data;
 #define MAX_DATA_BYTES 256
   unsigned char parity_zone[MAX_DATA_BYTES*4];
@@ -103,14 +104,77 @@ int outernet_rx_lane_init(int i,int freeP)
   /* Clear RX lane.
      If there was something in it, we should try to insert it as a bundle.
   */
+
+  if (freeP) {
+    // Try to register the bundle, in case we got the whole
+    // thing, except for a missing packet at the end, and thus
+    // didn't see the end flag.
+    LOG_NOTE("Attempting to insert bundle received via outernet");
+  }
   
   outernet_rx_bundles[i].waitingForStart=1;
+  outernet_rx_bundles[i].data_size=0;
   if (freeP&&outernet_rx_bundles[i].data) free(outernet_rx_bundles[i].data);
   outernet_rx_bundles[i].data=NULL;
   return 0;
 }
 
 int outernet_rx_lane_commit_parity_zone(int lane)
+{
+  int retVal=0;
+  LOG_ENTRY;
+
+  do {
+    LOG_NOTE("Commiting parity zone at offset %d",
+	     outernet_rx_bundles[lane].parity_zone_number
+	     *4*outernet_rx_bundles[lane].data_bytes);
+
+    if ((!outernet_rx_bundles[lane].data)
+	||(outernet_rx_bundles[lane].data_size
+	   < ( outernet_rx_bundles[lane].parity_zone_number + 1)
+	   * 4 * outernet_rx_bundles[lane].data_bytes))
+      {
+	// Insufficient space allocated, realloc.
+	
+	unsigned int new_size=outernet_rx_bundles[lane].data_size;
+	if (!new_size) new_size=65536;
+	else new_size=new_size<<1;
+	if (new_size<outernet_rx_bundles[lane].data_size)
+	  new_size=outernet_rx_bundles[lane].data_size;
+	
+	unsigned char *d=realloc(outernet_rx_bundles[lane].data,
+				 (size_t)new_size);
+	if (!d) {
+	  LOG_ERROR("realloc(%u) failed",new_size);
+	  // We can't allocate enough space, so free the lane
+	  // for the next bundle, which will hopefully be smaller.
+	  outernet_rx_lane_init(lane,1);
+	  retVal=-1;
+	  break;
+	} else {
+	  outernet_rx_bundles[lane].data=d;
+	  outernet_rx_bundles[lane].data_size=new_size;	  
+	}
+      }
+    
+    // Copy the parity zone into place
+    memcpy(&outernet_rx_bundles[lane].data
+	   [outernet_rx_bundles[lane].parity_zone_number
+	    *4*outernet_rx_bundles[lane].data_bytes],
+	   outernet_rx_bundles[lane].parity_bytes,
+	   4*outernet_rx_bundles[lane].data_bytes);
+    
+    // Prepare for receiving the next parity zone
+    outernet_rx_bundles[lane].parity_zone_number++;
+    outernet_rx_bundles[lane].parity_zone_bitmap=0;        
+    
+  } while(0);
+
+  LOG_EXIT;
+  return retVal;
+}
+
+int outernet_rx_lane_update_parity_zone(int lane)
 {
   int retVal=0;
   LOG_ENTRY;
@@ -150,6 +214,8 @@ int outernet_rx_lane_commit_parity_zone(int lane)
 	XOR(PZ(1,0),PZ(3,0)); XOR(PZ(2,0),PZ(3,0));
 	XOR(PZ(0,0),PZ(3,1)); XOR(PZ(2,1),PZ(3,1));
 	XOR(PZ(0,1),PZ(3,2)); XOR(PZ(1,1),PZ(3,2));
+
+	outernet_rx_lane_commit_parity_zone(lane);
 	
 	break;	
       case 0xb:
@@ -165,6 +231,8 @@ int outernet_rx_lane_commit_parity_zone(int lane)
 	XOR(PZ(0,0),PZ(2,1)); XOR(PZ(3,1),PZ(2,1));
 	XOR(PZ(0,2),PZ(2,2)); XOR(PZ(1,2),PZ(2,2));
 
+	outernet_rx_lane_commit_parity_zone(lane);
+
 	break;
       case 0xd:
 	// missing piece 1
@@ -177,6 +245,8 @@ int outernet_rx_lane_commit_parity_zone(int lane)
 	XOR(PZ(2,0),PZ(1,0)); XOR(PZ(3,0),PZ(1,0));
 	XOR(PZ(0,1),PZ(1,1)); XOR(PZ(3,2),PZ(1,1));
 	XOR(PZ(0,2),PZ(1,2)); XOR(PZ(2,2),PZ(1,2));
+
+	outernet_rx_lane_commit_parity_zone(lane);
 
 	break;
       case 0xe:
@@ -192,10 +262,13 @@ int outernet_rx_lane_commit_parity_zone(int lane)
 	XOR(PZ(1,1),PZ(1,1)); XOR(PZ(3,2),PZ(1,1));
 	XOR(PZ(1,2),PZ(1,2)); XOR(PZ(2,2),PZ(1,2));
 
+	outernet_rx_lane_commit_parity_zone(lane);
+
 	break;
       case 0xf:	
 	// We have all four pieces, so life is easy.
 	LOG_NOTE("Have all four pieces of parity zone");
+	outernet_rx_lane_commit_parity_zone(lane);
 	break;
     }
 
@@ -303,7 +376,7 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
 	  // so commit it. Really this should never happen, because
 	  // we should commit a parity zone after adding to it
 	  // each time
-	  outernet_rx_lane_commit_parity_zone(lane);
+	  outernet_rx_lane_update_parity_zone(lane);
 	  outernet_rx_bundles[lane].parity_zone_number++;
 	  outernet_rx_bundles[lane].parity_zone_bitmap=0;
 	}
@@ -320,7 +393,7 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
 
       /* Copy the parity bytes.
 	 For now, we just keep them. It is only when we call
-	 outernet_rx_lane_commit_parity_zone() that we try to
+	 outernet_rx_lane_update_parity_zone() that we try to
 	 use the parity. */
       memcpy(&outernet_rx_bundles[lane].parity_bytes[parity_zone_slice*parity_bytes],parity,parity_bytes);
       
@@ -330,7 +403,7 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
       outernet_rx_bundles[lane].data_bytes=data_bytes;
       
       // See if we have enough received to commit the parity zone
-      outernet_rx_lane_commit_parity_zone(lane);
+      outernet_rx_lane_update_parity_zone(lane);
       
     }
     if (parity_zone_number > ( 1 + outernet_rx_bundles[lane].parity_zone_number)) {
