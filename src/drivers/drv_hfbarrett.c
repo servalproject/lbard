@@ -216,7 +216,7 @@ int hfbarrett_serviceloop(int serialfd)
     }
     
     if (previous_state!=HF_ALELINK){
-      fprintf(stderr,"ALE Link established with %s (station #%d), I will send a packet in %ld seconds\n",
+      fprintf(stderr,"Radio linked with %s (station #%d), I will send a packet in %ld seconds\n",
       barrett_link_partner_string,hf_link_partner,
       hf_next_packet_time-time(0));
     }
@@ -260,7 +260,7 @@ int hfbarrett_serviceloop(int serialfd)
     break;
 
 	case HF_ALESENDING: //6
-
+    // This state is managed in the hfbarret_send_packet function
 		break;
 
   case HF_RADIOCONFUSED: //7
@@ -291,7 +291,7 @@ int hfbarrett_process_line(char *l)
   while(l[0]&&l[0]<' ') l++;
   while(l[0]&&(l[strlen(l)-1]<' ')) l[strlen(l)-1]=0;
   
-  fprintf(stderr,"Barrett radio says (in state 0x%04x): %s\n",hf_state,l);
+  //fprintf(stderr,"Barrett radio says (in state 0x%04x): %s\n",hf_state,l);
 
   if ((!strcmp(l,"EV00"))&&(hf_state==HF_CALLREQUESTED)) {
     // Syntax error in our request to call.
@@ -466,7 +466,7 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
 
   int i;
 
-  time_t absolute_timeout=time(0)+90;
+  time_t absolute_timeout=time(0)+200;
 
   if (!hfbarrett_ready_test()) return -1;
   
@@ -475,6 +475,7 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
   // number of fragments in the fragment counter.
   int pieces=len/43; if (len%43) pieces++;
   
+  previous_state=hf_state; //necessary because LBARD will nor run the service loop while being in HF_ALESENDING state
   hf_state=HF_ALESENDING;
   
   fprintf(stderr,"Sending message of %d bytes via Barratt HF\n",len);
@@ -507,6 +508,8 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
       if (time(0)>absolute_timeout) {
 	fprintf(stderr,"Failed to send packet in reasonable amount of time. Aborting.\n");
 	hf_message_sequence_number++;
+	previous_state=hf_state; //necessary because LBARD will nor run the service loop while being in HF_ALESENDING state
+	hf_state=HF_ALELINK;
 	return -1;
       }
       
@@ -533,9 +536,10 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
   		    write_all(serialfd,message,strlen(message));
 		    else if (ale_inprogress==2){
 		      printf("The radio is receiving a call. Leaving ALESENDING state to ALELINK.\n");
+		      previous_state=hf_state; //necessary because LBARD will nor run the service loop while being in HF_ALESENDING state
 		      hf_state=HF_ALELINK;
 		      write_all(serialfd,"AXABORT\r\n",9);
-		      hf_radio_pause_for_turnaround();
+		      //hf_radio_pause_for_turnaround();
 		      return -1;
 	      }
 
@@ -549,7 +553,9 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
 				
 				  if(time_to_send_frag>60){
 				    printf("Something wrong occured with the radio.\n");
-				    hf_state=HF_RADIOCONFUSED;  
+				    previous_state=hf_state; //necessary because LBARD will nor run the service loop while being in HF_ALESENDING state
+				    hf_state=HF_RADIOCONFUSED; 
+				    return -1; 
 				  }
 				
 				  //printf("Sleeping for upto %d more seconds while waiting for message to TX.\n",ale_command_state);
@@ -576,8 +582,9 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
 		        ale_command_state=2;
 		        printf("While trying to send a message, another message is received. Abort sending message and pause to listen to this message\n");
 		        write_all(serialfd,"AXABORT\r\n",9);
+		        previous_state=hf_state; //necessary because LBARD will nor run the service loop while being in HF_ALESENDING state
 		        hf_state=HF_ALELINK;
-		        hf_radio_pause_for_turnaround();
+		        //hf_radio_pause_for_turnaround();
 		        return -1;
 	        }
 	                
@@ -594,7 +601,7 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
 		}
   }
   // The whole message has been sent (all the fragments)
-  //hf_radio_pause_for_turnaround(); //The radio will wait fo the reply
+  //hf_radio_pause_for_turnaround(); //Done in the service loop
   previous_state=hf_state; //necessary because LBARD will nor run the service loop while being in HF_ALESENDING state
   hf_state=HF_ALELINK;
   hf_message_sequence_number++;
