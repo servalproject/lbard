@@ -154,7 +154,11 @@ int saw_message(unsigned char *msg,int len,int rssi,char *my_sid,
 		   msg[offset],offset);
 	  
 	  monitor_log(sender_prefix,NULL,monitor_log_buf);
-	}      
+	}
+
+      if (debug_pieces)
+	printf("### %s : No message handler for type '%c' @ offset 0x%x -- stopping processing of packet.\n",
+	       timestamp_str(),msg[offset],offset);
       return -1;
     }
   }
