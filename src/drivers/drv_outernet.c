@@ -197,7 +197,7 @@ int outernet_uplink_next_in_queue(int lane)
        2 bytes = length of encoded manifest,
        followed by manifest and body.
     */       
-    int serialised_len=2+cached_manifest_encoded_len+cached_body_len;
+    int serialised_len=2+4+cached_manifest_encoded_len+cached_body_len;
     // (but allow extra space for a complete parity zone, so that packet building is simpler)
     unsigned char *serialised_data=malloc(serialised_len+MAX_MTU*4);
     if (!serialised_data) {
@@ -209,13 +209,17 @@ int outernet_uplink_next_in_queue(int lane)
 
     // Set the fields in the serialised data
     serialised_data[0]=(cached_manifest_encoded_len>>0)&0xff;
-    serialised_data[1]=(cached_manifest_encoded_len>>0)&0xff;
-    bcopy(cached_manifest_encoded,&serialised_data[2],cached_manifest_encoded_len);
-    bcopy(cached_body,&serialised_data[2+cached_manifest_encoded_len],cached_body_len);
+    serialised_data[1]=(cached_manifest_encoded_len>>8)&0xff;
+    serialised_data[2]=(cached_body_len>>0)&0xff;
+    serialised_data[3]=(cached_body_len>>8)&0xff;
+    serialised_data[4]=(cached_body_len>>16)&0xff;
+    serialised_data[5]=(cached_body_len>>24)&0xff;
+    bcopy(cached_manifest_encoded,&serialised_data[2+4],cached_manifest_encoded_len);
+    bcopy(cached_body,&serialised_data[2+4+cached_manifest_encoded_len],cached_body_len);
     // Put a safe empty region at the end, so the last parity block can be correctly
     // calculated, regardless of the length of the serialised bundle modulo parity block
     // size.
-    bzero(&serialised_data[2+cached_manifest_encoded_len+cached_body_len],MAX_MTU*4);
+    bzero(&serialised_data[2+4+cached_manifest_encoded_len+cached_body_len],MAX_MTU*4);
 
     // Store in lane
     lane_queues[lane]->serialised_bundle=serialised_data;

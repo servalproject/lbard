@@ -53,6 +53,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 int outernet_socket=-1;
 
+extern char *servald_server;
+extern char *credential;
+
 
 /*
   See also drv_outernet.c, and outernet_uplink_build_packet()
@@ -99,6 +102,70 @@ struct outernet_rx_bundle {
 #define MAX_LANES 5
 struct outernet_rx_bundle outernet_rx_bundles[MAX_LANES];
 
+int outernet_rx_lane_init(int i,int freeP);
+
+int outernet_rx_try_bundle_insert(int lane)
+{
+  int retVal=0;
+  LOG_ENTRY;
+
+  do {
+
+    LOG_NOTE("Trying to insert bundle from lane #%d",lane);
+    
+    if (!outernet_rx_bundles[lane].data) {      
+      retVal=-1;
+      break;
+    }
+
+    dump_bytes(stdout,"Received data",outernet_rx_bundles[lane].data,
+	       1024);
+    
+    unsigned int packed_manifest_len=outernet_rx_bundles[lane].data[0]
+      +(outernet_rx_bundles[lane].data[1]<<8);
+    unsigned char manifest[8192];
+    int manifest_len=8192;
+    unsigned int payload_len=outernet_rx_bundles[lane].data[2]
+      +(outernet_rx_bundles[lane].data[3]<<8)
+      +(outernet_rx_bundles[lane].data[4]<<16)
+      +(outernet_rx_bundles[lane].data[5]<<24);      
+  
+    LOG_NOTE("compress manifest length = %d bytes.",packed_manifest_len);
+    dump_bytes(stdout,"Packed manifest",&outernet_rx_bundles[lane].data[2+4],packed_manifest_len);
+    int r=manifest_binary_to_text(&outernet_rx_bundles[lane].data[2+4],packed_manifest_len,
+				  manifest,&manifest_len);
+    if (r) {
+      LOG_ERROR("Failed to decompress binary manifest");
+      retVal=-1;
+      break;
+    }
+    LOG_NOTE("Manifest decompressed to %d bytes",manifest_len);
+    dump_bytes(stderr,"Manifest",manifest,manifest_len);
+    dump_bytes(stderr,"Payload",&outernet_rx_bundles[lane].data[2+4+packed_manifest_len],
+	       payload_len);
+
+    if ((2+4+payload_len)>outernet_rx_bundles[lane].data_size) {
+      LOG_ERROR("Bundle is longer than what we have received");
+      retVal=-1;
+      break;
+    }
+
+    // Otherwise, insert the bundle into the rhizome database if we can
+    r=rhizome_update_bundle(manifest,manifest_len,
+			    &outernet_rx_bundles[lane].data[2+4+packed_manifest_len],payload_len,
+			    servald_server,credential);
+    LOG_NOTE("rhizome_update_bundle() returned %d",r);	     
+
+    // Then clear the lane
+    outernet_rx_lane_init(lane,1);
+    
+  } while(0);
+  
+  LOG_EXIT;
+  return retVal;
+}
+
+
 int outernet_rx_lane_init(int i,int freeP)
 {
   /* Clear RX lane.
@@ -109,7 +176,8 @@ int outernet_rx_lane_init(int i,int freeP)
     // Try to register the bundle, in case we got the whole
     // thing, except for a missing packet at the end, and thus
     // didn't see the end flag.
-    LOG_NOTE("Attempting to insert bundle received via outernet");
+    LOG_NOTE("Attempting to insert bundle received via outernet via lane_init()");
+    outernet_rx_try_bundle_insert(i);
   }
   
   outernet_rx_bundles[i].waitingForStart=1;
@@ -161,7 +229,7 @@ int outernet_rx_lane_commit_parity_zone(int lane)
     memcpy(&outernet_rx_bundles[lane].data
 	   [outernet_rx_bundles[lane].parity_zone_number
 	    *4*outernet_rx_bundles[lane].data_bytes],
-	   outernet_rx_bundles[lane].parity_bytes,
+	   outernet_rx_bundles[lane].parity_zone,
 	   4*outernet_rx_bundles[lane].data_bytes);
     
     // Prepare for receiving the next parity zone
@@ -185,12 +253,10 @@ int outernet_rx_lane_update_parity_zone(int lane)
     int data_bytes=(unsigned char)outernet_rx_bundles[lane].data_bytes;
     int parity_bytes=data_bytes/3;
 
-    LOG_NOTE("pz=%p, pb=%p, data_bytes=%d, parity_bytes=%d",pz,pb,data_bytes,parity_bytes);
-    
     // Handy macros to make it easier to decode
 #define PZ(A,B) (&pz[A*data_bytes+B*parity_bytes])
 #define PB(A) (&pb[A*parity_bytes])
-#define COPY(FROM,TO) { LOG_NOTE("COPY(%p -> %p)",FROM,TO); memcpy(TO,FROM,parity_bytes); }
+#define COPY(FROM,TO) { LOG_NOTE("COPY(%p -> %p) (data_bytes=%d)",FROM,TO,data_bytes); memcpy(TO,FROM,parity_bytes); }
 #define XOR(THIS,ONTO) { for(int i=0;i<parity_bytes;i++) ONTO[i]^=THIS[i]; }
     
     switch (outernet_rx_bundles[lane].parity_zone_bitmap)
@@ -205,6 +271,7 @@ int outernet_rx_lane_update_parity_zone(int lane)
       case 0x7:
 	// Missing piece 3
 
+	
 	// Copy the parity slices to the missing spot
 	COPY(PB(0),PZ(3,0));
 	COPY(PB(1),PZ(3,1));
@@ -236,6 +303,7 @@ int outernet_rx_lane_update_parity_zone(int lane)
 	break;
       case 0xd:
 	// missing piece 1
+
 	// Copy the parity slices to the missing spot
 	COPY(PB(0),PZ(1,0));
 	COPY(PB(1),PZ(1,1));
@@ -267,7 +335,6 @@ int outernet_rx_lane_update_parity_zone(int lane)
 	break;
       case 0xf:	
 	// We have all four pieces, so life is easy.
-	LOG_NOTE("Have all four pieces of parity zone");
 	outernet_rx_lane_commit_parity_zone(lane);
 	break;
     }
@@ -412,6 +479,11 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
       break;
     }
 
+    if (end_flag) {
+      LOG_NOTE("Attempting to insert bundle received via outernet via end_flag");
+      outernet_rx_try_bundle_insert(lane);
+    }
+    
     
     
   } while(0);
