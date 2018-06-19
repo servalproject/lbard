@@ -84,19 +84,126 @@ int outernet_socket=-1;
 */
 
 struct outernet_rx_bundle {
-  int offset;
-  int parity_zone_number;
+  unsigned int offset;
+  unsigned int parity_zone_number;
   unsigned char *data;
 #define MAX_DATA_BYTES 256
   unsigned char parity_zone[MAX_DATA_BYTES*4];
-  char parity_zone_bitmap;
-
-  char waitingForStart;
+  unsigned char parity_bytes[MAX_DATA_BYTES];
+  unsigned char parity_zone_bitmap;
+  unsigned char data_bytes;  
+  unsigned char waitingForStart;
 };
 
 #define MAX_LANES 5
 struct outernet_rx_bundle outernet_rx_bundles[MAX_LANES];
 
+int outernet_rx_lane_init(int i,int freeP)
+{
+  /* Clear RX lane.
+     If there was something in it, we should try to insert it as a bundle.
+  */
+  
+  outernet_rx_bundles[i].waitingForStart=1;
+  if (freeP&&outernet_rx_bundles[i].data) free(outernet_rx_bundles[i].data);
+  outernet_rx_bundles[i].data=NULL;
+  return 0;
+}
+
+int outernet_rx_lane_commit_parity_zone(int lane)
+{
+  int retVal=0;
+  LOG_ENTRY;
+
+  do {
+    unsigned char *pz=outernet_rx_bundles[lane].parity_zone;
+    unsigned char *pb=outernet_rx_bundles[lane].parity_bytes;
+    int data_bytes=(unsigned char)outernet_rx_bundles[lane].data_bytes;
+    int parity_bytes=data_bytes/3;
+
+    LOG_NOTE("pz=%p, pb=%p, data_bytes=%d, parity_bytes=%d",pz,pb,data_bytes,parity_bytes);
+    
+    // Handy macros to make it easier to decode
+#define PZ(A,B) (&pz[A*data_bytes+B*parity_bytes])
+#define PB(A) (&pb[A*parity_bytes])
+#define COPY(FROM,TO) { LOG_NOTE("COPY(%p -> %p)",FROM,TO); memcpy(TO,FROM,parity_bytes); }
+#define XOR(THIS,ONTO) { for(int i=0;i<parity_bytes;i++) ONTO[i]^=THIS[i]; }
+    
+    switch (outernet_rx_bundles[lane].parity_zone_bitmap)
+      {
+      case 0x0: case 0x1: case 0x2: case 0x3:
+      case 0x4: case 0x5: case 0x6: case 0x8:
+      case 0x9: case 0xa: case 0xc:
+	// Do nothing if we don't have enough pieces of this parity zone
+	// Less than 3 pieces received from last parity zone
+	retVal=-1;
+	break;
+      case 0x7:
+	// Missing piece 3
+
+	// Copy the parity slices to the missing spot
+	COPY(PB(0),PZ(3,0));
+	COPY(PB(1),PZ(3,1));
+	COPY(PB(2),PZ(3,2));
+
+	// Reveal the original data
+	XOR(PZ(1,0),PZ(3,0)); XOR(PZ(2,0),PZ(3,0));
+	XOR(PZ(0,0),PZ(3,1)); XOR(PZ(2,1),PZ(3,1));
+	XOR(PZ(0,1),PZ(3,2)); XOR(PZ(1,1),PZ(3,2));
+	
+	break;	
+      case 0xb:
+	// missing piece 2
+
+	// Copy the parity slices to the missing spot
+	COPY(PB(0),PZ(2,0));
+	COPY(PB(1),PZ(2,1));
+	COPY(PB(2),PZ(2,2));
+
+	// Reveal the original data
+	XOR(PZ(1,0),PZ(2,0)); XOR(PZ(3,0),PZ(2,0));
+	XOR(PZ(0,0),PZ(2,1)); XOR(PZ(3,1),PZ(2,1));
+	XOR(PZ(0,2),PZ(2,2)); XOR(PZ(1,2),PZ(2,2));
+
+	break;
+      case 0xd:
+	// missing piece 1
+	// Copy the parity slices to the missing spot
+	COPY(PB(0),PZ(1,0));
+	COPY(PB(1),PZ(1,1));
+	COPY(PB(2),PZ(1,2));
+
+	// Reveal the original data
+	XOR(PZ(2,0),PZ(1,0)); XOR(PZ(3,0),PZ(1,0));
+	XOR(PZ(0,1),PZ(1,1)); XOR(PZ(3,2),PZ(1,1));
+	XOR(PZ(0,2),PZ(1,2)); XOR(PZ(2,2),PZ(1,2));
+
+	break;
+      case 0xe:
+	// missing piece 0
+
+	// Copy the parity slices to the missing spot
+	COPY(PB(0),PZ(0,0));
+	COPY(PB(1),PZ(0,1));
+	COPY(PB(2),PZ(0,2));
+
+	// Reveal the original data
+	XOR(PZ(2,1),PZ(1,0)); XOR(PZ(3,1),PZ(1,0));
+	XOR(PZ(1,1),PZ(1,1)); XOR(PZ(3,2),PZ(1,1));
+	XOR(PZ(1,2),PZ(1,2)); XOR(PZ(2,2),PZ(1,2));
+
+	break;
+      case 0xf:	
+	// We have all four pieces, so life is easy.
+	LOG_NOTE("Have all four pieces of parity zone");
+	break;
+    }
+
+  } while(0);
+
+  LOG_EXIT;
+  return retVal;
+}
 
 int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
 {
@@ -134,7 +241,7 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
 
     int parity_zone_size=data_bytes*4;
     int parity_zone_offset=(sequence_number*data_bytes)%parity_zone_size;
-    int parity_zone_start=(sequence_number*data_bytes)-parity_zone_offset;
+    // int parity_zone_start=(sequence_number*data_bytes)-parity_zone_offset;
     int parity_zone_number=sequence_number/4;
     int parity_zone_slice=sequence_number&3;
     
@@ -147,6 +254,92 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
 	     parity_zone_number,parity_zone_slice);
     dump_bytes(stderr,"Bundle bytes",data,data_bytes);
     dump_bytes(stderr,"Parity bytes",parity,parity_bytes);
+
+    if (start_flag) {
+      // Erase whatever was sitting in this lane.
+      LOG_NOTE("Clearing lane #%d RX state for new bundle",lane);
+      outernet_rx_lane_init(lane,1);
+
+      outernet_rx_bundles[lane].waitingForStart=0;
+    }
+
+    // If we are waiting for a new start flag, ignore whatever
+    // we see in the meantime.
+    // If we see a sequence #1, then we might have missed
+    // only sequence #0, which we can recover via parity, if we
+    // don't miss the next two packets.  So we should handle that
+    // special case.
+    if (outernet_rx_bundles[lane].waitingForStart
+	&&(sequence_number>1)) break;
+
+    // Can only happen if we are on sequence #0 or #1, which in either
+    // case counts as a start.
+    outernet_rx_bundles[lane].waitingForStart=0;
+
+    if (parity_zone_number < outernet_rx_bundles[lane].parity_zone_number) {
+      // We seem to have gone backwards, which means that we have to
+      // abandon the current transfer, as presumably we missed the end of the
+      // last, and the start of this one.
+      LOG_NOTE("Clearing lane #%d RX state because parity_zone_number went backwards",lane);
+      outernet_rx_lane_init(lane,1);
+      break;
+    }
+    if (parity_zone_number==(1 + outernet_rx_bundles[lane].parity_zone_number))
+      {
+	// Parity zone has advanced by exactly one.
+	// We need to check that the previous parity zone was completed.
+	// If not, then we need to stop receiving.
+      switch (outernet_rx_bundles[lane].parity_zone_bitmap)
+	{
+	case 0x0: case 0x1: case 0x2: case 0x3:
+	case 0x4: case 0x5: case 0x6: case 0x8:
+	case 0x9: case 0xa: case 0xc:
+	  // Less than 3 pieces received from last parity zone
+	  LOG_NOTE("Clearing lane #%d RX state because parity_zone_number advanced, but we havn't received at least 3/4 packets from the last one.",lane);
+	  outernet_rx_lane_init(lane,1);
+	  break;
+	default:
+	  // We have 3 or more pieces in the last parity zone,
+	  // so commit it. Really this should never happen, because
+	  // we should commit a parity zone after adding to it
+	  // each time
+	  outernet_rx_lane_commit_parity_zone(lane);
+	  outernet_rx_bundles[lane].parity_zone_number++;
+	  outernet_rx_bundles[lane].parity_zone_bitmap=0;
+	}
+      }
+    if (parity_zone_number==outernet_rx_bundles[lane].parity_zone_number)  {
+      // Okay, the packet is for this parity zone.
+      // Copy the data and parity bytes in, and update the bitmap
+
+      // Copy the data bytes
+      dump_bytes(stderr,"rxd bytes",data,data_bytes);
+      dump_bytes(stderr,"stored bytes",&outernet_rx_bundles[lane].parity_zone[parity_zone_offset],data_bytes);
+      memcpy(&outernet_rx_bundles[lane].parity_zone[parity_zone_offset],
+	     data,data_bytes);
+
+      /* Copy the parity bytes.
+	 For now, we just keep them. It is only when we call
+	 outernet_rx_lane_commit_parity_zone() that we try to
+	 use the parity. */
+      memcpy(&outernet_rx_bundles[lane].parity_bytes[parity_zone_slice*parity_bytes],parity,parity_bytes);
+      
+      
+      // Update bitmap
+      outernet_rx_bundles[lane].parity_zone_bitmap|=(1<<parity_zone_slice);
+      outernet_rx_bundles[lane].data_bytes=data_bytes;
+      
+      // See if we have enough received to commit the parity zone
+      outernet_rx_lane_commit_parity_zone(lane);
+      
+    }
+    if (parity_zone_number > ( 1 + outernet_rx_bundles[lane].parity_zone_number)) {
+      LOG_NOTE("Clearing lane #%d RX state because parity_zone_number skipped forwards",lane);
+      outernet_rx_lane_init(lane,1);
+      break;
+    }
+
+    
     
   } while(0);
   
@@ -195,10 +388,7 @@ int outernet_rx_setup(char *socket_filename)
     LOG_NOTE("Trying to open Outernet socket");
 
     // Initialise data RX structures
-    for(int i=0;i<MAX_LANES;i++) {
-      outernet_rx_bundles[i].waitingForStart=1;
-      outernet_rx_bundles[i].data=NULL;
-    }
+    for(int i=0;i<MAX_LANES;i++) outernet_rx_lane_init(i,0);
     
     outernet_socket = socket( AF_UNIX, SOCK_DGRAM, 0 );
     
