@@ -141,7 +141,7 @@ $(SRCDIR)/xfer/radio_types.c:	$(RADIODRIVERS) Makefile
 	echo "  {-1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,-1}" >> $(SRCDIR)/xfer/radio_types.c
 	echo "};" >> $(SRCDIR)/xfer/radio_types.c
 
-$(SRCDIR)/xfer/message_handlers.c:	$(MESSAGEHANDLERS) Makefile gen_msghandler_list
+$(SRCDIR)/xfer/message_handlers.c:	$(MESSAGEHANDLERS) Makefile gen_msghandler_list /bin/csh
 	echo '#include <stdio.h>' > $(SRCDIR)/xfer/message_handlers.c
 	echo '#include <fcntl.h>' >> $(SRCDIR)/xfer/message_handlers.c
 	echo '#include <sys/uio.h>' >> $(SRCDIR)/xfer/message_handlers.c
