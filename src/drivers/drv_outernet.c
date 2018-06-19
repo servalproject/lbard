@@ -498,7 +498,7 @@ int outernet_uplink_build_packet(int lane)
        { retVal=-1; break;}
   
     // 3/4 of the usable bytes are available for data
-    int data_bytes=(outernet_mtu-3)*3/4;
+    int data_bytes=(outernet_mtu-(1+2+1))*3/4;
     int parity_bytes=data_bytes/3;
     if (parity_bytes*3!=data_bytes) {
       LOG_ERROR("Parity stripe size problem. MTU=%d, data_bytes=%d, parity_bytes=%d",
@@ -557,8 +557,8 @@ int outernet_uplink_build_packet(int lane)
 
     // Glue everything together:
 
-    bcopy(&lane_queues[lane]->serialised_bundle[lane_queues[lane]->serialised_offset],&outernet_packet[2+1],data_bytes);
-    bcopy(parity_stripe,&outernet_packet[2+1+data_bytes],parity_bytes);
+    bcopy(&lane_queues[lane]->serialised_bundle[lane_queues[lane]->serialised_offset],&outernet_packet[1+2+1],data_bytes);
+    bcopy(parity_stripe,&outernet_packet[1+2+1+data_bytes],parity_bytes);
     
     // Sequence number
     int seq=outernet_sequence_number&0x3fff;
@@ -577,11 +577,12 @@ int outernet_uplink_build_packet(int lane)
       outernet_uplink_lane_dequeue_current(lane);
     }
 
-    outernet_packet[0]=(seq>>0)&0xff;
-    outernet_packet[1]=(seq>>8)&0xff;
-    outernet_packet[2]=outernet_mtu;
+    outernet_packet[0]=lane&0xff;
+    outernet_packet[1]=(seq>>0)&0xff;
+    outernet_packet[2]=(seq>>8)&0xff;
+    outernet_packet[3]=outernet_mtu;
 
-    outernet_packet_len=2+1+data_bytes+parity_bytes;
+    outernet_packet_len=1+2+1+data_bytes+parity_bytes;
     dump_bytes(stderr,"Packet for uplink",outernet_packet,outernet_packet_len);
     
   } while(0);
