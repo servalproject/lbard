@@ -561,12 +561,12 @@ int outernet_uplink_build_packet(int lane)
     bcopy(parity_stripe,&outernet_packet[1+2+1+data_bytes],parity_bytes);
     
     // Sequence number
-    int seq=outernet_sequence_number&0x3fff;
+    int seq=lane_queues[lane]->serialised_offset/data_bytes;
     // Start of bundle marker
     if (!lane_queues[lane]->serialised_offset) seq|=0x4000;
 
     lane_queues[lane]->serialised_offset+=data_bytes;
-    outernet_sequence_number++;
+
     // Send to end of serialised bundle + rounded out to end of parity zone, to make sure end of
     // bundle is protected as well as the rest of it is.
     if ((lane_queues[lane]->serialised_offset>=lane_queues[lane]->serialised_len)
