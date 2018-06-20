@@ -39,17 +39,6 @@ int ale_command_state=-1;
 //  1: executed
 //  2: understood by the radio, but nothing has happened
 
-int hfbarrett_ready_test(void)
-{
-  int isReady=1;
-  
-  if (hf_state!=HF_ALELINK) isReady=0;
-  if (ale_inprogress) isReady=0;
-  if (!barrett_link_partner_string[0]) isReady=0;
-
-  return isReady; 
-}
-
 int hfbarrett_my_turn_to_send(void)
 {
   if (hfbarrett_ready_test())
