@@ -161,10 +161,20 @@ int outernet_uplink_next_in_queue(int lane)
   
   do {
     int bundle=-1;
+    int source_lane=lane;
     
     // Work out next bundle
     if (lane<0||lane>4) { retVal=-1; break; } // lane exists?
-    if (!lane_queues[lane]->queue_len) break; // lane has a queue?
+    if (!lane_queues[lane]->queue_len) {
+      // There is nothing in the queue for this lane.
+      // We are allowed to take things from the queue of lower
+      // numbered lanes.
+      for(source_lane=0;source_lane<lane;source_lane++)
+	if (lane_queues[source_lane]->queue_len) break;
+      LOG_NOTE("source_lane = %d (for lane #%d)",source_lane,lane);
+      // If still nothing to do, then exit
+      if (!lane_queues[source_lane]->queue_len) break;      
+    }
 
     if (lane_queues[lane]->serialised_bundle_number!=-1) {
       LOG_ERROR("Must dequeue bundle being transmitted before calling outernet_upline_next_in_queue() for lane #%d",lane);
@@ -173,13 +183,13 @@ int outernet_uplink_next_in_queue(int lane)
     }
     
     // Get bundle # of head of queue
-    bundle=lane_queues[lane]->bundle_numbers[0];
+    bundle=lane_queues[source_lane]->bundle_numbers[0];
     // Move head of queue to tail of queue
     int n;
-    for(n=0;n<lane_queues[lane]->queue_len-1;n++)
-      lane_queues[lane]->bundle_numbers[n]
-	=lane_queues[lane]->bundle_numbers[n+1];
-    lane_queues[lane]->bundle_numbers[n]=bundle;
+    for(n=0;n<lane_queues[source_lane]->queue_len-1;n++)
+      lane_queues[source_lane]->bundle_numbers[n]
+	=lane_queues[source_lane]->bundle_numbers[n+1];
+    lane_queues[source_lane]->bundle_numbers[n]=bundle;
     
     // Get requested bundle in the bundle cache
     if (prime_bundle_cache(bundle,
@@ -188,6 +198,7 @@ int outernet_uplink_next_in_queue(int lane)
 	LOG_ERROR("Failed to prime bundle cache for bundle #%d",bundle);
       }
     if (cached_body_len<0||cached_manifest_encoded_len<0) {
+      LOG_NOTE("Cached length is negative");
       retVal=-1;
       break;
     }
@@ -227,8 +238,8 @@ int outernet_uplink_next_in_queue(int lane)
     lane_queues[lane]->serialised_bundle_number=bundle;
     lane_queues[lane]->serialised_len=serialised_len;
 
-    LOG_NOTE("Bundle #%d serialised and ready for uplink in lane #%d",
-	     bundle,lane);
+    LOG_NOTE("Bundle #%d serialised and ready for uplink in lane #%d (pulled from queue of lane #%d)",
+	     bundle,lane,source_lane);
     
   } while(0);
   LOG_EXIT;
@@ -654,6 +665,10 @@ int outernet_serviceloop(int serialfd)
 	}
 	// If still nothing to uplink, then do nothing, i.e.,
 	// resend last packet.  Else, replace packet content.
+	if (lane_queues[last_uplink_lane]->serialised_bundle_number==-1) {
+	  // This queue is idle, try to get something on it
+	  outernet_uplink_next_in_queue(last_uplink_lane);
+	}
 	if (lane_queues[last_uplink_lane]->serialised_bundle_number!=-1) {
 	  LOG_NOTE("Something in the queue for lane #%d",last_uplink_lane);
 	  outernet_uplink_build_packet(last_uplink_lane);
