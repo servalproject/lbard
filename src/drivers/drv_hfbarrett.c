@@ -50,6 +50,17 @@ int hfbarrett_ready_test(void)
   return isReady; 
 }
 
+int hfbarrett_ready_test(void)
+{
+  int isReady=1;
+  
+  if (hf_state!=HF_ALELINK) isReady=0;
+  if (ale_inprogress) isReady=0;
+  if (!barrett_link_partner_string[0]) isReady=0;
+
+  return isReady; 
+}
+
 int hfbarrett_initialise(int serialfd)
 {
   // See "2050 RS-232 ALE Commands" document from Barrett for more information on the
