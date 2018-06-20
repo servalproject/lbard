@@ -4,7 +4,7 @@ The following specially formatted comments tell the LBARD build environment abou
 See radio_type for the meaning of each field.
 See radios.h target in Makefile to see how this comment is used to register support for the radio.
 
-RADIO TYPE: HFBARRETT,"hfbarrett","Barrett HF with ALE",hfcodanbarrett_radio_detect,hfbarrett_serviceloop,hfbarrett_receive_bytes,hfbarrett_send_packet,hfbarrett_ready_test,20
+RADIO TYPE: HFBARRETT,"hfbarrett","Barrett HF with ALE",hfcodanbarrett_radio_detect,hfbarrett_serviceloop,hfbarrett_receive_bytes,hfbarrett_send_packet,hfbarrett_my_turn_to_send,20
 
 */
 
@@ -48,6 +48,14 @@ int hfbarrett_ready_test(void)
   if (!barrett_link_partner_string[0]) isReady=0;
 
   return isReady; 
+}
+
+int hfbarrett_my_turn_to_send(void)
+{
+  if (hfbarrett_ready_test())
+    return hf_radio_check_if_ready();
+  else
+    return 0;
 }
 
 int hfbarrett_ready_test(void)
