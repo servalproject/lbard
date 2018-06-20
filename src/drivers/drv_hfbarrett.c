@@ -4,7 +4,7 @@ The following specially formatted comments tell the LBARD build environment abou
 See radio_type for the meaning of each field.
 See radios.h target in Makefile to see how this comment is used to register support for the radio.
 
-RADIO TYPE: HFBARRETT,"hfbarrett","Barrett HF with ALE",hfcodanbarrett_radio_detect,hfbarrett_serviceloop,hfbarrett_receive_bytes,hfbarrett_send_packet,hf_radio_check_if_ready,20
+RADIO TYPE: HFBARRETT,"hfbarrett","Barrett HF with ALE",hfcodanbarrett_radio_detect,hfbarrett_serviceloop,hfbarrett_receive_bytes,hfbarrett_send_packet,hfbarrett_ready_test,20
 
 */
 
@@ -38,6 +38,17 @@ int ale_command_state=-1;
 //  0: not executed
 //  1: executed
 //  2: understood by the radio, but nothing has happened
+
+int hfbarrett_ready_test(void)
+{
+  int isReady=1;
+  
+  if (hf_state!=HF_ALELINK) isReady=0;
+  if (ale_inprogress) isReady=0;
+  if (!barrett_link_partner_string[0]) isReady=0;
+
+  return isReady; 
+}
 
 int hfbarrett_initialise(int serialfd)
 {
@@ -437,7 +448,11 @@ int hfbarrett_receive_bytes(unsigned char *bytes,int count)
 int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
 {
   // We can send upto 90 ALE encoded bytes.  ALE bytes are 6-bit, so we can send
-  // 22 groups of 3 bytes = 66 bytes raw and 88 encoded bytes.  We can use the first
+  // 22 groups of 3 bytes = 66 bytes raw and 88 encoded bytes.
+  // XXX - In practice we get only 4 bits per byte, as we don't seem to be able
+  // to get 6-bit clean. But recheck with Barrett to Barrett, as it might be a
+  // Barrett / Codan interoperabilitty problem.
+  // We can use the first
   // two bytes for fragmentation, since we would still like to support 256-byte
   // messages.  This means we need upto 4 pieces for each message.
   char message[8192];
@@ -447,14 +462,7 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
 
   time_t absolute_timeout=time(0)+200;
 
-  if (hf_state!=HF_ALELINK) return -1;
-  
-  //does not try to transmit if the radio isn't idle
-  if (ale_inprogress!=0){
-    printf("ALE already in progress\n");
-    return -1; 
-  }
-  if (!barrett_link_partner_string[0]) return -1;
+  if (!hfbarrett_ready_test()) return -1;
   
   // How many pieces to send (1-6)
   // This means we have 36 possible fragment indications, if we wish to imply the

@@ -138,7 +138,8 @@ int radio_send_message(int serialfd, unsigned char *buffer,int length)
   assert( offset <= (FEC_MAX_BYTES+FEC_LENGTH) );
 
   if (radio_get_type()>=0) {
-    radio_types[radio_get_type()].send_packet(serialfd,out,offset);
+    int result=radio_types[radio_get_type()].send_packet(serialfd,out,offset);
+    if (result) fprintf(stderr,"Transmission of packet failed.\n");
   }
   
   // Don't forget to count our own transmissions
