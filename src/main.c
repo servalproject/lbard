@@ -483,13 +483,17 @@ int main(int argc, char **argv)
       URI, then we don't try to open the port.
     */
     int serialfd = -1;
-    if (strstr(serial_port,":")&&(strcmp("/dev/null",serial_port))) {
+    if (strstr(serial_port,":")) {
       // Has a :, so assume it is a URI kind of thing
       fprintf(stderr,"Serial port looks like a URI, not (yet) opening/connecting\n");
       LOG_NOTE("Serial port looks like a URI, not (yet) opening/connecting\n");
       
       // So skip serial port fiddling, and go direct to auto detection routines
       autodetect_radio_type(serialfd);
+    } else if (!strcmp("noradio",serial_port)) {
+      // Force detection as no radio
+      serialfd=-1;
+      null_radio_detect(serialfd);
     } else {
       serialfd = open(serial_port,O_RDWR);
       if (serialfd < 0) {
