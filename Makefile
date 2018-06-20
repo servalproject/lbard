@@ -1,7 +1,10 @@
 BINDIR=.
-EXECS = $(BINDIR)/lbard $(BINDIR)/manifesttest $(BINDIR)/fakecsmaradio
+EXECS = $(BINDIR)/lbard $(BINDIR)/manifesttest $(BINDIR)/fakecsmaradio $(BINDIR)/fakeouternet
 
 all:	$(EXECS)
+
+test:	$(EXECS)
+	tests/lbard
 
 clean:
 	rm -rf version.h $(EXECS) echotest
