@@ -202,7 +202,8 @@ int update_my_message(int serialfd,
     printf("\n");
   }
 
-  radio_send_message(serialfd,msg_out,offset);
+  if (radio_send_message(serialfd,msg_out,offset))
+    fprintf(stderr,"radio_send_message() failed to send message.  This is bad, as report_queue entries may be lost forever.\n");
 
   return offset;
 }

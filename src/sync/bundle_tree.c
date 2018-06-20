@@ -316,7 +316,7 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
       report_queue_length++;
     } else {
       fprintf(stderr,">>> %s Flushing %d byte report from queue, %d remaining.\n",
-	      timestamp_str(),
+	      timestamp_str(),	      
 	      report_lengths[report_queue_length],
 	      report_queue_length);
       fprintf(stderr,"T+%lldms : Flushing %d byte report from queue, %d remaining.\n",
@@ -326,6 +326,10 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
       fprintf(stderr,"Sent report_queue message '%s' to %s*\n",
 	      report_queue_message[report_queue_length],
 	      report_queue_peers[report_queue_length]->sid_prefix);
+      dump_bytes(stderr,"report_queue message",
+		 (unsigned char *)report_queue_message[report_queue_length],
+		 report_lengths[report_queue_length]);
+		 
       free(report_queue_message[report_queue_length]);
       report_queue_message[report_queue_length]=NULL;
     }
