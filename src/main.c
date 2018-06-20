@@ -584,11 +584,6 @@ int main(int argc, char **argv)
           time_server=1;
           LOG_NOTE("time_server set to 1");
         }
-        else if (! strncasecmp("hfplan=", argv[n], 7)) 
-        {
-          LOG_NOTE("hfplan arg found");
-          hf_read_configuration(&argv[n][7]);
-        }
         else if (! strncasecmp("timebroadcast=", argv[n], 14)) 
         {
           time_broadcast_addrs[0] = strdup(&argv[n][14]);
