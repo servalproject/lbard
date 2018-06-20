@@ -393,7 +393,7 @@ setup_OuternetUplink() {
    get_servald_restful_http_server_port PORTC +C
    get_servald_restful_http_server_port PORTD +D
    # Start the fake radio daemon.
-   fork %fakeradio fakecsmaradio rfd900,rfd900,rfd900,rfd900 ttys.txt "$1"
+   fork %fakeradio fakecsmaradio hfcodan,hfcodan,hfcodan,hfcodan ttys.txt "$1"
    rm $_tfw_tmp/outernet.sock
    fork %fakeouternet fakeouternet 61001 $_tfw_tmp/outernetB.sock $_tfw_tmp/outernetC.sock $_tfw_tmp/outernetD.sock
    wait_until --timeout=15 eval [ `ls $_tfw_tmp/outernet.sock | wc -l` -ge 0 ]
@@ -409,15 +409,15 @@ setup_OuternetUplink() {
    set_instance +A
    rhizome_add_file file1 500
    set_instance +B
-   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" /dev/null "outernetrx=$_tfw_tmp/outernetB.sock" pull
+   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" noradio "outernetrx=$_tfw_tmp/outernetB.sock" pull
    set_instance +C
-   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" /dev/null "outernetrx=$_tfw_tmp/outernetC.sock" pull
+   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" noradio "outernetrx=$_tfw_tmp/outernetC.sock" pull
    set_instance +D
-   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" /dev/null "outernetrx=$_tfw_tmp/outernetD.sock" pull
+   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" noradio "outernetrx=$_tfw_tmp/outernetD.sock" pull
 }
 test_OuternetUplink() {
    # Test that all radios are detected
-   wait_until --timeout=20 grep "Radio is a outernet (Outernet.is broadcast satellite)" A_LBARDERR
+   wait_until --timeout=20 grep "Radio is a noradio (No radio)" A_LBARDERR
 
    all_bundles_received() {
       bundle_received_by $BID:$VERSION +B &&
@@ -444,7 +444,7 @@ setup_OuternetUplink5() {
    get_servald_restful_http_server_port PORTC +C
    get_servald_restful_http_server_port PORTD +D
    # Start the fake radio daemon.
-   fork %fakeradio fakecsmaradio rfd900,rfd900,rfd900,rfd900 ttys.txt "$1"
+   fork %fakeradio fakecsmaradio hfcodan,hfcodan,hfcodan,hfcodan ttys.txt "$1"
    rm $_tfw_tmp/outernet.sock
    fork %fakeouternet fakeouternet 61001 $_tfw_tmp/outernetB.sock $_tfw_tmp/outernetC.sock $_tfw_tmp/outernetD.sock
    wait_until --timeout=15 eval [ `ls $_tfw_tmp/outernet.sock | wc -l` -ge 0 ]
@@ -474,15 +474,15 @@ setup_OuternetUplink5() {
    BIDe=$BID
    VERSIONE=$VERSION
    set_instance +B
-   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" /dev/null "outernetrx=$_tfw_tmp/outernetB.sock" pull
+   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" noradio "outernetrx=$_tfw_tmp/outernetB.sock" pull
    set_instance +C
-   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" /dev/null "outernetrx=$_tfw_tmp/outernetC.sock" pull
+   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" noradio "outernetrx=$_tfw_tmp/outernetC.sock" pull
    set_instance +D
-   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" /dev/null "outernetrx=$_tfw_tmp/outernetD.sock" pull
+   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" noradio "outernetrx=$_tfw_tmp/outernetD.sock" pull
 }
 test_OuternetUplink5() {
    # Test that all radios are detected
-   wait_until --timeout=20 grep "Radio is a outernet (Outernet.is broadcast satellite)" A_LBARDERR
+   wait_until --timeout=20 grep "Radio is a noradio (No radio)" A_LBARDERR
 
    all_bundles_received() {
       bundle_received_by $BIDA:$VERSIONA +B &&
