@@ -26,9 +26,12 @@ RADIO TYPE: NORADIO,"noradio","No radio",null_radio_detect,null_serviceloop,null
 #include "radios.h"
 #include "code_instrumentation.h"
 
+// Import serial_port string from main.c
+extern char *serial_port;
+
 int null_radio_detect(int fd)
 {
-  if (fd==-1) {
+  if ((fd==-1)&&(!strcmp(serial_port,"noradio"))) {
     LOG_NOTE("No serial port, so no radio");
     radio_set_type(RADIOTYPE_NORADIO);
     return 1;

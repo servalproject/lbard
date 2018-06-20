@@ -141,8 +141,8 @@ int outernet_rx_try_bundle_insert(int lane)
       break;
     }
     LOG_NOTE("Manifest decompressed to %d bytes",manifest_len);
-    dump_bytes(stderr,"Manifest",manifest,manifest_len);
-    dump_bytes(stderr,"Payload",&outernet_rx_bundles[lane].data[2+4+packed_manifest_len],
+    dump_bytes(stdout,"Manifest",manifest,manifest_len);
+    dump_bytes(stdout,"Payload",&outernet_rx_bundles[lane].data[2+4+packed_manifest_len],
 	       payload_len);
 
     if ((2+4+payload_len)>outernet_rx_bundles[lane].data_size) {
@@ -193,9 +193,9 @@ int outernet_rx_lane_commit_parity_zone(int lane)
   LOG_ENTRY;
 
   do {
-    LOG_NOTE("Commiting parity zone at offset %d",
+    LOG_NOTE("Commiting parity zone at offset %d for lane #%d",
 	     outernet_rx_bundles[lane].parity_zone_number
-	     *4*outernet_rx_bundles[lane].data_bytes);
+	     *4*outernet_rx_bundles[lane].data_bytes,lane);
 
     if ((!outernet_rx_bundles[lane].data)
 	||(outernet_rx_bundles[lane].data_size
@@ -226,6 +226,9 @@ int outernet_rx_lane_commit_parity_zone(int lane)
       }
     
     // Copy the parity zone into place
+    dump_bytes(stderr,"Parity zone in commit",
+	       outernet_rx_bundles[lane].parity_zone,
+	       4*outernet_rx_bundles[lane].data_bytes);	       
     memcpy(&outernet_rx_bundles[lane].data
 	   [outernet_rx_bundles[lane].parity_zone_number
 	    *4*outernet_rx_bundles[lane].data_bytes],
@@ -328,9 +331,9 @@ int outernet_rx_lane_update_parity_zone(int lane)
 	COPY(PB(2),PZ(0,2));
 
 	// Reveal the original data
-	XOR(PZ(2,1),PZ(1,0)); XOR(PZ(3,1),PZ(1,0));
-	XOR(PZ(1,1),PZ(1,1)); XOR(PZ(3,2),PZ(1,1));
-	XOR(PZ(1,2),PZ(1,2)); XOR(PZ(2,2),PZ(1,2));
+	XOR(PZ(2,1),PZ(0,0)); XOR(PZ(3,1),PZ(0,0));
+	XOR(PZ(1,1),PZ(0,1)); XOR(PZ(3,2),PZ(0,1));
+	XOR(PZ(1,2),PZ(0,2)); XOR(PZ(2,2),PZ(0,2));
 
 	outernet_rx_lane_commit_parity_zone(lane);
 
@@ -397,7 +400,9 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
     dump_bytes(stderr,"Bundle bytes",data,data_bytes);
     dump_bytes(stderr,"Parity bytes",parity,parity_bytes);
 
-    if (start_flag) {
+    // Start receiving if we see a start sequence, or if we see sequence #1 while waiting
+    // for a start (since we can recover the missing start)
+    if (start_flag||((sequence_number==1)&&outernet_rx_bundles[lane].waitingForStart)) {
       // Erase whatever was sitting in this lane.
       LOG_NOTE("Clearing lane #%d RX state for new bundle",lane);
       outernet_rx_lane_init(lane,1);

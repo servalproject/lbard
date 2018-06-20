@@ -381,9 +381,58 @@ test_OuternetSetup() {
    fork_terminate_all
 }
 
+doc_OuternetUplink100="LBARD uplinks ~260+100 byte bundle via Outernet gateway in < 1 minute"
+setup_OuternetUplink100() {
+   setup_servald
+   assert_no_servald_processes
+   foreach_instance +A +B +C +D create_single_identity
+   foreach_instance +A +B +C +D start_servald_server
+   get_servald_restful_http_server_port PORTA +A
+   get_servald_restful_http_server_port PORTB +B
+   get_servald_restful_http_server_port PORTC +C
+   get_servald_restful_http_server_port PORTD +D
+   # Start the fake radio daemon.
+   fork %fakeradio fakecsmaradio hfcodan,hfcodan,hfcodan,hfcodan ttys.txt "$1"
+   rm $_tfw_tmp/outernet.sock
+   fork %fakeouternet fakeouternet 61001 $_tfw_tmp/outernetB.sock $_tfw_tmp/outernetC.sock $_tfw_tmp/outernetD.sock
+   wait_until --timeout=15 eval [ `ls $_tfw_tmp/outernet.sock | wc -l` -ge 0 ]
+   wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
+   tty1=$(sed -n 1p ttys.txt)
+   tty2=$(sed -n 2p ttys.txt)
+   tty3=$(sed -n 3p ttys.txt)
+   tty4=$(sed -n 4p ttys.txt)
+   # Start four lbard daemons, isolated from each other, with one as uplink to Outernet gateway
+   set_instance +A
+   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$IDA" outernet://127.0.0.1:61001 pull
+   # Insert a file to server A, which we will want to see received by the others via Outernet interface
+   set_instance +A
+   rhizome_add_file file1 100
+   set_instance +B
+   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" noradio "outernetrx=$_tfw_tmp/outernetB.sock" pull
+   set_instance +C
+   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" noradio "outernetrx=$_tfw_tmp/outernetC.sock" pull
+   set_instance +D
+   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" noradio "outernetrx=$_tfw_tmp/outernetD.sock" pull
+}
+test_OuternetUplink100() {
+   # Test that all radios are detected
+   set_instance +A
+   wait_until --timeout=20 grep "Radio is a outernet (Outernet.is broadcast satellite)" A_LBARDERR
 
-doc_OuternetUplink="LBARD uplinks to Outernet gateway"
-setup_OuternetUplink() {
+   all_bundles_received() {
+      bundle_received_by $BID:$VERSION +B &&
+      bundle_received_by $BID:$VERSION +C &&
+      bundle_received_by $BID:$VERSION +D
+   }
+   wait_until all_bundles_received
+
+   
+   fork_terminate %lbardA %lbardB %lbardC %lbardD 
+   fork_terminate_all
+}
+
+doc_OuternetUplink500="LBARD uplinks ~260+500 byte bundle via Outernet gateway in < 1 minute"
+setup_OuternetUplink500() {
    setup_servald
    assert_no_servald_processes
    foreach_instance +A +B +C +D create_single_identity
@@ -415,9 +464,10 @@ setup_OuternetUplink() {
    set_instance +D
    fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" noradio "outernetrx=$_tfw_tmp/outernetD.sock" pull
 }
-test_OuternetUplink() {
+test_OuternetUplink500() {
    # Test that all radios are detected
-   wait_until --timeout=20 grep "Radio is a noradio (No radio)" A_LBARDERR
+   set_instance +A
+   wait_until --timeout=20 grep "Radio is a outernet (Outernet.is broadcast satellite)" A_LBARDERR
 
    all_bundles_received() {
       bundle_received_by $BID:$VERSION +B &&
@@ -426,6 +476,56 @@ test_OuternetUplink() {
    }
    wait_until all_bundles_received
 
+   
+   fork_terminate %lbardA %lbardB %lbardC %lbardD 
+   fork_terminate_all
+}
+
+doc_OuternetUplink1000="LBARD uplinks ~260+1000 byte bundle via Outernet gateway in < 2 minutes"
+setup_OuternetUplink1000() {
+   setup_servald
+   assert_no_servald_processes
+   foreach_instance +A +B +C +D create_single_identity
+   foreach_instance +A +B +C +D start_servald_server
+   get_servald_restful_http_server_port PORTA +A
+   get_servald_restful_http_server_port PORTB +B
+   get_servald_restful_http_server_port PORTC +C
+   get_servald_restful_http_server_port PORTD +D
+   # Start the fake radio daemon.
+   fork %fakeradio fakecsmaradio hfcodan,hfcodan,hfcodan,hfcodan ttys.txt "$1"
+   rm $_tfw_tmp/outernet.sock
+   fork %fakeouternet fakeouternet 61001 $_tfw_tmp/outernetB.sock $_tfw_tmp/outernetC.sock $_tfw_tmp/outernetD.sock
+   wait_until --timeout=15 eval [ `ls $_tfw_tmp/outernet.sock | wc -l` -ge 0 ]
+   wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
+   tty1=$(sed -n 1p ttys.txt)
+   tty2=$(sed -n 2p ttys.txt)
+   tty3=$(sed -n 3p ttys.txt)
+   tty4=$(sed -n 4p ttys.txt)
+   # Start four lbard daemons, isolated from each other, with one as uplink to Outernet gateway
+   set_instance +A
+   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$IDA" outernet://127.0.0.1:61001 pull
+   # Insert a file to server A, which we will want to see received by the others via Outernet interface
+   set_instance +A
+   rhizome_add_file file1 1000
+   set_instance +B
+   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" noradio "outernetrx=$_tfw_tmp/outernetB.sock" pull
+   set_instance +C
+   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" noradio "outernetrx=$_tfw_tmp/outernetC.sock" pull
+   set_instance +D
+   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" noradio "outernetrx=$_tfw_tmp/outernetD.sock" pull
+}
+test_OuternetUplink1000() {
+   # Test that all radios are detected
+   set_instance +A
+   wait_until --timeout=20 grep "Radio is a outernet (Outernet.is broadcast satellite)" A_LBARDERR
+
+   all_bundles_received() {
+      bundle_received_by $BID:$VERSION +B &&
+      bundle_received_by $BID:$VERSION +C &&
+      bundle_received_by $BID:$VERSION +D
+   }
+   # Allow a little more time, since the bigger bundle will require a bit longer to transfer
+   wait_until --timeout=120 all_bundles_received
    
    fork_terminate %lbardA %lbardB %lbardC %lbardD 
    fork_terminate_all
@@ -482,7 +582,8 @@ setup_OuternetUplink5() {
 }
 test_OuternetUplink5() {
    # Test that all radios are detected
-   wait_until --timeout=20 grep "Radio is a noradio (No radio)" A_LBARDERR
+   set_instance +A
+   wait_until --timeout=20 grep "Radio is a outernet (Outernet.is broadcast satellite)" A_LBARDERR
 
    all_bundles_received() {
       bundle_received_by $BIDA:$VERSIONA +B &&
