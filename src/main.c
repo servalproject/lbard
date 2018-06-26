@@ -497,7 +497,7 @@ int main(int argc, char **argv)
     } else {
       serialfd = open(serial_port,O_RDWR);
       if (serialfd < 0) {
-	LOG_ERROR("cannot open serial port: %d", serialfd);
+	LOG_ERROR("cannot open serial port: %d ('%s')", serialfd,serial_port);
 	perror("Opening serial port in main");
 	exitVal = -1;
 	break;
