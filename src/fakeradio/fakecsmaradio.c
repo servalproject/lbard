@@ -851,7 +851,7 @@ int main(int argc,char **argv)
   char *radio_types="rfd900,rfd900";
   
   if (argv&&argv[1]) radio_types=argv[1];
-  if (getenv("LBARD_REAL_RADIOS")&&strlen(getenv("LBARD_REAL_RADIO"))) radio_types=getenv("LBARD_REAL_RADIOS");
+  if (getenv("LBARD_REAL_RADIOS")&&strlen(getenv("LBARD_REAL_RADIOS"))) radio_types=getenv("LBARD_REAL_RADIOS");
   radio_count=1;
   for(int i=0;radio_types[i];i++) if (radio_types[i]==',') radio_count++;
   fprintf(stderr,"radio_count=%d\n",radio_count);
