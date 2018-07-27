@@ -851,6 +851,7 @@ int main(int argc,char **argv)
   char *radio_types="rfd900,rfd900";
   
   if (argv&&argv[1]) radio_types=argv[1];
+  if (getenv("LBARD_REAL_RADIOS")&&strlen(getenv("LBARD_REAL_RADIO"))) radio_types=getenv("LBARD_REAL_RADIOS");
   radio_count=1;
   for(int i=0;radio_types[i];i++) if (radio_types[i]==',') radio_count++;
   fprintf(stderr,"radio_count=%d\n",radio_count);
@@ -862,6 +863,10 @@ int main(int argc,char **argv)
     fprintf(stderr,"The name of each tty will be written to <tty file>\n");
     fprintf(stderr,"The optional packet drop probability allows the simulation of packet loss.\n");
     fprintf(stderr,"Filter rules take the form of:  \"drop <manifest|body> <from|to> <radio id>; ...\"\n");
+    fprintf(stderr,"\n"
+	    "To run tests using real radios, set the LBARD_REAL_RADIOS environment variable to the list of serial ports.\n"
+	    " e.g., export LBARD_REAL_RADIOS=/dev/ttyUSB0,/dev/ttyUSB1\n"
+	    "These will then take precedence over whatever radio types are listed on the command line, and thus in the tests.\n");
     exit(-1);
   }
   if (argc>3) 
@@ -906,16 +911,21 @@ int main(int argc,char **argv)
     grantpt(fd);
     unlockpt(fd);
     fcntl(fd,F_SETFL,fcntl(fd, F_GETFL, NULL)|O_NONBLOCK);
-    fprintf(tty_file,"%s\n",ptsname(fd));
-    printf("Radio #%d is available at %s\n",client_count,ptsname(fd));
     int radio_type_id=-1;
+    char *radio_name=ptsname(fd);
     if (!strcasecmp(radio_type,"rfd900")) radio_type_id=RADIO_RFD900;
     if (!strcasecmp(radio_type,"hfcodan")) radio_type_id=RADIO_HFCODAN;
     if (!strcasecmp(radio_type,"hfbarrett")) radio_type_id=RADIO_HFBARRETT;
+    if (radio_type[0]=='/') {
+      radio_type_id=RADIO_REAL;
+      radio_name=radio_type;
+    }
     if (radio_type_id==-1) {
       fprintf(stderr,"Unknown radio type '%s'\n",radio_type);
       exit(-1);
     }
+    fprintf(tty_file,"%s\n",ptsname(fd));
+    printf("Radio #%d is available at %s\n",client_count,radio_name);
     register_client(fd,radio_type_id);
   }
   fclose(tty_file);

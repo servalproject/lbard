@@ -30,6 +30,7 @@ extern long long first_transmission_time;
 #define RADIO_RFD900 1
 #define RADIO_HFCODAN 2
 #define RADIO_HFBARRETT 3
+#define RADIO_REAL 99
 
 struct client {
   int socket;
