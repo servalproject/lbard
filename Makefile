@@ -69,7 +69,6 @@ SRCS=	$(SRCDIR)/main.c \
 	$(RADIODRIVERS) \
 	\
 	$(SRCDIR)/hf/ale.c \
-	$(SRCDIR)/hf/config.c \
 	\
 	$(SRCDIR)/outernetrx/outernetrx.c \
 	\

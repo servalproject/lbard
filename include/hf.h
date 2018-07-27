@@ -5,13 +5,15 @@
 #define HF_ALELINK 4
 #define HF_DISCONNECTING 5
 #define HF_ALESENDING 6
+#define HF_RADIOCONFUSED 7
 #define HF_COMMANDISSUED 0x100
 
 #define RADIO_ALE_2G (1<<0)
 #define RADIO_ALE_3G (1<<1)
 
 struct hf_station {
-  char *name;
+	char index[3]; //2 digits matching the ALE ID and the name of the radio (alias) in (internal radio settings)  
+	char name[64]; //alias
   int link_time_target; // minutes
   int line_time_interval; // hours
 
@@ -47,6 +49,7 @@ extern int hf_callout_interval; // minutes
 
 extern struct hf_station hf_stations[MAX_HF_STATIONS];
 extern int hf_station_count;
+extern struct hf_station self_hf_station;
 
 extern int has_hf_plan;
 
@@ -66,4 +69,3 @@ int hf_radio_pause_for_turnaround(void);
 int hf_process_fragment(char *fragment);
 char *radio_type_name(int radio_type);
 char *radio_type_description(int radio_type);
-
