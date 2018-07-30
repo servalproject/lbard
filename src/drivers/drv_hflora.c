@@ -27,9 +27,186 @@ RADIO TYPE: HFBARRETT,"hfbarrett","Barrett HF with ALE",hfcodanbarrett_radio_det
 #include "hf.h"
 #include "radios.h"
 
-char barrett_link_partner_string[1024]="";
+/*--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------UART Settings----------------------------------------------------------------------------------------------------------
+/*--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 
-int hfbarrett_initialise(int serialfd)
+/*
+int set_interface_attribs(int fd, int speed, int parity)
+{
+        struct termios tty;
+        memset (&tty, 0, sizeof tty);
+        if (tcgetattr (fd, &tty) != 0)
+        {
+                error_message("error %d from tcgetattr", errno);
+                return -1;
+        }
+
+        cfsetospeed(&tty, speed);
+        cfsetispeed(&tty, speed);
+
+        tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;     // 8-bit chars
+        // disable IGNBRK for mismatched speed tests; otherwise receive break
+        // as \000 chars
+        tty.c_iflag &= ~IGNBRK;         // disable break processing
+        tty.c_lflag = 0;                // no signaling chars, no echo,
+                                        // no canonical processing
+        tty.c_oflag = 0;                // no remapping, no delays
+        tty.c_cc[VMIN]  = 0;            // read doesn't block
+        tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+
+        tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
+
+        tty.c_cflag |= (CLOCAL | CREAD);// ignore modem controls,
+                                        // enable reading
+        tty.c_cflag &= ~(PARENB | PARODD);      // shut off parity
+        tty.c_cflag |= parity;
+        tty.c_cflag &= ~CSTOPB;
+        tty.c_cflag &= ~CRTSCTS;
+
+        if (tcsetattr(fd, TCSANOW, &tty) != 0)
+        {
+                error_message("error %d from tcsetattr", errno);
+                return -1;
+        }
+        return 0;
+}
+
+void set_blocking(int fd, int should_block)
+{
+        struct termios tty;
+        memset(&tty, 0, sizeof tty);
+        if(tcgetattr(fd, &tty) != 0)
+        {
+                error_message("error %d from tggetattr", errno);
+                return;
+        }
+
+        tty.c_cc[VMIN]  = should_block ? 1 : 0;
+        tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
+
+        if (tcsetattr(fd, TCSANOW, &tty) != 0)
+                error_message("error %d setting term attributes", errno);
+}
+
+
+
+char *portname = "/dev/ttyUSB0";
+ 
+int fd=open(portname, O_RDWR | O_NOCTTY | O_SYNC);
+if(fd < 0)
+{
+        error_message("error %d opening %s: %s", errno, portname, strerror (errno));
+        return;
+}
+
+set_interface_attribs(fd, B57600, 0);  // set speed to 115,200 bps, 8n1 (no parity)
+set_blocking(fd, 0);                // set no blocking
+
+write(fd, "sys get ver\n\r", 7);           // send 7 character greeting
+
+usleep((7 + 25) * 100);             // sleep enough to transmit the 7 plus
+                                     // receive 25:  approx 100 uS per char transmit
+char buf[100];
+int n = read(fd, buf, sizeof buf);  // read up to 100 characters if ready to read
+printf("version : %s\n",n); */
+
+/*--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------LoRa Settings----------------------------------------------------------------------------------------------------------
+/*--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+
+/*
+local initCmdIdx = 0;
+initCommands <- [ format("%s mod %s", RADIO_SET, RADIO_MODE),
+                  format("%s freq %i", RADIO_SET, RADIO_FREQ),
+                  format("%s sf %s", RADIO_SET, RADIO_SPREADING_FACTOR),
+                  format("%s bw %i", RADIO_SET, RADIO_BANDWIDTH),
+                  format("%s cr %s", RADIO_SET, RADIO_CODING_RATE),
+                  format("%s crc %s", RADIO_SET, RADIO_CRC),
+                  format("%s sync %i", RADIO_SET, RADIO_SYNC_WORD),
+                  format("%s wdt %i", RADIO_SET, RADIO_WATCHDOG_TIMEOUT),
+                  format("%s pwr %i", RADIO_SET, RADIO_POWER_OUT),
+                  MAC_PAUSE,
+                  format("%s %i", RADIO_RX, RADIO_RX_WINDOW_SIZE) ];
+
+local UART = hardware.uart1;
+local RESET_PIN = hardware.pinH;
+//lora <- LoRa_RN2483(UART, RESET_PIN);
+lora <- LoRa_RN2903(UART, RESET_PIN);
+
+function receive(data) {
+    if (data.len() > 10 && data.slice(0,10) == "radio_rx  ") {
+        // We have received a packet
+        // Add code to handle data here, for now just log the incoming data
+        server.log(data);
+        // Send ACK
+        lora.send( format("%s %s%s%s", RADIO_TX, TX_HEADER, ACK_COMMAND, TX_FOOTER) );
+    } else if (data == "radio_tx_ok" || data == "radio_err") {
+        // Queue next receive
+        lora.send( format("%s %i", RADIO_RX, RADIO_RX_WINDOW_SIZE) );
+    } else if (data != "ok") {
+        // Unexpected response
+        server.error(data);
+    }
+}
+
+function sendNextInitCmd(data = null) {
+    if (data == "invalid_param") {
+        // Set init command failed - log it
+        server.error("Radio command failed: " + data);
+    } else if (initCmdIdx < initCommands.len()) {
+        // Get command at the current index pointer, and increment the index pointer
+        local command = initCommands[initCmdIdx++];
+        server.log(command);
+        // Send command to LoRa
+        lora.send(command);
+    } else {
+        // Radio ready to receive, set to our receive handler
+        lora.setReceiveHandler(receive.bindenv(this));
+    }
+}
+
+function loraInitHandler(err) {
+    if (err) {
+        server.error(err);
+    } else {
+        // Set receive callback to loop through initialization commands
+        lora.setReceiveHandler(sendNextInitCmd.bindenv(this));
+        // Start sending initialization commands
+        sendNextInitCmd();
+    }
+}
+
+// Initialize LoRa Radio and open a receive handler
+lora.init(RN2xxx.RN2903_BANNER loraInitHandler);
+*/
+/*
+// LoRa Settings
+const RADIO_MODE = "lora";
+const RADIO_FREQ = 933000000;
+const RADIO_SPREADING_FACTOR = "sf12"; // 128 chips
+const RADIO_BANDWIDTH = 125;
+const RADIO_CODING_RATE = "4/5";
+const RADIO_CRC = "on"; // crc header enabled
+const RADIO_SYNC_WORD = 8;
+const RADIO_WATCHDOG_TIMEOUT = 0;
+const RADIO_POWER_OUT = 14;
+const RADIO_RX_WINDOW_SIZE = 0; // contiuous mode
+
+// LoRa Commands
+const MAC_PAUSE = "mac pause";
+const RADIO_SET = "radio set";
+const RADIO_RX = "radio rx";
+const RADIO_TX = "radio tx";
+
+// LoRa Com variables
+const TX_HEADER = "FF000000";
+const TX_FOOTER = "00";
+const ACK_COMMAND = "5458204F4B" // "TX OK"
+*/
+char lora_link_partner_string[1024]="";
+int hflora_initialise(int serialfd)
 {
   // See "2050 RS-232 ALE Commands" document from Barrett for more information on the
   // available commands.
@@ -53,13 +230,13 @@ int hfbarrett_initialise(int serialfd)
   // Tell Barrett radio we want to know when various events occur.
   char *setup_string[7]
     ={
-    "ARAMDM1\r\n", // Register for AMD messages
-    "ARAMDP1\r\n", // Register for phone messages
-    "ARCALL1\r\n", // Register for new calls
-    "ARLINK1\r\n", // Hear about ALE link notifications
-    "ARLTBL1\r\n", // Hear about ALE link table events
-    "ARMESS1\r\n", // Hear about ALE event notifications
-    "ARSTAT1\r\n", // Hear about ALE status change notifications
+    "radio set mod lora\r\n", // Register for AMD messages
+    "radio set freq 933000000\r\n", // Register for phone messages
+    "radio set sf sf12\r\n", // Register for new calls
+    "radio set bw 125\r\n", // Hear about ALE link notifications
+    "radio set cr 4/5\r\n", // Hear about ALE link table events
+    "radio set prlen 8\r\n", // Hear about ALE event notifications
+    "radio set pwr 14\r\n", // Hear about ALE status change notifications
   };
   int i;
   for(i=0;i<7;i++) {
@@ -71,8 +248,8 @@ int hfbarrett_initialise(int serialfd)
   
   return 0;
 }
-
-int hfbarrett_serviceloop(int serialfd)
+/*
+int hflora_serviceloop(int serialfd)
 {
   char cmd[1024];
   
@@ -132,7 +309,7 @@ int hfbarrett_serviceloop(int serialfd)
   return 0;
 }
 
-int hfbarrett_process_line(char *l)
+int hflora_process_line(char *l)
 {
   // Skip XON/XOFF character at start of line
   while(l[0]&&l[0]<' ') l++;
@@ -208,7 +385,7 @@ int hfbarrett_process_line(char *l)
   return 0;
 }
 
-int hfbarrett_receive_bytes(unsigned char *bytes,int count)
+int hflora_receive_bytes(unsigned char *bytes,int count)
 {
   int i;
   for(i=0;i<count;i++) {
@@ -304,5 +481,4 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
 	  timestr,hf_next_packet_time-time(0));
   
   return 0;
-}
-
+}*/
