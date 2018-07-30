@@ -24,7 +24,7 @@ RADIO TYPE: NORADIO,"noradio","No radio",null_radio_detect,null_serviceloop,null
 #include "lbard.h"
 #include "hf.h"
 #include "radios.h"
-#include "code_instrumentation.h"
+//#include "code_instrumentation.h"
 
 // Import serial_port string from main.c
 extern char *serial_port;
@@ -32,7 +32,8 @@ extern char *serial_port;
 int hflora_radio_detect(int fd)
 {
   if ((fd==-1)&&(!strcmp(serial_port,"noradio"))) {
-    LOG_NOTE("No serial port, so no radio");
+    //LOG_NOTE("No serial port, so no radio");
+    fprintf(stderr,"No serial port, so no radio\n");
     radio_set_type(RADIOTYPE_NORADIO);
     return 1;
   }
@@ -44,8 +45,6 @@ int hflora_radio_detect(int fd)
     write_all(fd, init, strlen(init)); // ask Codan radio for version
     sleep(1); // give the radio the chance to respond
     ssize_t count = read_nonblock(fd,buf,8192);  // read reply 33
-    LOG_NOTE("radio :");
-    LOG_NOTE(buf);
     strncpy(buf,loramodule,6);
     if(hflora_initialise(fd,loramodule)==-1){
       LOG_NOTE("INIT failed !");
@@ -53,7 +52,7 @@ int hflora_radio_detect(int fd)
     }
     else{
       LOG_NOTE("INIT success !");
-      radio_set_type(RADIOTYPE_HFLORA);
+      radio_set_type(RADIOTYPE_HFLORA); 
       return 0;
     }
   
