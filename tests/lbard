@@ -614,6 +614,21 @@ test_OuternetUplink5() {
 
 
 
+doc_OneOneHF="A single very small bundle transfers to a single peer via HF (timeout=10 minutes)"
+setup_OneOneHF() {
+   setup_DetectBarrettHF
+   # Insert a file to server A
+   set_instance +A
+   rhizome_add_file file1 50
+}
+test_OneOneHF() {
+   # Test that the bundle arrives at server B
+   all_bundles_received() {
+      bundle_received_by $BID:$VERSION +B 
+   }
+   wait_until --timeout 600 all_bundles_received
+}
+
 doc_OneOne="A single very small bundle transfers to a single peer"
 setup_OneOne() {
    setup "allow between 0,1; deny all;"
