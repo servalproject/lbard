@@ -626,7 +626,7 @@ test_OneOneHF() {
    all_bundles_received() {
       bundle_received_by $BID:$VERSION +B 
    }
-   wait_until --timeout 600 all_bundles_received
+   wait_until --timeout=600 all_bundles_received
 }
 
 doc_OneOne="A single very small bundle transfers to a single peer"
