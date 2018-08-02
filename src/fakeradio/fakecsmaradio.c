@@ -924,7 +924,7 @@ int main(int argc,char **argv)
       fprintf(stderr,"Unknown radio type '%s'\n",radio_type);
       exit(-1);
     }
-    fprintf(tty_file,"%s\n",ptsname(fd));
+    fprintf(tty_file,"%s\n",radio_name);
     printf("Radio #%d is available at %s\n",client_count,radio_name);
     register_client(fd,radio_type_id);
   }
