@@ -32,7 +32,7 @@ fork_lbard_console() {
    fork %lbard$C lbard_console "$*"
 }
 
-setup() {
+setup_bundles() {
    # Configure four servald daemons without any interfaces connecting them, and
    # start them running.
    setup_servald
@@ -75,14 +75,23 @@ setup() {
    else
        lbardflags=""
    fi
-   
+}
+
+start_instances() {   
+
+   if [ x"$1" != "x"]; then
+      fakeradios=$1
+   else
+      fakeradios=rfd900,rfd900,rfd900,rfd900
+   fi
+
    foreach_instance +A +B +C +D start_servald_server
    get_servald_restful_http_server_port PORTA +A
    get_servald_restful_http_server_port PORTB +B
    get_servald_restful_http_server_port PORTC +C
    get_servald_restful_http_server_port PORTD +D
    # Start the fake radio daemon.
-   fork %fakeradio fakecsmaradio rfd900,rfd900,rfd900,rfd900 ttys.txt "$1"
+   fork %fakeradio fakecsmaradio "$fakeradios" ttys.txt "$1"
    wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
    tty1=$(sed -n 1p ttys.txt)
    tty2=$(sed -n 2p ttys.txt)
@@ -98,6 +107,11 @@ setup() {
    fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" "$tty3" pull $lbardflags
    set_instance +D
    fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" "$tty4" pull $lbardflags
+}
+
+setup() {
+   setup_bundles $*
+   start_instances
 }
 
 setup20() {
@@ -306,30 +320,8 @@ test_DetectCodanHF() {
 
 doc_DetectBarrettHF="LBARD detects Barrett HF radios"
 setup_DetectBarrettHF() {
-   setup_servald
-   assert_no_servald_processes
-   foreach_instance +A +B +C +D create_single_identity
-   foreach_instance +A +B +C +D start_servald_server
-   get_servald_restful_http_server_port PORTA +A
-   get_servald_restful_http_server_port PORTB +B
-   get_servald_restful_http_server_port PORTC +C
-   get_servald_restful_http_server_port PORTD +D
-   # Start the fake radio daemon.
-   fork %fakeradio fakecsmaradio hfbarrett,hfbarrett,hfbarrett,hfbarrett ttys.txt "$1"
-   wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
-   tty1=$(sed -n 1p ttys.txt)
-   tty2=$(sed -n 2p ttys.txt)
-   tty3=$(sed -n 3p ttys.txt)
-   tty4=$(sed -n 4p ttys.txt)
-   # Start four lbard daemons.
-   set_instance +A
-   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$IDA" "$tty1" pull
-   set_instance +B
-   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" "$tty2" pull
-   set_instance +C
-   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" "$tty3" pull
-   set_instance +D
-   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" "$tty4" pull
+   setup_bundles
+   start_instances hfbarrett,hfbarrett,hfbarrett,hfbarrett
 }
 test_DetectBarrettHF() {
    # Test that all radios are detected
@@ -628,6 +620,18 @@ test_OneOneHF() {
    }
    wait_until --timeout=600 all_bundles_received
 }
+
+doc=MeshMSViaHFWithOthers="A MeshMS conversation via HF, where both peers have a large number of bundles in common"
+setup_MeshMSViaHFWithOthers() {
+   # 1500 files in common, 0 unique files per instance, 25% packet loss
+   setup_bundles "0.25" 1500 0
+   # Then start with 4 Barrett HF radios
+   start_instances rfbarrett,rfbarrett,rfbarrett,rfbarrett
+}
+test_MessageDeliveryWithOthers() {
+    test_MessageDelivery 1800
+}
+
 
 doc_OneOne="A single very small bundle transfers to a single peer"
 setup_OneOne() {
