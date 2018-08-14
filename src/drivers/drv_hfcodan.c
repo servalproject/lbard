@@ -43,16 +43,32 @@ int hfcodanbarrett_radio_detect(int fd)
   unsigned char buf[8192];
   unsigned clr[3]={21,13,10};
   int verhi,verlo;
-  serial_setup_port_with_speed(fd,9600);
+
+  // Barrett radios can operate at either 9600 or 115200, so we need to check both
+  serial_setup_port_with_speed(fd,115200);
   write_all(fd,clr,3); // Clear any partial command
   sleep(1); // give the radio the chance to respond
   ssize_t count = read_nonblock(fd,buf,8192);  // read and ignore any stuff
   write_all(fd,"VER\r",4); // ask Codan radio for version
   sleep(1); // give the radio the chance to respond
   count = read_nonblock(fd,buf,8192);  // read reply
+  dump_bytes(stderr,"Response to VER command @ 115200 was",buf,count);
   int barrett_e0_seen=0;
   for(int i=0;i<=(count-6);i++)
-    if (!memcmp(&buf[i],barrett_e0_string,6)) barrett_e0_seen=1;
+    if (!memcmp(&buf[i],barrett_e0_string,6)) barrett_e0_seen=1;  
+
+  if (!barrett_e0_seen) {
+    serial_setup_port_with_speed(fd,9600);
+    write_all(fd,clr,3); // Clear any partial command
+    sleep(1); // give the radio the chance to respond
+    ssize_t count = read_nonblock(fd,buf,8192);  // read and ignore any stuff
+    write_all(fd,"VER\r",4); // ask Codan radio for version
+    sleep(1); // give the radio the chance to respond
+    count = read_nonblock(fd,buf,8192);  // read reply
+    dump_bytes(stderr,"Response to VER command @ 9600 was",buf,count);
+    for(int i=0;i<=(count-6);i++)
+      if (!memcmp(&buf[i],barrett_e0_string,6)) barrett_e0_seen=1;
+  }
   
   // If we get a version string -> Codan HF
   if (sscanf((char *)buf,"VER\r\nCICS: V%d.%d",&verhi,&verlo)==2) {
