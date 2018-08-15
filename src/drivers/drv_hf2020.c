@@ -534,7 +534,13 @@ int hf2020_parse_reply(unsigned char *m,int len)
     case 0x65: printf("Clover modem attempting robust link\n"); break;
     case 0x78: printf("Send clover call CCB RETRY\n"); break;
     case 0x79: printf("Receiving clover call CCB RETRY\n"); break;
-    case 0x7D: printf("Received clover call CCB OK\n"); break;
+    case 0x7D:
+      printf("Received clover call CCB OK\n");
+      // Sometimes ALE thinks we have hung up, when the clover link is still running,
+      // so reinstate the link if we keep seeing CCB traffic.
+      if (hf_state==HF_DISCONNECTED) hf_state=HF_ALELINK;
+      break;
+    case 0x7f: printf("!!! Clover modem reports an error with a recent command\n"); break;
     case 0x8e:
       // TX is idle, so assume buffer is empty.
       printf("TX idle, marking Clover TX buffer empty.\n");
@@ -582,7 +588,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
   int i;
   for(i=0;i<count;i++) {
     unsigned char b=bytes[i];
-    // printf("saw byte %02x\n",b);    
+    // printf("saw byte %02x '%c'\n",b, ((b==' ')||(b>='0'&&b<=0x7d)?b:'X'));    
     if ((!esc91)&&(b==0x91)) {
       esc91=1;
     } else if (esc91) {
@@ -661,6 +667,9 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	case 0x75:
 	  // Clover call waveform format
 	  status80[0]=b; status80len=1; status80BytesRemaining=4; break;
+	case 0x7f:
+	  // Modem command error
+	  status80[0]=b; status80len=1; status80BytesRemaining=4; break;
 	default:
 	  printf("Saw unknown status message: 80 %02x\n",b);
 	}
@@ -672,7 +681,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
       default:
 	if (fromSecondary) {
 	  // Barrett modem output
-	  printf("Passing byte 0x%02x to barrett AT command parser\n",b);
+	  //	  printf("Passing byte 0x%02x to barrett AT command parser\n",b);
 	  hf2020_receive_barrett_bytes(serialfd,&b,1);
 	} else {
 	  // Clover modem output
@@ -694,23 +703,25 @@ int hf2020_send_packet(int serialfd,unsigned char *out, int len)
   // Switch to TX via modem
   send80cmd(serialfd,0x31);
 
-  unsigned char m[2];
+  unsigned char escaped[512];
+  int elen=0;
 
   // Write packet body with escape characters
   for(int i=0;i<len;i++) {
     switch(out[i]) {
     case 0x80: case 0x81:
-      m[0]=0x81; m[1]=out[i];
-      write_all(serialfd,m,2);
+      escaped[elen++]=0x81; escaped[elen++]=out[i];
       clover_tx_buffer_space--;
       break;
     default:
-      write_all(serialfd,&out[i],1);
+      escaped[elen++]=out[i];
       clover_tx_buffer_space--;
       break;
     }
     if (clover_tx_buffer_space<0) clover_tx_buffer_space=0;
   }
+  dump_bytes(stdout,"Escaped packet for Clover TX",escaped,len);
+  write_all(serialfd,escaped,elen);
 
   return 0;
 }
@@ -740,7 +751,7 @@ int hf2020_radio_detect(int fd)
   send80cmd(fd,0x7B);
 
   unsigned char buffer[1024];
-  usleep(100000);
+  usleep(700000);
   int count=read_nonblock(fd,buffer,1024);
   
   unsigned int product_id=hf2020_extract_product_id(buffer,count);
@@ -748,7 +759,7 @@ int hf2020_radio_detect(int fd)
   if (!product_id) {
     serial_setup_port_with_speed(fd,115200);
     send80cmd(fd,0x7B);
-    usleep(100000);
+    usleep(700000);
     count=read_nonblock(fd,buffer,1024);
     product_id=hf2020_extract_product_id(buffer,count);
   }
