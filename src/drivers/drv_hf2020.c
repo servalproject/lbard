@@ -88,7 +88,9 @@ int hf2020_initialise(int fd, unsigned int product_id)
   fprintf(stderr,"Detected a Clover HF modem, model ID %04x\n",
 	  product_id);
 
-  send80cmd(fd,0x09); // Hardware reset
+  // Reset takes a long time, so don't do anything now.
+  // send80cmd(fd,0x09); // Hardware reset
+  
   send80cmd(fd,0x06); // Stop whatever we are doing
   send80cmd(fd,0x80); // Switch to clover mode
   send80cmd(fd,0x65); send80cmd(fd,0x02); // Set FEC mode to "FAST"
@@ -239,11 +241,8 @@ unsigned char status80[256];
 int hf2020_receive_bytes(unsigned char *bytes,int count)
 {
   int i;
-  printf("Read %d bytes from modem\n",count);
-  fflush(stdout);
   for(i=0;i<count;i++) {
     unsigned char b=bytes[i];
-    printf("Examining byte #%d = 0x%02x\n",i,b);
     if (esc80) {
       esc80=0;
       printf("saw 80 %02x\n",b);
