@@ -60,7 +60,14 @@ int send80cmd(int fd,unsigned char c)
   cmd[0]=0x80; cmd[1]=c;
   write_all(fd,cmd,2);
 
-  printf("0x80%02x written. Waiting for reply.\n",c);
+  printf("80 %02x written.\n",c);
+  return 0;
+}
+
+int send80stringz(int fd,char *s)
+{
+  for(int i=0;i<=strlen(s);i++)
+    send80cmd(fd,s[i]);
   return 0;
 }
 
@@ -141,6 +148,15 @@ int hf2020_serviceloop(int serialfd)
       int next_station = hf_next_station_to_call();
       if (next_station>-1) {
 	// XXX Try to connect
+	printf("XXX Try to connect to next station.\n");
+
+	// Build and send call command
+	send80cmd(serialfd,0x10);
+	send80stringz(serialfd,hf_stations[next_station].name);
+	hf_state=HF_CALLREQUESTED;
+	// Allow enough time for the clover link to be established
+	// 1 minute should be enough.
+	hf_next_call_time=time(0)+60;
       }
     }
     else if (hf_link_partner>-1) {
@@ -217,7 +233,7 @@ int hf2020_serviceloop(int serialfd)
   }
 
   if (previous_state!=hf_state){
-    fprintf(stderr,"\nClover 2020 modem changed to state %s\n",hf_state_name(hf_state));
+    fprintf(stdout,"\nClover 2020 modem changed to state %s\n",hf_state_name(hf_state));
     previous_state=hf_state;
   }
   return 0;
@@ -239,6 +255,9 @@ int hf2020_parse_reply(unsigned char *m,int len)
   case 0x70:
     // Channel spectra
     break;
+  case 0x71:
+    // Celcall status
+    break;
   case 0x72:
     // Channel statistics
     last_rx_rssi=m[1+0+1];   // local RSSI
@@ -246,6 +265,19 @@ int hf2020_parse_reply(unsigned char *m,int len)
     if (last_rx_rssi||last_remote_rssi)
       printf("RSSI = %d local, %d remote (x 0.5 dB)\n",last_rx_rssi,last_remote_rssi);
     break;
+  case 0x73:
+    // Clover call status
+    switch(m[1]) {
+    case 0x65:
+      printf("Modem reports attempting to establish robust clover call\n");
+      break;
+    case 0x9C:
+      printf("Modem reports clover call failed due to CCB send retries exceeded.\n");
+      break;
+    default:
+      printf("Clover call status = 0x%02x\n",m[1]);
+      break;
+    }
   default:
     dump_bytes(stdout,"Unknown 80xx status message",m,len);
   }
@@ -294,6 +326,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
       } else {
 	switch(b) {
 	case 0x06: case 0x09:
+	case 0x10:
 	case 0x34:
 	case 0x51: case 0x56: case 0x59: case 0x5a:
 	case 0x65: case 0x69:
@@ -311,7 +344,8 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	  // terminated by 80 00).
 	  status80BytesRemaining=-1; break;
 	case 0x23: case 0x24:
-	  // Link disconnect notification 
+	  // Link disconnect notification
+	  printf("Disconnecting due to 80 23 / 80 24 response\n");
 	  hf_state=HF_DISCONNECTED;
 	  status80[0]=b; status80len=1; status80BytesRemaining=1; break;
 	case 0x30:
@@ -326,9 +360,15 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	case 0x70:
 	  // Channel spectra (8 bytes)
 	  status80[0]=b; status80len=1; status80BytesRemaining=8; break;
+	case 0x71:
+	  // SELcall status
+	  status80[0]=b; status80len=1; status80BytesRemaining=1; break;
 	case 0x72:
 	  // Channel statistics (7 bytes for both ends)
 	  status80[0]=b; status80len=1; status80BytesRemaining=7*2; break;
+	case 0x73:
+	  // Clover call status
+	  status80[0]=b; status80len=1; status80BytesRemaining=1; break;
 	default:
 	  printf("Saw unknown status message: 80 %02x\n",b);
 	}

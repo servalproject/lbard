@@ -161,8 +161,8 @@ int hfbarrett_serviceloop(int serialfd)
 			    hf_state = HF_CALLREQUESTED;
 					
 			    fprintf(stderr,"HF: Attempting to call station #%d '%s'\n",
-		    next_station,hf_stations[next_station].name);
-        	hf_next_call_time=time(0)+ALElink_establishment_time;
+				    next_station,hf_stations[next_station].name);
+			    hf_next_call_time=time(0)+ALElink_establishment_time;
         }else{
           printf("The radio is not idle. The call request is not sent.\n");
         }
