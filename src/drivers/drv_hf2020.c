@@ -61,6 +61,7 @@ extern int previous_state;
 int hf_may_defer=-1;
 time_t hf_connecting_timeout=0;
 time_t clover_connect_time=0;
+int clover_tx_buffer_space=1024;
 
 int send80cmd(int fd,unsigned char c)
 {
@@ -120,9 +121,7 @@ int hf2020_initialise(int fd, unsigned int product_id)
   send80cmd(fd,0x41); // disable channel status reports
   send80cmd(fd,0x52); // answer incoming calls automatically
   send80cmd(fd,0x56); // enable expanded link state reports
-  // send80cmd(fd,0x46); // disable expanded link state reports
   send80cmd(fd,0x5a); // enable even more reports
-  // send80cmd(fd,0x4a); // disable even more reports
 
   // We set our call ID to always be the same, SERVAL, so that Serval clover calls
   // can be easily recognised.
@@ -375,12 +374,19 @@ int hf2020_serviceloop(int serialfd)
     }
     if (clover_connect_time&&(time(0)>=clover_connect_time))
       {
+	printf("Sending command to establish clover link now.\n");
 	clover_connect_time=0;
+#if 0
+	// Was used to test that we receive the clover packets.
+	send80cmd(serialfd,0x14);
+	send80stringz(serialfd,"Hello world!");
+#else
 	// Build and send call command
 	send80cmd(serialfd,0x10);
 	// Always call remote end SERVAL, and set our call ID to be SERVAL on startup,
 	// so that Serval calls can be easily identified.
-	send80stringz(serialfd,CLOVER_ID);      
+	send80stringz(serialfd,CLOVER_ID);
+#endif
       }
     
     break;
@@ -405,6 +411,18 @@ int hf2020_serviceloop(int serialfd)
       hf_next_packet_time-time(0));
     }
 
+    if (clover_tx_buffer_space>512) {
+      // Space in the TX buffer, so push a new packet.
+      unsigned char msg_out[256];
+      update_my_message(
+			serialfd,
+			my_sid,
+			my_sid_hex,
+			255,
+			msg_out,
+			servald_server,
+			credential);
+    }
     
     break;
 
@@ -464,6 +482,8 @@ int hf2020_parse_reply(unsigned char *m,int len)
     // XXX Check if link partner is "serval". If not, disconnect.
     hf_state=HF_ALELINK;
     break;
+  case 0x22:
+    printf("Monitored ARQ from '%s'\n",&m[1]);
   case 0x24:
     // Disconnected
     printf("Marking link disconnected due to 8024 8000\n");
@@ -473,6 +493,9 @@ int hf2020_parse_reply(unsigned char *m,int len)
   case 0x27:
     // Incoming clover call to us
     printf("Incoming clover call addressed to us.\n");
+    break;
+  case 0x42:
+    printf("Link stations monitored for clover (whatever that means)\n");
     break;
   case 0x70:
     // Channel spectra
@@ -507,6 +530,15 @@ int hf2020_parse_reply(unsigned char *m,int len)
 	  hf_may_defer=0;
 	}
       }
+      break;
+    case 0x65: printf("Clover modem attempting robust link\n"); break;
+    case 0x78: printf("Send clover call CCB RETRY\n"); break;
+    case 0x79: printf("Receiving clover call CCB RETRY\n"); break;
+    case 0x7D: printf("Received clover call CCB OK\n"); break;
+    case 0x8e:
+      // TX is idle, so assume buffer is empty.
+      printf("TX idle, marking Clover TX buffer empty.\n");
+      clover_tx_buffer_space=1024;
       break;
     case 0x9C:
       printf("Modem reports clover call failed due to CCB send retries exceeded.\n");
@@ -640,7 +672,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
       default:
 	if (fromSecondary) {
 	  // Barrett modem output
-	  //	  printf("Passing byte 0x%02x to barrett AT command parser\n",b);
+	  printf("Passing byte 0x%02x to barrett AT command parser\n",b);
 	  hf2020_receive_barrett_bytes(serialfd,&b,1);
 	} else {
 	  // Clover modem output
@@ -654,6 +686,32 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 
 int hf2020_send_packet(int serialfd,unsigned char *out, int len)
 {
+  printf("Preparing to send a packet of %d bytes\n",len);
+  
+  // Now send the packet with escaping of the appropriate bytes.
+  // But first, redirect output to modem TX
+
+  // Switch to TX via modem
+  send80cmd(serialfd,0x31);
+
+  unsigned char m[2];
+
+  // Write packet body with escape characters
+  for(int i=0;i<len;i++) {
+    switch(out[i]) {
+    case 0x80: case 0x81:
+      m[0]=0x81; m[1]=out[i];
+      write_all(serialfd,m,2);
+      clover_tx_buffer_space--;
+      break;
+    default:
+      write_all(serialfd,&out[i],1);
+      clover_tx_buffer_space--;
+      break;
+    }
+    if (clover_tx_buffer_space<0) clover_tx_buffer_space=0;
+  }
+
   return 0;
 }
 
