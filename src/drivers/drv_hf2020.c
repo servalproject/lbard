@@ -52,6 +52,8 @@ Characters 0x80 and 0x81 for TX or RX must be escaped with 0x81 in front.
 #include "hf.h"
 #include "radios.h"
 
+#define CLOVER_ID "serval"
+
 extern int serialfd;
 extern char barrett_link_partner_string[1024];
 extern int previous_state;
@@ -86,7 +88,7 @@ int hf2020_ready_test(void)
   int isReady=1;
   
   if (hf_state!=HF_ALELINK) isReady=0;
-  if (ale_inprogress) isReady=0;
+  // XXX  if (ale_inprogress) isReady=0;
   // XXX  if (!barrett_link_partner_string[0]) isReady=0;
 
   return isReady; 
@@ -114,7 +116,7 @@ int hf2020_initialise(int fd, unsigned int product_id)
 
   // We set our call ID to always be the same, SERVAL, so that Serval clover calls
   // can be easily recognised.
-  send80cmd(fd,0x13); send80stringz(fd,"SERVAL");
+  send80cmd(fd,0x13); send80stringz(fd,CLOVER_ID);
   
   // To be able to talk to the Barrett radio via AT commands,
   // we need to enable the secondary serial port.  This port
@@ -167,21 +169,24 @@ int hf2020_process_barrett_line(int serialfd,char *l)
   if ((!strcmp(l,"EV00"))&&(hf_state==HF_CALLREQUESTED)) {
     // Syntax error in our request to call.
     printf("Saw EV00 response. Marking call disconnected.\n");
-		hf_next_call_time=time(0); //AXLINK failed, no call have been tried
+    hf_next_call_time=time(0); //AXLINK failed, no call have been tried
+    hf_link_partner=-1;
     hf_state = HF_DISCONNECTED;
     return 0;
   }
   if ((!strcmp(l,"E0"))&&(hf_state==HF_CALLREQUESTED)) {
     // Syntax error in our request to call.
     printf("Saw E0 response. Marking call disconnected.\n");
-		hf_next_call_time=time(0); //AXLINK failed, no call have been tried
+    hf_next_call_time=time(0); //AXLINK failed, no call have been tried
+    hf_link_partner=-1;
     hf_state = HF_DISCONNECTED;
     return 0;
   }
 	if ((!strcmp(l,"EV08"))&&(hf_state==HF_CALLREQUESTED)) {
     // Syntax error in our request to call.
     printf("Saw EV08 response. Marking call disconnected.\n");
-		hf_state = HF_DISCONNECTED;
+    hf_link_partner=-1;
+    hf_state = HF_DISCONNECTED;
     return 0;
   }
 
@@ -215,6 +220,7 @@ int hf2020_process_barrett_line(int serialfd,char *l)
 
     // We have to also wait for the > prompt again
     printf("Timed out trying to connect. Marking call disconnected.\n");
+    hf_link_partner=-1;
     hf_state=HF_DISCONNECTED;
   }
   
@@ -234,6 +240,7 @@ int hf2020_process_barrett_line(int serialfd,char *l)
       if (!strcmp(barrett_link_partner_string, tmp)){ 
 	hf_link_partner=i;
 	hf_stations[hf_link_partner].consecutive_connection_failures=0;
+	printf("Setting hf_link_partner=%d",hf_link_partner);
 	break; 
       }
     }
@@ -252,12 +259,13 @@ int hf2020_process_barrett_line(int serialfd,char *l)
       send80cmd(serialfd,0x10);
       // Always call remote end SERVAL, and set our call ID to be SERVAL on startup,
       // so that Serval calls can be easily identified.
-      send80stringz(serialfd,"SERVAL");      
+      send80stringz(serialfd,CLOVER_ID);      
     }    
   }
   
   if ((!strcmp(l,"AIMESS3"))&&(hf_state==HF_CALLREQUESTED)){
     printf("No link established after the call request\n");
+    hf_link_partner=-1;
     hf_state=HF_DISCONNECTED;
     
   }
@@ -302,7 +310,7 @@ int hf2020_serviceloop(int serialfd)
     // If the radio is not receiving a message
     // call-out time, then pick a hf station to call
 
-    if ((ale_inprogress==0)&&(hf_link_partner==-1)&&(hf_station_count>0)&&(time(0)>=hf_next_call_time)) {
+    if ((hf_link_partner==-1)&&(hf_station_count>0)&&(time(0)>=hf_next_call_time)) {
       int next_station = hf_next_station_to_call();
       if (next_station>-1) {
 	// XXX Try to connect
@@ -318,7 +326,8 @@ int hf2020_serviceloop(int serialfd)
 	
 	// Allow enough time for the clover link to be established
 	// 1 minute should be enough.
-	hf_next_call_time=time(0)+60;
+	// (add randomness to prevent lock-step)
+	hf_next_call_time=time(0)+60+(random()%30);
       }
     }
     else if (hf_link_partner>-1) {
@@ -340,12 +349,9 @@ int hf2020_serviceloop(int serialfd)
       //write(serialfd,"AILTBL\r\n",8);
       last_link_probe_time=time(0);
     }
-    if (ale_inprogress==2){
-      printf("Another radio is calling. Marking this sent call disconnected\n");
-      hf_state=HF_DISCONNECTED;
-    }
     if (time(0)>=hf_next_call_time){ //no reply from the called station
       hf_state = HF_DISCONNECTED;
+      hf_link_partner=-1;
       printf("Make the call disconnected because of no reply\n");
     }
     break;
@@ -374,6 +380,7 @@ int hf2020_serviceloop(int serialfd)
     
     printf("XXX Aborting the current established ALE link\n");
 
+    hf_link_partner=-1;
     hf_state=HF_DISCONNECTED;
     
     break;
@@ -385,6 +392,7 @@ int hf2020_serviceloop(int serialfd)
   case HF_RADIOCONFUSED: //7
     // We entenred a case where the radio is confused
     printf("XXX HF Radio is confused. Marking as disconnected.\n");
+    hf_link_partner=-1;
     hf_state=HF_DISCONNECTED;
     
     break;
@@ -395,9 +403,19 @@ int hf2020_serviceloop(int serialfd)
   }
 
   if (previous_state!=hf_state){
-    fprintf(stdout,"\nClover 2020 modem changed to state %s\n",hf_state_name(hf_state));
+    fprintf(stdout,"\nClover 2020 modem changed to state %s (next call in %lld seconds)\n",
+	    hf_state_name(hf_state),(long long)(hf_next_call_time-time(0)));
     previous_state=hf_state;
+  } else {
+    static int last_state_report_time=0;    
+    if (time(0)>last_state_report_time) {
+      fprintf(stdout,"Link state is %s (next call in %lld seconds, link partner=%d, hf_station_count=%d)\n",
+	      hf_state_name(hf_state),(long long)(hf_next_call_time-time(0)),
+	      hf_link_partner,hf_station_count);
+      last_state_report_time=time(0)+2;
+    }
   }
+  
   return 0;
 }
 
@@ -412,6 +430,7 @@ int hf2020_parse_reply(unsigned char *m,int len)
   case 0x24:
     // Disconnected
     printf("Marking link disconnected due to 8024 8000\n");
+    hf_link_partner=-1;
     hf_state=HF_DISCONNECTED;
     break;
   case 0x70:
@@ -433,14 +452,8 @@ int hf2020_parse_reply(unsigned char *m,int len)
     case 0x01:
       // Here we should either just give up, or try again soon.
       // For now, we will give up.
-      printf("Modem reports channel occupied by non-clover signal.\n");
+      printf("Modem reports channel occupied by non-clover signal (that could just be ALE links establishing).\n");
       
-      // Disconnect ALE link
-      send80cmd(serialfd,0x34); // output goes to Barrett radio
-      write_all(serialfd,"\r\nAXABORT\r\n",11);
-      
-      hf_state=HF_DISCONNECTED;
-
       break;
     case 0x65:
       printf("Modem reports attempting to establish robust clover call\n");
@@ -450,8 +463,10 @@ int hf2020_parse_reply(unsigned char *m,int len)
 
       // Disconnect ALE link
       send80cmd(serialfd,0x34); // output goes to Barrett radio
-      write_all(serialfd,"\r\nAXABORT\r\n",11);
+      //      write_all(serialfd,"\r\nAXABORT\r\n",11);
+      write_all(serialfd,"AXTLNK00\r\n",10);
       
+      hf_link_partner=-1;
       hf_state=HF_DISCONNECTED;
       break;
     default:
@@ -526,7 +541,14 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	  status80BytesRemaining=-1; break;
 	case 0x23: case 0x24:
 	  // Link disconnect notification
-	  printf("Disconnecting due to 80 23 / 80 24 response\n");
+	  printf("Disconnecting due to 80 23 / 80 24 response\n");	  
+
+	  // Disconnect ALE link
+	  send80cmd(serialfd,0x34); // output goes to Barrett radio
+	  //      write_all(serialfd,"\r\nAXABORT\r\n",11);
+	  write_all(serialfd,"AXTLNK00\r\n",10);
+	  
+	  hf_link_partner=-1;
 	  hf_state=HF_DISCONNECTED;
 	  status80[0]=b; status80len=1; status80BytesRemaining=1; break;
 	case 0x30:
