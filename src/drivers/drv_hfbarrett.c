@@ -345,30 +345,30 @@ int hfbarrett_process_line(char *l)
     hf_process_fragment(&tmp[6]);
   }
 
-	if (sscanf(l, "AISTAT%s", tmp)==1){
-		//idle
-		if (tmp[1]=='0'){
-			ale_inprogress=0;
-		}
-		//call transmitting
-		if (tmp[1]=='1'){
-		  ale_inprogress=1;
-		}
-		//call receiving
-		if (tmp[1]=='2'){
-		  ale_inprogress=2;
-		}
-		if (tmp[2]=='0'){
-		  ale_transmission=0;
-		}
-		if (tmp[2]=='1'){
-		  ale_transmission=1;
-		}
-		if ((tmp[1]=='2')&&(tmp[2]=='0')&&(hf_state==HF_ALELINK)){
-		  printf("Turn idle after receiving\n");
-		  message_failure++;
-		}
-	}
+  if (sscanf(l, "AISTAT%s", tmp)==1){
+    //idle
+    if (tmp[1]=='0'){
+      ale_inprogress=0;
+    }
+    //call transmitting
+    if (tmp[1]=='1'){
+      ale_inprogress=1;
+    }
+    //call receiving
+    if (tmp[1]=='2'){
+      ale_inprogress=2;
+    }
+    if (tmp[2]=='0'){
+      ale_transmission=0;
+    }
+    if (tmp[2]=='1'){
+      ale_transmission=1;
+    }
+    if ((tmp[1]=='2')&&(tmp[2]=='0')&&(hf_state==HF_ALELINK)){
+      printf("Turn idle after receiving\n");
+      message_failure++;
+    }
+  }
 
   if ((!strcmp(l,"AILTBL"))&&((hf_state==HF_ALELINK)||(hf_state==HF_ALESENDING))) {
     if (hf_link_partner>-1) {

@@ -62,7 +62,7 @@ int send80cmd(int fd,unsigned char c)
   cmd[0]=0x80; cmd[1]=c;
   write_all(fd,cmd,2);
 
-  printf("80 %02x written.\n",c);
+  //   printf("80 %02x written.\n",c);
   return 0;
 }
 
@@ -105,10 +105,17 @@ int hf2020_initialise(int fd, unsigned int product_id)
   send80cmd(fd,0x65); send80cmd(fd,0x02); // Set FEC mode to "FAST"
   send80cmd(fd,0x59); // Enable echo-as-sent
   send80cmd(fd,0xfe); send80cmd(fd,0x00); send80cmd(fd,0x00); // use default CRC mask
-  send80cmd(fd,0x51); // enable channel status reports
+  // send80cmd(fd,0x51); // enable channel status reports
+  send80cmd(fd,0x41); // disable channel status reports
   send80cmd(fd,0x56); // enable expanded link state reports
+  // send80cmd(fd,0x46); // disable expanded link state reports
   send80cmd(fd,0x5a); // enable even more reports
+  // send80cmd(fd,0x4a); // disable even more reports
 
+  // We set our call ID to always be the same, SERVAL, so that Serval clover calls
+  // can be easily recognised.
+  send80cmd(fd,0x13); send80stringz(fd,"SERVAL");
+  
   // To be able to talk to the Barrett radio via AT commands,
   // we need to enable the secondary serial port.  This port
   // should always be at 9600, regardless of whether the head
@@ -121,9 +128,29 @@ int hf2020_initialise(int fd, unsigned int product_id)
   // Switch to secondary serial port for TX
   send80cmd(fd,0x34);
 
-  // Send AIATBL command to Barrett modem to get ALE call list
-  // (for both peers, and also so we know our own ID, so that we can configure it in the clover modem)
-  write_all(fd,"\r\nAIATBL\r\n",10);
+  
+  // Now do Barrett radio setup
+  // Tell Barrett radio we want to know when various events occur.
+  char *setup_string[11]
+    ={
+		"AIATBL\r\n", // Ask for all valid ale addresses
+		"ARAMDM1\r\n", // Register for AMD messages
+		"ARAMDP1\r\n", // Register for phone messages
+		"ARCALL1\r\n", // Register for new calls
+		"ARLINK1\r\n", // Hear about ALE link notifications
+		"ARLTBL1\r\n", // Hear about ALE link table events
+		"ARMESS1\r\n", // Hear about ALE event notifications
+		"ARSTAT1\r\n", // Hear about ALE status change notifications
+		"AXALRM0\r\n", // Diable alarm sound when receiving a call
+		"AILTBL\r\n", // Ask for the current ALE link state
+		"AXSCNPF\r\n", // Resume channel scanning, if it was paused
+  };
+  int i;
+  write(serialfd,"\r\n",2);
+  for(i=0; i<11; i++) {
+    write(serialfd,setup_string[i],strlen(setup_string[i]));
+    usleep(200000);
+  }    
   
   return 1;
 }
@@ -133,8 +160,9 @@ int hf2020_process_barrett_line(int serialfd,char *l)
   // Skip XON/XOFF character at start of line
   while(l[0]&&l[0]<' ') l++;
   while(l[0]&&(l[strlen(l)-1]<' ')) l[strlen(l)-1]=0;
-  
-  fprintf(stderr,"Barrett radio says (in state 0x%04x): %s\n",hf_state,l);
+
+  if (hf_state!=HF_DISCONNECTED)
+    fprintf(stderr,"Barrett radio says (in state %s): %s\n",hf_state_name(hf_state),l);
 
   if ((!strcmp(l,"EV00"))&&(hf_state==HF_CALLREQUESTED)) {
     // Syntax error in our request to call.
@@ -224,12 +252,8 @@ int hf2020_process_barrett_line(int serialfd,char *l)
       send80cmd(serialfd,0x10);
       // Always call remote end SERVAL, and set our call ID to be SERVAL on startup,
       // so that Serval calls can be easily identified.
-      send80stringz(serialfd,"SERVAL");
-      
-    }
-    
-    hf_state=HF_ALELINK;   
-  
+      send80stringz(serialfd,"SERVAL");      
+    }    
   }
   
   if ((!strcmp(l,"AIMESS3"))&&(hf_state==HF_CALLREQUESTED)){
@@ -237,7 +261,7 @@ int hf2020_process_barrett_line(int serialfd,char *l)
     hf_state=HF_DISCONNECTED;
     
   }
-  
+
   if ((hf_state==HF_DISCONNECTING)&&(!strcmp(l,"AILTBL"))){
     hf_link_partner=-1;
   }
@@ -300,7 +324,7 @@ int hf2020_serviceloop(int serialfd)
     else if (hf_link_partner>-1) {
       // If we are connected to someone, then mark us as being in-call
       // XXX This probably needs to change for the 2020
-      hf_state=HF_ALELINK;
+      // hf_state=HF_ALELINK;
     }
     else if (time(0)!=last_link_probe_time) { //once a second
       // XXX - Probe to see if we are still connected
@@ -406,6 +430,18 @@ int hf2020_parse_reply(unsigned char *m,int len)
   case 0x73:
     // Clover call status
     switch(m[1]) {
+    case 0x01:
+      // Here we should either just give up, or try again soon.
+      // For now, we will give up.
+      printf("Modem reports channel occupied by non-clover signal.\n");
+      
+      // Disconnect ALE link
+      send80cmd(serialfd,0x34); // output goes to Barrett radio
+      write_all(serialfd,"\r\nAXABORT\r\n",11);
+      
+      hf_state=HF_DISCONNECTED;
+
+      break;
     case 0x65:
       printf("Modem reports attempting to establish robust clover call\n");
       break;
@@ -445,7 +481,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
   int i;
   for(i=0;i<count;i++) {
     unsigned char b=bytes[i];
-    //    printf("saw byte %02x\n",b);    
+    // printf("saw byte %02x\n",b);    
     if ((!esc91)&&(b==0x91)) {
       esc91=1;
     } else if (esc91) {
