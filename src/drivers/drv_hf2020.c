@@ -269,7 +269,13 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
   for(i=0;i<count;i++) {
     unsigned char b=bytes[i];
     printf("saw byte %02x\n",b);    
-    if (esc80) {
+    if ((!esc91)&&(b==0x91)) {
+      esc91=1;
+    } else if (esc91) {
+      esc91=0;
+      if (b==0x33) fromSecondary=1;
+      if (b==0x31) fromSecondary=0;
+    } else if (esc80) {
       esc80=0;
       //      printf("saw 80 %02x\n",b);
       if (status80BytesRemaining) {
@@ -327,10 +333,6 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	  printf("Saw unknown status message: 80 %02x\n",b);
 	}
       }
-    } else if (esc91) {
-      esc91=0;
-      if (b==0x33) fromSecondary=1;
-      if (b==0x31) fromSecondary=0;
     } else {      
       switch(b) {
       case 0x80: esc80=1; break;
@@ -338,6 +340,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
       default:
 	if (fromSecondary) {
 	  // Barrett modem output
+	  //	  printf("Passing byte 0x%02x to barrett AT command parser\n",b);
 	  hfbarrett_receive_bytes(&b,1);
 	} else {
 	  // Clover modem output
