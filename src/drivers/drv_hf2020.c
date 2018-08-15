@@ -52,6 +52,8 @@ Characters 0x80 and 0x81 for TX or RX must be escaped with 0x81 in front.
 #include "hf.h"
 #include "radios.h"
 
+extern int serialfd;
+extern char barrett_link_partner_string[1024];
 extern int previous_state;
 
 int send80cmd(int fd,unsigned char c)
@@ -126,6 +128,138 @@ int hf2020_initialise(int fd, unsigned int product_id)
   return 1;
 }
 
+int hf2020_process_barrett_line(int serialfd,char *l)
+{
+  // Skip XON/XOFF character at start of line
+  while(l[0]&&l[0]<' ') l++;
+  while(l[0]&&(l[strlen(l)-1]<' ')) l[strlen(l)-1]=0;
+  
+  fprintf(stderr,"Barrett radio says (in state 0x%04x): %s\n",hf_state,l);
+
+  if ((!strcmp(l,"EV00"))&&(hf_state==HF_CALLREQUESTED)) {
+    // Syntax error in our request to call.
+    printf("Saw EV00 response. Marking call disconnected.\n");
+		hf_next_call_time=time(0); //AXLINK failed, no call have been tried
+    hf_state = HF_DISCONNECTED;
+    return 0;
+  }
+  if ((!strcmp(l,"E0"))&&(hf_state==HF_CALLREQUESTED)) {
+    // Syntax error in our request to call.
+    printf("Saw E0 response. Marking call disconnected.\n");
+		hf_next_call_time=time(0); //AXLINK failed, no call have been tried
+    hf_state = HF_DISCONNECTED;
+    return 0;
+  }
+	if ((!strcmp(l,"EV08"))&&(hf_state==HF_CALLREQUESTED)) {
+    // Syntax error in our request to call.
+    printf("Saw EV08 response. Marking call disconnected.\n");
+		hf_state = HF_DISCONNECTED;
+    return 0;
+  }
+
+  char tmp[8192];
+
+  if (sscanf(l, "AIATBL%s", tmp)==1){ 
+
+    hf_parse_linkcandidate(l);
+    
+    //display all the hf radios
+    printf("The self hf Barrett radio is: \n%s, index=%s\n", self_hf_station.name, self_hf_station.index);		
+    printf("The registered stations are:\n");		
+    int i;		
+    for (i=0; i<hf_station_count; i++){
+      printf("%s, index=%s\n", hf_stations[i].name, hf_stations[i].index);
+    }
+  }
+
+  if ((!strcmp(l,"AILTBL"))&&((hf_state==HF_ALELINK)||(hf_state==HF_ALESENDING))) {
+    if (hf_link_partner>-1) {
+	  // Mark link partner as having been attempted now, so that we can
+  	// round-robin better.  Basically we should probably mark the station we failed
+    // to connect to for re-attempt in a few minutes.
+	    hf_stations[hf_link_partner].consecutive_connection_failures++;
+	    fprintf(stderr,"Failed to connect to station #%d '%s' (%d times in a row)\n",
+		    hf_link_partner,
+		    hf_stations[hf_link_partner].name,
+		    hf_stations[hf_link_partner].consecutive_connection_failures);
+    }
+    hf_link_partner=-1;
+
+    // We have to also wait for the > prompt again
+    printf("Timed out trying to connect. Marking call disconnected.\n");
+    hf_state=HF_DISCONNECTED;
+  }
+  
+  if ((sscanf(l,"AILTBL%s",tmp)==1)&&(hf_state!=HF_ALELINK)&&(hf_state!=HF_DISCONNECTING)&&(hf_state!=HF_ALESENDING)) {
+
+    // Link established
+    barrett_link_partner_string[0]=tmp[4];
+    barrett_link_partner_string[1]=tmp[5];
+    barrett_link_partner_string[2]=tmp[2];
+    barrett_link_partner_string[3]=tmp[3];
+    barrett_link_partner_string[4]=0;
+
+    int i;
+    for(i=0;i<hf_station_count;i++){
+      strcpy(tmp, hf_stations[i].index);
+      strcat(tmp, self_hf_station.index);
+      if (!strcmp(barrett_link_partner_string, tmp)){ 
+	hf_link_partner=i;
+	hf_stations[hf_link_partner].consecutive_connection_failures=0;
+	break; 
+      }
+    }
+    
+    if (((hf_state&0xff)!=HF_CONNECTING)
+	&&((hf_state&0xff)!=HF_CALLREQUESTED)) {
+      // We have a link, but without us asking for it.
+      // We leave it connected for a while, to allow the other side to establish a
+      // Clover call.
+    } else {
+      // We requested the call, and now we have it, so try to start the clover call.
+
+      printf("Requesting clover call now that ALE link established.\n");
+      
+      // Build and send call command
+      send80cmd(serialfd,0x10);
+      // Always call remote end SERVAL, and set our call ID to be SERVAL on startup,
+      // so that Serval calls can be easily identified.
+      send80stringz(serialfd,"SERVAL");
+      
+    }
+    
+    hf_state=HF_ALELINK;   
+  
+  }
+  
+  if ((!strcmp(l,"AIMESS3"))&&(hf_state==HF_CALLREQUESTED)){
+    printf("No link established after the call request\n");
+    hf_state=HF_DISCONNECTED;
+    
+  }
+  
+  if ((hf_state==HF_DISCONNECTING)&&(!strcmp(l,"AILTBL"))){
+    hf_link_partner=-1;
+  }
+  
+  return 0;
+}
+
+int hf2020_receive_barrett_bytes(int serialfd,unsigned char *bytes,int count)
+{
+  int i;
+  for(i=0;i<count;i++) {
+    if (bytes[i]==13||bytes[i]==10) { //end of command detected => if not null, line is processed by lbard
+      hf_response_line[hf_rl_len]=0; //	after the command we out a '\0' to have a proper string
+      if (hf_rl_len){ hf2020_process_barrett_line(serialfd,hf_response_line);}
+      hf_rl_len=0;
+    } else {
+      if (hf_rl_len<1024) hf_response_line[hf_rl_len++]=bytes[i];
+    }
+  }
+  return 0;
+}
+
 int hf2020_serviceloop(int serialfd)
 {
   switch(hf_state) {
@@ -150,10 +284,14 @@ int hf2020_serviceloop(int serialfd)
 	// XXX Try to connect
 	printf("XXX Try to connect to next station.\n");
 
-	// Build and send call command
-	send80cmd(serialfd,0x10);
-	send80stringz(serialfd,hf_stations[next_station].name);
+	// First, we have to tell the Barrett radio to establish an ALE link
+	send80cmd(serialfd,0x34);
+	char cmd[1024];
+	snprintf(cmd,1024,"AXLINK%s%s\r\n", hf_stations[next_station].index, self_hf_station.index);
+	write_all(serialfd,cmd,strlen(cmd));
+	
 	hf_state=HF_CALLREQUESTED;
+	
 	// Allow enough time for the clover link to be established
 	// 1 minute should be enough.
 	hf_next_call_time=time(0)+60;
@@ -300,7 +438,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
   int i;
   for(i=0;i<count;i++) {
     unsigned char b=bytes[i];
-    printf("saw byte %02x\n",b);    
+    //    printf("saw byte %02x\n",b);    
     if ((!esc91)&&(b==0x91)) {
       esc91=1;
     } else if (esc91) {
@@ -381,7 +519,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	if (fromSecondary) {
 	  // Barrett modem output
 	  //	  printf("Passing byte 0x%02x to barrett AT command parser\n",b);
-	  hfbarrett_receive_bytes(&b,1);
+	  hf2020_receive_barrett_bytes(serialfd,&b,1);
 	} else {
 	  // Clover modem output
 	  printf("Received HF data byte 0x%02x\n",b);

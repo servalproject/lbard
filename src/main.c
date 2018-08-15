@@ -71,6 +71,8 @@ int debug_noprioritisation = 0;
 int debug_bundlelog = 0;
 char *bundlelog_filename = NULL;
 
+int serialfd = -1;
+
 int peer_keepalive_interval=DEFAULT_PEER_KEEPALIVE_INTERVAL;
 
 int fix_badfs = 0;
@@ -483,7 +485,6 @@ int main(int argc, char **argv)
       the serial port name contains a :, i.e., looks like a
       URI, then we don't try to open the port.
     */
-    int serialfd = -1;
     if (strstr(serial_port,":")) {
       // Has a :, so assume it is a URI kind of thing
       fprintf(stderr,"Serial port looks like a URI, not (yet) opening/connecting\n");
