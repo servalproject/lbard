@@ -598,13 +598,27 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
   int i;
   for(i=0;i<count;i++) {
     unsigned char b=bytes[i];
-    // printf("saw byte %02x '%c'\n",b, ((b==' ')||(b>='0'&&b<=0x7d)?b:'X'));    
+    //    printf("saw byte %02x '%c'\n",b, ((b==' ')||(b>='0'&&b<=0x7d)?b:'X'));    
     if ((!esc91)&&(b==0x91)) {
       esc91=1;
     } else if (esc91) {
       esc91=0;
-      if (b==0x33) fromSecondary=1;
-      if (b==0x31) fromSecondary=0;
+      switch(b) {
+      case 0x33: fromSecondary=1; break;
+      case 0x31: fromSecondary=0; break;
+      case 0xb1: 
+	b=0x91;
+	if (fromSecondary) {
+	  // Barrett modem output
+	  //	  printf("Passing byte 0x%02x to barrett AT command parser\n",b);
+	  hf2020_receive_barrett_bytes(serialfd,&b,1);
+	} else {
+	  // Clover modem output
+	  //	  printf("Received HF data byte 0x%02x\n",b);
+	  hf2020_received_byte(b);
+	}
+	break;
+      }
     } else if (esc80) {
       esc80=0;
       //      printf("saw 80 %02x\n",b);
@@ -695,7 +709,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	  hf2020_receive_barrett_bytes(serialfd,&b,1);
 	} else {
 	  // Clover modem output
-	  printf("Received HF data byte 0x%02x\n",b);
+	  //	  printf("Received HF data byte 0x%02x\n",b);
 	  hf2020_received_byte(b);
 	}
       }
@@ -712,7 +726,7 @@ int hf2020_received_byte(unsigned char b)
   
   // A ring buffer would be more efficient, but at 9600bps
   // this will be fine.
-  bcopy(&hf2020_rx_buffer[0],&hf2020_rx_buffer[1],512-1);
+  bcopy(&hf2020_rx_buffer[1],&hf2020_rx_buffer[0],512-1);
   hf2020_rx_buffer[511]=b;
 
   // Check for envelope trailer
@@ -737,6 +751,7 @@ int hf2020_received_byte(unsigned char b)
 	(hf2020_rx_buffer[511-7-candidate_len-0]==0x90)) {
       printf("We have found a packet of %d bytes\n",
 	     candidate_len);
+      dump_bytes(stdout,"The packet:",&hf2020_rx_buffer[511-7-candidate_len],candidate_len);
       saw_packet(&hf2020_rx_buffer[511-7-candidate_len],candidate_len,
 		 last_rx_rssi,
 		 my_sid_hex,prefix,servald_server,credential);
@@ -768,6 +783,10 @@ int hf2020_send_packet(int serialfd,unsigned char *out, int len)
     switch(out[i]) {
     case 0x80: case 0x81:
       escaped[elen++]=0x81; escaped[elen++]=out[i];
+      clover_tx_buffer_space--;
+      break;
+    case 0x90: case 0x91:
+      escaped[elen++]=0x91; escaped[elen++]=out[i];
       clover_tx_buffer_space--;
       break;
     default:
