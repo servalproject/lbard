@@ -60,6 +60,7 @@ extern int previous_state;
 
 int hf_may_defer=-1;
 time_t hf_connecting_timeout=0;
+time_t clover_connect_time=0;
 
 int send80cmd(int fd,unsigned char c)
 {
@@ -117,6 +118,7 @@ int hf2020_initialise(int fd, unsigned int product_id)
   send80cmd(fd,0xfe); send80cmd(fd,0x00); send80cmd(fd,0x00); // use default CRC mask
   // send80cmd(fd,0x51); // enable channel status reports
   send80cmd(fd,0x41); // disable channel status reports
+  send80cmd(fd,0x52); // answer incoming calls automatically
   send80cmd(fd,0x56); // enable expanded link state reports
   // send80cmd(fd,0x46); // disable expanded link state reports
   send80cmd(fd,0x5a); // enable even more reports
@@ -272,12 +274,9 @@ int hf2020_process_barrett_line(int serialfd,char *l)
       // We requested the call, and now we have it, so try to start the clover call.
 
       printf("Requesting clover call now that ALE link established.\n");
+
+      clover_connect_time=time(0)+random()%10;
       
-      // Build and send call command
-      send80cmd(serialfd,0x10);
-      // Always call remote end SERVAL, and set our call ID to be SERVAL on startup,
-      // so that Serval calls can be easily identified.
-      send80stringz(serialfd,CLOVER_ID);      
     }    
   }
   
@@ -374,6 +373,16 @@ int hf2020_serviceloop(int serialfd)
       hf_link_partner=-1;
       printf("Make the call disconnected because of no reply\n");
     }
+    if (clover_connect_time&&(time(0)>=clover_connect_time))
+      {
+	clover_connect_time=0;
+	// Build and send call command
+	send80cmd(serialfd,0x10);
+	// Always call remote end SERVAL, and set our call ID to be SERVAL on startup,
+	// so that Serval calls can be easily identified.
+	send80stringz(serialfd,CLOVER_ID);      
+      }
+    
     break;
     
   case HF_CONNECTING: //3
@@ -450,6 +459,11 @@ int hf2020_parse_reply(unsigned char *m,int len)
   if (!len) return -1;
 
   switch (m[0]) {
+  case 0x20:
+    printf("Linked via clover to '%s'\n",&m[1]);
+    // XXX Check if link partner is "serval". If not, disconnect.
+    hf_state=HF_ALELINK;
+    break;
   case 0x24:
     // Disconnected
     printf("Marking link disconnected due to 8024 8000\n");
@@ -494,10 +508,6 @@ int hf2020_parse_reply(unsigned char *m,int len)
 	}
       }
       break;
-    case 0x75:
-      printf("Clover connection waveform format: %02x %02x %02x %02x\n",
-	     m[1],m[2],m[3],m[4]);
-      break;
     case 0x9C:
       printf("Modem reports clover call failed due to CCB send retries exceeded.\n");
 
@@ -513,6 +523,10 @@ int hf2020_parse_reply(unsigned char *m,int len)
       printf("Clover call status = 0x%02x\n",m[1]);
       break;
     }
+    break;
+  case 0x75:
+    printf("Clover connection waveform format: %02x %02x %02x %02x\n",
+	   m[1],m[2],m[3],m[4]);
     break;
   default:
     dump_bytes(stdout,"Unknown 80xx status message",m,len);
@@ -571,7 +585,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	  // Various status messages we can safely ignore
 	  break;
 	case 0x20: case 0x21: case 0x22:
-	case 0x26: case 0x28: case 0x2a:
+	case 0x26: case 0x27: case 0x28: case 0x2a:
 	case 0x2b: case 0x2c: case 0x2d:
 	case 0x2e:
 	  // Various variable-length replies
