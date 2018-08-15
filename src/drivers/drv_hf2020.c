@@ -6,6 +6,31 @@ See radios.h target in Makefile to see how this comment is used to register supp
 
 RADIO TYPE: HF2020,"hf2020","Clover 2020 HF modem",hf2020_radio_detect,hf2020_serviceloop,hf2020_receive_bytes,hf2020_send_packet,hf2020_my_turn_to_send,20
 
+The Clover modem uses 0x80 0xXX commands to do various things.
+0x80 0x06 - Immediate abort
+0x80 0x07 - Polite hangup of call
+0x80 0x09 - Hardware reset
+0x80 0x80 - Enable clover mode
+0x80 0x0A - Transmit CW ID when possible
+0x80 0x10 + [0x80 0xCC]x(1-8) + [0x80 0x00] to call station CC...
+0x80 0x59 - Enable echo-as-sent to use for flow control (count bytes sent). The buffer is 1KB, and for high speed, >255 bytes need to be in the buffer.
+0x80 0x65 + 0x80 0x02 - Set RS error correction rate to 90%
+0x80 0xfe + 0x80 0x00 + 0x80 0x00 - Set clover mask to recommended default
+0x80 0x51 - Enable channel statistics reports
+0x80 0x56 - Enable expanded link state reports
+0x80 0x5A - Enable connect status and related messages
+0x80 0x6A + 0x80 0x07 - Set serial port to 57600 until next reset (if we decide to use this feature. We would need to improve the auto-detect to check 57600 as well)
+0x80 0x6F + 0x80 0x01 - Switch to AT command mode.
+
+Characters 0x80 and 0x81 for TX or RX must be escaped with 0x81 in front.
+0x80 0x30 from modem means following bytes (if any) are RX
+0x80 0x31 from modem means following bytes (if any) are TX (this is the echo back enabled by 0x80 0x59)
+0x80 0x72 returns link info: byte 2 = SNR in 0.5db units, byte 5 = data rate in bytes per second
+0x80 0x27 - Someone is calling us.
+0x80 0x20 + peer + 0x80 0x00 - Linked to someone
+0x91 0x33 - Next bytes are from secondary port
+0x91 0x31 - Next bytes are from primary port
+
 */
 
 #include <unistd.h>
@@ -29,6 +54,16 @@ RADIO TYPE: HF2020,"hf2020","Clover 2020 HF modem",hf2020_radio_detect,hf2020_se
 
 extern int previous_state;
 
+int send80cmd(int fd,unsigned char c)
+{
+  unsigned char cmd[2];
+  cmd[0]=0x80; cmd[1]=c;
+  write_all(fd,cmd,2);
+
+  printf("0x80%02x written. Waiting for reply.\n",c);
+  return 0;
+}
+
 int hf2020_my_turn_to_send(void)
 {
   if (hf2020_ready_test())
@@ -48,10 +83,36 @@ int hf2020_ready_test(void)
   return isReady; 
 }
 
-int hf2020_initialise(int serialfd, unsigned int product_id)
+int hf2020_initialise(int fd, unsigned int product_id)
 {
   fprintf(stderr,"Detected a Clover HF modem, model ID %04x\n",
 	  product_id);
+
+  send80cmd(fd,0x06); // Stop whatever we are doing
+  send80cmd(fd,0x80); // Switch to clover mode
+  send80cmd(fd,0x65); send80cmd(fd,0x02); // Set FEC mode to "FAST"
+  send80cmd(fd,0x59); // Enable echo-as-sent
+  send80cmd(fd,0xfe); send80cmd(fd,0x00); send80cmd(fd,0x00); // use default CRC mask
+  send80cmd(fd,0x51); // enable channel status reports
+  send80cmd(fd,0x56); // enable expanded link state reports
+  send80cmd(fd,0x5a); // enable even more reports
+
+  // To be able to talk to the Barrett radio via AT commands,
+  // we need to enable the secondary serial port.  This port
+  // should always be at 9600, regardless of whether the head
+  // has the RS232 port set to 9600 or 115200.  This makes life
+  // a little easier for us.
+  
+  // Enable secondary port
+  send80cmd(fd,0x69);
+  send80cmd(fd,0x04);
+  // Switch to secondary serial port for TX
+  send80cmd(fd,0x34);
+
+  // Send AIATBL command to Barrett modem to get ALE call list
+  // (for both peers, and also so we know our own ID, so that we can configure it in the clover modem)
+  write_all(fd,"\r\nAIATBL\r\n",10);
+  
   return 1;
 }
 
@@ -164,27 +225,42 @@ int hf2020_process_reply(char *l)
   return 0;
 }
 
+int esc80=0;
+int esc91=0;
+int fromSecondary=0;
+
 int hf2020_receive_bytes(unsigned char *bytes,int count)
 {
   int i;
   for(i=0;i<count;i++) {
-    
+    unsigned char b=bytes[i];
+    if (esc80) {
+      esc80=0;
+      printf("saw 80 %02x\n",b);
+    } else if (esc91) {
+      esc91=0;
+      printf("saw 91 %02x\n",b);
+      if (b==0x33) fromSecondary=1;
+      if (b==0x31) fromSecondary=0;
+    } else {      
+      switch(b) {
+      case 0x80: esc80=1; break;
+      case 0x91: esc91=1; break;
+      default:
+	if (fromSecondary) {
+	  // Barrett modem output
+	  hfbarrett_receive_bytes(&b,1);
+	} else {
+	  // Clover modem output
+	}
+      }
+    }
   }
   return 0;
 }
 
 int hf2020_send_packet(int serialfd,unsigned char *out, int len)
 {
-  return 0;
-}
-
-int send80cmd(int fd,unsigned char c)
-{
-  unsigned char cmd[2];
-  cmd[0]=0x80; cmd[1]=c;
-  write_all(fd,cmd,2);
-
-  printf("0x80%02x written. Waiting for reply.\n",c);
   return 0;
 }
 
