@@ -751,8 +751,8 @@ int hf2020_received_byte(unsigned char b)
 	(hf2020_rx_buffer[511-7-candidate_len-0]==0x90)) {
       printf("We have found a packet of %d bytes\n",
 	     candidate_len);
-      dump_bytes(stdout,"The packet:",&hf2020_rx_buffer[511-7-candidate_len],candidate_len);
-      saw_packet(&hf2020_rx_buffer[511-7-candidate_len],candidate_len,
+      dump_bytes(stdout,"The packet:",&hf2020_rx_buffer[511-6-candidate_len],candidate_len);
+      saw_packet(&hf2020_rx_buffer[511-6-candidate_len],candidate_len,
 		 last_rx_rssi,
 		 my_sid_hex,prefix,servald_server,credential);
     }
