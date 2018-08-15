@@ -88,6 +88,7 @@ int hf2020_initialise(int fd, unsigned int product_id)
   fprintf(stderr,"Detected a Clover HF modem, model ID %04x\n",
 	  product_id);
 
+  send80cmd(fd,0x09); // Hardware reset
   send80cmd(fd,0x06); // Stop whatever we are doing
   send80cmd(fd,0x80); // Switch to clover mode
   send80cmd(fd,0x65); send80cmd(fd,0x02); // Set FEC mode to "FAST"
@@ -228,18 +229,76 @@ int hf2020_process_reply(char *l)
 int esc80=0;
 int esc91=0;
 int fromSecondary=0;
+int fromTXEcho=0;
+
+// For gathering 80xx status message responses
+int status80BytesRemaining=0;
+int status80len=0;
+unsigned char status80[256];
 
 int hf2020_receive_bytes(unsigned char *bytes,int count)
 {
   int i;
+  printf("Read %d bytes from modem\n",count);
+  fflush(stdout);
   for(i=0;i<count;i++) {
     unsigned char b=bytes[i];
+    printf("Examining byte #%d = 0x%02x\n",i,b);
     if (esc80) {
       esc80=0;
       printf("saw 80 %02x\n",b);
+      if (status80BytesRemaining) {
+	status80[status80len++]=b;
+	status80BytesRemaining--;
+	// Check for end of null-terminated string in reply
+	if ((status80BytesRemaining<0)&&(b==0x00))
+	  {	    
+	    status80BytesRemaining=0;
+	    dump_bytes(stdout,"Collected 80xx status variable-length message",status80,status80len);
+	  }
+	// Check for end of fixed-length reply
+	if (!status80BytesRemaining) {
+	  dump_bytes(stdout,"Collected 80xx status fixed-length message",status80,status80len);
+	}
+      } else {
+	switch(b) {
+	case 0x06: case 0x09:
+	  // Various status messages we can safely ignore
+	  break;
+	case 0x20: case 0x21: case 0x22:
+	case 0x26: case 0x28: case 0x2a:
+	case 0x2b: case 0x2c: case 0x2d:
+	case 0x2e:
+	  // Various variable-length replies
+	  status80[0]=b; status80len=1;
+	  // (Negative bytes-remaining count indicates variable length
+	  // terminated by 80 00).
+	  status80BytesRemaining=-1; break;
+	case 0x23: case 0x24:
+	  // Link disconnect notification 
+	  hf_state=HF_DISCONNECTED;
+	  status80[0]=b; status80len=1; status80BytesRemaining=1; break;
+	case 0x30:
+	  // Bytes are RX from modem
+	  fromSecondary=0; fromTXEcho=0; break;
+	case 0x31:
+	  // Bytes are TX echos from modem
+	  fromSecondary=0; fromTXEcho=1; break;
+	case 0x32:
+	  // Bytes are from secondary port
+	  fromSecondary=1; break;
+	case 0x70:
+	  // Channel spectra (8 bytes)
+	  status80[0]=b; status80len=1; status80BytesRemaining=8; break;
+	case 0x72:
+	  // Channel statistics (7 bytes for both ends)
+	  status80[0]=b; status80len=1; status80BytesRemaining=7*2; break;
+	default:
+	  printf("Saw unknown status message: 80 %02x\n",b);
+	}
+      }
     } else if (esc91) {
       esc91=0;
-      printf("saw 91 %02x\n",b);
       if (b==0x33) fromSecondary=1;
       if (b==0x31) fromSecondary=0;
     } else {      

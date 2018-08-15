@@ -89,6 +89,8 @@ int radio_read_bytes(int serialfd,int monitor_mode)
   ssize_t count =
     read_nonblock(serialfd,buf,8192);
 
+  if (count) printf("radio_read_bytes() = %d\n",(int)count);
+  
   errno=0;
   
   if (count>0)
