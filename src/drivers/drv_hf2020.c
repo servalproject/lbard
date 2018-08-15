@@ -58,6 +58,9 @@ extern int serialfd;
 extern char barrett_link_partner_string[1024];
 extern int previous_state;
 
+int hf_may_defer=-1;
+time_t hf_connecting_timeout=0;
+
 int send80cmd(int fd,unsigned char c)
 {
   unsigned char cmd[2];
@@ -101,6 +104,8 @@ int hf2020_initialise(int fd, unsigned int product_id)
 
   // Randomise time of first call to stop lock step
   hf_next_call_time=time(0)+(random()%30);
+  printf("First call will be in %lld seconds.\n",(long long)hf_next_call_time-time(0));
+  hf_may_defer=1;
   
   // Reset takes a long time, so don't do anything now.
   // send80cmd(fd,0x09); // Hardware reset
@@ -173,6 +178,7 @@ int hf2020_process_barrett_line(int serialfd,char *l)
     // Syntax error in our request to call.
     printf("Saw EV00 response. Marking call disconnected.\n");
     hf_next_call_time=time(0); //AXLINK failed, no call have been tried
+    hf_may_defer=1;
     hf_link_partner=-1;
     hf_state = HF_DISCONNECTED;
     return 0;
@@ -181,6 +187,7 @@ int hf2020_process_barrett_line(int serialfd,char *l)
     // Syntax error in our request to call.
     printf("Saw E0 response. Marking call disconnected.\n");
     hf_next_call_time=time(0); //AXLINK failed, no call have been tried
+    hf_may_defer=1;
     hf_link_partner=-1;
     hf_state = HF_DISCONNECTED;
     return 0;
@@ -243,28 +250,24 @@ int hf2020_process_barrett_line(int serialfd,char *l)
       if (!strcmp(barrett_link_partner_string, tmp)){ 
 	hf_link_partner=i;
 	hf_stations[hf_link_partner].consecutive_connection_failures=0;
-	printf("Setting hf_link_partner=%d",hf_link_partner);
+	printf("Setting hf_link_partner=%d\n",hf_link_partner);
 	if (hf_state==HF_DISCONNECTED) {
 	  // Er, okay. So we thought we were disconnected, but have an ALE link established.
-	  // We should probably try to establish a clover call now.
-	  
-	  // Build and send call command
-	  send80cmd(serialfd,0x10);
-	  // Always call remote end SERVAL, and set our call ID to be SERVAL on startup,
-	  // so that Serval calls can be easily identified.
-	  send80stringz(serialfd,CLOVER_ID);      
+	  // So mark us as connecting, so we can time out, and don't try to call anyone else just yet.
 
-	  hf_state=HF_CALLREQUESTED;	  
+	  hf_state=HF_CONNECTING;
+	  hf_connecting_timeout=time(0)+30+(random()%30);
 	}
 	break; 
       }
     }
     
-    if (((hf_state&0xff)!=HF_CONNECTING)
-	&&((hf_state&0xff)!=HF_CALLREQUESTED)) {
+    if ((hf_state&0xff)!=HF_CALLREQUESTED) {
       // We have a link, but without us asking for it.
       // We leave it connected for a while, to allow the other side to establish a
       // Clover call.
+      hf_state=HF_CONNECTING;
+      hf_connecting_timeout=time(0)+30+(random()%30);
     } else {
       // We requested the call, and now we have it, so try to start the clover call.
 
@@ -344,6 +347,7 @@ int hf2020_serviceloop(int serialfd)
 	// 1 minute should be enough.
 	// (add randomness to prevent lock-step)
 	hf_next_call_time=time(0)+60+(random()%30);
+	hf_may_defer=1;
       }
     }
     else if (hf_link_partner>-1) {
@@ -373,7 +377,10 @@ int hf2020_serviceloop(int serialfd)
     break;
     
   case HF_CONNECTING: //3
-    printf("XXX HF_CONNECTING\n");
+    if (time(0)>hf_connecting_timeout) {
+      hf_state=HF_DISCONNECTED;
+      hf_link_partner=-1;
+    }
     break;
 
   case HF_ALELINK: //4
@@ -449,6 +456,10 @@ int hf2020_parse_reply(unsigned char *m,int len)
     hf_link_partner=-1;
     hf_state=HF_DISCONNECTED;
     break;
+  case 0x27:
+    // Incoming clover call to us
+    printf("Incoming clover call addressed to us.\n");
+    break;
   case 0x70:
     // Channel spectra
     break;
@@ -462,6 +473,9 @@ int hf2020_parse_reply(unsigned char *m,int len)
     if (last_rx_rssi||last_remote_rssi)
       printf("RSSI = %d local, %d remote (x 0.5 dB)\n",last_rx_rssi,last_remote_rssi);
     break;
+  case 0x65:
+      printf("Modem reports attempting to establish robust clover call\n");
+      break;
   case 0x73:
     // Clover call status
     switch(m[1]) {
@@ -472,11 +486,17 @@ int hf2020_parse_reply(unsigned char *m,int len)
       if (hf_state==HF_DISCONNECTED) {
 	// If not yet connected, don't try to open a call just yet, if the channel is busy
 	// (But at the same time, we don't want scanning past a busy channel to stop us communicating)
-	
+	// So extend the wait exactly one time only.
+	if (hf_may_defer) {
+	  printf("Deferring trying to make a call, incase this is an incoming call for us.\n");
+	  hf_next_call_time=time(0)+20+(random()%20);
+	  hf_may_defer=0;
+	}
       }
       break;
-    case 0x65:
-      printf("Modem reports attempting to establish robust clover call\n");
+    case 0x75:
+      printf("Clover connection waveform format: %02x %02x %02x %02x\n",
+	     m[1],m[2],m[3],m[4]);
       break;
     case 0x9C:
       printf("Modem reports clover call failed due to CCB send retries exceeded.\n");
@@ -592,6 +612,9 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	case 0x73:
 	  // Clover call status
 	  status80[0]=b; status80len=1; status80BytesRemaining=1; break;
+	case 0x75:
+	  // Clover call waveform format
+	  status80[0]=b; status80len=1; status80BytesRemaining=4; break;
 	default:
 	  printf("Saw unknown status message: 80 %02x\n",b);
 	}
