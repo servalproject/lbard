@@ -223,14 +223,39 @@ int hf2020_serviceloop(int serialfd)
   return 0;
 }
 
-int hf2020_process_reply(char *l)
+extern int last_rx_rssi;
+int last_remote_rssi=-1;
+
+int hf2020_parse_reply(unsigned char *m,int len)
 {
+  if (!len) return -1;
+
+  switch (m[0]) {
+  case 0x24:
+    // Disconnected
+    printf("Marking link disconnected due to 8024 8000\n");
+    hf_state=HF_DISCONNECTED;
+    break;
+  case 0x70:
+    // Channel spectra
+    break;
+  case 0x72:
+    // Channel statistics
+    last_rx_rssi=m[1+0+1];   // local RSSI
+    last_remote_rssi=m[1+7+1]; // remote RSSI
+    if (last_rx_rssi||last_remote_rssi)
+      printf("RSSI = %d local, %d remote (x 0.5 dB)\n",last_rx_rssi,last_remote_rssi);
+    break;
+  default:
+    dump_bytes(stdout,"Unknown 80xx status message",m,len);
+  }
+
   return 0;
 }
 
 int esc80=0;
 int esc91=0;
-int fromSecondary=0;
+int fromSecondary=1;
 int fromTXEcho=0;
 
 // For gathering 80xx status message responses
@@ -243,9 +268,10 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
   int i;
   for(i=0;i<count;i++) {
     unsigned char b=bytes[i];
+    printf("saw byte %02x\n",b);    
     if (esc80) {
       esc80=0;
-      printf("saw 80 %02x\n",b);
+      //      printf("saw 80 %02x\n",b);
       if (status80BytesRemaining) {
 	status80[status80len++]=b;
 	status80BytesRemaining--;
@@ -253,15 +279,20 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	if ((status80BytesRemaining<0)&&(b==0x00))
 	  {	    
 	    status80BytesRemaining=0;
-	    dump_bytes(stdout,"Collected 80xx status variable-length message",status80,status80len);
+	    hf2020_parse_reply(status80,status80len);
 	  }
 	// Check for end of fixed-length reply
 	if (!status80BytesRemaining) {
-	  dump_bytes(stdout,"Collected 80xx status fixed-length message",status80,status80len);
+	  hf2020_parse_reply(status80,status80len);
 	}
       } else {
 	switch(b) {
 	case 0x06: case 0x09:
+	case 0x34:
+	case 0x51: case 0x56: case 0x59: case 0x5a:
+	case 0x65: case 0x69:
+	case 0x80:
+	case 0xfe:
 	  // Various status messages we can safely ignore
 	  break;
 	case 0x20: case 0x21: case 0x22:
@@ -310,6 +341,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	  hfbarrett_receive_bytes(&b,1);
 	} else {
 	  // Clover modem output
+	  printf("Received HF data byte 0x%02x\n",b);
 	}
       }
     }
