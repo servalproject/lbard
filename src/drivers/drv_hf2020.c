@@ -411,11 +411,18 @@ int hf2020_parse_reply(unsigned char *m,int len)
       break;
     case 0x9C:
       printf("Modem reports clover call failed due to CCB send retries exceeded.\n");
+
+      // Disconnect ALE link
+      send80cmd(serialfd,0x34); // output goes to Barrett radio
+      write_all(serialfd,"\r\nAXABORT\r\n",11);
+      
+      hf_state=HF_DISCONNECTED;
       break;
     default:
       printf("Clover call status = 0x%02x\n",m[1]);
       break;
     }
+    break;
   default:
     dump_bytes(stdout,"Unknown 80xx status message",m,len);
   }
