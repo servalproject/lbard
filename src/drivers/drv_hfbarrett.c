@@ -75,24 +75,26 @@ int hfbarrett_initialise(int serialfd)
   // XXX - ARLTBL1 to register for ALE LINK table notifications?
   // XXX - ARMESS1 to register for ALE event notifications?
   // XXX - ARSTAT1 to register for ALE status change notifications?
+  // XXX - AXSCNPF to resume channel scanning, in case it was paused 
 
     
   // Tell Barrett radio we want to know when various events occur.
-  char *setup_string[10]
+  char *setup_string[11]
     ={
 		"AIATBL\r\n", // Ask for all valid ale addresses
-    "ARAMDM1\r\n", // Register for AMD messages
-    "ARAMDP1\r\n", // Register for phone messages
-    "ARCALL1\r\n", // Register for new calls
-    "ARLINK1\r\n", // Hear about ALE link notifications
-    "ARLTBL1\r\n", // Hear about ALE link table events
-    "ARMESS1\r\n", // Hear about ALE event notifications
-    "ARSTAT1\r\n", // Hear about ALE status change notifications
+		"ARAMDM1\r\n", // Register for AMD messages
+		"ARAMDP1\r\n", // Register for phone messages
+		"ARCALL1\r\n", // Register for new calls
+		"ARLINK1\r\n", // Hear about ALE link notifications
+		"ARLTBL1\r\n", // Hear about ALE link table events
+		"ARMESS1\r\n", // Hear about ALE event notifications
+		"ARSTAT1\r\n", // Hear about ALE status change notifications
 		"AXALRM0\r\n", // Diable alarm sound when receiving a call
 		"AILTBL\r\n", // Ask for the current ALE link state
+		"AXSCNPF\r\n", // Resume channel scanning, if it was paused
   };
   int i;
-  for(i=0; i<10; i++) {
+  for(i=0; i<11; i++) {
     write(serialfd,setup_string[i],strlen(setup_string[i]));
     usleep(200000);
   }    
@@ -133,9 +135,13 @@ int hfbarrett_serviceloop(int serialfd)
 			  write(serialfd,"\r\n",2);
 
 			  // The AXLINK commmand creates a link which is unusable. So we connect sending the message CONNECTED.
-			  // A link will be established after the mesage is receied.
+			  // A link will be established after the mesage is received.
+			  // XXX - But AXNMSG will make the receiving side alarm, so AXLINK is really better.
+			  // Also, AXLINK is probably the more appropriate to use, when a clover or rapidM modem is fitted, as we
+			  // just want the ALE side to establish the call.
 			  init_buffer((unsigned char*)cmd, 1024);
-			  snprintf(cmd,1024,"AXNMSG%s%sCONNECTING\r\n", hf_stations[next_station].index, self_hf_station.index);
+			  // snprintf(cmd,1024,"AXNMSG%s%sCONNECTING\r\n", hf_stations[next_station].index, self_hf_station.index);
+			  snprintf(cmd,1024,"AXLINK%s%s\r\n", hf_stations[next_station].index, self_hf_station.index);
 			  //printf("sending '%s' to try to make ALE call.\n",cmd);			  
 			  
 	      // We add a random 0 - 4 seconds to avoid lock-step failure modes,
@@ -289,6 +295,7 @@ int hfbarrett_serviceloop(int serialfd)
 
 int hfbarrett_process_line(char *l)
 {
+
   // Skip XON/XOFF character at start of line
   while(l[0]&&l[0]<' ') l++;
   while(l[0]&&(l[strlen(l)-1]<' ')) l[strlen(l)-1]=0;
