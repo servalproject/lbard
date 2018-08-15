@@ -99,6 +99,9 @@ int hf2020_initialise(int fd, unsigned int product_id)
   fprintf(stderr,"Detected a Clover HF modem, model ID %04x\n",
 	  product_id);
 
+  // Randomise time of first call to stop lock step
+  hf_next_call_time=time(0)+(random()%30);
+  
   // Reset takes a long time, so don't do anything now.
   // send80cmd(fd,0x09); // Hardware reset
   
@@ -241,6 +244,18 @@ int hf2020_process_barrett_line(int serialfd,char *l)
 	hf_link_partner=i;
 	hf_stations[hf_link_partner].consecutive_connection_failures=0;
 	printf("Setting hf_link_partner=%d",hf_link_partner);
+	if (hf_state==HF_DISCONNECTED) {
+	  // Er, okay. So we thought we were disconnected, but have an ALE link established.
+	  // We should probably try to establish a clover call now.
+	  
+	  // Build and send call command
+	  send80cmd(serialfd,0x10);
+	  // Always call remote end SERVAL, and set our call ID to be SERVAL on startup,
+	  // so that Serval calls can be easily identified.
+	  send80stringz(serialfd,CLOVER_ID);      
+
+	  hf_state=HF_CALLREQUESTED;	  
+	}
 	break; 
       }
     }
@@ -301,6 +316,7 @@ int hf2020_serviceloop(int serialfd)
     // The call requested has to abort, the radio is receiving a another call
     if (previous_state==HF_CALLREQUESTED){
       printf("XXX Aborting call\n");
+      hf_link_partner=-1;
     }
     
     // Wait until we are allowed our first call before doing so
@@ -453,7 +469,11 @@ int hf2020_parse_reply(unsigned char *m,int len)
       // Here we should either just give up, or try again soon.
       // For now, we will give up.
       printf("Modem reports channel occupied by non-clover signal (that could just be ALE links establishing).\n");
-      
+      if (hf_state==HF_DISCONNECTED) {
+	// If not yet connected, don't try to open a call just yet, if the channel is busy
+	// (But at the same time, we don't want scanning past a busy channel to stop us communicating)
+	
+      }
       break;
     case 0x65:
       printf("Modem reports attempting to establish robust clover call\n");
