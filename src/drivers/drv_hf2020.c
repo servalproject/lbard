@@ -54,6 +54,8 @@ Characters 0x80 and 0x81 for TX or RX must be escaped with 0x81 in front.
 
 #define CLOVER_ID "serval"
 
+int hf2020_received_byte(unsigned char b);
+
 extern int serialfd;
 extern char barrett_link_partner_string[1024];
 extern int previous_state;
@@ -321,13 +323,18 @@ int hf2020_serviceloop(int serialfd)
     }
     
     // Wait until we are allowed our first call before doing so
-    if (time(0)<last_outbound_call) return 0;    
+    if (time(0)<last_outbound_call)
+      {
+	printf("Not yet allowed to call out.\n");
+	return 0;
+      }
     
     // Currently disconnected. If the current time is later than the next scheduled
     // If the radio is not receiving a message
     // call-out time, then pick a hf station to call
 
     if ((hf_link_partner==-1)&&(hf_station_count>0)&&(time(0)>=hf_next_call_time)) {
+      printf("It would be good to call another station.\n");
       int next_station = hf_next_station_to_call();
       if (next_station>-1) {
 	// XXX Try to connect
@@ -493,6 +500,9 @@ int hf2020_parse_reply(unsigned char *m,int len)
   case 0x27:
     // Incoming clover call to us
     printf("Incoming clover call addressed to us.\n");
+    break;
+  case 0x28:
+    printf("Monitored ARQ to '%s' (whatever that means)\n",&m[1]);
     break;
   case 0x42:
     printf("Link stations monitored for clover (whatever that means)\n");
@@ -669,7 +679,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	  status80[0]=b; status80len=1; status80BytesRemaining=4; break;
 	case 0x7f:
 	  // Modem command error
-	  status80[0]=b; status80len=1; status80BytesRemaining=4; break;
+	  status80[0]=b; status80len=1; status80BytesRemaining=2; break;
 	default:
 	  printf("Saw unknown status message: 80 %02x\n",b);
 	}
@@ -686,10 +696,53 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	} else {
 	  // Clover modem output
 	  printf("Received HF data byte 0x%02x\n",b);
+	  hf2020_received_byte(b);
 	}
       }
     }
   }
+  return 0;
+}
+
+unsigned char hf2020_rx_buffer[512];
+
+int hf2020_received_byte(unsigned char b)
+{
+  // Add new byte to end of the buffer
+  
+  // A ring buffer would be more efficient, but at 9600bps
+  // this will be fine.
+  bcopy(&hf2020_rx_buffer[0],&hf2020_rx_buffer[1],512-1);
+  hf2020_rx_buffer[511]=b;
+
+  // Check for envelope trailer
+  if ((hf2020_rx_buffer[511-6]==0x55)&&
+      (hf2020_rx_buffer[511-5]==0xAA)&&
+      (hf2020_rx_buffer[511-4]==0x55)&&
+      ((hf2020_rx_buffer[511-3]&0xf0)==0)&&
+      ((hf2020_rx_buffer[511-2]&0xf0)==0)&&
+      (hf2020_rx_buffer[511-1]==0xAA)&&
+      (hf2020_rx_buffer[511-0]==0x55)) {
+
+    // Okay, so envelope trailer is present.
+    // Work out the length of the packet we expect to see
+    int candidate_len=hf2020_rx_buffer[511-2]<<4;
+    candidate_len+=hf2020_rx_buffer[511-3];
+
+    printf("Envelope for a %d byte packet found\n",candidate_len);
+    
+    // Now see if the start of packet marker preceeds the
+    // expected packet
+    if ((hf2020_rx_buffer[511-7-candidate_len-1]==0x91)&&
+	(hf2020_rx_buffer[511-7-candidate_len-0]==0x90)) {
+      printf("We have found a packet of %d bytes\n",
+	     candidate_len);
+      saw_packet(&hf2020_rx_buffer[511-7-candidate_len],candidate_len,
+		 last_rx_rssi,
+		 my_sid_hex,prefix,servald_server,credential);
+    }
+  }
+  
   return 0;
 }
 
@@ -701,11 +754,15 @@ int hf2020_send_packet(int serialfd,unsigned char *out, int len)
   // But first, redirect output to modem TX
 
   // Switch to TX via modem
-  send80cmd(serialfd,0x31);
+  send80cmd(serialfd,0x33);
 
-  unsigned char escaped[512];
+  unsigned char escaped[256+256*2];
   int elen=0;
 
+  // Add marker bytes to beginning as part of the envelope
+  escaped[elen++]=0x91;
+  escaped[elen++]=0x90;
+  
   // Write packet body with escape characters
   for(int i=0;i<len;i++) {
     switch(out[i]) {
@@ -720,6 +777,23 @@ int hf2020_send_packet(int serialfd,unsigned char *out, int len)
     }
     if (clover_tx_buffer_space<0) clover_tx_buffer_space=0;
   }
+
+  // Add evenlope to the end, so that we know when we have a packet
+  // (The odd false positive from matching part of the envelope with
+  // data should not cause any significant problems. Later we can
+  // implement yet another escape character to make it foolproof.)
+  escaped[elen++]=0x55;
+  escaped[elen++]=0xAA;
+  escaped[elen++]=0x55;
+  // Encode the length as two nybls, so that we can be sure to
+  // not trigger an escape character.
+  escaped[elen++]=len&0xf;
+  escaped[elen++]=(len>>4)&0xf;
+  escaped[elen++]=0xAA;
+  escaped[elen++]=0x55;
+  clover_tx_buffer_space-=7;
+  
+  
   dump_bytes(stdout,"Escaped packet for Clover TX",escaped,len);
   write_all(serialfd,escaped,elen);
 
