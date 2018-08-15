@@ -153,7 +153,7 @@ int hf2020_serviceloop(int serialfd)
   }
 
   if (previous_state!=hf_state){
-    fprintf(stderr,"\nClover 2020 modem changed to state 0x%04x\n",hf_state);
+    fprintf(stderr,"\nClover 2020 modem changed to state %s\n",hf_state_name(hf_state));
     previous_state=hf_state;
   }
   return 0;

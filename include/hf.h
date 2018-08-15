@@ -69,3 +69,4 @@ int hf_radio_pause_for_turnaround(void);
 int hf_process_fragment(char *fragment);
 char *radio_type_name(int radio_type);
 char *radio_type_description(int radio_type);
+char *hf_state_name(int state);

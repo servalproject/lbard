@@ -69,6 +69,21 @@ char hf_response_line[1024];
 
 int hf_message_sequence_number=0;
 
+char *hf_state_name(int state)
+{
+  switch(state) {
+  case HF_DISCONNECTED: return "HF_DISCONNECTED";
+  case HF_CALLREQUESTED: return "HF_CALLREQUESTED";
+  case HF_CONNECTING: return "HF_CONNECTING";
+  case HF_ALELINK: return "HF_ALELINK";
+  case HF_DISCONNECTING: return "HF_DISCONNECTING";
+  case HF_ALESENDING: return "HF_ALESENDING";
+  case HF_RADIOCONFUSED: return "HF_RADIOCONFUSED";
+  case HF_COMMANDISSUED: return "HF_COMMANDISSUED";
+  default: return "[Unknown state. Update ale.c:hf_state_name()]";
+  }
+}
+
 char *radio_type_name(int radio_type)
 {
   for(int i=0;radio_types[i].id!=-1;i++)
