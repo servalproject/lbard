@@ -366,12 +366,18 @@ int main(int argc, char **argv)
       debug_pieces = 1;
       debug_message_pieces = 1;
 
+      if (!argv[2]) {
+	LOG_ERROR("Serial port (or link specification) must be specified.\n");
+	exitVal=-1;
+	break;
+      }
+      
       serial_port = argv[2];
       LOG_NOTE("serial_port = %s", serial_port);
     } 
     else 
     {  
-      if (argc<5) 
+      if (argc<6) 
       {
         LOG_NOTE("less than 5 arguments");
 
