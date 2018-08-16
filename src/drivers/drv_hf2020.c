@@ -109,8 +109,9 @@ int hf2020_initialise(int fd, unsigned int product_id)
   hf_may_defer=1;
   
   // Reset takes a long time, so don't do anything now.
-  // send80cmd(fd,0x09); // Hardware reset
-  
+  //  send80cmd(fd,0x09); // Hardware reset
+  //  sleep(30);
+
   send80cmd(fd,0x06); // Stop whatever we are doing
   send80cmd(fd,0x80); // Switch to clover mode
   send80cmd(fd,0x65); send80cmd(fd,0x02); // Set FEC mode to "FAST"
@@ -294,7 +295,7 @@ int hf2020_process_barrett_line(int serialfd,char *l)
     
   }
 
-  if ((!strcmp(l,"AIMESS2"))&&(hf_state==HF_CALLREQUESTED)){
+  if (!strcmp(l,"AIMESS2")) {
     printf("Call disconnected -- resuming scanning.\n");
     hf_link_partner=-1;
     clover_connect_time=0;
