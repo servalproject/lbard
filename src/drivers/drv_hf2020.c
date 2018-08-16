@@ -232,6 +232,7 @@ int hf2020_process_barrett_line(int serialfd,char *l)
     if (hf_state==HF_CONNECTING||hf_state==HF_CALLREQUESTED) {
       printf("Timed out trying to connect. Marking call disconnected.\n");
       hf_link_partner=-1;
+      clover_connect_time=0;
       hf_state=HF_DISCONNECTED;
     }
   }
@@ -284,6 +285,7 @@ int hf2020_process_barrett_line(int serialfd,char *l)
   if ((!strcmp(l,"AIMESS3"))&&(hf_state==HF_CALLREQUESTED)){
     printf("No link established after the call request -- resuming scanning\n");
     hf_link_partner=-1;
+    clover_connect_time=0;
     hf_state=HF_DISCONNECTED;
 
     // Resume scanning
@@ -295,6 +297,7 @@ int hf2020_process_barrett_line(int serialfd,char *l)
   if ((!strcmp(l,"AIMESS2"))&&(hf_state==HF_CALLREQUESTED)){
     printf("Call disconnected -- resuming scanning.\n");
     hf_link_partner=-1;
+    clover_connect_time=0;
     hf_state=HF_DISCONNECTED;
 
     // Resume channel scanning
@@ -415,6 +418,7 @@ int hf2020_serviceloop(int serialfd)
   case HF_CONNECTING: //3
     if (time(0)>hf_connecting_timeout) {
       hf_state=HF_DISCONNECTED;
+      clover_connect_time=0;
       hf_link_partner=-1;
     }
     break;
@@ -452,6 +456,7 @@ int hf2020_serviceloop(int serialfd)
     printf("XXX Aborting the current established ALE link\n");
 
     hf_link_partner=-1;
+    clover_connect_time=0;
     hf_state=HF_DISCONNECTED;
     
     break;
@@ -464,6 +469,7 @@ int hf2020_serviceloop(int serialfd)
     // We entenred a case where the radio is confused
     printf("XXX HF Radio is confused. Marking as disconnected.\n");
     hf_link_partner=-1;
+    clover_connect_time=0;
     hf_state=HF_DISCONNECTED;
     
     break;
@@ -485,7 +491,7 @@ int hf2020_serviceloop(int serialfd)
 	      (long long)(hf_next_call_time-time(0)),
 	      (long long)(hf_connecting_timeout-time(0)),
 	      hf_link_partner,hf_station_count);
-      last_state_report_time=time(0)+10;
+      last_state_report_time=time(0)+9;
     }
   }
   
@@ -511,6 +517,7 @@ int hf2020_parse_reply(unsigned char *m,int len)
     // Disconnected
     printf("Marking link disconnected due to 8024 8000\n");
     hf_link_partner=-1;
+    clover_connect_time=0;
     hf_state=HF_DISCONNECTED;
     break;
   case 0x27:
@@ -581,6 +588,7 @@ int hf2020_parse_reply(unsigned char *m,int len)
       write_all(serialfd,"AXTLNK00\r\n",10);
       
       hf_link_partner=-1;
+      clover_connect_time=0;
       hf_state=HF_DISCONNECTED;
       break;
     default:
@@ -681,6 +689,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	  write_all(serialfd,"AXTLNK00\r\n",10);
 	  
 	  hf_link_partner=-1;
+	  clover_connect_time=0;
 	  hf_state=HF_DISCONNECTED;
 	  status80[0]=b; status80len=1; status80BytesRemaining=1; break;
 	case 0x30:
