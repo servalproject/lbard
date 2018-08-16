@@ -586,7 +586,7 @@ int hf2020_parse_reply(unsigned char *m,int len)
       // Disconnect ALE link
       send80cmd(serialfd,0x34); // output goes to Barrett radio
       //      write_all(serialfd,"\r\nAXABORT\r\n",11);
-      write_all(serialfd,"AXTLNK00\r\n",10);
+      write_all(serialfd,"AXTLNK99\r\n",10);
       
       hf_link_partner=-1;
       clover_connect_time=0;
@@ -687,7 +687,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	  // Disconnect ALE link
 	  send80cmd(serialfd,0x34); // output goes to Barrett radio
 	  //      write_all(serialfd,"\r\nAXABORT\r\n",11);
-	  write_all(serialfd,"AXTLNK00\r\n",10);
+	  write_all(serialfd,"AXTLNK99\r\n",10);
 	  
 	  hf_link_partner=-1;
 	  clover_connect_time=0;

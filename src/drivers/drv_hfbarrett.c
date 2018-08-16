@@ -244,7 +244,7 @@ int hfbarrett_serviceloop(int serialfd)
     while (hf_link_partner>-1){
       time_to_abort=0;
       ale_command_state=0;
-      write_all(serialfd,"AXTLNK00\r\n",10);
+      write_all(serialfd,"AXTLNK99\r\n",10);
       while(ale_command_state==0){
         sleep(1); //once a second
         write_all(serialfd,"AILTBL\r\n",8);
