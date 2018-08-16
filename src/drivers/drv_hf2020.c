@@ -106,9 +106,6 @@ int hf2020_initialise(int fd, unsigned int product_id)
   fprintf(stderr,"Detected a Clover HF modem, model ID %04x\n",
 	  product_id);
 
-  // Randomise time of first call to stop lock step
-  hf_next_call_time=time(0)+(random()%30);
-  printf("First call will be in %lld seconds.\n",(long long)hf_next_call_time-time(0));
   hf_may_defer=1;
   
   // Reset takes a long time, so don't do anything now.
@@ -174,7 +171,7 @@ int hf2020_process_barrett_line(int serialfd,char *l)
   while(l[0]&&l[0]<' ') l++;
   while(l[0]&&(l[strlen(l)-1]<' ')) l[strlen(l)-1]=0;
 
-  if (hf_state!=HF_DISCONNECTED)
+  if (1) if (hf_state!=HF_DISCONNECTED)
     fprintf(stderr,"Barrett radio says (in state %s): %s\n",hf_state_name(hf_state),l);
 
   if ((!strcmp(l,"EV00"))&&(hf_state==HF_CALLREQUESTED)) {
@@ -195,7 +192,7 @@ int hf2020_process_barrett_line(int serialfd,char *l)
     hf_state = HF_DISCONNECTED;
     return 0;
   }
-	if ((!strcmp(l,"EV08"))&&(hf_state==HF_CALLREQUESTED)) {
+  if ((!strcmp(l,"EV08"))&&(hf_state==HF_CALLREQUESTED)) {
     // Syntax error in our request to call.
     printf("Saw EV08 response. Marking call disconnected.\n");
     hf_link_partner=-1;
@@ -218,13 +215,13 @@ int hf2020_process_barrett_line(int serialfd,char *l)
     }
   }
 
-  if ((!strcmp(l,"AILTBL"))&&((hf_state==HF_ALELINK)||(hf_state==HF_ALESENDING))) {
+  if (!strcmp(l,"AILTBL")) {
     if (hf_link_partner>-1) {
 	  // Mark link partner as having been attempted now, so that we can
   	// round-robin better.  Basically we should probably mark the station we failed
     // to connect to for re-attempt in a few minutes.
 	    hf_stations[hf_link_partner].consecutive_connection_failures++;
-	    fprintf(stderr,"Failed to connect to station #%d '%s' (%d times in a row)\n",
+	    fprintf(stderr,"Disconnected or failed to connect to station #%d '%s' (%d times in a row)\n",
 		    hf_link_partner,
 		    hf_stations[hf_link_partner].name,
 		    hf_stations[hf_link_partner].consecutive_connection_failures);
@@ -232,9 +229,11 @@ int hf2020_process_barrett_line(int serialfd,char *l)
     hf_link_partner=-1;
 
     // We have to also wait for the > prompt again
-    printf("Timed out trying to connect. Marking call disconnected.\n");
-    hf_link_partner=-1;
-    hf_state=HF_DISCONNECTED;
+    if (hf_state==HF_CONNECTING||hf_state==HF_CALLREQUESTED) {
+      printf("Timed out trying to connect. Marking call disconnected.\n");
+      hf_link_partner=-1;
+      hf_state=HF_DISCONNECTED;
+    }
   }
   
   if ((sscanf(l,"AILTBL%s",tmp)==1)&&(hf_state!=HF_ALELINK)&&(hf_state!=HF_DISCONNECTING)&&(hf_state!=HF_ALESENDING)) {
@@ -271,9 +270,10 @@ int hf2020_process_barrett_line(int serialfd,char *l)
       // Clover call.
       hf_state=HF_CONNECTING;
       hf_connecting_timeout=time(0)+30+(random()%30);
-    } else {
-      // We requested the call, and now we have it, so try to start the clover call.
+    } 
 
+    if ((hf_link_partner!=-1)&&(!clover_connect_time)) {
+      
       printf("Requesting clover call now that ALE link established.\n");
 
       clover_connect_time=time(0)+random()%10;
@@ -282,10 +282,24 @@ int hf2020_process_barrett_line(int serialfd,char *l)
   }
   
   if ((!strcmp(l,"AIMESS3"))&&(hf_state==HF_CALLREQUESTED)){
-    printf("No link established after the call request\n");
+    printf("No link established after the call request -- resuming scanning\n");
     hf_link_partner=-1;
     hf_state=HF_DISCONNECTED;
+
+    // Resume scanning
+    send80cmd(serialfd,0x34); // output goes to Barrett radio
+    write_all(serialfd,"XN1\r\n",10);
     
+  }
+
+  if ((!strcmp(l,"AIMESS2"))&&(hf_state==HF_CALLREQUESTED)){
+    printf("Call disconnected -- resuming scanning.\n");
+    hf_link_partner=-1;
+    hf_state=HF_DISCONNECTED;
+
+    // Resume channel scanning
+    send80cmd(serialfd,0x34); // output goes to Barrett radio
+    write_all(serialfd,"XN1\r\n",10);
   }
 
   if ((hf_state==HF_DISCONNECTING)&&(!strcmp(l,"AILTBL"))){
@@ -338,7 +352,7 @@ int hf2020_serviceloop(int serialfd)
       int next_station = hf_next_station_to_call();
       if (next_station>-1) {
 	// XXX Try to connect
-	printf("XXX Try to connect to next station.\n");
+	printf(">>> Try to connect to station '%s'.\n",hf_stations[next_station].name);
 
 	// First, we have to tell the Barrett radio to establish an ALE link
 	send80cmd(serialfd,0x34);
@@ -351,7 +365,7 @@ int hf2020_serviceloop(int serialfd)
 	// Allow enough time for the clover link to be established
 	// 1 minute should be enough.
 	// (add randomness to prevent lock-step)
-	hf_next_call_time=time(0)+60+(random()%30);
+	hf_next_call_time=time(0)+30+(random()%30);
 	hf_may_defer=1;
       }
     }
@@ -466,10 +480,12 @@ int hf2020_serviceloop(int serialfd)
   } else {
     static int last_state_report_time=0;    
     if (time(0)>last_state_report_time) {
-      fprintf(stdout,"Link state is %s (next call in %lld seconds, link partner=%d, hf_station_count=%d)\n",
-	      hf_state_name(hf_state),(long long)(hf_next_call_time-time(0)),
+      fprintf(stdout,"Link state is %s (next call in %lld seconds, HF_CONNECTING timeout = %lld, link partner=%d, hf_station_count=%d)\n",
+	      hf_state_name(hf_state),
+	      (long long)(hf_next_call_time-time(0)),
+	      (long long)(hf_connecting_timeout-time(0)),
 	      hf_link_partner,hf_station_count);
-      last_state_report_time=time(0)+2;
+      last_state_report_time=time(0)+10;
     }
   }
   
@@ -639,7 +655,7 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 	switch(b) {
 	case 0x06: case 0x09:
 	case 0x10:
-	case 0x34:
+	case 0x33: case 0x34:
 	case 0x51: case 0x56: case 0x59: case 0x5a:
 	case 0x65: case 0x69:
 	case 0x80:
@@ -811,9 +827,8 @@ int hf2020_send_packet(int serialfd,unsigned char *out, int len)
   escaped[elen++]=0xAA;
   escaped[elen++]=0x55;
   clover_tx_buffer_space-=7;
-  
-  
-  dump_bytes(stdout,"Escaped packet for Clover TX",escaped,len);
+    
+  //  dump_bytes(stdout,"Escaped packet for Clover TX",escaped,len);
   write_all(serialfd,escaped,elen);
 
   return 0;
