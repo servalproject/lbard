@@ -96,7 +96,7 @@ char *time_broadcast_addrs[]={DEFAULT_BROADCAST_ADDRESSES,NULL};
 
 int reboot_when_stuck=0;
 extern int serial_errors;
-
+//extern int serialfd=-1;
 unsigned char my_sid[32];
 unsigned char my_signingid[32];
 char *my_sid_hex=NULL;
@@ -115,6 +115,8 @@ time_t last_summary_time=0;
 time_t last_status_time=0;
 
 int monitor_mode=0;
+
+int serialfd=-1;
 
 struct sync_state *sync_state=NULL;
 
@@ -309,7 +311,6 @@ int main(int argc, char **argv)
   if (argc>2) credential=argv[2];
   if (argc>1) servald_server=argv[1];
   
-  int serialfd=-1;
   serialfd = open(serial_port,O_RDWR);
   if (serialfd<0) {
     perror("Opening serial port in main");

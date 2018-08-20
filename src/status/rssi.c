@@ -97,7 +97,7 @@ int log_rssi_graph(FILE *f,struct peer_state *p)
   fprintf(f,
 	  "var theData = {\n"
 	  "  labels: [");
-  for(int i=59;i>0;i--) fprintf(f,"%d,",i); fprintf(f,"0],\n");
+  for(int i=59;i>0;i--) { fprintf(f,"%d,",i); } fprintf(f,"0],\n");
 
   int bins[60];
   for(int i=0;i<60;i++) bins[i]=0;

@@ -342,6 +342,44 @@ test_DetectBarrettHF() {
    fork_terminate_all
 }
 
+doc_DetectLoRa="LBARD detects LoRa radios"
+setup_DetectLoRa() {
+   setup_servald
+   assert_no_servald_processes
+   foreach_instance +A +B +C +D create_single_identity
+   foreach_instance +A +B +C +D start_servald_server
+   get_servald_restful_http_server_port PORTA +A
+   get_servald_restful_http_server_port PORTB +B
+   get_servald_restful_http_server_port PORTC +C
+   get_servald_restful_http_server_port PORTD +D
+   # Start the fake radio daemon.
+   fork %fakeradio fakecsmaradio alora,alora,alora,alora ttys.txt "$1"
+   wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
+   tty1=$(sed -n 1p ttys.txt)
+   tty2=$(sed -n 2p ttys.txt)
+   tty3=$(sed -n 3p ttys.txt)
+   tty4=$(sed -n 4p ttys.txt)
+   # Start four lbard daemons.
+   set_instance +A
+   fork_lbard_console "$addr_localhost:$PORTA" lbard:lbard "$SIDA" "$IDA" "$tty1" pull
+   set_instance +B
+   fork_lbard_console "$addr_localhost:$PORTB" lbard:lbard "$SIDB" "$IDB" "$tty2" pull
+   set_instance +C
+   fork_lbard_console "$addr_localhost:$PORTC" lbard:lbard "$SIDC" "$IDC" "$tty3" pull
+   set_instance +D
+   fork_lbard_console "$addr_localhost:$PORTD" lbard:lbard "$SIDD" "$IDD" "$tty4" pull
+}
+test_DetectLoRa() {
+   # Test that all radios are detected
+   wait_until --timeout=10 grep "Detected LoRa radio" A_LBARDERR
+   wait_until --timeout=10 grep "Detected LoRa radio" B_LBARDERR
+   wait_until --timeout=10 grep "Detected LoRa radio" C_LBARDERR
+   wait_until --timeout=10 grep "Detected LoRa radio" D_LBARDERR
+
+   fork_terminate %lbardA %lbardB %lbardC %lbardD 
+   fork_terminate_all
+}
+
 
 
 doc_OneOne="A single very small bundle transfers to a single peer"

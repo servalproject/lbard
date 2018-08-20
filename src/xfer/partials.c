@@ -93,14 +93,14 @@ int clear_partial(struct partial_bundle *p)
   while(p->manifest_segments) {
     struct segment_list *s=p->manifest_segments;
     p->manifest_segments=s->next;
-    if (s->data) free(s->data); s->data=NULL;
+    if (s->data) { free(s->data); } s->data=NULL;
     free(s);
     s=NULL;
   }
   while(p->body_segments) {
     struct segment_list *s=p->body_segments;
     p->body_segments=s->next;
-    if (s->data) free(s->data); s->data=NULL;
+    if (s->data) { free(s->data); } s->data=NULL;
     free(s);
     s=NULL;
   }
