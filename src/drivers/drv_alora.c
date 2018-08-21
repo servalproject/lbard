@@ -45,8 +45,7 @@ int alora_radio_detect(int fd)
   if (fd==-1){
     //LOG_NOTE("No serial port, so no radio");
     fprintf(stderr,"No serial port, so no radio\n");
-    //radio_set_type(RADIOTYPE_NORADIO);
-    return 1;
+    return 0;
   }
   else{ 
     //FILE* f=fopen("loralogs.log","w");
@@ -54,9 +53,7 @@ int alora_radio_detect(int fd)
     int lora_value = alora_module_reset(fd); //reset the lora radio we are communicating with and retrieve module identifier (RN2903 or RN4843)
     if(alora_initialise(fd,lora_value)==-1){ //set lora radio parameters
       fprintf(stderr,"init failed\n");
-      //radio_set_type(RADIOTYPE_NORADIO);
-      close(fd);
-      return 1;
+      return 0;
     }
     else{
       fprintf(stderr,"RN2903 initialized\n");
@@ -66,9 +63,7 @@ int alora_radio_detect(int fd)
       int lora_value = alora_module_reset(fd); //reset the lora radio module
       if(alora_initialise(fd,lora_value)==-1){ //set lora radio parameters
         fprintf(stderr,"init failed\n");
-        //radio_set_type(RADIOTYPE_NORADIO);
-        close(fd);
-        return 1;
+        return 0;
       }
       else{
         fprintf(stderr,"RN4843 initialized\n");
