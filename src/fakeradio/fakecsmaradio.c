@@ -650,6 +650,8 @@ int filter_process_packet(int from,int to,
       hfcodan_encapsulate_packet(from,to,packet,packet_len); break;
     case RADIO_HFBARRETT:
       hfbarrett_encapsulate_packet(from,to,packet,packet_len); break;
+    case RADIO_RFDLORA:
+      hfbarrett_encapsulate_packet(from,to,packet,packet_len); break;
   }
   
   if ((to==-1)&&out_len) {
@@ -912,6 +914,7 @@ int main(int argc,char **argv)
     if (!strcasecmp(radio_type,"rfd900")) radio_type_id=RADIO_RFD900;
     if (!strcasecmp(radio_type,"hfcodan")) radio_type_id=RADIO_HFCODAN;
     if (!strcasecmp(radio_type,"hfbarrett")) radio_type_id=RADIO_HFBARRETT;
+    if (!strcasecmp(radio_type,"alora")) radio_type_id=RADIO_RFDLORA;
     if (radio_type_id==-1) {
       fprintf(stderr,"Unknown radio type '%s'\n",radio_type);
       exit(-1);
@@ -940,6 +943,7 @@ int main(int argc,char **argv)
 	  case RADIO_RFD900: rfd900_read_byte(i,buffer[j]); break;
 	  case RADIO_HFCODAN: hfcodan_read_byte(i,buffer[j]); break;
 	  case RADIO_HFBARRETT: hfbarrett_read_byte(i,buffer[j]); break;
+	  case RADIO_RFDLORA: rfdlora_read_byte(i,buffer[j]); break;
 	  }
 	  activity++;
 	}
@@ -953,6 +957,7 @@ int main(int argc,char **argv)
 	case RADIO_RFD900: rfd900_heartbeat(i); break;
 	case RADIO_HFCODAN: hfcodan_heartbeat(i); break;
 	case RADIO_HFBARRETT: hfbarrett_heartbeat(i); break;
+	case RADIO_RFDLORA: rfdlora_heartbeat(i); break;
 	}
       }
       last_heartbeat_time=now;

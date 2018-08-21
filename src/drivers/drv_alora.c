@@ -79,7 +79,7 @@ int alora_radio_detect(int fd)
       fprintf(stderr,"module version : %d  -- 0 = RN2903 and 1 = RN2483\n",version);
       fprintf(stderr,"module firmware : %s\n", firmware);
       radio_set_type(RADIOTYPE_ALORA);
-      return 0;
+      return 1;
     }
   
   }
@@ -319,10 +319,11 @@ int alora_module_reset(int fd){
     write_all(fd, reset, strlen(reset)); // reset Lora radio 
     int lora_value=3;
 
-    usleep(100000);
+    //not working with smaller value of usleep here, the module did not have the time to reset and therefore didn't send any response in time
+    usleep(1000000); 
     int count=read_nonblock(fd,buf,8192);
 
-    if (count<7) return -1;
+    if (count<7){ printf("%d\n",count);return -1;}
     
     //update the loramodule to know which module we are communicating with then return it
     for(int i=0;i<6;i++){
