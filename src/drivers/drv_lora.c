@@ -3,7 +3,7 @@ The following specially formatted comments tell the LBARD build environment abou
 See radio_type for the meaning of each field.
 See radios.h target in Makefile to see how this comment is used to register support for the radio.
 
-RADIO TYPE: ALORA,"alora","RFD Tri-Band LoRa module",alora_radio_detect,alora_serviceloop,alora_receive_bytes,alora_send_packet,alora_check_if_ready,20
+RADIO TYPE: ALORA,"rfdlora","RFD Tri-Band LoRa module",rfdlora_radio_detect,rfdlora_serviceloop,rfdlora_receive_bytes,rfdlora_send_packet,rfdlora_check_if_ready,20
 */
 
 #include <unistd.h>
@@ -28,19 +28,19 @@ RADIO TYPE: ALORA,"alora","RFD Tri-Band LoRa module",alora_radio_detect,alora_se
 #include "radios.h"
 //#include "code_instrumentation.h"
 
-int alora_initialise(int fd, int lora_module); 
-int alora_switch_module(int fd, int lora_module);
-int alora_module_reset(int fd);
-int alora_module_ver(int fd);
-int alora_module_firmware(int fd, char* firmware);
-int alora_module_snr(int fd, char * snr);
-void alora_send_packets(int fd);
-void alora_receive_packets(int fd);
+int rfdlora_initialise(int fd, int lora_module); 
+int rfdlora_switch_module(int fd, int lora_module);
+int rfdlora_module_reset(int fd);
+int rfdlora_module_ver(int fd);
+int rfdlora_module_firmware(int fd, char* firmware);
+int rfdlora_module_snr(int fd, char * snr);
+void rfdlora_send_packets(int fd);
+void rfdlora_receive_packets(int fd);
 // Import serial_port string from main.c
 extern char *serial_port;
 extern int serialfd;
 //int last_rx_rssi=-1;
-int alora_radio_detect(int fd)
+int rfdlora_radio_detect(int fd)
 {
   if (fd==-1){
     //LOG_NOTE("No serial port, so no radio");
@@ -50,8 +50,8 @@ int alora_radio_detect(int fd)
   else{ 
     //FILE* f=fopen("loralogs.log","w");
     serial_setup_port_with_speed(fd,57600);
-    int lora_value = alora_module_reset(fd); //reset the lora radio we are communicating with and retrieve module identifier (RN2903 or RN4843)
-    if(alora_initialise(fd,lora_value)==-1){ //set lora radio parameters
+    int lora_value = rfdlora_module_reset(fd); //reset the lora radio we are communicating with and retrieve module identifier (RN2903 or RN4843)
+    if(rfdlora_initialise(fd,lora_value)==-1){ //set lora radio parameters
       fprintf(stderr,"init failed\n");
       return 0;
     }
@@ -59,18 +59,18 @@ int alora_radio_detect(int fd)
       fprintf(stderr,"RN2903 initialized\n");
       fprintf(stderr,"switching to other module\n");
       //radio_set_type(RADIOTYPE_ALORA); 
-      alora_switch_module(fd, lora_value); //switch to the other lora radio module 
-      int lora_value = alora_module_reset(fd); //reset the lora radio module
-      if(alora_initialise(fd,lora_value)==-1){ //set lora radio parameters
+      rfdlora_switch_module(fd, lora_value); //switch to the other lora radio module 
+      int lora_value = rfdlora_module_reset(fd); //reset the lora radio module
+      if(rfdlora_initialise(fd,lora_value)==-1){ //set lora radio parameters
         fprintf(stderr,"init failed\n");
         return 0;
       }
       else{
         fprintf(stderr,"RN4843 initialized\n");
       }
-      int version = alora_module_ver(fd); //get lora module name (RN2903 or RN4843)
+      int version = rfdlora_module_ver(fd); //get lora module name (RN2903 or RN4843)
       char firmware[1024] = {0};
-      alora_module_firmware(fd, firmware); //get lora module firmware version
+      rfdlora_module_firmware(fd, firmware); //get lora module firmware version
       fprintf(stderr,"module version : %d  -- 0 = RN2903 and 1 = RN2483\n",version);
       fprintf(stderr,"module firmware : %s\n", firmware);
       radio_set_type(RADIOTYPE_ALORA);
@@ -80,7 +80,7 @@ int alora_radio_detect(int fd)
   }
 }
 
-int alora_serviceloop(int fd)
+int rfdlora_serviceloop(int fd)
 {
   // Deal with clocks running backwards sometimes
   if ((congestion_update_time-gettime_ms())>4000)
@@ -181,12 +181,12 @@ int alora_serviceloop(int fd)
   return 0;
 }
 
-int alora_parse_line(char *line)
+int rfdlora_parse_line(char *line)
 {
   if (!strncmp("radio_rx ",(char *)line,9)) {
     char buf[8192];
     char rssi[1024] = {0};
-    alora_module_snr(serialfd, rssi);
+    rfdlora_module_snr(serialfd, rssi);
     // We have a packet from the radio.
     // Decode the hex bytes into an array, and then call saw_packet() with the result
     int i=0;
@@ -218,21 +218,21 @@ int alora_parse_line(char *line)
 }
 
 #define MAX_RX_BYTES 8192
-char alora_current_rx_line[MAX_RX_BYTES];
-int alora_current_rx_line_length=0;
-int alora_receive_bytes(unsigned char *bytes,int count)
+char rfdlora_current_rx_line[MAX_RX_BYTES];
+int rfdlora_current_rx_line_length=0;
+int rfdlora_receive_bytes(unsigned char *bytes,int count)
 { 
   for(int i=0;i<count;i++)
   {
       switch(bytes[i]) {
         case '\n': case '\r':
-          alora_parse_line(alora_current_rx_line);
-          alora_current_rx_line_length=0;
+          rfdlora_parse_line(rfdlora_current_rx_line);
+          rfdlora_current_rx_line_length=0;
           break;
         default:
-          if (alora_current_rx_line_length<MAX_RX_BYTES) {
-            alora_current_rx_line[alora_current_rx_line_length++]=bytes[i];
-            alora_current_rx_line[alora_current_rx_line_length]=0;
+          if (rfdlora_current_rx_line_length<MAX_RX_BYTES) {
+            rfdlora_current_rx_line[rfdlora_current_rx_line_length++]=bytes[i];
+            rfdlora_current_rx_line[rfdlora_current_rx_line_length]=0;
           }
       }
   }
@@ -240,7 +240,7 @@ int alora_receive_bytes(unsigned char *bytes,int count)
   return 0;
 }
 
-int alora_send_packet(int fd,unsigned char *out, int len)
+int rfdlora_send_packet(int fd,unsigned char *out, int len)
 {
   char macp[] = "mac pause\r\n";
   char radio_resume[] = "radio rx 0\r\n";
@@ -274,12 +274,12 @@ int alora_send_packet(int fd,unsigned char *out, int len)
   return 0;
 }
 
-int alora_check_if_ready(void)
+int rfdlora_check_if_ready(void)
 {
   return -1;
 }
 
-int alora_switch_module(int fd, int lora_module){
+int rfdlora_switch_module(int fd, int lora_module){
   if (lora_module==0){
     char switchm[] = "sys set pindig GPIO13 1\r\n";
     write_all(fd, switchm, strlen(switchm)); // change value of GPIO pin 13 = switch the radio we are communicating with
@@ -297,7 +297,7 @@ int alora_switch_module(int fd, int lora_module){
   //return 0;
 }
 
-int alora_module_reset(int fd){
+int rfdlora_module_reset(int fd){
     unsigned char buf[8192];
     char loramodule[7];
     for(int i=0;i<7;i++){
@@ -310,13 +310,15 @@ int alora_module_reset(int fd){
     //ssize_t count = read_nonblock(fd,buf,8192);  // read and ignore any stuff
     write_all(fd,"\r\n",2); // Clear any partial command
     usleep(100000);
-    read_nonblock(fd,buf,8192);  // read and ignore any stuff
+    int count=read_nonblock(fd,buf,8192);  // read and ignore any stuff
+    dump_bytes(stdout,"bytes following CRLF",buf,count);
     write_all(fd, reset, strlen(reset)); // reset Lora radio 
     int lora_value=3;
 
     //not working with smaller value of usleep here, the module did not have the time to reset and therefore didn't send any response in time
     usleep(1000000); 
     int count=read_nonblock(fd,buf,8192);
+    dump_bytes(stdout,"bytes following reset",buf,count);
 
     if (count<7){ printf("%d\n",count);return -1;}
     
@@ -341,7 +343,7 @@ int alora_module_reset(int fd){
     }
 }
 
-int alora_module_ver(int fd){
+int rfdlora_module_ver(int fd){
     unsigned char buf[8192];
     char loramodule[7];
     for(int i=0;i<7;i++){
@@ -381,7 +383,7 @@ int alora_module_ver(int fd){
     }
 }
 
-int alora_module_firmware(int fd, char * firmware)
+int rfdlora_module_firmware(int fd, char * firmware)
 {
   unsigned char buf[8192];
   for(int i=0;i<=6;i++) firmware[i]=0;
@@ -401,7 +403,7 @@ int alora_module_firmware(int fd, char * firmware)
   return 0;
 }
 
-int alora_module_snr(int fd, char * snr){
+int rfdlora_module_snr(int fd, char * snr){
     unsigned char buf[8192];
     for(int i=0;i<4;i++){
       snr[i]='\0';
@@ -421,7 +423,7 @@ int alora_module_snr(int fd, char * snr){
     return 0;
 }
 
-int alora_initialise(int fd, int lora_module)
+int rfdlora_initialise(int fd, int lora_module)
 {
   // XXX -- The radio setup should be done specifically for each region,
   // and the region code read from the serial eeprom, and pick the correct module
@@ -466,7 +468,7 @@ int alora_initialise(int fd, int lora_module)
   return 0;
 }
 /*
-int alora_serviceloop(int fd)
+int rfdlora_serviceloop(int fd)
 {
   char cmd[1024];
   
@@ -602,7 +604,7 @@ int lora_process_line(char *l)
   return 0;
 }
 
-int alora_receive_bytes(unsigned char *bytes,int count)
+int rfdlora_receive_bytes(unsigned char *bytes,int count)
 {
   int i;
   for(i=0;i<count;i++) {

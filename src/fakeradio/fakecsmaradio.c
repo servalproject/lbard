@@ -914,7 +914,7 @@ int main(int argc,char **argv)
     if (!strcasecmp(radio_type,"rfd900")) radio_type_id=RADIO_RFD900;
     if (!strcasecmp(radio_type,"hfcodan")) radio_type_id=RADIO_HFCODAN;
     if (!strcasecmp(radio_type,"hfbarrett")) radio_type_id=RADIO_HFBARRETT;
-    if (!strcasecmp(radio_type,"alora")) radio_type_id=RADIO_RFDLORA;
+    if (!strcasecmp(radio_type,"rfdlora")) radio_type_id=RADIO_RFDLORA;
     if (radio_type_id==-1) {
       fprintf(stderr,"Unknown radio type '%s'\n",radio_type);
       exit(-1);
