@@ -3,7 +3,7 @@ The following specially formatted comments tell the LBARD build environment abou
 See radio_type for the meaning of each field.
 See radios.h target in Makefile to see how this comment is used to register support for the radio.
 
-RADIO TYPE: ALORA,"alora","aLora",alora_radio_detect,alora_serviceloop,alora_receive_bytes,alora_send_packet,alora_check_if_ready,20
+RADIO TYPE: ALORA,"alora","RFD Tri-Band LoRa module",alora_radio_detect,alora_serviceloop,alora_receive_bytes,alora_send_packet,alora_check_if_ready,20
 */
 
 #include <unistd.h>
