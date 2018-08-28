@@ -298,6 +298,7 @@ int rfdlora_switch_module(int fd, int lora_module){
 }
 
 int rfdlora_module_reset(int fd){
+    fprintf(stderr,"Entered rfdlora_module_reset()\n");
     unsigned char buf[8192];
     char loramodule[7];
     for(int i=0;i<7;i++){
@@ -308,17 +309,19 @@ int rfdlora_module_reset(int fd){
     //write_all(fd,clr,3); // Clear any partial command
     //sleep(1);
     //ssize_t count = read_nonblock(fd,buf,8192);  // read and ignore any stuff
+    fprintf(stderr,"Writing CRLF to modem.\n");
     write_all(fd,"\r\n",2); // Clear any partial command
-    usleep(100000);
+    usleep(2000000);
     int count=read_nonblock(fd,buf,8192);  // read and ignore any stuff
-    dump_bytes(stdout,"bytes following CRLF",buf,count);
+    dump_bytes(stderr,"bytes following CRLF",buf,count);
+    fprintf(stderr,"Writing reset command to modem.\n");
     write_all(fd, reset, strlen(reset)); // reset Lora radio 
     int lora_value=3;
 
     //not working with smaller value of usleep here, the module did not have the time to reset and therefore didn't send any response in time
-    usleep(1000000); 
-    int count=read_nonblock(fd,buf,8192);
-    dump_bytes(stdout,"bytes following reset",buf,count);
+    usleep(2000000); 
+    count=read_nonblock(fd,buf,8192);
+    dump_bytes(stderr,"bytes following reset",buf,count);
 
     if (count<7){ printf("%d\n",count);return -1;}
     
