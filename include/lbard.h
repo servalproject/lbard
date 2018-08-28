@@ -539,7 +539,7 @@ int bundle_calculate_tree_key(sync_key_t *sync_key,
 			      long long version,
 			      long long length,
 			      char *filehash);
-int dump_bytes(FILE *f,char *msg,unsigned char *bytes,int length);
+int dump_bytes(FILE *f,const char *msg,const unsigned char *bytes,const int length);
 int urandombytes(unsigned char *buf, size_t len);
 int active_peer_count(void);
 int sync_dequeue_bundle(struct peer_state *p,int bundle);

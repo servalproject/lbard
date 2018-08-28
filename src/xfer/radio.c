@@ -48,6 +48,7 @@ extern char *servald_server;
 extern char *credential;
 extern char *prefix;
 extern char *onepeer;
+//extern int serialfd=-1;
 
 int serial_errors=0;
 

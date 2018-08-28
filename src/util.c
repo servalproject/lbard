@@ -568,7 +568,7 @@ int ascii64_decode(char *in, unsigned char *out, int out_len, int radio_type)
   return retVal;  
 }
 
-int dump_bytes(FILE *f,char *msg, unsigned char *bytes, int length)
+int dump_bytes(FILE *f,const char *msg,const unsigned char *bytes,const int length)
 {
   int retVal = -1;
 

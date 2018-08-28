@@ -92,6 +92,8 @@ ssize_t read_nonblock(int fd, void *buf, size_t len)
 
 ssize_t write_all(int fd, const void *buf, size_t len)
 {
+  dump_bytes(stderr,"write_all",buf,len);
+
   ssize_t written = write(fd, buf, len);
   if (written == -1)
     { perror("write_all(): written == -1");
@@ -162,10 +164,16 @@ int serial_setup_port_with_speed(int fd,int speed)
    Disable START/STOP output flow control. */
   
   // Disable CTS/RTS flow control
-#ifndef CNEW_RTSCTS
+#ifdef CRTSCTS
   t.c_cflag &= ~CRTSCTS;
-#else
+#endif
+#ifdef CNEW_RTSCTS
   t.c_cflag &= ~CNEW_RTSCTS;
+#endif
+#ifndef CRTSCTS
+#ifndef CNEW_RTSCTS
+#error No support for hardware flow control detected.
+#endif
 #endif
 
   // no output processing
@@ -182,6 +190,8 @@ int serial_setup_port_with_speed(int fd,int speed)
 	  (unsigned int)t.c_cflag,(unsigned int)t.c_iflag,
 	  (unsigned int)t.c_oflag,(unsigned int)t.c_lflag);
 
+
+  fprintf(stderr,"Serial baud rate set to %d\n",speed);
   
   set_nonblock(fd);
   
