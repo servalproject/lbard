@@ -299,26 +299,6 @@ int main(int argc, char **argv)
       break;
     }
 
-  fprintf(stderr,"%d:My SigningID as hex is %s\n",__LINE__,my_signingid_hex);
-  fprintf(stderr,"%d:My SID as hex is %s\n",__LINE__,my_sid_hex);
-  fprintf(stderr,"My SID prefix is %02X%02X%02X%02X%02X%02X\n",
-	 my_sid[0],my_sid[1],my_sid[2],my_sid[3],my_sid[4],my_sid[5]);
-  
-  if (argc>2) credential=argv[2];
-  if (argc>1) servald_server=argv[1];
-  
-  serialfd = open(serial_port,O_RDWR);
-  if (serialfd<0) {
-    perror("Opening serial port in main");
-    exit(-1);
-  }
-  if (serial_setup_port(serialfd))
-    {
-      LOG_NOTE("serial port setup failed");
-      exitVal = -1;
-      break;
-    }
-
     fprintf(stderr,"Version commit:%s branch:%s [MD5: %s] @ %s\n",
     GIT_VERSION_STRING,GIT_BRANCH,VERSION_STRING,BUILD_DATE);
       
@@ -415,6 +395,26 @@ int main(int argc, char **argv)
 
       serial_port = argv[5];
       LOG_NOTE("serial_port = %s", serial_port);
+    }
+
+  fprintf(stderr,"%d:My SigningID as hex is %s\n",__LINE__,my_signingid_hex);
+  fprintf(stderr,"%d:My SID as hex is %s\n",__LINE__,my_sid_hex);
+  fprintf(stderr,"My SID prefix is %02X%02X%02X%02X%02X%02X\n",
+	 my_sid[0],my_sid[1],my_sid[2],my_sid[3],my_sid[4],my_sid[5]);
+  
+  if (argc>2) credential=argv[2];
+  if (argc>1) servald_server=argv[1];
+  
+  serialfd = open(serial_port,O_RDWR);
+  if (serialfd<0) {
+    perror("Opening serial port in main");
+    exit(-1);
+  }
+  if (serial_setup_port(serialfd))
+    {
+      LOG_NOTE("serial port setup failed");
+      exitVal = -1;
+      break;
     }
 
     if (message_update_interval < 0) 
