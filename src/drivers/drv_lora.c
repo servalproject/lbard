@@ -5,7 +5,7 @@ See radios.h target in Makefile to see how this comment is used to register supp
 
 RADIO TYPE: ALORA,"rfdlora","RFD Tri-Band LoRa module",rfdlora_radio_detect,rfdlora_serviceloop,rfdlora_receive_bytes,rfdlora_send_packet,rfdlora_check_if_ready,20
 */
-
+#define _POSIX_SOURCE
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -21,6 +21,7 @@ RADIO TYPE: ALORA,"rfdlora","RFD Tri-Band LoRa module",rfdlora_radio_detect,rfdl
 #include <ctype.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <sys/stat.h>
 
 #include "sync.h"
 #include "lbard.h"
@@ -29,13 +30,15 @@ RADIO TYPE: ALORA,"rfdlora","RFD Tri-Band LoRa module",rfdlora_radio_detect,rfdl
 //#include "code_instrumentation.h"
 
 int rfdlora_initialise(int fd, int lora_module); 
-int rfdlora_switch_module(int fd, int lora_module);
+int rfdlora_switch_module(int fd);
 int rfdlora_module_reset(int fd);
+int rfdlora_break(int fd);
 int rfdlora_module_ver(int fd);
 int rfdlora_module_firmware(int fd, char* firmware);
 int rfdlora_module_snr(int fd, char * snr);
 void rfdlora_send_packets(int fd);
 void rfdlora_receive_packets(int fd);
+int same_file(int fd1, int fd2);
 // Import serial_port string from main.c
 extern char *serial_port;
 extern int serialfd;
@@ -50,33 +53,41 @@ int rfdlora_radio_detect(int fd)
   else{ 
     //FILE* f=fopen("loralogs.log","w");
     serial_setup_port_with_speed(fd,57600);
-    int lora_value = rfdlora_module_reset(fd); //reset the lora radio we are communicating with and retrieve module identifier (RN2903 or RN4843)
-    if(rfdlora_initialise(fd,lora_value)==-1){ //set lora radio parameters
-      fprintf(stderr,"init failed\n");
+    if(rfdlora_break(fd)==0){
+      fprintf(stderr,"break failed\n");
       return 0;
     }
-    else{
-      fprintf(stderr,"RN2903 initialized\n");
-      fprintf(stderr,"switching to other module\n");
-      //radio_set_type(RADIOTYPE_ALORA); 
-      rfdlora_switch_module(fd, lora_value); //switch to the other lora radio module 
-      int lora_value = rfdlora_module_reset(fd); //reset the lora radio module
+    int lora_value = rfdlora_module_reset(fd); //reset the lora radio we are communicating with and retrieve module identifier (RN2903 or RN4843)
+    if (lora_value==-1){
+      fprintf(stderr,"reset failed\n");
+      return 0;
+    }else{
       if(rfdlora_initialise(fd,lora_value)==-1){ //set lora radio parameters
         fprintf(stderr,"init failed\n");
         return 0;
       }
       else{
-        fprintf(stderr,"RN4843 initialized\n");
+        fprintf(stderr,"RN2903 initialized\n");
+        fprintf(stderr,"switching to other module\n");
+        //radio_set_type(RADIOTYPE_ALORA); 
+        rfdlora_switch_module(fd); //switch to the other lora radio module 
+        lora_value = rfdlora_module_reset(fd); //reset the lora radio module
+        if(rfdlora_initialise(fd,lora_value)==-1){ //set lora radio parameters
+          fprintf(stderr,"init failed\n");
+          return 0;
+        }
+        else{
+          fprintf(stderr,"RN4843 initialized\n");
+        }
+        int version = rfdlora_module_ver(fd); //get lora module name (RN2903 or RN4843)
+        char firmware[1024] = {0};
+        rfdlora_module_firmware(fd, firmware); //get lora module firmware version
+        fprintf(stderr,"module version : %d  -- 0 = RN2903 and 1 = RN2483\n",version);
+        fprintf(stderr,"module firmware : %s\n", firmware);
+        radio_set_type(RADIOTYPE_ALORA);
+        return 1;
       }
-      int version = rfdlora_module_ver(fd); //get lora module name (RN2903 or RN4843)
-      char firmware[1024] = {0};
-      rfdlora_module_firmware(fd, firmware); //get lora module firmware version
-      fprintf(stderr,"module version : %d  -- 0 = RN2903 and 1 = RN2483\n",version);
-      fprintf(stderr,"module firmware : %s\n", firmware);
-      radio_set_type(RADIOTYPE_ALORA);
-      return 1;
     }
-  
   }
 }
 
@@ -279,6 +290,7 @@ int rfdlora_check_if_ready(void)
   return -1;
 }
 
+/*
 int rfdlora_switch_module(int fd, int lora_module){
   if (lora_module==0){
     char switchm[] = "sys set pindig GPIO13 1\r\n";
@@ -295,8 +307,72 @@ int rfdlora_switch_module(int fd, int lora_module){
     return -1;
   }
   //return 0;
+}*/
+
+int rfdlora_switch_module(int fd){
+  char pin[] = "sys get pindig GPIO13\r\n";
+  unsigned char buf[8192];
+  // get value of GPIO pin 13 = used to switch the radio we are communicating with
+  write_all(fd, pin, strlen(pin)); 
+  usleep(200000);
+  int count=read_nonblock(fd,buf,8192);  // read and ignore any stuff
+  dump_bytes(stderr,"bytes following CRLF",buf,count);
+  // -48 is for transforming the char in int : in the ASCII table "0" = 48 so 48-48 = 0 and "1" = 49 so 49-48 =1.
+  int GPIO13 = buf[0] - 48; 
+  fprintf(stderr,"GPIO 13 value obtained : %d. Now reverting it.\n", GPIO13);
+  if (GPIO13==0){
+    char switchm[] = "sys set pindig GPIO13 1\r\n";
+    write_all(fd, switchm, strlen(switchm)); // change value of GPIO pin 13 = switch the radio we are communicating with
+    //fprintf(stderr,"\n\n-----------------------------------------------------------------------\n\n |%s| \n\n-----------------------------------------------------------------------\n\n",buf);
+    return 0;
+  }else if (GPIO13==1){
+    char switchm[] = "sys set pindig GPIO13 0\r\n";
+    write_all(fd, switchm, strlen(switchm)); // ask Lora radio for module and version strlen(init)
+    //fprintf(stderr,"\n\n-----------------------------------------------------------------------\n\n |%s| \n\n-----------------------------------------------------------------------\n\n",buf);
+    return 0;
+  }else{
+    fprintf(stderr,"Wrong GPIO13 value");
+    return -1;
+  }
+  //return 0;
 }
 
+// used to compare if 2 files descriptor are pointing on the same file
+/*int same_file(int fd1, int fd2) {
+    struct stat stat1, stat2;
+    if(fstat(fd1, &stat1) < 0) return -1;
+    if(fstat(fd2, &stat2) < 0) return -1;
+    return (stat1.st_dev == stat2.st_dev) && (stat1.st_ino == stat2.st_ino);
+}*/
+
+int rfdlora_break(int fd){
+    unsigned char buf[8192];
+
+    char reset[] = "U\r\n"; 
+
+    int timer = 0;
+    /* Wait for all data transmission to the terminal to finish */
+      /* and then transmit a break condition to the terminal.     */
+   if (tcdrain(fd) != 0) {
+      perror("tcdrain error");
+      return(0);
+   }
+   else {
+
+      if (tcsendbreak(fd, timer) != 0){
+        fprintf(stderr,"break : tcsendbreak() error, %d\n", errno);
+        return 0;
+      }
+      else{
+        write_all(fd, reset, strlen(reset)); // reset Lora radio
+        usleep(2000000);
+        int count=read_nonblock(fd,buf,8192);  // read and ignore any stuff
+        dump_bytes(stderr,"bytes following break and 0x55",buf,count);
+        return 1;
+      }
+   }
+  return 0;
+}
 int rfdlora_module_reset(int fd){
     fprintf(stderr,"Entered rfdlora_module_reset()\n");
     unsigned char buf[8192];
@@ -340,9 +416,9 @@ int rfdlora_module_reset(int fd){
       return lora_value;
     }
     else{
-      fprintf(stderr,"wrong lora module\n");
-      close(fd);
-      return lora_value;
+      fprintf(stderr,"wrong lora module : %s\n", loramodule);
+      //close(fd);
+      return -1;
     }
 }
 
@@ -455,7 +531,7 @@ int rfdlora_initialise(int fd, int lora_module)
     setup_string[1]="radio set freq 433100000\r\n"; // Register for phone messages
   break;
   default :
-    printf("wrong lora module given\n");
+    fprintf(stderr,"wrong lora module given : %d\n", lora_module);
     
     return(-1);
   break;
