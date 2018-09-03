@@ -72,20 +72,25 @@ int rfdlora_radio_detect(int fd)
         //radio_set_type(RADIOTYPE_ALORA); 
         rfdlora_switch_module(fd); //switch to the other lora radio module 
         lora_value = rfdlora_module_reset(fd); //reset the lora radio module
-        if(rfdlora_initialise(fd,lora_value)==-1){ //set lora radio parameters
-          fprintf(stderr,"init failed\n");
+        if (lora_value==-1){
+          fprintf(stderr,"reset failed\n");
           return 0;
+        }else{
+          if(rfdlora_initialise(fd,lora_value)==-1){ //set lora radio parameters
+            fprintf(stderr,"init failed\n");
+            return 0;
+          }
+          else{
+            fprintf(stderr,"RN4843 initialized\n");
+          }
+          int version = rfdlora_module_ver(fd); //get lora module name (RN2903 or RN4843)
+          char firmware[1024] = {0};
+          rfdlora_module_firmware(fd, firmware); //get lora module firmware version
+          fprintf(stderr,"module version : %d  -- 0 = RN2903 and 1 = RN2483\n",version);
+          fprintf(stderr,"module firmware : %s\n", firmware);
+          radio_set_type(RADIOTYPE_ALORA);
+          return 1;
         }
-        else{
-          fprintf(stderr,"RN4843 initialized\n");
-        }
-        int version = rfdlora_module_ver(fd); //get lora module name (RN2903 or RN4843)
-        char firmware[1024] = {0};
-        rfdlora_module_firmware(fd, firmware); //get lora module firmware version
-        fprintf(stderr,"module version : %d  -- 0 = RN2903 and 1 = RN2483\n",version);
-        fprintf(stderr,"module firmware : %s\n", firmware);
-        radio_set_type(RADIOTYPE_ALORA);
-        return 1;
       }
     }
   }
@@ -395,7 +400,7 @@ int rfdlora_module_reset(int fd){
     int lora_value=3;
 
     //not working with smaller value of usleep here, the module did not have the time to reset and therefore didn't send any response in time
-    usleep(2000000); 
+    usleep(8000000); 
     count=read_nonblock(fd,buf,8192);
     dump_bytes(stderr,"bytes following reset",buf,count);
 
