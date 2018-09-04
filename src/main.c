@@ -405,18 +405,6 @@ int main(int argc, char **argv)
   if (argc>2) credential=argv[2];
   if (argc>1) servald_server=argv[1];
   
-  serialfd = open(serial_port,O_RDWR);
-  if (serialfd<0) {
-    perror("Opening serial port in main");
-    exit(-1);
-  }
-  if (serial_setup_port(serialfd))
-    {
-      LOG_NOTE("serial port setup failed");
-      exitVal = -1;
-      break;
-    }
-
     if (message_update_interval < 0) 
     {
       message_update_interval = 0;
