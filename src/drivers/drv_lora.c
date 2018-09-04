@@ -27,7 +27,6 @@ RADIO TYPE: ALORA,"rfdlora","RFD Tri-Band LoRa module",rfdlora_radio_detect,rfdl
 #include "lbard.h"
 #include "hf.h"
 #include "radios.h"
-//#include "code_instrumentation.h"
 
 int rfdlora_initialise(int fd, int lora_module); 
 int rfdlora_switch_module(int fd);
@@ -42,50 +41,57 @@ int same_file(int fd1, int fd2);
 // Import serial_port string from main.c
 extern char *serial_port;
 extern int serialfd;
-//int last_rx_rssi=-1;
 int rfdlora_radio_detect(int fd)
 {
   if (fd==-1){
-    //LOG_NOTE("No serial port, so no radio");
     fprintf(stderr,"No serial port, so no radio\n");
     return 0;
   }
   else{ 
-    //FILE* f=fopen("loralogs.log","w");
+    // set the serial port speed to 57600, required for lora radios
     serial_setup_port_with_speed(fd,57600);
+    // call a function to get the lora radio out of non responsive state
     if(rfdlora_break(fd)==0){
-      fprintf(stderr,"break failed\n");
+      fprintf(stderr,"non responsive state break failed\n");
       return 0;
     }
-    int lora_value = rfdlora_module_reset(fd); //reset the lora radio we are communicating with and retrieve module identifier (RN2903 or RN4843)
+    // reset the lora radio we are communicating with and retrieve module identifier (RN2903 or RN4843)
+    int lora_value = rfdlora_module_reset(fd); 
+    // manage the wrong value return case
     if (lora_value==-1){
       fprintf(stderr,"reset failed\n");
       return 0;
     }else{
-      if(rfdlora_initialise(fd,lora_value)==-1){ //set lora radio parameters
+      //set lora radio parameters according to region and module given
+      if(rfdlora_initialise(fd,lora_value)==-1){ 
         fprintf(stderr,"init failed\n");
         return 0;
       }
       else{
-        fprintf(stderr,"RN2903 initialized\n");
-        fprintf(stderr,"switching to other module\n");
-        //radio_set_type(RADIOTYPE_ALORA); 
-        rfdlora_switch_module(fd); //switch to the other lora radio module 
-        lora_value = rfdlora_module_reset(fd); //reset the lora radio module
+        fprintf(stderr,"First module initialized\n");
+        fprintf(stderr,"Switching to other module\n");
+        // switch to the other lora radio module 
+        rfdlora_switch_module(fd); 
+        // reset the lora radio we are communicating with and retrieve module identifier (RN2903 or RN4843)
+        lora_value = rfdlora_module_reset(fd);
+        // manage the wrong value return case
         if (lora_value==-1){
           fprintf(stderr,"reset failed\n");
           return 0;
         }else{
-          if(rfdlora_initialise(fd,lora_value)==-1){ //set lora radio parameters
+          //set lora radio parameters according to region and module given
+          if(rfdlora_initialise(fd,lora_value)==-1){ 
             fprintf(stderr,"init failed\n");
             return 0;
           }
           else{
-            fprintf(stderr,"RN4843 initialized\n");
+            fprintf(stderr,"Second module initialized\n");
           }
-          int version = rfdlora_module_ver(fd); //get lora module name (RN2903 or RN4843)
+          //get lora module name (RN2903 or RN4843)
+          int version = rfdlora_module_ver(fd); 
           char firmware[1024] = {0};
-          rfdlora_module_firmware(fd, firmware); //get lora module firmware version
+          //get lora module firmware version
+          rfdlora_module_firmware(fd, firmware); 
           fprintf(stderr,"module version : %d  -- 0 = RN2903 and 1 = RN2483\n",version);
           fprintf(stderr,"module firmware : %s\n", firmware);
           radio_set_type(RADIOTYPE_ALORA);
@@ -295,25 +301,6 @@ int rfdlora_check_if_ready(void)
   return -1;
 }
 
-/*
-int rfdlora_switch_module(int fd, int lora_module){
-  if (lora_module==0){
-    char switchm[] = "sys set pindig GPIO13 1\r\n";
-    write_all(fd, switchm, strlen(switchm)); // change value of GPIO pin 13 = switch the radio we are communicating with
-    //fprintf(stderr,"\n\n-----------------------------------------------------------------------\n\n |%s| \n\n-----------------------------------------------------------------------\n\n",buf);
-    return 0;
-  }else if (lora_module==1){
-    char switchm[] = "sys set pindig GPIO13 0\r\n";
-    write_all(fd, switchm, strlen(switchm)); // ask Lora radio for module and version strlen(init)
-    //fprintf(stderr,"\n\n-----------------------------------------------------------------------\n\n |%s| \n\n-----------------------------------------------------------------------\n\n",buf);
-    return 0;
-  }else{
-    fprintf(stderr,"Wrong loramodule value");
-    return -1;
-  }
-  //return 0;
-}*/
-
 int rfdlora_switch_module(int fd){
   char pin[] = "sys get pindig GPIO13\r\n";
   unsigned char buf[8192];
@@ -342,40 +329,32 @@ int rfdlora_switch_module(int fd){
   //return 0;
 }
 
-// used to compare if 2 files descriptor are pointing on the same file
-/*int same_file(int fd1, int fd2) {
-    struct stat stat1, stat2;
-    if(fstat(fd1, &stat1) < 0) return -1;
-    if(fstat(fd2, &stat2) < 0) return -1;
-    return (stat1.st_dev == stat2.st_dev) && (stat1.st_ino == stat2.st_ino);
-}*/
-
 int rfdlora_break(int fd){
+  // Wait for all data transmission to the terminal to finish 
+  // and then transmit a break condition to the terminal.     
     unsigned char buf[8192];
-
     char reset[] = "U\r\n"; 
-
     int timer = 0;
-    /* Wait for all data transmission to the terminal to finish */
-      /* and then transmit a break condition to the terminal.     */
-   if (tcdrain(fd) != 0) {
+    // wait for the radio to be available for communication
+    if (tcdrain(fd) != 0) {
       perror("tcdrain error");
       return(0);
-   }
-   else {
-
+    }
+    else {
+      // send a break signal to the module
       if (tcsendbreak(fd, timer) != 0){
         fprintf(stderr,"break : tcsendbreak() error, %d\n", errno);
         return 0;
       }
       else{
-        write_all(fd, reset, strlen(reset)); // reset Lora radio
+        // send 0x55 in order to get it out from non responsive state
+        write_all(fd, reset, strlen(reset)); 
         usleep(2000000);
         int count=read_nonblock(fd,buf,8192);  // read and ignore any stuff
         dump_bytes(stderr,"bytes following break and 0x55",buf,count);
         return 1;
       }
-   }
+    }
   return 0;
 }
 int rfdlora_module_reset(int fd){
@@ -385,13 +364,10 @@ int rfdlora_module_reset(int fd){
     for(int i=0;i<7;i++){
       loramodule[i]='\0';
     }
-    //unsigned clr[3]={21,13,10};
     char reset[] = "sys reset\r\n";
-    //write_all(fd,clr,3); // Clear any partial command
-    //sleep(1);
-    //ssize_t count = read_nonblock(fd,buf,8192);  // read and ignore any stuff
     fprintf(stderr,"Writing CRLF to modem.\n");
-    write_all(fd,"\r\n",2); // Clear any partial command
+    // Clear any partial command
+    write_all(fd,"\r\n",2); 
     usleep(2000000);
     int count=read_nonblock(fd,buf,8192);  // read and ignore any stuff
     dump_bytes(stderr,"bytes following CRLF",buf,count);
@@ -422,7 +398,6 @@ int rfdlora_module_reset(int fd){
     }
     else{
       fprintf(stderr,"wrong lora module : %s\n", loramodule);
-      //close(fd);
       return -1;
     }
 }
@@ -433,11 +408,13 @@ int rfdlora_module_ver(int fd){
     for(int i=0;i<7;i++){
       loramodule[i]='\0';
     }
-    //unsigned clr[3]={21,13,10};
     char reset[] = "sys get ver\r\n";
-    write_all(fd, reset, strlen(reset)); // asks for lora radio version
-    sleep(1); // give the radio the chance to respond
-    ssize_t count = read_nonblock(fd,buf,8192);  // read reply module version firmware ...
+    // ask for lora module version
+    write_all(fd, reset, strlen(reset)); 
+    // give the radio the chance to respond
+    sleep(1); 
+    // read reply module version firmware ...
+    ssize_t count = read_nonblock(fd,buf,8192); 
     int lora_value=3;
 
     if (count<7) {
@@ -461,7 +438,7 @@ int rfdlora_module_ver(int fd){
       return lora_value;
     }
     else{
-      fprintf(stderr,"wrong lora module\n");
+      fprintf(stderr,"rfdlora_module_ver : wrong lora module\n");
       close(fd);
       return lora_value;
     }
@@ -473,9 +450,12 @@ int rfdlora_module_firmware(int fd, char * firmware)
   for(int i=0;i<=6;i++) firmware[i]=0;
   
   char reset[] = "sys get ver\r\n";
-  write_all(fd, reset, strlen(reset)); // ask Lora radio for module and version
-  sleep(1); // give the radio the chance to respond
-  ssize_t count = read_nonblock(fd,buf,8192);  // read lora reply
+  // ask Lora radio for module and version
+  write_all(fd, reset, strlen(reset)); 
+  // give the radio the chance to respond
+  sleep(1);
+  // read lora reply
+  ssize_t count = read_nonblock(fd,buf,8192);  
   
   if (count<13) return -1;
   
@@ -517,11 +497,10 @@ int rfdlora_initialise(int fd, int lora_module)
   
   int count;
   unsigned char buf[8192];
-  //char *setup_string[7];
   // Tell LoRa radio we want to know when various events occur.
   char *setup_string[7]={
       "radio set mod lora\r\n", // set radio in LoRa mode
-      "radio set freq 868100000\r\n", // set frequency according to the module used
+      "radio set freq xxxx00000\r\n", // set frequency according to the module used
       "radio set sf sf12\r\n", // set the spread factor of the radio
       "radio set bw 125\r\n", // set the bandwidth of the radio, in KHz
       "radio set cr 4/5\r\n", // set the error correction rate of the radio
@@ -530,13 +509,13 @@ int rfdlora_initialise(int fd, int lora_module)
     };
   switch(lora_module){
   case 0 : //RN2903
-    setup_string[1]="radio set freq 923300000\r\n"; // Register for phone messages
+    setup_string[1]="radio set freq 923300000\r\n"; // frequency chosen for RN2903 according to region
   break;
   case 1 : //RN2483
-    setup_string[1]="radio set freq 433100000\r\n"; // Register for phone messages
+    setup_string[1]="radio set freq 433100000\r\n"; // frequency chosen for RN2483 according to region
   break;
   default :
-    fprintf(stderr,"wrong lora module given : %d\n", lora_module);
+    fprintf(stderr,"rfdlora_initialise : wrong lora module given : %d\n", lora_module);
     
     return(-1);
   break;
@@ -551,237 +530,11 @@ int rfdlora_initialise(int fd, int lora_module)
   
   return 0;
 }
-/*
-int rfdlora_serviceloop(int fd)
-{
-  char cmd[1024];
-  
-  if (!has_hf_plan) {
-    fprintf(stderr,"You must specify a HF radio plan via the hfplan= command line option.\n");
-    exit(-1);
-  }
 
-  switch(hf_state) {
-  case HF_DISCONNECTED:
-    // Currently disconnected. If the current time is later than the next scheduled
-    // call-out time, then pick a hf station to call
-
-    // Wait until we are allowed our first call before doing so
-    if (time(0)<last_outbound_call) return 0;
-    
-    if ((hf_station_count>0)&&(time(0)>=hf_next_call_time)) {
-      int next_station = hf_next_station_to_call();
-      if (next_station>-1) {
-	// Ensure we have a clear line for new command (we were getting some
-	// errors here intermittantly).
-	write(fd,"\r\n",2);
-	
-	snprintf(cmd,1024,"AXLINK%s\r\n",hf_stations[next_station].name);
-	write(fd,cmd,strlen(cmd));
-	hf_state = HF_CALLREQUESTED;
-      
-	fprintf(stderr,"HF: Attempting to call station #%d '%s'\n",
-		next_station,hf_stations[next_station].name);
-      }
-    }
-    break;
-  case HF_CALLREQUESTED:
-    // Probe periodically with AILTBL to get link table, because the modem doesn't
-    // preemptively tell us when we get a link established
-    if (time(0)!=last_link_probe_time)  {
-      write(fd,"AILTBL\r\n",8);
-      last_link_probe_time=time(0);
-    }
-    break;
-  case HF_CONNECTING:
-    break;
-  case HF_ALELINK:
-    // Probe periodically with AILTBL to get link table, because the modem doesn't
-    // preemptively tell us when we lose a link
-    if (time(0)!=last_link_probe_time)  {
-      write(fd,"AILTBL\r\n",8);
-      last_link_probe_time=time(0);
-    }
-    break;
-  case HF_DISCONNECTING:
-    break;
-  default:
-    break;
-  }
-  
-  return 0;
-}
-
-int lora_process_line(char *l)
-{
-  // Skip XON/XOFF character at start of line
-  while(l[0]&&l[0]<' ') l++;
-  while(l[0]&&(l[strlen(l)-1]<' ')) l[strlen(l)-1]=0;
-  
-  //  fprintf(stderr,"Barrett radio says (in state 0x%04x): %s\n",hf_state,l);
-
-  if ((!strcmp(l,"EV00"))&&(hf_state==HF_CALLREQUESTED)) {
-    // Syntax error in our request to call.
-    hf_state = HF_DISCONNECTED;
-    return 0;
-  }
-  if ((!strcmp(l,"E0"))&&(hf_state==HF_CALLREQUESTED)) {
-    // Syntax error in our request to call.
-    hf_state = HF_DISCONNECTED;
-    return 0;
-  }
-
-  char tmp[8192];
-
-  if (sscanf(l,"AIAMDM%s",tmp)==1) {
-    fprintf(stderr,"Barrett radio saw ALE AMD message '%s'\n",&tmp[6]);
-    hf_process_fragment(&tmp[6]);
-  }
-  
-  if ((!strcmp(l,"AILTBL"))&&(hf_state==HF_ALELINK)) {
-      if (hf_link_partner>-1) {
-	// Mark link partner as having been attempted now, so that we can
-	// round-robin better.  Basically we should probably mark the station we failed
-	// to connect to for re-attempt in a few minutes.
-	hf_stations[hf_link_partner].consecutive_connection_failures++;
-	fprintf(stderr,"Failed to connect to station #%d '%s' (%d times in a row)\n",
-		hf_link_partner,
-		hf_stations[hf_link_partner].name,
-		hf_stations[hf_link_partner].consecutive_connection_failures);
-      }
-      hf_link_partner=-1;
-      ale_inprogress=0;
-
-      // We have to also wait for the > prompt again
-      hf_state=HF_DISCONNECTED;
-  } else if ((sscanf(l,"AILTBL%s",tmp)==1)&&(hf_state!=HF_ALELINK)) {
-    // Link established
-    barrett_link_partner_string[0]=tmp[4];
-    barrett_link_partner_string[1]=tmp[5];
-    barrett_link_partner_string[2]=tmp[2];
-    barrett_link_partner_string[3]=tmp[3];
-    barrett_link_partner_string[4]=0;
-
-    int i;
-    hf_link_partner=-1;
-    for(i=0;i<hf_station_count;i++)
-      if (!strcmp(barrett_link_partner_string,hf_stations[i].name))
-	{ hf_link_partner=i;
-	  hf_stations[hf_link_partner].consecutive_connection_failures=0;
-	  break; }
-
-    if (((hf_state&0xff)!=HF_CONNECTING)
-	&&((hf_state&0xff)!=HF_CALLREQUESTED)) {
-      // We have a link, but without us asking for it.
-      // So allow 10 seconds before trying to TX, else we start TXing immediately.
-    hf_radio_pause_for_turnaround();
-    } else hf_radio_mark_ready();
-
-    
-    fprintf(stderr,"ALE Link established with %s (station #%d), I will send a packet in %ld seconds\n",
-	    barrett_link_partner_string,hf_link_partner,
-	    hf_next_packet_time-time(0));
-    
-    hf_state=HF_ALELINK;
-  }
-
-  return 0;
-}
-
-int rfdlora_receive_bytes(unsigned char *bytes,int count)
-{
-  int i;
-  for(i=0;i<count;i++) {
-    if (bytes[i]==13||bytes[i]==10) {
-      hf_response_line[hf_rl_len]=0;
-      if (hf_rl_len) hfbarrett_process_line(hf_response_line);
-      hf_rl_len=0;
-    } else {
-      if (hf_rl_len<1024) hf_response_line[hf_rl_len++]=bytes[i];
-    }
-  }
-  return 0;
-}
-
-int hfbarrett_send_packet(int fd,unsigned char *out, int len)
-{
-  // We can send upto 90 ALE encoded bytes.  ALE bytes are 6-bit, so we can send
-  // 22 groups of 3 bytes = 66 bytes raw and 88 encoded bytes.  We can use the first
-  // two bytes for fragmentation, since we would still like to support 256-byte
-  // messages.  This means we need upto 4 pieces for each message.
-  char message[8192];
-  char fragment[8192];
-
-  int i;
-
-  time_t absolute_timeout=time(0)+90;
-
-  if (hf_state!=HF_ALELINK) return -1;
-  if (ale_inprogress) return -1;
-  if (!barrett_link_partner_string[0]) return -1;
-  
-  // How many pieces to send (1-6)
-  // This means we have 36 possible fragment indications, if we wish to imply the
-  // number of fragments in the fragment counter.
-  int pieces=len/43; if (len%43) pieces++;
-  
-  fprintf(stderr,"Sending message of %d bytes via Barratt HF\n",len);
-  for(i=0;i<len;i+=43) {
-    // Indicate radio type in fragment header
-    fragment[0]=0x41+(hf_message_sequence_number&0x07);
-    fragment[1]=0x30+(i/43);
-    fragment[2]=0x30+pieces;
-    int frag_len=43; if (len-i<43) frag_len=len-i;
-    hex_encode(&out[i],&fragment[3],frag_len,radio_get_type());
-
-    unsigned char buffer[8192];
-    int count;
-
-    usleep(100000);
-    count = read_nonblock(fd,buffer,8192);
-    if (count) dump_bytes(stderr,"presend",buffer,count);
-    if (count) hfbarrett_receive_bytes(buffer,count);
-    
-    snprintf(message,8192,"AXNMSG%s%02d%s\r\n",
-	     barrett_link_partner_string,
-	     (int)strlen(fragment),fragment);
-
-    int not_accepted=1;
-    while (not_accepted) {
-      if (time(0)>absolute_timeout) {
-	fprintf(stderr,"Failed to send packet in reasonable amount of time. Aborting.\n");
-	hf_message_sequence_number++;
-	return -1;
-      }
-      
-      write_all(fd,message,strlen(message));
-
-      // Any ALE send will take at least a second, so we can safely wait that long
-      sleep(1);
-
-      // Check that it gets accepted for TX. If we see EV04, then something is still
-      // being sent, and we have to wait and try again.
-      count = read_nonblock(fd,buffer,8192);
-      // if (count) dump_bytes(stderr,"postsend",buffer,count);
-      if (count) hfbarrett_receive_bytes(buffer,count);
-      if (strstr((const char *)buffer,"OK")
-	  &&(!strstr((const char *)buffer,"EV"))) {
-	not_accepted=0;
-	char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
-	if (timestr[0]) timestr[strlen(timestr)-1]=0;
-	fprintf(stderr,"  [%s] Sent %s",timestr,message);
-
-      } else not_accepted=1;
-      
-    }    
-
-  }
-  hf_radio_pause_for_turnaround();
-  hf_message_sequence_number++;
-  char timestr[100]; time_t now=time(0); ctime_r(&now,timestr);
-  if (timestr[0]) timestr[strlen(timestr)-1]=0;
-  fprintf(stderr,"  [%s] Finished sending packet, next in %ld seconds.\n",
-	  timestr,hf_next_packet_time-time(0));
-  
-  return 0;
+// used to compare if 2 files descriptor are pointing on the same file
+/*int same_file(int fd1, int fd2) {
+    struct stat stat1, stat2;
+    if(fstat(fd1, &stat1) < 0) return -1;
+    if(fstat(fd2, &stat2) < 0) return -1;
+    return (stat1.st_dev == stat2.st_dev) && (stat1.st_ino == stat2.st_ino);
 }*/
