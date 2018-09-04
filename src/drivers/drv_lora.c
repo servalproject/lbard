@@ -3,7 +3,7 @@ The following specially formatted comments tell the LBARD build environment abou
 See radio_type for the meaning of each field.
 See radios.h target in Makefile to see how this comment is used to register support for the radio.
 
-RADIO TYPE: ALORA,"rfdlora","RFD Tri-Band LoRa module",rfdlora_radio_detect,rfdlora_serviceloop,rfdlora_receive_bytes,rfdlora_send_packet,rfdlora_check_if_ready,20
+RADIO TYPE: LORA,"rfdlora","RFD Tri-Band LoRa module",rfdlora_radio_detect,rfdlora_serviceloop,rfdlora_receive_bytes,rfdlora_send_packet,rfdlora_check_if_ready,20
 */
 #define _POSIX_SOURCE
 #include <unistd.h>
@@ -94,7 +94,7 @@ int rfdlora_radio_detect(int fd)
           rfdlora_module_firmware(fd, firmware); 
           fprintf(stderr,"module version : %d  -- 0 = RN2903 and 1 = RN2483\n",version);
           fprintf(stderr,"module firmware : %s\n", firmware);
-          radio_set_type(RADIOTYPE_ALORA);
+          radio_set_type(RADIOTYPE_LORA);
           return 1;
         }
       }
