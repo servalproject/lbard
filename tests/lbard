@@ -280,10 +280,10 @@ setup_DetectRFD900() {
 }
 test_DetectRFD900() {
    # Test that all radios are detected
-   wait_until --timeout=10 grep "Radio is a rfd900" A_LBARDERR
-   wait_until --timeout=10 grep "Radio is a rfd900" B_LBARDERR
-   wait_until --timeout=10 grep "Radio is a rfd900" C_LBARDERR
-   wait_until --timeout=10 grep "Radio is a rfd900" D_LBARDERR
+   wait_until --timeout=30 grep "Radio is a rfd900" A_LBARDERR
+   wait_until --timeout=30 grep "Radio is a rfd900" B_LBARDERR
+   wait_until --timeout=30 grep "Radio is a rfd900" C_LBARDERR
+   wait_until --timeout=30 grep "Radio is a rfd900" D_LBARDERR
 
    fork_terminate %lbardA %lbardB %lbardC %lbardD 
    fork_terminate_all
@@ -318,10 +318,10 @@ setup_DetectCodanHF() {
 }
 test_DetectCodanHF() {
    # Test that all radios are detected
-   wait_until --timeout=10 grep "Codan HF Radio running CICS" A_LBARDERR
-   wait_until --timeout=10 grep "Codan HF Radio running CICS" B_LBARDERR
-   wait_until --timeout=10 grep "Codan HF Radio running CICS" C_LBARDERR
-   wait_until --timeout=10 grep "Codan HF Radio running CICS" D_LBARDERR
+   wait_until --timeout=30 grep "Codan HF Radio running CICS" A_LBARDERR
+   wait_until --timeout=30 grep "Codan HF Radio running CICS" B_LBARDERR
+   wait_until --timeout=30 grep "Codan HF Radio running CICS" C_LBARDERR
+   wait_until --timeout=30 grep "Codan HF Radio running CICS" D_LBARDERR
 
    fork_terminate %lbardA %lbardB %lbardC %lbardD 
    fork_terminate_all
@@ -335,10 +335,10 @@ setup_DetectBarrettHF() {
 }
 test_DetectBarrettHF() {
    # Test that all radios are detected
-   wait_until --timeout=10 grep "Detected Barrett HF Radio" A_LBARDERR
-   wait_until --timeout=10 grep "Detected Barrett HF Radio" B_LBARDERR
-   wait_until --timeout=10 grep "Detected Barrett HF Radio" C_LBARDERR
-   wait_until --timeout=10 grep "Detected Barrett HF Radio" D_LBARDERR
+   wait_until --timeout=30 grep "Detected Barrett HF Radio" A_LBARDERR
+   wait_until --timeout=30 grep "Detected Barrett HF Radio" B_LBARDERR
+   wait_until --timeout=30 grep "Detected Barrett HF Radio" C_LBARDERR
+   wait_until --timeout=30 grep "Detected Barrett HF Radio" D_LBARDERR
 
    fork_terminate %lbardA %lbardB %lbardC %lbardD 
    fork_terminate_all
@@ -374,10 +374,10 @@ setup_OuternetSetup() {
 }
 test_OuternetSetup() {
    # Test that all radios are detected
-   wait_until --timeout=10 grep "Radio is a outernet (Outernet.is broadcast satellite)" A_LBARDERR
-   wait_until --timeout=10 grep "Codan HF Radio running CICS" B_LBARDERR
-   wait_until --timeout=10 grep "Codan HF Radio running CICS" C_LBARDERR
-   wait_until --timeout=10 grep "Codan HF Radio running CICS" D_LBARDERR
+   wait_until --timeout=30 grep "Radio is a outernet (Outernet.is broadcast satellite)" A_LBARDERR
+   wait_until --timeout=30 grep "Codan HF Radio running CICS" B_LBARDERR
+   wait_until --timeout=30 grep "Codan HF Radio running CICS" C_LBARDERR
+   wait_until --timeout=30 grep "Codan HF Radio running CICS" D_LBARDERR
 
    fork_terminate %lbardA %lbardB %lbardC %lbardD 
    fork_terminate_all
