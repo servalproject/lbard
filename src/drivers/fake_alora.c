@@ -2,16 +2,17 @@
 
 #include "fakecsmaradio.h"
 
-int last_was_lf=0;
+int last_was_cr=0;
 int rfdlora_read_byte(int i,unsigned char c)
 {
-  if (c=='\n') last_was_lf=1; else last_was_lf=0;
-  if ((c=='\r')&&last_was_lf) {
+  if ((c=='\n')&&last_was_cr) {
     // Have line of input 
         if (clients[i].buffer_count) {
       
-      clients[i].buffer[clients[i].buffer_count]=0;
-      fprintf(stderr,"Codan HF Radio #%d sent command '%s'\n",i,clients[i].buffer);
+      // trim CR from end
+      clients[i].buffer[clients[i].buffer_count-1]=0;
+      
+      fprintf(stderr,"RFD LoRa Radio #%d was sent command '%s'\n",i,clients[i].buffer);
 
       // Process the command here
       if (!strcasecmp("mac pause",(char *)clients[i].buffer)) {
@@ -41,6 +42,8 @@ int rfdlora_read_byte(int i,unsigned char c)
     if (clients[i].buffer_count<(CLIENT_BUFFER_SIZE-1))
       clients[i].buffer[clients[i].buffer_count++]=c;
   }
+   if (c=='\r') last_was_cr=1; else last_was_cr=0;
+ 
   return 0;
 }
 
