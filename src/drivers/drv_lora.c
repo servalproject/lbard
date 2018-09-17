@@ -46,8 +46,7 @@ int rfdlora_radio_detect(int fd)
   if (fd==-1){
     fprintf(stderr,"No serial port, so no radio\n");
     return 0;
-  }
-  else{ 
+  }else{ 
     // set the serial port speed to 57600, required for lora radios
     serial_setup_port_with_speed(fd,57600);
     // call a function to get the lora radio out of non responsive state
@@ -62,31 +61,31 @@ int rfdlora_radio_detect(int fd)
       fprintf(stderr,"reset failed\n");
       return 0;
     }else{
+      radio_set_type(RADIOTYPE_LORA);
       //set lora radio parameters according to region and module given
       if(rfdlora_initialise(fd,lora_value)==-1){ 
         fprintf(stderr,"init failed\n");
-        return 0;
-      }
-      else{
+        return -1;
+      }else{
         fprintf(stderr,"First module initialized\n");
-        fprintf(stderr,"Switching to other module\n");
+        /*fprintf(stderr,"Switching to other module\n");
         // switch to the other lora radio module 
         rfdlora_switch_module(fd); 
         // reset the lora radio we are communicating with and retrieve module identifier (RN2903 or RN4843)
         lora_value = rfdlora_module_reset(fd);
         // manage the wrong value return case
         if (lora_value==-1){
-          fprintf(stderr,"reset failed\n");
+          fprintf(stderr,"reset failed, only 1 radio on this board\n");
           return 0;
         }else{
           //set lora radio parameters according to region and module given
           if(rfdlora_initialise(fd,lora_value)==-1){ 
             fprintf(stderr,"init failed\n");
-            return 0;
+            return -1;
           }
           else{
             fprintf(stderr,"Second module initialized\n");
-          }
+          }*/
           //get lora module name (RN2903 or RN4843)
           int version = rfdlora_module_ver(fd); 
           char firmware[1024] = {0};
@@ -94,14 +93,12 @@ int rfdlora_radio_detect(int fd)
           rfdlora_module_firmware(fd, firmware); 
           fprintf(stderr,"module version : %d  -- 0 = RN2903 and 1 = RN2483\n",version);
           fprintf(stderr,"module firmware : %s\n", firmware);
-          radio_set_type(RADIOTYPE_LORA);
+          //radio_set_type(RADIOTYPE_LORA);
           return 1;
-        }
       }
     }
   }
 }
-
 int rfdlora_serviceloop(int fd)
 {
   // Deal with clocks running backwards sometimes
@@ -187,11 +184,7 @@ int rfdlora_serviceloop(int fd)
       radio_silence_count++;
       if (radio_silence_count>3) {
 	// Radio silence for 4x4sec = 16 sec.
-	// This might be due to a bug with the UHF radios where they just stop
-	// receiving packets from other radios. Or it could just be that there is
-	// no one to talk to. Anyway, resetting the radio is cheap, and fast, so
-	// it is best to play it safe and just reset the radio.
-	write_all(fd,"!Z",2);
+  // Maybe reset the radio, in case we think it has crashed? For now, do nothing
 	radio_silence_count=0;
       }
     }
@@ -298,6 +291,7 @@ int rfdlora_send_packet(int fd,unsigned char *out, int len)
 
 int rfdlora_check_if_ready(void)
 {
+  printf("Checking if radio is ready");
   return -1;
 }
 
@@ -315,17 +309,28 @@ int rfdlora_switch_module(int fd){
   if (GPIO13==0){
     char switchm[] = "sys set pindig GPIO13 1\r\n";
     write_all(fd, switchm, strlen(switchm)); // change value of GPIO pin 13 = switch the radio we are communicating with
+    usleep(2000000);
     //fprintf(stderr,"\n\n-----------------------------------------------------------------------\n\n |%s| \n\n-----------------------------------------------------------------------\n\n",buf);
+    if(rfdlora_break(fd)==0){
+      fprintf(stderr,"non responsive state break failed\n");
+      return -1;
+    }
     return 0;
   }else if (GPIO13==1){
     char switchm[] = "sys set pindig GPIO13 0\r\n";
     write_all(fd, switchm, strlen(switchm)); // ask Lora radio for module and version strlen(init)
+    usleep(2000000);
     //fprintf(stderr,"\n\n-----------------------------------------------------------------------\n\n |%s| \n\n-----------------------------------------------------------------------\n\n",buf);
+    if(rfdlora_break(fd)==0){
+      fprintf(stderr,"non responsive state break failed\n");
+      return -1;
+    }
     return 0;
   }else{
     fprintf(stderr,"Wrong GPIO13 value");
     return -1;
   }
+  
   //return 0;
 }
 
@@ -376,7 +381,7 @@ int rfdlora_module_reset(int fd){
     int lora_value=3;
 
     //not working with smaller value of usleep here, the module did not have the time to reset and therefore didn't send any response in time
-    usleep(8000000); 
+    usleep(4000000); 
     count=read_nonblock(fd,buf,8192);
     dump_bytes(stderr,"bytes following reset",buf,count);
 
@@ -397,7 +402,7 @@ int rfdlora_module_reset(int fd){
       return lora_value;
     }
     else{
-      fprintf(stderr,"wrong lora module : %s\n", loramodule);
+      fprintf(stderr,"not a lora module : %s\n", loramodule);
       return -1;
     }
 }
