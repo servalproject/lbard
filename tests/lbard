@@ -72,6 +72,7 @@ setup_bundles() {
    fi
    if [ "x$4" != "x" ]; then
        lbardflags="$4"
+       echo "lbard flags set to $4"
    else
        lbardflags=""
    fi
@@ -110,6 +111,7 @@ start_instances() {
 }
 
 setup() {
+   echo "setup $*"
    setup_bundles $*
    start_instances
 }
@@ -630,10 +632,10 @@ setup_DetectLoRa() {
 }
 test_DetectLoRa() {
    # Test that all radios are detected
-   wait_until --timeout=10 grep "Detected LoRa radio" A_LBARDERR
-   wait_until --timeout=10 grep "Detected LoRa radio" B_LBARDERR
-   wait_until --timeout=10 grep "Detected LoRa radio" C_LBARDERR
-   wait_until --timeout=10 grep "Detected LoRa radio" D_LBARDERR
+   wait_until --timeout=30 grep "Radio is a rfdlora (RFD Tri-Band LoRa module)" A_LBARDERR
+   wait_until --timeout=30 grep "Radio is a rfdlora (RFD Tri-Band LoRa module)" B_LBARDERR
+   wait_until --timeout=30 grep "Radio is a rfdlora (RFD Tri-Band LoRa module)" C_LBARDERR
+   wait_until --timeout=30 grep "Radio is a rfdlora (RFD Tri-Band LoRa module)" D_LBARDERR
 
    fork_terminate %lbardA %lbardB %lbardC %lbardD 
    fork_terminate_all
