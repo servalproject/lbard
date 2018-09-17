@@ -39,6 +39,8 @@ setup_bundles() {
    assert_no_servald_processes
    foreach_instance +A +B +C +D create_single_identity
 
+   echo "setup_bundles arguments are '$*'"
+
    # Create files in each servald instance if requested
    if [ "x$2" != "x" ]; then
        common_files=$2
@@ -80,8 +82,12 @@ setup_bundles() {
 
 start_instances() {   
 
-   if [ x"$1" != "x"]; then
-      fakeradios=$1
+   echo "start_instances: \$1 = $1"
+   echo "start_instances: \$2 = $2"
+   echo "start_instances: \$3 = $3"
+
+   if [ x"$2" != "x" ]; then
+      fakeradios=$2
    else
       fakeradios=rfd900,rfd900,rfd900,rfd900
    fi
@@ -111,9 +117,11 @@ start_instances() {
 }
 
 setup() {
+   filterrules=$1
+   shift
    echo "setup $*"
    setup_bundles $*
-   start_instances
+   start_instances "${filterrules}"
 }
 
 setup20() {
@@ -664,7 +672,7 @@ test_OneOneHF() {
 doc=MeshMSViaHFWithOthers="A MeshMS conversation via HF, where both peers have a large number of bundles in common"
 setup_MeshMSViaHFWithOthers() {
    # 1500 files in common, 0 unique files per instance, 25% packet loss
-   setup_bundles "0.25" 1500 0
+   setup_bundles "" "0.25" 1500 0
    # Then start with 4 Barrett HF radios
    start_instances rfbarrett,rfbarrett,rfbarrett,rfbarrett
 }
