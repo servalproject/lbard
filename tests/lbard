@@ -614,7 +614,7 @@ setup_DetectLoRa() {
    get_servald_restful_http_server_port PORTC +C
    get_servald_restful_http_server_port PORTD +D
    # Start the fake radio daemon.
-   fork %fakeradio fakecsmaradio alora,alora,alora,alora ttys.txt "$1"
+   fork %fakeradio fakecsmaradio rfdlora,rfdlora,rfdlora,rfdlora ttys.txt "$1"
    wait_until --timeout=15 eval [ '$(cat ttys.txt | wc -l)' -ge 4 ]
    tty1=$(sed -n 1p ttys.txt)
    tty2=$(sed -n 2p ttys.txt)
