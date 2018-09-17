@@ -25,6 +25,8 @@ int rfdlora_read_byte(int i,unsigned char c)
         // 
       } else if (!strcasecmp("sys set pindig GPIO13 0",(char *)clients[i].buffer)) {
         // 
+      } else if (!strcasecmp("sys get ver",(char *)clients[i].buffer)) {
+        write(clients[i].socket,"RN2903 1.0.3 Aug  8 2017 15:11:09\r\n",strlen("RN2903 1.0.3 Aug  8 2017 15:11:09\r\n"));
       } else if (!strcasecmp("sys reset",(char *)clients[i].buffer)) {
         write(clients[i].socket,"RN2903 1.0.3 Aug  8 2017 15:11:09\r\n",strlen("RN2903 1.0.3 Aug  8 2017 15:11:09\r\n"));
       } else if (!strcasecmp("",(char *)clients[i].buffer)) {
