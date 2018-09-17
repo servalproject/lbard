@@ -650,6 +650,22 @@ test_DetectLoRa() {
 }
 
 
+doc_OneOneLoRa="A single very small bundle transfers to a single peer via RFD LoRa radios (timeout=1 minute)"
+setup_OneOneLoRa() {
+   setup_DetectLoRa
+   # Insert a file to server A
+   set_instance +A
+   rhizome_add_file file1 50
+}
+test_OneOneLoRa() {
+   # Test that the bundle arrives at server B
+   all_bundles_received() {
+      bundle_received_by $BID:$VERSION +B 
+   }
+   wait_until --timeout=60 all_bundles_received
+}
+
+doc=MeshMSViaHFWithOthers="A MeshMS conversation via HF, where both peers have a large number of bundles in common"
 
 
 
