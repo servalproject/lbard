@@ -191,7 +191,7 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
     // XXX - Should check that we read all the bytes
     cached_body_len=fread(cached_body,1,5*1024*1024,f);    
     cached_body=realloc(cached_body,cached_body_len);
-    assert(cached_body);
+    if (cached_body_len) assert(cached_body); else fprintf(stderr,"WARNING:Body len = 0 bytes!\n");
     fclose(f);
     unlink(filename);
     if (1)
