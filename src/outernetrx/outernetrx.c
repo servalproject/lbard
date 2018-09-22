@@ -395,10 +395,11 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
     unsigned char *data=&buffer[4];
     unsigned char *parity=&buffer[4+data_bytes];
 
-    LOG_NOTE("Received bundle piece in lane #%d, sequence #%d (start=%d, end=%d) (parity zone #%d, packet %d)",
+    LOG_NOTE("Received bundle piece in lane #%d, sequence #%d (start=%d, end=%d) (parity zone #%d, packet %d, expected parity zone #%d)",
 	     lane,
 	     sequence_number,start_flag,end_flag,
-	     parity_zone_number,parity_zone_slice);
+	     parity_zone_number,parity_zone_slice,
+	     outernet_rx_bundles[lane].parity_zone_number);
     dump_bytes(stderr,"Bundle bytes",data,data_bytes);
     dump_bytes(stderr,"Parity bytes",parity,parity_bytes);
 
@@ -419,7 +420,10 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
     // don't miss the next two packets.  So we should handle that
     // special case.
     if (outernet_rx_bundles[lane].waitingForStart
-	&&(sequence_number>1)) break;
+	&&(sequence_number>1)) {
+      LOG_NOTE("Ignoring piece while waiting for start");
+      break;
+    }
 
     // Can only happen if we are on sequence #0 or #1, which in either
     // case counts as a start.
@@ -434,7 +438,7 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
 	       lane,outernet_rx_bundles[lane].parity_zone_number,parity_zone_number);
       outernet_rx_lane_init(lane,1);
       break;
-    }
+    }    
     if (parity_zone_number==(1 + outernet_rx_bundles[lane].parity_zone_number))
       {
 	// Parity zone has advanced by exactly one.
@@ -457,7 +461,7 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
 	  outernet_rx_lane_update_parity_zone(lane);
 	}
       }
-    if (parity_zone_number==outernet_rx_bundles[lane].parity_zone_number)  {
+    else if (parity_zone_number==outernet_rx_bundles[lane].parity_zone_number)  {
       // Okay, the packet is for this parity zone.
       // Copy the data and parity bytes in, and update the bitmap
 
