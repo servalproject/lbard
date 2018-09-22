@@ -678,7 +678,7 @@ int outernet_serviceloop(int serialfd)
 	if (lane_queues[last_uplink_lane]->serialised_bundle_number!=-1) {
 	  LOG_NOTE("Something in the queue for lane #%d, namely bundle #%d BID %s)",last_uplink_lane,
 		   lane_queues[last_uplink_lane]->serialised_bundle_number,
-		   bundles[lane_queues[last_uplink_lane]->serialised_bundle_number].bid_prefix);
+		   bundles[lane_queues[last_uplink_lane]->serialised_bundle_number].bid_hex);
 	  outernet_uplink_build_packet(last_uplink_lane);
 	}
       }
