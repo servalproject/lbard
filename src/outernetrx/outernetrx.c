@@ -92,6 +92,7 @@ struct outernet_rx_bundle {
   unsigned int last_parity_zone_number;
   unsigned int data_size;
   unsigned char *data;
+  time_t rx_start_time;
 #define MAX_DATA_BYTES 256
   unsigned char parity_zone[MAX_DATA_BYTES*4];
   unsigned char parity_bytes[MAX_DATA_BYTES];
@@ -157,7 +158,8 @@ int outernet_rx_try_bundle_insert(int lane)
     r=rhizome_update_bundle(manifest,manifest_len,
 			    &outernet_rx_bundles[lane].data[2+4+packed_manifest_len],payload_len,
 			    servald_server,credential);
-    LOG_NOTE("rhizome_update_bundle() returned %d",r);	     
+    LOG_NOTE("rhizome_update_bundle() returned %d.  RX duration was %lld seconds for %d manifest and %d payload bytes",r,
+	     (long long)(time(0)-outernet_rx_bundles[lane].rx_start_time),manifest_len,payload_len);	     
 
     
   } while(0);
@@ -415,6 +417,7 @@ int outernet_rx_saw_packet(unsigned char *buffer,int bytes)
       outernet_rx_lane_init(lane,1);
 
       outernet_rx_bundles[lane].waitingForStart=0;
+      outernet_rx_bundles[lane].rx_start_time=time(0);
     }
 
     // If we are waiting for a new start flag, ignore whatever
