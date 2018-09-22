@@ -124,10 +124,10 @@ int outernet_lane_queue_setup(void)
 	     Lane 4 - All others.
 	     (i.e., 1KiB << (lane * 2))
 	  */
-	  if (i) lane_queues[i]->min_size=1+ (1<<(10+i+i));
+	  if (i) lane_queues[i]->min_size=1+ (1<<(8+i+i));
 	  else lane_queues[i]->min_size=0;
 	  if (i<4) 
-	    lane_queues[i]->max_size=(1<<(10+(i+1)+(i+1)))-1;
+	    lane_queues[i]->max_size=(1<<(8+(i+1)+(i+1)))-1;
 	  else
 	    lane_queues[i]->max_size=0x7fffffff;	    
 	  // Not currently uplinking anything
