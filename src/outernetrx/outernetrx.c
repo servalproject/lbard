@@ -183,7 +183,11 @@ int outernet_rx_lane_init(int i,int freeP)
 
   LOG_NOTE("Clearing lane #%d",i);
   outernet_rx_bundles[i].waitingForStart=1;
+  outernet_rx_bundles[i].offset=0;
   outernet_rx_bundles[i].data_size=0;
+  outernet_rx_bundles[i].parity_zone_bitmap=0;  
+  outernet_rx_bundles[i].parity_zone_number=0;  
+  outernet_rx_bundles[i].last_parity_zone_number=0;  
   if (freeP&&outernet_rx_bundles[i].data) free(outernet_rx_bundles[i].data);
   outernet_rx_bundles[i].data=NULL;
   return 0;
