@@ -599,7 +599,7 @@ int outernet_uplink_build_packet(int lane)
     outernet_packet[3]=outernet_mtu;
 
     outernet_packet_len=1+2+1+data_bytes+parity_bytes;
-    dump_bytes(stderr,"Packet for uplink",outernet_packet,outernet_packet_len);
+    // dump_bytes(stderr,"Packet for uplink",outernet_packet,outernet_packet_len);
     
   } while(0);
   
@@ -633,7 +633,7 @@ int outernet_serviceloop(int serialfd)
       rx_bytes = recvfrom(uplink_fd, rx_buf, rx_bytes, 0, NULL, 0);
       if (rx_bytes>0) {
 	LOG_NOTE("Received %d bytes from uplink",rx_bytes);
-	dump_bytes(stdout,"ack packet",rx_buf,rx_bytes);
+	// dump_bytes(stdout,"ack packet",rx_buf,rx_bytes);
       }
       //      if  ((rx_bytes==outernet_packet_len)
       //	   &&(!memcmp(rx_buf,outernet_packet,rx_bytes)))
@@ -676,7 +676,9 @@ int outernet_serviceloop(int serialfd)
 	  outernet_uplink_next_in_queue(last_uplink_lane);
 	}
 	if (lane_queues[last_uplink_lane]->serialised_bundle_number!=-1) {
-	  LOG_NOTE("Something in the queue for lane #%d",last_uplink_lane);
+	  LOG_NOTE("Something in the queue for lane #%d, namely bundle #%d BID %s)",last_uplink_lane,
+		   lane_queues[last_uplink_lane]->serialised_bundle_number,
+		   bundles[lane_queues[last_uplink_lane]->serialised_bundle_number].bid_prefix);
 	  outernet_uplink_build_packet(last_uplink_lane);
 	}
       }
