@@ -114,7 +114,8 @@ int outernet_rx_try_bundle_insert(int lane)
 
     LOG_NOTE("Trying to insert bundle from lane #%d",lane);
     
-    if (!outernet_rx_bundles[lane].data) {      
+    if (!outernet_rx_bundles[lane].data) {
+      LOG_NOTE("... but nothing was in that lane");
       retVal=-1;
       break;
     }
@@ -142,8 +143,6 @@ int outernet_rx_try_bundle_insert(int lane)
     }
     LOG_NOTE("Manifest decompressed to %d bytes",manifest_len);
     dump_bytes(stdout,"Manifest",manifest,manifest_len);
-    dump_bytes(stdout,"Payload",&outernet_rx_bundles[lane].data[2+4+packed_manifest_len],
-	       payload_len);
 
     if ((2+4+payload_len)>outernet_rx_bundles[lane].data_size) {
       LOG_ERROR("Bundle is longer than what we have received");
@@ -151,6 +150,9 @@ int outernet_rx_try_bundle_insert(int lane)
       break;
     }
 
+    dump_bytes(stdout,"Payload",&outernet_rx_bundles[lane].data[2+4+packed_manifest_len],
+	       payload_len);
+    
     // Otherwise, insert the bundle into the rhizome database if we can
     r=rhizome_update_bundle(manifest,manifest_len,
 			    &outernet_rx_bundles[lane].data[2+4+packed_manifest_len],payload_len,
