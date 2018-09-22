@@ -70,7 +70,8 @@ int last_uplink_lane=-1;
 #define MAX_MTU 255
 unsigned char outernet_packet[MAX_MTU];
 int outernet_packet_len=0;
-int outernet_mtu=200;
+// (outernet_mtu - 4) must be a multiple of 4
+int outernet_mtu=240;
 int outernet_sequence_number=0;
 
 // Import serial_port string from main.c
@@ -642,8 +643,9 @@ int outernet_serviceloop(int serialfd)
 	  last_uplink_packet_time=0;
 	}
     }
-    
-    if ((gettime_ms()-last_uplink_packet_time)>60000) {
+
+    // XXX Enforce 1 sec time out to deal with packet loss for now.
+    if ((gettime_ms()-last_uplink_packet_time)>1000) {
       // 1 minute has passed, or we have received an ack for our last
       // packet, so send next uplink packet.
       // Note that if some lanes don't have anything to send,
