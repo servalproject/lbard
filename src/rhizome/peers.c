@@ -44,7 +44,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 int free_peer(struct peer_state *p)
 {
-  if (p->sid_prefix) free(p->sid_prefix); p->sid_prefix=NULL;
+  if (p->sid_prefix) { free(p->sid_prefix); } p->sid_prefix=NULL;
   for(int i=0;i<4;i++) p->sid_prefix_bin[i]=0;
 #ifdef SYNC_BY_BAR
   for(int i=0;i<p->bundle_count;i++) {
