@@ -98,3 +98,14 @@ $ sudo i2cset -y 0 0x60 0x00 0x8B
 # after subtracting the intermediate frequency of the LNB (in our case 10.75 GHz)
 $ sudo /usr/sbin/i2cset -y 0 0x60 0x00 0x8B && sudo /usr/local/bin/demod 166 0.8795 0 &
 $ sudo echo && /usr/local/bin/lbard 127.0.0.1:4110 lbard:lbard  `sudo servald keyring list | tail -1 | cut -f1 -d:` `sudo servald keyring list | tail -1 | cut -f2 -d:` /dev/null  outernetrx=/tmp/demod.socks.000
+
+8. On the uplink computer, commence operations.  The command for uplink contains sensitive information, and is therefore not listed here.  Refer to the Final Report for the proof of concept project funded by the Humanitarian Innovation Fund.  The general form of the command, is, however:
+
+$ lbard localhost:4110 lbard:lbard `sudo servald keyring list | tail -1 | cut -f1 -d:` `sudo servald keyring list | tail -1 | cut -f2 -d:`  outernet://uplinkurl
+
+The uplink will then begin to uplink all bundles in the Rhizome database of the uplink Serval instance. Therefore it is normally recommended that this be an isolated node, with
+no network interfaces defined.  Injecting new messages and alerts is accomplished by pushing them into this rhizome database.  Uplink occurs using 5 parallel "lanes", each of which
+handles bundles of a distinct range of sizes.  Thus lane 1 is for small (<1KB) high-priority bundles.  To ensure low latencies, stale alerts should be removed from the rhizome
+database after they are no longer relevant.  This could be done with a program that scrubs the rhizome database of such entries by checking the expiration information encoded in
+the alerts themselves, once the alert format has been defined.
+
