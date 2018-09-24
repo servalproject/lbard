@@ -746,9 +746,17 @@ int hf2020_receive_bytes(unsigned char *bytes,int count)
 
 unsigned char hf2020_rx_buffer[512];
 
+unsigned char stash[256];
+int rx_count=0;
+
 int hf2020_received_byte(unsigned char b)
 {
   // Add new byte to end of the buffer
+  if (rx_count>256) {
+    dump_bytes(stdout,"RX stash",stash,rx_count);
+    rx_count=0;
+  }
+  stash[rx_count++]=b;
   
   // A ring buffer would be more efficient, but at 9600bps
   // this will be fine.
@@ -807,6 +815,9 @@ int hf2020_send_packet(int serialfd,unsigned char *out, int len)
   // Write packet body with escape characters
   for(int i=0;i<len;i++) {
     switch(out[i]) {
+      // 
+      //      case 0x11:
+      //	break;
     case 0x80: case 0x81:
       escaped[elen++]=0x81; escaped[elen++]=out[i];
       clover_tx_buffer_space--;
@@ -838,8 +849,15 @@ int hf2020_send_packet(int serialfd,unsigned char *out, int len)
   escaped[elen++]=0x55;
   clover_tx_buffer_space-=7;
     
-  //  dump_bytes(stdout,"Escaped packet for Clover TX",escaped,len);
+  dump_bytes(stdout,"Escaped packet for Clover TX",escaped,len);
   write_all(serialfd,escaped,elen);
+
+  // Write dummy packet to see what needs escaping
+  {
+    unsigned char b[512];
+    for(int i=0;i<256;i++) { b[i*2+0]=0x91; b[i*2+1]=i; }
+    write_all(serialfd,b,512);
+  }
 
   return 0;
 }
