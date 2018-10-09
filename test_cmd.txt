@@ -1,0 +1,1 @@
+LBARD_REAL_RADIOS=/dev/ttyUSB0,/dev/ttyUSB1,/dev/null,/dev/null tests/lbard -f 4
