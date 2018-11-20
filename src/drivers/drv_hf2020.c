@@ -31,6 +31,12 @@ Characters 0x80 and 0x81 for TX or RX must be escaped with 0x81 in front.
 0x91 0x33 - Next bytes are from secondary port
 0x91 0x31 - Next bytes are from primary port
 
+Basically the escaping scheme is complicated to actually make work reliably.
+So we are just going to use a safe subset of 128 characters, and thus use 7 bits only in each
+8 bit byte.
+
+0x40 - 0x7F & 0xC0-0xFF are safe ranges, so we will use those, i.e., bit 6 always set.
+
 */
 
 #include <unistd.h>
@@ -783,10 +789,48 @@ int hf2020_received_byte(unsigned char b)
     // expected packet
     if ((hf2020_rx_buffer[511-7-candidate_len-1]==0x91)&&
 	(hf2020_rx_buffer[511-7-candidate_len-0]==0x90)) {
-      printf("We have found a packet of %d bytes\n",
+      printf("We have found a possible packet of %d bytes\n",
 	     candidate_len);
+      // We encode 7 bytes in 8, keeping bit 6 high to avoid all the
+      // annoying character escaping dramas of the clover modems.
+      // The envelope indicates how many decoded bytes we have.
+      // Where the packet is not a multiple of 7 bytes, we still use
+      // a full 8-byte data frame to carry those remaining bytes, as
+      // this just keeps things simple.
+      // So the first offset we have to look at is 511 - 6 - encoded_length
+      // encoded_length = 8*(decoded_length/7) + decoded_length%7 ? 8 : 0
+      // (We should eventually support packets with > 255 bytes, but for
+      // now do not.)
+      unsigned char decoded_packet[256];
+      int decoded_len=candidate_len;
+      int encoded_length = 8 * (decoded_len/7) + (decoded_len%7)?8:0;
+      printf("Encoded length should be %d bytes\n",encoded_length);
+      int o;
+      int consumed=0;
+      for(o=0;o<decoded_len;o+=7) {
+	unsigned char *encoded_dataframe=&hf2020_rx_buffer[511-6-encoded_length+consumed];
+	consumed+=8;
+	// Encoding uses one bit from each byte, so that we can just shift the bytes around
+	for(int j=0;j<7;j++) {
+	  // Read out lowest bits from each byte
+	  decoded_packet[o+j] =
+	    (encoded_dataframe[0]<<0)
+	    |(encoded_dataframe[1]<<1)	    
+	    |(encoded_dataframe[2]<<2)	    
+	    |(encoded_dataframe[3]<<3)	    
+	    |(encoded_dataframe[4]<<4)	    
+	    |(encoded_dataframe[5]<<5)	    
+	    |(encoded_dataframe[6]<<6)	    
+	    |(encoded_dataframe[7]<<7);
+	  // shift all bytes down
+	  for(int k=0;k<8;k++) encoded_dataframe[k]>>=1;
+	  // And skip bit 6
+	  if (j==5) for(int k=0;k<8;k++) encoded_dataframe[k]>>=1;
+	}
+      }
+      
       dump_bytes(stdout,"The packet:",&hf2020_rx_buffer[511-6-candidate_len],candidate_len);
-      saw_packet(&hf2020_rx_buffer[511-6-candidate_len],candidate_len,
+      saw_packet(decoded_packet,decoded_len,
 		 last_rx_rssi,
 		 my_sid_hex,prefix,servald_server,credential);
     }
