@@ -903,15 +903,8 @@ int hf2020_send_packet(int serialfd,unsigned char *out, int len)
   escaped[elen++]=0x55;
   clover_tx_buffer_space-=7;
     
-  dump_bytes(stdout,"Escaped packet for Clover TX",escaped,len);
+  dump_bytes(stdout,"Escaped packet for Clover TX",escaped,elen);
   write_all(serialfd,escaped,elen);
-
-  // Write dummy packet to see what needs escaping
-  {
-    unsigned char b[512];
-    for(int i=0;i<256;i++) { b[i*2+0]=0x91; b[i*2+1]=i; }
-    write_all(serialfd,b,512);
-  }
 
   return 0;
 }
