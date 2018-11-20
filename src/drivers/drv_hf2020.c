@@ -856,25 +856,32 @@ int hf2020_send_packet(int serialfd,unsigned char *out, int len)
   escaped[elen++]=0x91;
   escaped[elen++]=0x90;
   
-  // Write packet body with escape characters
-  for(int i=0;i<len;i++) {
-    switch(out[i]) {
-      // 
-      //      case 0x11:
-      //	break;
-    case 0x80: case 0x81:
-      escaped[elen++]=0x81; escaped[elen++]=out[i];
-      clover_tx_buffer_space--;
-      break;
-    case 0x90: case 0x91:
-      escaped[elen++]=0x91; escaped[elen++]=out[i];
-      clover_tx_buffer_space--;
-      break;
-    default:
-      escaped[elen++]=out[i];
-      clover_tx_buffer_space--;
-      break;
+  // Write packet body using 7:8 encoding with bit 6 set.
+  // This avoids the complications of the escape characters completely.
+  for(int i=0;i<len;i+=7) {
+    // Clear out the encoded bytes
+    for(int j=0;j<8;j++) escaped[elen+j]=0x00;
+
+    // Now shift each new byte in
+    for(int j=6;j>-1;j--) {
+      if (out[i+6-j]&0x01) escaped[elen+0]|=0x01;
+      if (out[i+6-j]&0x02) escaped[elen+1]|=0x01;
+      if (out[i+6-j]&0x04) escaped[elen+2]|=0x01;
+      if (out[i+6-j]&0x08) escaped[elen+3]|=0x01;
+      if (out[i+6-j]&0x10) escaped[elen+4]|=0x01;
+      if (out[i+6-j]&0x20) escaped[elen+5]|=0x01;
+      if (out[i+6-j]&0x40) escaped[elen+6]|=0x01;
+      if (out[i+6-j]&0x80) escaped[elen+7]|=0x01;
+
+      // skip and set bit 6 if required
+      if (j==5) for(int k=0;k<8;k++)
+		  escaped[elen+k]=1+(escaped[elen+k]<<1);
+      // Shift up to make room for the next byte
+      for(int k=0;k<8;k++) escaped[elen+k]<<=1;            
     }
+    
+    elen+=8;
+    clover_tx_buffer_space-=8;
     if (clover_tx_buffer_space<0) clover_tx_buffer_space=0;
   }
 
