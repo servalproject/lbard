@@ -829,7 +829,8 @@ int hf2020_received_byte(unsigned char b)
 	}
       }
       
-      dump_bytes(stdout,"The packet:",&hf2020_rx_buffer[511-6-candidate_len],candidate_len);
+      dump_bytes(stdout,"The encoded packet:",&hf2020_rx_buffer[511-6-encoded_length],encoded_length);
+      dump_bytes(stdout,"The decoded packet:",decoded_packet,decoded_len);
       saw_packet(decoded_packet,decoded_len,
 		 last_rx_rssi,
 		 my_sid_hex,prefix,servald_server,credential);
@@ -842,6 +843,8 @@ int hf2020_received_byte(unsigned char b)
 int hf2020_send_packet(int serialfd,unsigned char *out, int len)
 {
   printf("Preparing to send a packet of %d bytes\n",len);
+
+  dump_bytes(stdout,"The packet before encoding:",out,len);
   
   // Now send the packet with escaping of the appropriate bytes.
   // But first, redirect output to modem TX
