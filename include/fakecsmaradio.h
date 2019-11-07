@@ -30,6 +30,7 @@ extern long long first_transmission_time;
 #define RADIO_RFD900 1
 #define RADIO_HFCODAN 2
 #define RADIO_HFBARRETT 3
+#define RADIO_LORARN 4
 #define RADIO_REAL 99
 
 struct client {
@@ -61,12 +62,16 @@ int rfd900_setbitrate(char *b);
 int release_pending_packets(int i);
 
 int rfd900_read_byte(int client,unsigned char byte);
+int lorarn_read_byte(int client,unsigned char byte);
 int hfcodan_read_byte(int client,unsigned char c);
 int hfbarrett_read_byte(int client,unsigned char c);
 int rfd900_heartbeat(int client);
+int lorarn_heartbeat(int client);
 int hfcodan_heartbeat(int client);
 int hfbarrett_heartbeat(int client);
 int rfd900_encapsulate_packet(int from,int to,unsigned char *packet,
+			      int *packet_len);
+int lorarn_encapsulate_packet(int from,int to,unsigned char *packet,
 			      int *packet_len);
 int hfcodan_encapsulate_packet(int from,int to,unsigned char *packet,
 			      int *packet_len);

@@ -646,6 +646,8 @@ int filter_process_packet(int from,int to,
     {
     case RADIO_RFD900:
       rfd900_encapsulate_packet(from,to,packet,packet_len); break;
+    case RADIO_LORARN:
+      rfd900_encapsulate_packet(from,to,packet,packet_len); break;
     case RADIO_HFCODAN:
       hfcodan_encapsulate_packet(from,to,packet,packet_len); break;
     case RADIO_HFBARRETT:
@@ -914,6 +916,7 @@ int main(int argc,char **argv)
     int radio_type_id=-1;
     char *radio_name=ptsname(fd);
     if (!strcasecmp(radio_type,"rfd900")) radio_type_id=RADIO_RFD900;
+    if (!strcasecmp(radio_type,"lorarn")) radio_type_id=RADIO_LORARN;
     if (!strcasecmp(radio_type,"hfcodan")) radio_type_id=RADIO_HFCODAN;
     if (!strcasecmp(radio_type,"hfbarrett")) radio_type_id=RADIO_HFBARRETT;
     if (radio_type[0]=='/') {
@@ -948,6 +951,7 @@ int main(int argc,char **argv)
 	for(int j=0;j<count;j++) {
 	  switch(clients[i].radio_type) {
 	  case RADIO_RFD900: rfd900_read_byte(i,buffer[j]); break;
+	  case RADIO_LORARN: lorarn_read_byte(i,buffer[j]); break;
 	  case RADIO_HFCODAN: hfcodan_read_byte(i,buffer[j]); break;
 	  case RADIO_HFBARRETT: hfbarrett_read_byte(i,buffer[j]); break;
 	  }
@@ -961,6 +965,7 @@ int main(int argc,char **argv)
       for(int i=0;i<client_count;i++) {
 	switch(clients[i].radio_type) {
 	case RADIO_RFD900: rfd900_heartbeat(i); break;
+	case RADIO_LORARN: lorarn_heartbeat(i); break;
 	case RADIO_HFCODAN: hfcodan_heartbeat(i); break;
 	case RADIO_HFBARRETT: hfbarrett_heartbeat(i); break;
 	}
