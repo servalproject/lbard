@@ -1,8 +1,8 @@
 #include "fakecsmaradio.h"
 
-long long codan_starttime=0;
 
-void codan_prompt(int client)
+
+/*void codan_prompt(int client)
 {
   char prompt[1024];
   int hours,minutes,seconds,msec;
@@ -20,11 +20,11 @@ void codan_prompt(int client)
   write(clients[client].socket,prompt,strlen(prompt));
   fprintf(stderr,"Sending CODAN prompt '%s'\n",prompt);
   return;
-}     
+}    */
 
-int hfcodan_read_byte(int i,unsigned char c)
+int lorarn_read_byte(int i,unsigned char c)
 {
-  if (c==0x15) {
+  /*if (c==0x15) {
     // Control-U -- clear input buffer
     clients[i].buffer_count=0;
   } else if ((c!='\n')&&(c!='\r')&&c) {
@@ -62,17 +62,17 @@ int hfcodan_read_byte(int i,unsigned char c)
       // Reset buffer ready for next command
       clients[i].buffer_count=0;
     }    
-  }
+  }*/
 
   return 0;
 }
 
-int hfcodan_heartbeat(int client)
+int lorarn_heartbeat(int client)
 {
   return 0;
 }
 
-int hfcodan_encapsulate_packet(int from,int to,
+int lorarn_encapsulate_packet(int from,int to,
 			       unsigned char *packet,
 			       int *packet_len)
 {
