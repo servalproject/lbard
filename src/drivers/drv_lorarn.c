@@ -79,11 +79,13 @@ int lorarn_radio_detect(int fd)
   char response_buffer[100];
 
   serial_setup_port_with_speed(fd, 57600);
-  write_all(fd, "\r\n", 4);
+   // Force rqdio to use our baud rate
+  tcsendbreak(fd,0);
+  write_all(fd, "U", 1);
   sleep(1);
   int count=read_nonblock(fd,clearing_buffer,1024);
-
-  write_all(fd, "sys get ver\r\n", 15);
+ 
+  write_all(fd, "sys get ver\r\n", 13);
   sleep(1);
   count = read(fd, response_buffer, sizeof response_buffer);
 
@@ -92,16 +94,18 @@ int lorarn_radio_detect(int fd)
   char subbuff[7];
   memcpy( subbuff, &response_buffer[0], 6 );
   subbuff[6] = '\0';
-  if( (strcmp(subbuff, "RN2903")==0) | (strcmp(subbuff, "RN2483")==0)) {
+  if( (strcasecmp(subbuff, "RN2903")==0) | (strcasecmp(subbuff, "RN2483")==0)) {
     fprintf(stderr,"LoRa Radio detected.\n");
-    write_all(fd, "mac pause\r\n", 13); //initialisation
+    write_all(fd, "mac pause\r\n", 11); //initialisation
     usleep(500000);
     read(fd, response_buffer, sizeof response_buffer); // TODO : test of "invalid_param" return
 
     rx_update_time = gettime_ms();
-    write_all(fd, "radio rx 0\r\n", 14); //initialize rx state
+    write_all(fd, "radio rx 0\r\n", 12); //initialize rx state
     usleep(500000);
     read(fd, response_buffer, sizeof response_buffer); // TODO : test of "invalid_param" return
+    //fprintf(stderr, "open connection ok\n");
+    radio_set_type(RADIOTYPE_LORARN);
     return 1;
   }
 
@@ -116,7 +120,7 @@ int lorarn_serviceloop(int serialfd)
     rx_update_time = gettime_ms();
 
     write_all(serialfd, "radio rx 0\r\n", 14); //reset rx state every 15sec
-    usleep(500000);
+    //usleep(500000);
     //read(serialfd, response_buffer, sizeof response_buffer); TODO : check if returning message of radio rx 0 interfer in the reception function
   }
 
