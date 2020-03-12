@@ -15,7 +15,7 @@
 #include <fcntl.h>
 #include "serial.h"
 
-int open_vcom(char *hostname,int port)
+int open_vcom(char *hostname,int port,int baud)
 {
   int fd;
   struct sockaddr_in addr;
@@ -43,11 +43,29 @@ int open_vcom(char *hostname,int port)
    return -1;
  }
 
- char buf[8192];
- 
- // Tell other side GO AHEAD
- buf[0]=0xff; buf[1]=0xf9; write(fd,buf,2);
+ unsigned char buf[8192]={
+   // Set serial port option
+   0xFF, 0xFA, 0x2C,
+   // serial port option 1 = SET BAUD RATE
+   // value  is big endian 32-bit value. 0 = read value from server
+   0x01,(baud>>24),(baud>>16)&0xff,(baud>>8)&0xff,baud&0xff,
+   // IAC + SE to finish it
+   0xFF,0xF0,
 
+   // Set serial port option
+   0xFF, 0xFA, 0x2C,
+   // serial port option 5 = SET OPTION
+   // Option 5, value 0 = disable flow control
+   0x05,0x00,
+   // IAC + SE to finish it
+   0xFF,0xF0
+
+
+   
+ };
+ // Tell other side to set the above options
+ write(fd,buf,17);
+ 
  int flags;
  if ((flags = fcntl(fd, F_GETFL, NULL)) == -1)
    {
@@ -81,7 +99,7 @@ int open_vcom(char *hostname,int port)
 #ifdef STANDALONE
 int main(int argc,char *argv[])
 {
-  int fd=open_vcom(argv[1],atoi(argv[2]));
+  int fd=open_vcom(argv[1],atoi(argv[2]),atoi(argv[3]));
 
   return 0;
 }
