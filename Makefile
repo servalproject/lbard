@@ -110,6 +110,9 @@ lbard:	$(SRCS) $(HDRS) $(INCLUDEDIR)/version.h
 echotest:	Makefile echotest.c
 	$(CC) $(CFLAGS) -o echotest echotest.c
 
+vcom:	Makefile	$(SRCDIR)/utils/vcom.c
+	$(CC) $(CFLAGS) -DSTANDALONE -o vcom $(SRCDIR)/utils/vcom.c
+
 FAKERADIOSRCS=	$(SRCDIR)/fakeradio/fakecsmaradio.c \
 		$(SRCDIR)/drivers/fake_*.c \
 		\
