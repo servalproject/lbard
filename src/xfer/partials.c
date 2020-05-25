@@ -41,6 +41,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 #include "code_instrumentation.h"
+#include "util.h"
+
+struct partial_bundle partials[MAX_BUNDLES_IN_FLIGHT];  
 
 int partial_recent_sender_report(struct partial_bundle *p)
 {

@@ -176,7 +176,7 @@ struct peer_state {
 // peers, as a small protection against malicious nodes offering fake bundle
 // pieces that will result in the crypto checksums failing at the end.
 #define MAX_BUNDLES_IN_FLIGHT 256
-struct partial_bundle partials[MAX_BUNDLES_IN_FLIGHT];  
+extern struct partial_bundle partials[MAX_BUNDLES_IN_FLIGHT];  
 
 struct recent_bundle {
   char *bid_prefix;
