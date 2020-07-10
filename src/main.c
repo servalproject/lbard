@@ -444,6 +444,7 @@ int main(int argc, char **argv)
           {
             LOG_ERROR("signing ID length is not 64");
             fprintf(stderr,"You must provide a valid signing ID for the ID of the local node.\n");
+            fprintf(stderr,"You provided '%s'\n",argv[4]);
             exitVal = -1;
             break;
           }

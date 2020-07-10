@@ -10,14 +10,23 @@ if ( "x$1" != "x" ) then
   set count=$1
 endif
 
-foreach n ( 1 2 3 4 )
+foreach n ( 1 2 3 4 5 6 7 8 9  )
  # Start relevant servald instance if required
  cd serval$n
  setenv SERVALINSTANCE_PATH `pwd`
  rm rhizome.db
+
+ # create a keyring entry for an instance if none yet exist
+ set keylines=`../../serval-dna/servald keyring list | wc -l`
+ if ( "x$keylines" == "x2" ) then
+    ../../serval-dna/servald keyring add
+ endif
+
  ../../serval-dna/servald start
  sleep 1
  ../../serval-dna/servald id self | tail -1 > self.sid
+ ../../serval-dna/servald keyring list | tail -1 > self.id
+
 
  # Repopulate rhizome with test bundles.
  ../../serval-dna/servald rhizome add file `cat self.sid` file$n
