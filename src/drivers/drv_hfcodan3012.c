@@ -27,7 +27,20 @@ RADIO TYPE: HFCODAN3012,"hfcodan3012","Codan HF with 3012 Data Modem",hfcodan301
 #include "hf.h"
 #include "radios.h"
 
-int hfcodan3021_initialise(int serialfd);
+extern char *hfselfid;
+extern char *hfcallplan;
+
+int hfcallplan_pos=0;
+
+int hfcodan3012_initialise(int serialfd)
+{
+  char cmd[1024];
+  fprintf(stderr,"Initialising Codan HF 3012 modem...\n");
+  snprintf(cmd,1024,"at&i=%s\r\n",hfselfid?hfselfid:"1");
+  write_all(serialfd,cmd,strlen(cmd));
+  fprintf(stderr,"Set HF station ID in modem to '%s'\n",hfselfid?hfselfid:"1");
+  
+}
 
 int hfcodan3012_radio_detect(int fd)
 {
@@ -66,6 +79,7 @@ int hfcodan3012_radio_detect(int fd)
   *m2=0;
   if (!strcmp("3012E",model_name)) {
     radio_set_type(RADIOTYPE_HFCODAN3012);
+    hfcodan3012_initialise(fd);    
     return 1;
   } else {
     fprintf(stderr,"Unknown/unsupported Codan Data Modem type '%s' detected. Aborting.\n",model_name);
@@ -75,19 +89,64 @@ int hfcodan3012_radio_detect(int fd)
   return -1;
 }
 
+time_t call_timeout=0;
+
+
+int last_hf_state=0;
+
 int hfcodan3012_serviceloop(int serialfd)
 {
   char cmd[1024];
 
-  fprintf(stderr,"Codan 3012 modem is in state %d\n",hf_state);
+  // XXX DEBUG show when state changes
+  if (hf_state!=last_hf_state) {
+    fprintf(stderr,"Codan 3012 modem is in state %d, callplan='%s':%d\n",hf_state,hfcallplan,hfcallplan_pos);
+    last_hf_state=hf_state;
+  }
+  
   switch(hf_state) {
   case HF_DISCONNECTED:
+    if (hfcallplan) {
+      int n;
+      char remoteid[1024];
+      int f=sscanf(&hfcallplan[hfcallplan_pos],
+		   "call %[^,]%n",
+		   remoteid,&n);
+      if (f==1) {
+	hfcallplan_pos+=n;
+	fprintf(stderr,"Calling station '%s'\n",remoteid);
+	char cmd[1024];
+	snprintf(cmd,1024,"atd%s\r\n",remoteid);
+	write_all(serialfd,cmd,strlen(cmd));
+	call_timeout=time(0)+300;
+	hf_state=HF_CALLREQUESTED;
+      } else {
+	fprintf(stderr," remoteid='%s', n=%d, f=%d\n",remoteid,n,f);
+      }
+      
+      while (hfcallplan[hfcallplan_pos]==',') hfcallplan_pos++;
+      if (!hfcallplan[hfcallplan_pos]) hfcallplan_pos=0;
+    }    
     break;
   case HF_CALLREQUESTED:
+    if (time(0)>=call_timeout) hf_state=HF_DISCONNECTED;
+    break;
+  case HF_ANSWERCALL:
+    write_all(serialfd,"ata\r\n",5);
+    hf_state=HF_CONNECTING;
+    call_timeout=300;
     break;
   case HF_CONNECTING:
+    // wait for CONNECT or NO CARRIER message
     break;
-  case HF_ALELINK:
+  case HF_DATALINK:
+    // Modem is connected
+    write_all(serialfd,"ato\r\n",5);
+    hf_state=HF_DATAONLINE;
+    break;
+  case HF_DATAONLINE:
+    // Mode is online.  Do nothing but indicate that the modem is
+    // ready to process packets
     break;
   case HF_DISCONNECTING:
     break;
@@ -101,7 +160,19 @@ int hfcodan3012_serviceloop(int serialfd)
 int hfcodan3012_process_line(char *l)
 {
   int channel,caller,callee,day,month,hour,minute;
-  
+  fprintf(stderr,"Saw line from modem: '%s'\n",l);
+  if (!strncmp(l,"NO CARRIER",10)) {
+    hf_state=HF_DISCONNECTED;
+  }
+  if (!strncmp(l,"CONNECT",10)) {
+    hf_state=HF_DATAONLINE;
+    // And announce ourselves as ready for the first packet of the connection
+    hf_radio_mark_ready();
+  }
+  if (!strncmp(l,"RING",4)) {
+    fprintf(stderr,"Saw incoming call. Answering.\n");
+    hf_state=HF_ANSWERCALL;
+  }
   return 0;
 }
 

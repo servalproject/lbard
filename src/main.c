@@ -103,6 +103,9 @@ char *time_broadcast_addrs[] = { DEFAULT_BROADCAST_ADDRESSES, NULL };
 
 int reboot_when_stuck = 0;
 
+char *hfselfid=NULL;
+char *hfcallplan=NULL;
+
 unsigned char my_sid[32];
 unsigned char my_signingid[32];
 char *my_sid_hex = NULL;
@@ -769,6 +772,18 @@ int main(int argc, char **argv)
           LOG_NOTE("otabid: %s", otabid);
           fprintf(stderr,"OTA BID is '%s'\n", otabid);
         } 
+        else if (! strncasecmp("hfid=", argv[n], 5))
+	  {
+	    hfselfid=strdup(&argv[n][5]);
+	    LOG_NOTE("hfselfid: %s", hfselfid);
+          fprintf(stderr,"HF Radio station ID is '%s'\n", hfselfid);
+	  }
+        else if (! strncasecmp("hfcallplan=", argv[n], 11))
+	  {
+	    hfcallplan=strdup(&argv[n][11]);
+	    LOG_NOTE("hfcallplan: %s", hfcallplan);
+          fprintf(stderr,"HF Radio station ID is '%s'\n", hfselfid);
+	  }
         else if (! strncasecmp("otadir=", argv[n], 7)) 
         {
           // Where to put OTA update file
@@ -796,7 +811,7 @@ int main(int argc, char **argv)
             &argv[n][17]);
           setup_periodic_requests(&argv[n][17]);
         } 
-        else 
+        else if (argv[n][0]) // empty args are ok
         {
           LOG_ERROR("illegal mode: %s", argv[n]);
           fprintf(stderr,"Illegal mode '%s'\n",argv[n]);
