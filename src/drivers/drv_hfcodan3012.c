@@ -48,7 +48,8 @@ int hfcodan3012_radio_detect(int fd)
     response_buffer[sizeof(response_buffer)-1]=0;
   // Look for Codan name in copyright. If not present, then not a Codan HF modem 
   if (!strstr(response_buffer,"CODAN Ltd.")) return -1;
-
+  dump_bytes(stderr,"Response from serial port was:\n",response_buffer,count);
+  
   // Get model number etc
   write_all(fd,"ati1\r\n",5);
   usleep(300000);
@@ -77,7 +78,8 @@ int hfcodan3012_radio_detect(int fd)
 int hfcodan3012_serviceloop(int serialfd)
 {
   char cmd[1024];
-  
+
+  fprintf(stderr,"Codan 3012 modem is in state %d\n",hf_state);
   switch(hf_state) {
   case HF_DISCONNECTED:
     break;
