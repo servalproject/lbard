@@ -123,7 +123,6 @@ int fds[MAX_PORTS];
 int dump_bytes(FILE *f,char *msg, unsigned char *bytes, int length)
 {
   int retVal = -1;
-  unsigned char c;
   
   do 
   {
@@ -173,7 +172,7 @@ int main(int argc,char **argv)
   
   while(1) {
     int activity=0;
-    char buffer[8192];
+    unsigned char buffer[8192];
     for(int p=0;p<port_count;p++) {
       int n=read_nonblock(fds[p],buffer,8192);    
       if (n>0) {

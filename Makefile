@@ -1,5 +1,5 @@
 BINDIR=.
-EXECS = $(BINDIR)/lbard $(BINDIR)/manifesttest $(BINDIR)/fakecsmaradio $(BINDIR)/fakeouternet
+EXECS = $(BINDIR)/lbard $(BINDIR)/manifesttest $(BINDIR)/fakecsmaradio $(BINDIR)/fakeouternet $(BINDIR)/serialmonitor
 
 all:	$(EXECS)
 
@@ -123,9 +123,13 @@ fakecsmaradio:	\
 
 FAKEOUTERNETSRCS=	$(SRCDIR)/fakeradio/fakeouternet.c \
 			$(SRCDIR)/code_instrumentation.c
-fakeouternet:	\
-	Makefile $(FAKEOUTERNETSRCS) $(INCLUDEDIR)/code_instrumentation.h
-	$(CC) $(CFLAGS) -o fakeouternet $(FAKEOUTERNETSRCS)
+$(BINDIR)/fakeouternet:	Makefile $(FAKEOUTERNETSRCS) $(INCLUDEDIR)/code_instrumentation.h
+	$(CC) $(CFLAGS) -o $(BINDIR)/fakeouternet $(FAKEOUTERNETSRCS)
+
+SERIALMONITORSRCS=	$(SRCDIR)/utils/serialmonitor.c
+
+$(BINDIR)/serialmonitor: Makefile $(SERIALMONITORSRCS) $(INCLUDEDIR)/code_instrumentation.h
+	$(CC) $(CFLAGS) -o $(BINDIR)/serialmonitor $(SERIALMONITORSRCS)
 
 $(BINDIR)/manifesttest:	Makefile $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c $(SRCDIR)/code_instrumentation.c
 	$(CC) $(CFLAGS) -DTEST -o $(BINDIR)/manifesttest $(SRCDIR)/rhizome/manifest_compress.c $(SRCDIR)/util.c $(SRCDIR)/code_instrumentation.c
