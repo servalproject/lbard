@@ -152,10 +152,19 @@ int hfcodan3012_serviceloop(int serialfd)
     // Modem is connected
     write_all(serialfd,"ato\r\n",5);
     hf_state=HF_DATAONLINE;
+    call_timeout=time(0)+120;
     break;
   case HF_DATAONLINE:
     // Mode is online.  Do nothing but indicate that the modem is
     // ready to process packets
+    if (time(0)>call_timeout) {
+      // Nothing for too long, so hang up
+      sleep(2);
+      write_all(serialfd,"+++",3);
+      sleep(2);
+      write_all(serialfd,"ath0\r\n",5);
+      hf_state=HF_DISCONNECTED;
+    }
     break;
   case HF_DISCONNECTING:
     break;
@@ -180,6 +189,7 @@ int hfcodan3012_process_line(char *l)
     hf_state=HF_DATAONLINE;
     // And announce ourselves as ready for the first packet of the connection
     hf_radio_mark_ready();
+    call_timeout=time(0)+120;
   }
   if (!strncmp(l,"RING",4)) {
     fprintf(stderr,"Saw incoming call. Answering.\n");
@@ -188,16 +198,64 @@ int hfcodan3012_process_line(char *l)
   return 0;
 }
 
+unsigned char packet_rx_buffer[256];
+int rx_len=0;
+int rx_esc=0;
+
+
 int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 { 
   int i;
-  for(i=0;i<count;i++) {
-    if (bytes[i]==13||bytes[i]==10) {
-      hf_response_line[hf_rl_len]=0;
-      if (hf_rl_len) hfcodan3012_process_line(hf_response_line);
-      hf_rl_len=0;
-    } else {
-      if (hf_rl_len<1024) hf_response_line[hf_rl_len++]=bytes[i];
+  if (hf_state==HF_DATAONLINE) {
+    // Online mode, so decode packets
+    for(i=0;i<count;i++) {
+      if (rx_esc) {
+	switch(bytes[i]) {
+	case '.': // escaped !
+	  if (rx_len<256) {
+	    packet_rx_buffer[rx_len++]='!';
+	  }
+	  break;
+	case '!': // end of packet
+
+	  // Reset our hangup timeout
+	  call_timeout=time(0)+120;
+	  if (saw_packet(packet_rx_buffer,rx_len,0,
+			 my_sid_hex,prefix,
+			 servald_server,credential)) {
+	  } else {
+	  }
+	  rx_len=0;
+
+	  break;
+	case 'C': // clear RX buffer
+	  rx_len=0;
+	  break;
+	default:
+	  break;
+	}
+	rx_esc=0;
+      } else {
+	// Not in escape mode
+	if (bytes[i]=='!') rx_esc=1;
+	else {
+	  if (rx_len<256) {
+	    packet_rx_buffer[rx_len++]=bytes[i];
+	  }
+	}
+      }
+    }
+    
+  } else {
+    // Modem command mode
+    for(i=0;i<count;i++) {
+      if (bytes[i]==13||bytes[i]==10) {
+	hf_response_line[hf_rl_len]=0;
+	if (hf_rl_len) hfcodan3012_process_line(hf_response_line);
+	hf_rl_len=0;
+      } else {
+	if (hf_rl_len<1024) hf_response_line[hf_rl_len++]=bytes[i];
+      }
     }
   }
   
