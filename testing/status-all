@@ -9,7 +9,11 @@ foreach instance ( serval? )
 
  cd $instance
  setenv SERVALINSTANCE_PATH `pwd`
-# ../../serval-dna/servald rhizome list
+ echo ""
+ echo "---------------------------------------------------------------------"
+ echo "Instance $instance"
+ echo "---------------------------------------------------------------------"
+ ../../serval-dna/servald rhizome list
  ../../serval-dna/servald keyring list
  cd ..
 
