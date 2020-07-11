@@ -32,10 +32,12 @@ extern char *hfcallplan;
 
 int hfcallplan_pos=0;
 
+int hfselfidseen=0;
+
 int hfcodan3012_initialise(int serialfd)
 {
   char cmd[1024];
-  fprintf(stderr,"Initialising Codan HF 3012 modem...\n");
+  fprintf(stderr,"Initialising Codan HF 3012 modem with id '%s'...\n",hfselfid?hfselfid:"<not set>");
   snprintf(cmd,1024,"at&i=%s\r\n",hfselfid?hfselfid:"1");
   write_all(serialfd,cmd,strlen(cmd));
   fprintf(stderr,"Set HF station ID in modem to '%s'\n",hfselfid?hfselfid:"1");
@@ -103,6 +105,13 @@ int hfcodan3012_serviceloop(int serialfd)
     fprintf(stderr,"Codan 3012 modem is in state %d, callplan='%s':%d\n",hf_state,hfcallplan,hfcallplan_pos);
     last_hf_state=hf_state;
   }
+
+  // HF call plan and ID only become available after auto-detection, so we have to call initialise again
+  if (hfselfid&&!hfselfidseen) {
+    hfcodan3012_initialise(serialfd);
+    hfselfidseen=1;
+  }
+  
   
   switch(hf_state) {
   case HF_DISCONNECTED:
@@ -164,6 +173,9 @@ int hfcodan3012_process_line(char *l)
   if (!strncmp(l,"NO CARRIER",10)) {
     hf_state=HF_DISCONNECTED;
   }
+  if (!strncmp(l,"NO ANSWER",9)) {
+    hf_state=HF_DISCONNECTED;
+  }
   if (!strncmp(l,"CONNECT",10)) {
     hf_state=HF_DATAONLINE;
     // And announce ourselves as ready for the first packet of the connection
@@ -194,6 +206,43 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 
 int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
 {
+  // Now escape any ! characters, and append !! to the end to mark the 
+  // packet boundary. I.e., very similar to what we do with the RFD900.
+
+  unsigned char escaped[2+len*2+2];
+  int elen=0;
+  int i;
+
+  if (hf_state!=HF_DATAONLINE) {
+    //    fprintf(stderr,"Ignoring packet while not in DATAONLINE state.\n");
+    // Silently ignore sending
+    return 0;
+  }
+
+  // Sometimes the ! gets eaten here. Solution is to
+  // send a non-! character first, so that even if !-mode
+  // is set, all works properly.  this will also stop us
+  // accidentally doing !!, which will send a packet.
+  write(serialfd,"C!C",3);
+  // Then stuff the escaped bytes to send
+  for(i=0;i<len;i++) {
+    if (out[i]=='!') {
+      escaped[elen++]='!'; escaped[elen++]='.';
+    } else escaped[elen++]=out[i];
+  }
+  // Finally include TX packet command
+  escaped[elen++]='!'; escaped[elen++]='!';
+  if (debug_radio_tx) {
+    dump_bytes(stdout,"sending packet",escaped,elen);    
+  }  
+
+  if (write_all(serialfd,escaped,elen)==-1) {
+    serial_errors++;
+    return -1;
+  } else {
+    serial_errors=0;
+    return 0;
+  }
   
   return 0;
 }

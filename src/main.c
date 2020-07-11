@@ -782,7 +782,7 @@ int main(int argc, char **argv)
 	  {
 	    hfcallplan=strdup(&argv[n][11]);
 	    LOG_NOTE("hfcallplan: %s", hfcallplan);
-          fprintf(stderr,"HF Radio station ID is '%s'\n", hfselfid);
+          fprintf(stderr,"HF Radio call plan is '%s'\n", hfcallplan);
 	  }
         else if (! strncasecmp("otadir=", argv[n], 7)) 
         {
