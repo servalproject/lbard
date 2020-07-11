@@ -34,6 +34,11 @@ int hfcallplan_pos=0;
 
 int hfselfidseen=0;
 
+int tx_seq=0;
+int last_tx_reflected_seq;
+int rx_seq=0;
+
+
 int hfcodan3012_initialise(int serialfd)
 {
   char cmd[1024];
@@ -42,14 +47,14 @@ int hfcodan3012_initialise(int serialfd)
   write_all(serialfd,cmd,strlen(cmd));
   fprintf(stderr,"Set HF station ID in modem to '%s'\n",hfselfid?hfselfid:"1");
 
-  // snprintf(cmd,1024,"at&k=3\r\n");
-  //   write_all(serialfd,cmd,strlen(cmd));
-  //  fprintf(stderr,"Enabling hardware flow control.\n");
+  snprintf(cmd,1024,"at&k=3\r\n");
+  write_all(serialfd,cmd,strlen(cmd));
+  fprintf(stderr,"Enabling hardware flow control.\n");
 
   // Slow message rate, so that we don't have overruns all the time,
   // and so that we don't end up with lots of missed packets which messes with the
   // sync algorithm
-  message_update_interval = 3000;
+  message_update_interval = 1000;
   
 }
 
@@ -211,7 +216,7 @@ int hfcodan3012_process_line(char *l)
   return 0;
 }
 
-unsigned char packet_rx_buffer[256];
+unsigned char packet_rx_buffer[2+256];
 int rx_len=0;
 int rx_esc=0;
 
@@ -225,7 +230,7 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
       if (rx_esc) {
 	switch(bytes[i]) {
 	case '.': // escaped !
-	  if (rx_len<256) {
+	  if (rx_len<258) {
 	    packet_rx_buffer[rx_len++]='!';
 	  }
 	  break;
@@ -233,7 +238,13 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 
 	  // Reset our hangup timeout
 	  call_timeout=time(0)+120;
-	  if (saw_packet(packet_rx_buffer,rx_len,0,
+	  last_tx_reflected_seq=packet_rx_buffer[1];
+	  rx_seq=packet_rx_buffer[0];
+
+	  fprintf(stderr,"Saw packet #$%02x, reflecting reception of packet #$%02x from us.\n",
+		  rx_seq,last_tx_reflected_seq);
+	  
+	  if (saw_packet(&packet_rx_buffer[2],rx_len-2,0,
 			 my_sid_hex,prefix,
 			 servald_server,credential)) {
 	  } else {
@@ -252,7 +263,7 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	// Not in escape mode
 	if (bytes[i]=='!') rx_esc=1;
 	else {
-	  if (rx_len<256) {
+	  if (rx_len<258) {
 	    packet_rx_buffer[rx_len++]=bytes[i];
 	  }
 	}
@@ -295,6 +306,17 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
   // is set, all works properly.  this will also stop us
   // accidentally doing !!, which will send a packet.
   write(serialfd,"C!C",3);
+
+  // Then sequence # and the last sequence # we have seen from the remote
+  if (tx_seq==0x21) write(serialfd,"!.",2); else {
+    char s=tx_seq; write(serialfd,&s,1);
+  }
+  if (rx_seq==0x21) write(serialfd,"!.",2); else {
+    char s=rx_seq; write(serialfd,&s,1);
+  }
+  tx_seq++;
+  fprintf(stderr,"Sending packet #$%02x, len=%d\n",tx_seq,len);
+  
   // Then stuff the escaped bytes to send
   for(i=0;i<len;i++) {
     if (out[i]=='!') {
