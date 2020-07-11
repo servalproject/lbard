@@ -68,6 +68,20 @@ int saw_length(char *peer_prefix,char *bid_prefix,long long version,
   int peer=find_peer_by_prefix(peer_prefix);
   if (peer<0) return -1;
 
+  fprintf(stderr,"%s* is telling us that bundle %s*:%lld has length = %d\n",
+	  peer_prefix,bid_prefix,version,body_length);
+
+  // This also implicitly tells us that that peer has that bundle
+  {
+    int i;
+    for(i=0;i<bundle_count;i++) {
+      if (!strncasecmp(bundles[i].bid_hex,bid_prefix,strlen(bid_prefix))) {
+	fprintf(stderr,"   (For this reason we are de-queuing it.)\n");
+	sync_dequeue_bundle(peer_records[peer],i);	
+      }
+    }
+  }
+  
   int i;
   int spare_record=random()%MAX_BUNDLES_IN_FLIGHT;
   for(i=0;i<MAX_BUNDLES_IN_FLIGHT;i++) {
