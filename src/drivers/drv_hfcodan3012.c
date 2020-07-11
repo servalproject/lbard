@@ -317,11 +317,12 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
   tx_seq++;
 
   // Modulate TX rate based on the number of outstanding packets we have
-  int packets_unacknowledged=tx_seq-last_tx_reflected_seq;
+  int packets_unacknowledged=(tx_seq&0xff)-last_tx_reflected_seq;
   if (packets_unacknowledged<0) packets_unacknowledged+=256;
   if (packets_unacknowledged>32) packets_unacknowledged=32;
-  message_update_interval=packets_unacknowledged*1000;
-  fprintf(stderr,"Sending packet #$%02x, len=%d, packet interval=%d ms\n",tx_seq,len,message_update_interval);
+  message_update_interval=packets_unacknowledged*250;
+  fprintf(stderr,"Sending packet #$%02x, len=%d, packet interval=%d ms, unackd packets=%d\n",
+	  tx_seq,len,message_update_interval,packets_unacknowledged);
   
   // Then stuff the escaped bytes to send
   for(i=0;i<len;i++) {
