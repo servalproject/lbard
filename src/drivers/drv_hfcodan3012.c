@@ -41,6 +41,15 @@ int hfcodan3012_initialise(int serialfd)
   snprintf(cmd,1024,"at&i=%s\r\n",hfselfid?hfselfid:"1");
   write_all(serialfd,cmd,strlen(cmd));
   fprintf(stderr,"Set HF station ID in modem to '%s'\n",hfselfid?hfselfid:"1");
+
+  // snprintf(cmd,1024,"at&k=3\r\n");
+  //   write_all(serialfd,cmd,strlen(cmd));
+  //  fprintf(stderr,"Enabling hardware flow control.\n");
+
+  // Slow message rate, so that we don't have overruns all the time,
+  // and so that we don't end up with lots of missed packets which messes with the
+  // sync algorithm
+  message_update_interval = 3000;
   
 }
 
@@ -52,6 +61,10 @@ int hfcodan3012_radio_detect(int fd)
   serial_setup_port_with_speed(fd,9600);
   // Abort any help display, incase we are in one
   write_all(fd,"q",1);
+  // drop out of online mode if required
+  usleep(1500000);
+  write_all(fd,"+++",3);
+  usleep(1100000);
   // Ask for copyright notice
   write_all(fd,"ati2\r\n",5);
   usleep(300000);
