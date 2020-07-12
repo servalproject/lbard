@@ -250,12 +250,19 @@ int peer_update_send_point(int peer)
   // If we are not currently being asked to send a specific bundle, then keep track of whatever
   // we are sending to a given peer.  Similarly, if we are sending them something we already know
   // them to have, then stop keeping track of that.
-  if (peer_already_possesses_bundle(peer_records[peer],peer_records[peer]->request_bitmap_bundle))
+  if (peer_already_possesses_bundle(peer_records[peer],peer_records[peer]->request_bitmap_bundle)) {    
     peer_records[peer]->request_bitmap_bundle=-1;
+    bzero(peer_records[peer]->request_bitmap,32);
+    bzero(peer_records[peer]->request_manifest_bitmap,2);
+    peer_records[peer]->request_bitmap_offset=0;
+  }
   if (peer_records[peer]->request_bitmap_bundle==-1) {
     if (!peer_already_possesses_bundle(peer_records[peer],peer_records[peer]->tx_bundle))
       {
 	peer_records[peer]->request_bitmap_bundle=peer_records[peer]->tx_bundle;
+	bzero(peer_records[peer]->request_bitmap,32);
+	bzero(peer_records[peer]->request_manifest_bitmap,2);
+	peer_records[peer]->request_bitmap_offset=0;
 	fprintf(stderr,"Setting request_bitmap_bundle to %d\n",peer_records[peer]->tx_bundle);
       }
   }
@@ -390,6 +397,7 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	    // Reset bitmap and start accumulating
 	    bzero(peer_records[i]->request_bitmap,32);
 	    bzero(peer_records[i]->request_manifest_bitmap,2);
+	    peer_records[i]->request_bitmap_offset=0;
 	    peer_records[i]->request_bitmap_bundle=bundle_number;
 	    // The only tricky part is working out the start offset for the bitmap.
 	    // If the offset of the piece is near the start, we will assume we have
@@ -447,8 +455,11 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 			    timestamp_str(),start_offset,start_offset+bytes,
 			    i,peer_records[i]->sid_prefix,
 			    peer_records[i]->request_bitmap_bundle,bundle_number);
-	      if (peer_records[i]->tx_bundle==bundle_number)
+	      if (peer_records[i]->tx_bundle==bundle_number) {
 		if (debug_bitmap) printf(">>> %s ... but I should care about marking it, because it matches the bundle I am sending.\n",timestamp_str());
+
+	      
+	      }
 	      if (peer_records[i]->tx_bundle==-1)
 		// In fact, if we see someone sending a bundle to someone, and we don't yet know if we can send it yet, we should probably start on a speculative basis
 		if (debug_bitmap)
