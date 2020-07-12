@@ -168,6 +168,21 @@ static void xor_children(struct node *node, key_message_t *dest)
   }
 }
 
+static void print_sync_subtree(int x_ofs,struct node *node)
+{  
+  unsigned i;
+  for(int j=0;j<x_ofs;j++) printf(" ");
+  printf("key=");
+  for(int j=0;j<8;j++) printf("%02x",&node->message.key.key[j]);
+  printf("\n");
+
+  for (i=0;i<NODE_CHILDREN;i++){
+    if (node->children[i])
+      print_sync_subtree(x_ofs+3,node->children[i]);
+  }
+}
+
+
 // Add a new key into the state tree, XOR'ing the key into each parent node
 static struct node *add_key(struct node **root, const sync_key_t *key, void *context, uint8_t stored)
 {
@@ -389,12 +404,34 @@ void sync_add_key(struct sync_state *state, const sync_key_t *key, void *context
   struct sync_peer_state *peer_state = state->peers;
   while(peer_state){
     if (find_message(peer_state->root, &message)){
+      printf("calling remove_key() %02X%02X* from %s\n",((unsigned char *)key)[0],((unsigned char *)key)[1],__FUNCTION__);
       remove_key(state, &peer_state->root, key);
       peer_state->recv_count--;
     }
     peer_state = peer_state->next;
   }
 }
+
+void sync_add_key_from_peer(struct sync_state *state, const sync_key_t *key, void *context)
+{
+
+  printf("sync_add_key_from_peer() inserting %02X%02X*\n",
+	 ((unsigned char *)key)[0],((unsigned char *)key)[1]);
+  
+  key_message_t message = MESSAGE_FROM_KEY(key);
+  struct node *node = (struct node *)find_message(state->root, &message);
+  if (node){
+    node->message.stored = 1;
+    node->context = context;
+    return;
+  }
+  
+  state->key_count++;
+  state->progress=0;
+  add_key(&state->root, key, context, 1);
+  
+}
+
 
 void sync_free_peer_state(struct sync_state *state, void *peer_context){
   struct sync_peer_state **peer_state = &state->peers;
@@ -552,6 +589,7 @@ static unsigned peer_is_missing(struct sync_state *state, struct sync_peer_state
       // peer has now received this key?
       if (state->now_has)
 	state->now_has(state->context, peer->peer_context, node->context, &node->message.key);
+      printf("calling remove_key() %02X%02X* from %s\n",((unsigned char *)&node->message.key)[0],((unsigned char *)&node->message.key)[1],__FUNCTION__);
       remove_key(state, &peer->root, &node->message.key);
       peer->send_count --;
       return 1;
@@ -621,6 +659,7 @@ static unsigned peer_has_received_all(struct sync_state *state, struct sync_peer
     if (peer_node->message.stored){
       if (state->now_has)
 	state->now_has(state->context, peer_state->peer_context, peer_node->context, &peer_node->message.key);
+      printf("calling remove_key() %02X%02X* from %s\n",((unsigned char *)&peer_node->message.key)[0],((unsigned char *)&peer_node->message.key)[1],__FUNCTION__);
       remove_key(state, &peer_state->root, &peer_node->message.key);
       peer_state->send_count --;
       ret=1;
@@ -866,6 +905,25 @@ static int recv_key(struct sync_state *state, struct sync_peer_state *peer_state
     node = node->children[key_index];
     prefix_len += PREFIX_STEP_BITS;
   }
+}
+
+struct sync_peer_state *sync_lookup_peer_context(struct sync_state *state,void *peer_context)
+{
+  assert(peer_context);
+  
+  struct sync_peer_state *peer_state = state->peers;
+  while(peer_state && peer_state->peer_context != peer_context){
+    peer_state = peer_state->next;
+  }
+  
+  if (!peer_state){
+    peer_state = allocate(sizeof(struct sync_peer_state));
+    peer_state->peer_context = peer_context;
+    peer_state->next = state->peers;
+    state->peers = peer_state;
+  }
+
+  return peer_state;
 }
 
 // Process all incoming messages from this packet buffer

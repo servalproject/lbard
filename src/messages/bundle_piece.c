@@ -83,9 +83,10 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 
   if (actual_bytes<0) return -1;
 
-  printf(">>> %s I just sent %s piece [%d,%d) for %s*.\n",
+  printf(">>> %s I just sent %s piece [%d,%d) of %s* for %s*.\n",
 	 timestamp_str(),is_manifest?"manifest":"body",
 	 start_offset,start_offset+actual_bytes,
+	 bundles[bundle_number].bid_hex,
 	 peer_records[target_peer]->sid_prefix);
   peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,is_manifest,
 						       start_offset,actual_bytes);
@@ -266,6 +267,11 @@ int saw_piece(char *peer_prefix,int for_me,
 	   timestamp_str());
     peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,is_manifest_piece,
 							 piece_offset,piece_bytes);
+  }
+
+  if (peer>=0&&bundle_number>=0) {
+    // This sender has this bundle, so we should never try sending it to them
+    peer_mark_posession_of_bundle(peer_records[peer],bundle_number);
   }
   
   int i;

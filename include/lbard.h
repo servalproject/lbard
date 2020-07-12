@@ -1,5 +1,7 @@
 #include <sys/time.h>
 
+#define MAX_BUNDLES 10000
+
 #define SYNC_MSG_HEADER_LEN 2
 
 // For now we use a fixed link MTU for all radio types for now.
@@ -112,6 +114,10 @@ struct peer_state {
   int rssi_log_count;
   int recent_rssis[RSSI_LOG_SIZE];
   long long recent_rssi_times[RSSI_LOG_SIZE];
+
+  // List of bundles we know the peer to have, based on them sending pieces
+  // of them etc.
+  unsigned char bundle_posession_flags[1+(MAX_BUNDLES>>3)];
   
 #ifdef SYNC_BY_BAR
   // BARs we have seen from them.
@@ -122,8 +128,8 @@ struct peer_state {
   long long *versions;
   unsigned char *size_bytes;
   unsigned char *insert_failures;
-#else
-
+#else  
+  
   // Bundle we are currently transfering to this peer
   int tx_bundle;
   int tx_bundle_priority;
@@ -314,7 +320,6 @@ extern unsigned int my_instance_id;
 extern struct peer_state *peer_records[MAX_PEERS];
 extern int peer_count;
 
-#define MAX_BUNDLES 10000
 extern struct bundle_record bundles[MAX_BUNDLES];
 extern int bundle_count;
 
@@ -654,5 +659,14 @@ int autodetect_radio_type(int fd);
 int outernet_rx_setup(char *socket_filename);
 int outernet_rx_serviceloop(void);
 int set_nonblock(int fd);
+
+int peer_clear_posession_of_all_bundles(struct peer_state *p);
+int peer_clear_posession_of_bundle(struct peer_state *p,int bundle_index);
+int peer_mark_posession_of_bundle(struct peer_state *p,int bundle_index);
+int peer_already_possesses_bundle(struct peer_state *p,int bundle_index);
+
+
+
+
 
 #include "util.h"

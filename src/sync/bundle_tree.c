@@ -167,6 +167,12 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
   else
     peer_records[peer]->tx_cache_errors=0;
 
+  if (peer_already_possesses_bundle(peer_records[peer],peer_records[peer]->tx_bundle))
+    {
+      printf("dequeuing TX bundle, as the peer already has it.\n");
+      sync_dequeue_bundle(peer_records[peer],peer_records[peer]->tx_bundle);
+    }
+  
   // Update send point based on the bundle progress bitmap for this peer, if we
   // have one.
   if (!(option_flags&FLAG_NO_BITMAP_PROGRESS)) peer_update_send_point(peer);
@@ -621,6 +627,10 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
       if (debug_ack)
 	fprintf(stderr,"HARDLOWER: DEQUEUING:\n     %d more bundles in the queue. Next is bundle #%d\n",
 		p->tx_queue_len,p->tx_queue_bundles[0]);
+      printf("%d more bundles in the queue. Next is bundle #%d (%s)\n",
+	     p->tx_queue_len,p->tx_queue_bundles[0],bundles[p->tx_queue_bundles[0]].bid_hex);
+      peer_queue_list_dump(p);
+      
       p->tx_bundle=p->tx_queue_bundles[0];
       p->tx_bundle_priority=p->tx_queue_priorities[0];
       p->tx_bundle_manifest_offset=0;
@@ -656,7 +666,7 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
       }
     }
   } else {
-    // Wasn't the bundle on the list right now, so delete from in list.
+    // Wasn't the bundle being transmitted right now, so delete from in list.
     for(int i=0;i<p->tx_queue_len;i++) {
       if (bundle==p->tx_queue_bundles[i]) {
 	// printf("Before deletion from in queue:\n");
@@ -669,8 +679,8 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
 	      &p->tx_queue_priorities[i],
 	      sizeof(int)*p->tx_queue_len-i-1);
 	p->tx_queue_len--;
-	// printf("After deletion from in queue:\n");
-	// peer_queue_list_dump(p);
+	printf("After deletion from in queue:\n");
+	peer_queue_list_dump(p);
 	return 0;
       }
     }

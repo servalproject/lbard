@@ -71,13 +71,18 @@ int saw_length(char *peer_prefix,char *bid_prefix,long long version,
   fprintf(stderr,"%s* is telling us that bundle %s*:%lld has length = %d\n",
 	  peer_prefix,bid_prefix,version,body_length);
 
-  // This also implicitly tells us that that peer has that bundle
+  // This also implicitly tells us that that peer has that bundle, so dequeue it
   {
-    int i;
+    int i;    
     for(i=0;i<bundle_count;i++) {
       if (!strncasecmp(bundles[i].bid_hex,bid_prefix,strlen(bid_prefix))) {
 	fprintf(stderr,"   (For this reason we are de-queuing it.)\n");
-	sync_dequeue_bundle(peer_records[peer],i);	
+	sync_dequeue_bundle(peer_records[peer],i);
+	  if (peer>=0) {
+
+	    // This sender has this bundle, so we should never try sending it to them
+	    peer_mark_posession_of_bundle(peer_records[peer],i);
+	  }
       }
     }
   }

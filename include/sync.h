@@ -39,5 +39,9 @@ size_t sync_build_message(struct sync_state *state, uint8_t *buff, size_t len);
 // process a message received from a peer.
 int sync_recv_message(struct sync_state *state, void *peer_context, const uint8_t *buff, size_t len);
 
+struct sync_peer_state;
+struct sync_peer_state *sync_lookup_peer_context(struct sync_state *state,void *peer_context);
+void sync_add_key_from_peer(struct sync_state *state, const sync_key_t *key, void *context);
+
 
 #endif

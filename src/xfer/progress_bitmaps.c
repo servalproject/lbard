@@ -336,11 +336,11 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 							 int bytes)
 {
   if (!is_manifest)
-    printf(">>> %s Saw body piece [%d,%d) of bundle #%d\n",
-	   timestamp_str(),start_offset,start_offset+bytes,bundle_number);
+    printf(">>> %s Saw body piece [%d,%d) of bundle #%d (%s)\n",
+	   timestamp_str(),start_offset,start_offset+bytes,bundle_number,bundles[bundle_number].bid_hex);
   else
-    printf(">>> %s Saw manifest piece [%d,%d) of bundle #%d\n",
-	   timestamp_str(),start_offset,start_offset+bytes,bundle_number);
+    printf(">>> %s Saw manifest piece [%d,%d) of bundle #%d (%s)\n",
+	   timestamp_str(),start_offset,start_offset+bytes,bundle_number,bundles[bundle_number].bid_hex);
   
   for(int i=0;i<MAX_PEERS;i++)
     {

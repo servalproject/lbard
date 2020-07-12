@@ -223,6 +223,9 @@ int register_bundle(char *service,
     fprintf(stderr,">>> %s We have updated bundle %s/%lld\n",
 	    timestamp_str(),bid,versionll);
 
+    // Now clear flags that indicate if any peer posesses this bundle.
+    for(int pp=0;pp<peer_count;pp++) peer_clear_posession_of_bundle(pp,bundle_number);
+
   } else {    
     // New bundle
     bundles[bundle_number].bid_hex=strdup(bid);
@@ -262,8 +265,11 @@ int register_bundle(char *service,
   
   bundles[bundle_number].index=bundle_number;
   
-  // Add bundle to the sync tree 
-  sync_add_key(sync_state,&bundle_sync_key,&bundles[bundle_number]);
+  // Add bundle to the sync tree WITHOUT making us forget that other peers
+  // might already have it
+  sync_add_key_from_peer(sync_state,&bundle_sync_key,&bundles[bundle_number]);
+  printf("Called sync_add_key() for newly received bundle.\n");
+  
   if (debug_sync_keys) {
     char filename[1024];
     snprintf(filename,1024,"lbardkeys.%s.has",my_sid_hex);

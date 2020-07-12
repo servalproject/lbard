@@ -430,6 +430,40 @@ int peer_queue_list_dump(struct peer_state *p)
   return 0;
 }
 
+int peer_already_possesses_bundle(struct peer_state *p,int bundle_index)
+{
+  if (!p) return 0;
+  if (bundle_index<0||bundle_index>=MAX_BUNDLES) return 0;
+  int byte=bundle_index>>3;
+  int bit=1<<(bundle_index&7);
+  return p->bundle_posession_flags[byte]&bit;
+}
+
+int peer_mark_posession_of_bundle(struct peer_state *p,int bundle_index)
+{
+  if (!p) return 0;
+  if (bundle_index<0||bundle_index>=MAX_BUNDLES) return 0;
+  int byte=bundle_index>>3;
+  int bit=1<<(bundle_index&7);
+  p->bundle_posession_flags[byte]|=bit;
+}
+
+int peer_clear_posession_of_bundle(struct peer_state *p,int bundle_index)
+{
+  if (!p) return 0;
+  if (bundle_index<0||bundle_index>=MAX_BUNDLES) return 0;
+  int byte=bundle_index>>3;
+  int bit=1<<(bundle_index&7);
+  p->bundle_posession_flags[byte]&=0xff-bit;
+}
+
+int peer_clear_posession_of_all_bundles(struct peer_state *p)
+{
+  if (!p) return 0;
+  bzero(p->bundle_posession_flags,1+(MAX_BUNDLES>>3));
+  return 0;
+}
+
 int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int priority)
 {
   int i;
@@ -437,16 +471,25 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
 
   for(i=0;i<pn;i++) if (p==peer_records[i]) pn=i;
 
-  printf("Queueing bundle #%d ",b->index);
+  printf("Queueing bundle #%d (%s)",b->index,b->bid_hex);
+  
   if (pn>-1)
     describe_bundle(RESOLVE_SIDS,stdout,NULL,b->index,pn,-1,-1);
   printf(" for transmission to %s*\n",p->sid_prefix);
+
+  if (peer_already_possesses_bundle(p,b->index)) {
+    printf("But that peer already has that bundle. Refusing to queue bundle.\n");
+  }
   
   // Don't queue if already in the queue
   for(i=0;i<p->tx_queue_len;i++) 
     {
-      if (p->tx_queue_bundles[i]==b->index) return 0;
+      if (p->tx_queue_bundles[i]==b->index) {
+	printf("Bundle #%d is already in the queue.\n",b->index);
+	return 0;
+      }
     }
+  printf("Bundle #%d is not yet in the queue, so inserting it\n",b->index);
   
   // Find point of insertion
   for(i=0;i<p->tx_queue_len;i++) 
@@ -466,11 +509,10 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
     // Write new entry
     p->tx_queue_bundles[i]=b->index;
     p->tx_queue_priorities[i]=priority;
-    if (i>=p->tx_queue_len)
-      p->tx_queue_len=i+1;
+    if (p->tx_queue_len<MAX_TXQUEUE_LEN) p->tx_queue_len++;
 
-    // printf("After queueing new bundle:\n"); fflush(stdout);
-    // peer_queue_list_dump(p);
+    printf("After queueing new bundle:\n"); fflush(stdout);
+    peer_queue_list_dump(p);
     
     return 0;
   } else {
