@@ -458,12 +458,18 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	      if (peer_records[i]->tx_bundle==bundle_number) {
 		if (debug_bitmap) printf(">>> %s ... but I should care about marking it, because it matches the bundle I am sending.\n",timestamp_str());
 
+		bzero(peer_records[i]->request_bitmap,32);
+		bzero(peer_records[i]->request_manifest_bitmap,2);
+		peer_records[i]->request_bitmap_offset=0;
+		peer_records[i]->request_bitmap_bundle=bundle_number;
 	      
 	      }
 	      if (peer_records[i]->tx_bundle==-1)
 		// In fact, if we see someone sending a bundle to someone, and we don't yet know if we can send it yet, we should probably start on a speculative basis
 		if (debug_bitmap)
 		  printf(">>> %s ... but I could care about marking it, because I am not sending a bundle to them yet.\n",timestamp_str());
+
+		sync_queue_bundle(peer_records[i],bundle_number);
 	    }
 	  }
 	}
