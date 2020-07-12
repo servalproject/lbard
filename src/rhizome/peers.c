@@ -479,6 +479,7 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
 
   if (peer_already_possesses_bundle(p,b->index)) {
     printf("But that peer already has that bundle. Refusing to queue bundle.\n");
+    return 0;
   }
   
   // Don't queue if already in the queue
