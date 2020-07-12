@@ -5,7 +5,8 @@
 #include <stdarg.h> 
 #include <string.h> 
 
-#define BUFFER_SIZE 256
+#define WHOLE_BUFFER_SIZE 4096
+#define BUFFER_SIZE 1024
 
 void code_instrumentation_log(const char* fileName, int line, const char* functionName, int logLevel, const char *msg, ...)
 {
@@ -18,8 +19,8 @@ void code_instrumentation_log(const char* fileName, int line, const char* functi
 		strcpy(timeBuffer, asctime(localtm));
 		*(timeBuffer + strlen(timeBuffer) - 1) = '\0';
 
-		static char formatBuffer[BUFFER_SIZE];
-		snprintf(formatBuffer, BUFFER_SIZE, "%s: %s (%d) - %s:\n  %s\n", timeBuffer, fileName, line, functionName, msg);
+		static char formatBuffer[WHOLE_BUFFER_SIZE];
+		snprintf(formatBuffer, WHOLE_BUFFER_SIZE, "%s: %s (%d) - %s:\n  %s\n", timeBuffer, fileName, line, functionName, msg);
 		va_list args;
 		va_start(args, msg);
 		vfprintf(stderr, formatBuffer, args);

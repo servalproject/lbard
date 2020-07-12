@@ -724,9 +724,9 @@ int http_report_network_status(int socket,char *topic)
     if (!strcmp(topic,topics[t].name)) break;
   if (!topics[t].name[0]) {
     // Illegal topic
-    char m[1024];
+    char m[2048];
     fprintf(stderr,"404 for unknown status page '%s'\n",topic);
-    snprintf(m,1024,"HTTP/1.0 404 File not found\nServer: Serval LBARD\n\nCould not read file '%s'\n",filename);
+    snprintf(m,2048,"HTTP/1.0 404 File not found\nServer: Serval LBARD\n\nCould not read file '%s'\n",filename);
     write_all(socket,m,strlen(m));
     return -1;
   }

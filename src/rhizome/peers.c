@@ -446,6 +446,7 @@ int peer_mark_posession_of_bundle(struct peer_state *p,int bundle_index)
   int byte=bundle_index>>3;
   int bit=1<<(bundle_index&7);
   p->bundle_posession_flags[byte]|=bit;
+  return 0;
 }
 
 int peer_clear_posession_of_bundle(struct peer_state *p,int bundle_index)
@@ -455,6 +456,7 @@ int peer_clear_posession_of_bundle(struct peer_state *p,int bundle_index)
   int byte=bundle_index>>3;
   int bit=1<<(bundle_index&7);
   p->bundle_posession_flags[byte]&=0xff-bit;
+  return 0;
 }
 
 int peer_clear_posession_of_all_bundles(struct peer_state *p)

@@ -168,12 +168,13 @@ static void xor_children(struct node *node, key_message_t *dest)
   }
 }
 
+#if 0
 static void print_sync_subtree(int x_ofs,struct node *node)
 {  
   unsigned i;
   for(int j=0;j<x_ofs;j++) printf(" ");
   printf("key=");
-  for(int j=0;j<8;j++) printf("%02x",&node->message.key.key[j]);
+  for(int j=0;j<8;j++) printf("%02x",node->message.key.key[j]);
   printf("\n");
 
   for (i=0;i<NODE_CHILDREN;i++){
@@ -181,7 +182,7 @@ static void print_sync_subtree(int x_ofs,struct node *node)
       print_sync_subtree(x_ofs+3,node->children[i]);
   }
 }
-
+#endif
 
 // Add a new key into the state tree, XOR'ing the key into each parent node
 static struct node *add_key(struct node **root, const sync_key_t *key, void *context, uint8_t stored)

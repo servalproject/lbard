@@ -52,8 +52,8 @@ char auth_token[1024];
 int meshms_parse_serval_conf()
 {
   char serval_conf_file[1024];
-  char auth_name[1024]="username";
-  char auth_key[1024]="password";
+  char auth_name[256]="username";
+  char auth_key[256]="password";
   int port=4110;
 
   int got_port=0;

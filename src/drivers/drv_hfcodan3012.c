@@ -55,7 +55,7 @@ int hfcodan3012_initialise(int serialfd)
   // and so that we don't end up with lots of missed packets which messes with the
   // sync algorithm
   message_update_interval = 1000;
-  
+  return 0;
 }
 
 int hfcodan3012_radio_detect(int fd)
@@ -80,7 +80,7 @@ int hfcodan3012_radio_detect(int fd)
   else
     response_buffer[sizeof(response_buffer)-1]=0;
   // Look for Codan name in copyright. If not present, then not a Codan HF modem 
-  if (!strstr(response_buffer,"CODAN Ltd.")) return -1;
+  if (!strstr((char *)response_buffer,"CODAN Ltd.")) return -1;
   dump_bytes(stderr,"Response from serial port was:\n",response_buffer,count);
   
   // Get model number etc
@@ -91,7 +91,7 @@ int hfcodan3012_radio_detect(int fd)
     response_buffer[count]=0;
   else
     response_buffer[sizeof(response_buffer)-1]=0;
-  char *model_name=&response_buffer[0];
+  char *model_name=(char *)&response_buffer[0];
   while(*model_name&&*model_name!='\n') model_name++;
   if (*model_name) model_name++;
   char *m2=model_name+1;
@@ -116,8 +116,6 @@ int last_hf_state=0;
 
 int hfcodan3012_serviceloop(int serialfd)
 {
-  char cmd[1024];
-
   // XXX DEBUG show when state changes
   if (hf_state!=last_hf_state) {
     fprintf(stderr,"Codan 3012 modem is in state %d, callplan='%s':%d\n",hf_state,hfcallplan,hfcallplan_pos);
@@ -142,8 +140,8 @@ int hfcodan3012_serviceloop(int serialfd)
       if (f==1) {
 	hfcallplan_pos+=n;
 	fprintf(stderr,"Calling station '%s'\n",remoteid);
-	char cmd[1024];
-	snprintf(cmd,1024,"atd%s\r\n",remoteid);
+	char cmd[2048];
+	snprintf(cmd,2048,"atd%s\r\n",remoteid);
 	write_all(serialfd,cmd,strlen(cmd));
 	call_timeout=time(0)+300;
 	hf_state=HF_CALLREQUESTED;
@@ -195,7 +193,6 @@ int hfcodan3012_serviceloop(int serialfd)
 
 int hfcodan3012_process_line(char *l)
 {
-  int channel,caller,callee,day,month,hour,minute;
   fprintf(stderr,"Saw line from modem: '%s'\n",l);
   if (!strncmp(l,"NO CARRIER",10)) {
     hf_state=HF_DISCONNECTED;

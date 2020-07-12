@@ -223,7 +223,7 @@ int hfcodan_send_packet(int serialfd,unsigned char *out, int len)
   // 22 groups of 3 bytes = 66 bytes raw and 88 encoded bytes.  We can use the first
   // two bytes for fragmentation, since we would still like to support 256-byte
   // messages.  This means we need upto 4 pieces for each message.
-  char message[8192];
+  char message[9000];
   char fragment[8192];
 
   int i;
@@ -252,7 +252,7 @@ int hfcodan_send_packet(int serialfd,unsigned char *out, int len)
     int frag_len=43; if (len-i<43) frag_len=len-i;
     hex_encode(&out[i],&fragment[3],frag_len,radio_get_type());
     
-    snprintf(message,8192,"amd %s\r\n",fragment);
+    snprintf(message,9000,"amd %s\r\n",fragment);
     write_all(serialfd,message,strlen(message));
 
     int not_ready=1;

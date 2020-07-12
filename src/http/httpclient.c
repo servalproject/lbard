@@ -267,7 +267,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
   if (auth_token&&strlen(auth_token)>500) return -1;
   if (strlen(path)>500) return -1;
   
-  char request[2048];
+  char request[4096];
   char authdigest[1024];
   int zero=0;
 
@@ -278,7 +278,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
 
   // Build request
   if (auth_token)
-    snprintf(request,2048,
+    snprintf(request,4096,
 	     "GET %s HTTP/1.1\n"
 	     "Authorization: Basic %s\n"
 	     "Host: %s:%d\n"
@@ -288,7 +288,7 @@ int http_get_simple(char *server_and_port, char *auth_token,
 	     authdigest,
 	     server_name,server_port);
   else
-    snprintf(request,2048,
+    snprintf(request,4096,
 	     "GET %s HTTP/1.1\n"
 	     "Host: %s:%d\n"
 	     "Accept: */*\n"
@@ -960,7 +960,7 @@ int http_get_async(char *server_and_port, char *auth_token,
   if (strlen(auth_token)>500) return -1;
   if (strlen(path)>500) return -1;
   
-  char request[2048];
+  char request[4096];
   char authdigest[1024];
   int zero=0;
   
@@ -968,7 +968,7 @@ int http_get_async(char *server_and_port, char *auth_token,
   base64_append(authdigest,&zero,(unsigned char *)auth_token,strlen(auth_token));
 
   // Build request
-  snprintf(request,2048,
+  snprintf(request,4096,
 	   "GET %s HTTP/1.1\n"
 	   "Authorization: Basic %s\n"
 	   "Host: %s:%d\n"

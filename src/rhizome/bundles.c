@@ -224,7 +224,7 @@ int register_bundle(char *service,
 	    timestamp_str(),bid,versionll);
 
     // Now clear flags that indicate if any peer posesses this bundle.
-    for(int pp=0;pp<peer_count;pp++) peer_clear_posession_of_bundle(pp,bundle_number);
+    for(int pp=0;pp<peer_count;pp++) peer_clear_posession_of_bundle(peer_records[pp],bundle_number);
 
   } else {    
     // New bundle

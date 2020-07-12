@@ -470,7 +470,7 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
   // We can use the first
   // two bytes for fragmentation, since we would still like to support 256-byte
   // messages.  This means we need upto 4 pieces for each message.
-  char message[8192];
+  char message[16384];
   char fragment[8192];
 
   int i;
@@ -507,7 +507,7 @@ int hfbarrett_send_packet(int serialfd,unsigned char *out, int len)
     //if (count) dump_bytes(stderr,"presend",buffer,count);
     if (count) hfbarrett_receive_bytes(buffer,count);
     
-    snprintf(message,8192,"AXNMSG%s%02d%s\r\n",
+    snprintf(message,16384,"AXNMSG%s%02d%s\r\n",
 	     barrett_link_partner_string,
 	     (int)strlen(fragment),fragment);
 

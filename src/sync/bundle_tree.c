@@ -310,7 +310,10 @@ int sync_by_tree_stuff_packet(int *offset,int mtu, unsigned char *msg_out,
   // Stuff packet as full as we can with data for as many peers as we can.
   // In practice, we will likely fill it on the first peer, but let's not
   // waste a packet if we have something we can stuff in.
-
+  
+  fprintf(stderr,"Called sync_by_tree_stuff_packet() with %d bytes available. Report queue length=%d\n",
+	  mtu-(*offset),report_queue_length);
+  
   // First of all, tell any peers any acknowledgement messages that are required.
   while (report_queue_length&&((*offset)<(mtu-MAX_REPORT_LEN))) {
     report_queue_length--;
