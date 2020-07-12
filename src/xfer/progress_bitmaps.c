@@ -247,11 +247,25 @@ int dump_peer_tx_bitmap(int peer)
  */
 int peer_update_send_point(int peer)
 {
-  // Only update if the bundle ID of the bitmap and the bundle being sent match
+  // If we are not currently being asked to send a specific bundle, then keep track of whatever
+  // we are sending to a given peer.  Similarly, if we are sending them something we already know
+  // them to have, then stop keeping track of that.
+  if (peer_already_possesses_bundle(peer_records[peer],peer_records[peer]->request_bitmap_bundle))
+    peer_records[peer]->request_bitmap_bundle=-1;
+  if (peer_records[peer]->request_bitmap_bundle==-1) {
+    if (!peer_already_possesses_bundle(peer_records[peer],peer_records[peer]->tx_bundle))
+      {
+	peer_records[peer]->request_bitmap_bundle=peer_records[peer]->tx_bundle;
+	fprintf(stderr,"Setting request_bitmap_bundle to %d\n",peer_records[peer]->tx_bundle);
+      }
+  }
+
+  
+  // Only update if the bundle ID of the bitmap and the bundle being sent match  
   if (peer_records[peer]->request_bitmap_bundle!=peer_records[peer]->tx_bundle)
     {
       if (debug_bitmap)
-	printf(">>> %s BITMAP : No updating send point because request_bitmap_bundle != tx_bundle (%d vs %d)\n",
+	printf(">>> %s BITMAP : Not updating send point because request_bitmap_bundle != tx_bundle (%d vs %d)\n",
 	       timestamp_str(),peer_records[peer]->request_bitmap_bundle,peer_records[peer]->tx_bundle);
       return 0;
     }
