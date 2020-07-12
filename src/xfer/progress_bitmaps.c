@@ -252,6 +252,8 @@ int peer_update_send_point(int peer)
   // them to have, then stop keeping track of that.
   if (peer_already_possesses_bundle(peer_records[peer],peer_records[peer]->request_bitmap_bundle)) {    
     peer_records[peer]->request_bitmap_bundle=-1;
+    bzero(peer_records[peer]->request_bitmap_manifest_counts,16);
+    bzero(peer_records[peer]->request_bitmap_counts,32*8);
     bzero(peer_records[peer]->request_bitmap,32);
     bzero(peer_records[peer]->request_manifest_bitmap,2);
     peer_records[peer]->request_bitmap_offset=0;
@@ -260,6 +262,8 @@ int peer_update_send_point(int peer)
     if (!peer_already_possesses_bundle(peer_records[peer],peer_records[peer]->tx_bundle))
       {
 	peer_records[peer]->request_bitmap_bundle=peer_records[peer]->tx_bundle;
+	bzero(peer_records[peer]->request_bitmap_manifest_counts,16);
+	bzero(peer_records[peer]->request_bitmap_counts,32*8);
 	bzero(peer_records[peer]->request_bitmap,32);
 	bzero(peer_records[peer]->request_manifest_bitmap,2);
 	peer_records[peer]->request_bitmap_offset=0;
@@ -278,76 +282,75 @@ int peer_update_send_point(int peer)
     }
 
   dump_peer_tx_bitmap(peer);
-  
+
   // Pick random piece that has yet to be received, and send that
-#define MAX_CANDIDATES 32
+#define MAX_CANDIDATES (16+32*8)
+  int candidate_is_manifest[MAX_CANDIDATES];
   int candidates[MAX_CANDIDATES];
   int candidate_count=0;
+  int count_num=255;
 
-  // But limit send point to the valid range of the bundle
-  int max_bit=(cached_body_len-peer_records[peer]->request_bitmap_offset)>>6; // = /64
-  // (make sure we don't leave out the last piece at the tail)
-  if ((cached_body_len-peer_records[peer]->request_bitmap_offset)&63) max_bit++;
-  if (max_bit>=32*8*64) max_bit=32*8*64-1; 
-
-  // Search on even boundaries first
-  int i=0; if (peer_records[peer]->request_bitmap_offset&0x40) i=1;
-  for(;i<max_bit;i+=2)
-    if (!(peer_records[peer]->request_bitmap[i>>3]&(1<<(i&7)))) {
-      // If the entire bundle has an odd number of pieces, then the last piece
-      // is not eligible to be an even boundary.
-      if (i!=(max_bit-1))
-	if (candidate_count<MAX_CANDIDATES) candidates[candidate_count++]=i;
+  for(int j=0;j<16;j++) {
+    if (j*64<cached_manifest_encoded_len) {
+      if (!(peer_records[peer]->request_manifest_bitmap[j>>3]&(1<<(j&7)))) {
+	if (peer_records[peer]->request_bitmap_manifest_counts[j]<count_num) {
+	  printf("Discarding %d candidates, due to lower count of %d (vs %d)\n",
+		 candidate_count,peer_records[peer]->request_bitmap_manifest_counts[j],count_num);
+	  count_num=peer_records[peer]->request_bitmap_manifest_counts[j];
+	  candidate_count=0;
+	}
+	candidates[candidate_count]=j*64;
+	candidate_is_manifest[candidate_count++]=1;
+      }
     }
-  if (!candidate_count) {
-    // No evenly aligned candidates, so include all
-    for(i=0;i<max_bit;i++)
-      if (!(peer_records[peer]->request_bitmap[i>>3]&(1<<(i&7))))
-      if (candidate_count<MAX_CANDIDATES) candidates[candidate_count++]=i;
   }
-  
-  if (!candidate_count) {
+  for(int j=0;j<32*8;j++) {
+    if (j*64+peer_records[peer]->request_bitmap_offset<cached_body_len) {
+      if (!(peer_records[peer]->request_bitmap[j>>3]&(1<<(j&7)))) {      
+	if (peer_records[peer]->request_bitmap_counts[j]<count_num) {
+	  printf("Discarding %d candidates, due to lower count of %d (vs %d)\n",
+		 candidate_count,peer_records[peer]->request_bitmap_manifest_counts[j],count_num);
+	  count_num=peer_records[peer]->request_bitmap_counts[j];
+	  candidate_count=0;
+	}
+	candidates[candidate_count]=peer_records[peer]->request_bitmap_offset+j*64;
+	candidate_is_manifest[candidate_count++]=0;
+      }
+    }
+  }
+
+  if (candidate_count) {
+    int candidate=random()%candidate_count;
+    int selection=candidates[candidate];
+    int from_manifest=candidate_is_manifest[candidate];
+    if (from_manifest) {
+      peer_records[peer]->tx_bundle_manifest_offset=selection;
+      peer_records[peer]->tx_next_from_manifest=1;
+      if (debug_bitmap)
+	printf(">>> %s BITMAP based manifest send point for peer #%d(%s*) = %d (candidate %d/%d = block %d)\n",
+	       timestamp_str(),peer,peer_records[peer]->sid_prefix,
+	       peer_records[peer]->tx_bundle_manifest_offset,
+	       candidate,candidate_count,selection>>6);
+      
+    } else {
+      peer_records[peer]->tx_bundle_body_offset=selection;    
+      peer_records[peer]->tx_next_from_manifest=0;
+      if (debug_bitmap)
+	printf(">>> %s BITMAP based payload send point for peer #%d(%s*) = %d (candidate %d/%d = offset %d)\n",
+	       timestamp_str(),peer,peer_records[peer]->sid_prefix,
+	       peer_records[peer]->tx_bundle_body_offset,
+	       candidate,candidate_count,selection>>6);
+      
+    }
+  } else {
     // No candidates, so keep sending from end of region
     if (peer_records[peer]->tx_bundle_body_offset
 	<=(peer_records[peer]->request_bitmap_offset+(32*8*64))) {
       peer_records[peer]->tx_bundle_body_offset
 	=(peer_records[peer]->request_bitmap_offset+(32*8*64));
     }
-  } else {
-    int candidate=random()%candidate_count;
-    int selection=candidates[candidate];
-    peer_records[peer]->tx_bundle_body_offset
-      =(peer_records[peer]->request_bitmap_offset+(selection*64));
-      if (debug_bitmap)
-	printf(">>> %s BITMAP based send point for peer #%d(%s*) = %d (candidate %d/%d = block %d)\n",
-	       timestamp_str(),peer,peer_records[peer]->sid_prefix,
-	       peer_records[peer]->tx_bundle_body_offset,
-	       candidate,candidate_count,selection);
-      
   }
 
-  // For the manifest, we just have our simple bitmap to go through
-  candidate_count=0;
-  for(int i=0;i<(1024/64);i++) {
-    if (!(peer_records[peer]->request_manifest_bitmap[i>>3]&(1<<(i&7)))) {
-      if (candidate_count<MAX_CANDIDATES)
-	candidates[candidate_count++]=peer_records[peer]->tx_bundle_manifest_offset=i*64;
-    }
-  }
-  if (!candidate_count)
-    // All send, so set send point to end
-    peer_records[peer]->tx_bundle_manifest_offset=1024;
-  else {
-    int candidate=random()%candidate_count;
-    int selection=candidates[candidate];
-    peer_records[peer]->tx_bundle_manifest_offset=selection;
-    if (debug_bitmap)
-      printf(">>> %s BITMAP based manifest send point for peer #%d(%s*) = %d (candidate %d/%d = block %d)\n",
-	     timestamp_str(),peer,peer_records[peer]->sid_prefix,
-	     peer_records[peer]->tx_bundle_manifest_offset,
-	     candidate,candidate_count,selection>>6);
-  }
-  
   return 0;
 }
 
@@ -390,11 +393,16 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	    // Manifest progress is easier to update, as the bitmap is a fixed 16 bits
 	    for(int j=0;j<16;j++)
 	      if ((start_offset<=(64*j))
-		  &&(start_offset+bytes>=(64+64*j)))
+		  &&(start_offset+bytes>=(64+64*j))) {
 		peer_records[i]->request_manifest_bitmap[j>>3]|=1<<(j&7);
+		if (peer_records[i]->request_bitmap_manifest_counts[j]<255)
+		  peer_records[i]->request_bitmap_manifest_counts[j]++;
+	      }
 	    
 	  } else {	  
 	    // Reset bitmap and start accumulating
+	    bzero(peer_records[i]->request_bitmap_counts,32*8);
+	    bzero(peer_records[i]->request_bitmap_manifest_counts,16);
 	    bzero(peer_records[i]->request_bitmap,32);
 	    bzero(peer_records[i]->request_manifest_bitmap,2);
 	    peer_records[i]->request_bitmap_offset=0;
@@ -427,7 +435,7 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 		  { offset+=64-trim; bytes_remaining-=trim; }
 		int bit=offset/64;
 		if (bit>=0)
-		  while((bytes_remaining>=64)&&(bit<(32*8*64))) {
+		  while((bytes_remaining>=64)&&(bit<(32*8))) {
 		    if (debug_bitmap)
 		      printf(">>> %s Marking [%d,%d) sent to peer #%d(%s*) due to transmitted piece.\n",
 			     timestamp_str(),block_offset,block_offset+64,i,peer_records[i]->sid_prefix);
@@ -440,6 +448,11 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 		    else
 		      if (debug_bitmap)
 			printf(">>> %s BITMAP: Bit %d already set!\n",timestamp_str(),bit);
+
+		    if (peer_records[i]->request_bitmap_counts[bit]<255) {
+		      printf("Incrementing sent count for bitmap position %d\n",bit);
+		      peer_records[i]->request_bitmap_counts[bit]++;
+		    }
 		    
 		    peer_records[i]->request_bitmap[bit>>3]|=(1<<(bit&7));
 		    bit++; bytes_remaining-=64; block_offset+=64;
@@ -458,18 +471,55 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	      if (peer_records[i]->tx_bundle==bundle_number) {
 		if (debug_bitmap) printf(">>> %s ... but I should care about marking it, because it matches the bundle I am sending.\n",timestamp_str());
 
+		bzero(peer_records[i]->request_bitmap_manifest_counts,16);
+		bzero(peer_records[i]->request_bitmap_counts,32*8);
 		bzero(peer_records[i]->request_bitmap,32);
 		bzero(peer_records[i]->request_manifest_bitmap,2);
 		peer_records[i]->request_bitmap_offset=0;
 		peer_records[i]->request_bitmap_bundle=bundle_number;
-	      
+
+		// Now mark off the bits
+		int offset=start_offset-peer_records[i]->request_bitmap_offset;
+		int block_offset=start_offset;
+		int trim=offset&64;
+		int bytes_remaining=bytes;
+		// Trim final partial piece from length, but only if it isn't
+		// the last few bytes of the bundle.
+		if (trim&&((start_offset+bytes)<(bundles[bundle_number].length)))
+		  { offset+=64-trim; bytes_remaining-=trim; }
+		int bit=offset/64;
+		if (bit>=0)
+		  while((bytes_remaining>=64)&&(bit<(32*8))) {
+		    if (debug_bitmap)
+		      printf(">>> %s Marking [%d,%d) sent to peer #%d(%s*) due to transmitted piece.\n",
+			     timestamp_str(),block_offset,block_offset+64,i,peer_records[i]->sid_prefix);
+		    if (!(peer_records[i]->request_bitmap[bit>>3]&(1<<(bit&7))))
+		      {
+			if (debug_bitmap)
+			  printf(">>> %s BITMAP: Setting bit %d due to transmitted piece.\n",
+				 timestamp_str(),bit);
+		      }
+		    else
+		      if (debug_bitmap)
+			printf(">>> %s BITMAP: Bit %d already set!\n",timestamp_str(),bit);
+
+		    if (peer_records[i]->request_bitmap_counts[bit]<255) {
+		      printf("Incrementing sent count for bitmap position %d\n",bit);
+		      peer_records[i]->request_bitmap_counts[bit]++;
+		    }
+		    
+		    peer_records[i]->request_bitmap[bit>>3]|=(1<<(bit&7));
+		    bit++; bytes_remaining-=64; block_offset+=64;
+		  }				
 	      }
 	      if (peer_records[i]->tx_bundle==-1)
-		// In fact, if we see someone sending a bundle to someone, and we don't yet know if we can send it yet, we should probably start on a speculative basis
-		if (debug_bitmap)
-		  printf(">>> %s ... but I could care about marking it, because I am not sending a bundle to them yet.\n",timestamp_str());
-
-		sync_queue_bundle(peer_records[i],bundle_number);
+		{
+		  // In fact, if we see someone sending a bundle to someone, and we don't yet know if we can send it yet, we should probably start on a speculative basis
+		  if (debug_bitmap)
+		    printf(">>> %s ... but I could care about marking it, because I am not sending a bundle to them yet.\n",timestamp_str());
+		  
+		  sync_queue_bundle(peer_records[i],bundle_number);
+		}
 	    }
 	  }
 	}

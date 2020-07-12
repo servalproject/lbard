@@ -135,6 +135,7 @@ struct peer_state {
   int tx_bundle_priority;
   int tx_bundle_manifest_offset;
   int tx_bundle_body_offset;
+  int tx_next_from_manifest;
 
   // These get set to offsets provided in an ACK('A') packet,
   // so that we avoid resending stuff that has been definitively acknowledged by
@@ -168,6 +169,8 @@ struct peer_state {
      A set bit means that we have received that 64 byte piece. */
   int request_bitmap_bundle;
   int request_bitmap_offset;
+  unsigned char request_bitmap_counts[32*8];
+  unsigned char request_bitmap_manifest_counts[16];
   unsigned char request_bitmap[32];
   unsigned char request_manifest_bitmap[2];
 };

@@ -192,43 +192,44 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
       peer_records[peer]->tx_bundle_manifest_offset
 	=peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound;
     }
-  
-  if (peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound<cached_manifest_encoded_len) {
-    if (peer_records[peer]->tx_bundle_manifest_offset<cached_manifest_encoded_len) {
-      fprintf(stderr,"  manifest_offset=%d, manifest_len=%d\n",
-	      peer_records[peer]->tx_bundle_manifest_offset,
-	      cached_manifest_encoded_len);
-      int start_offset=peer_records[peer]->tx_bundle_manifest_offset;
-      int bytes =
-	sync_append_some_bundle_bytes(bundle_number,start_offset,
-				      cached_manifest_encoded_len,
-				      &cached_manifest_encoded[start_offset],1,
-				      offset,mtu,msg,peer);
-      if (bytes>0)
-	peer_records[peer]->tx_bundle_manifest_offset+=bytes;
+
+  if ((peer_records[peer]->tx_next_from_manifest>0)&&
+      (peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound<cached_manifest_encoded_len)) {
+    fprintf(stderr,"  manifest_offset=%d, manifest_len=%d\n",
+	    peer_records[peer]->tx_bundle_manifest_offset,
+	    cached_manifest_encoded_len);
+    int start_offset=peer_records[peer]->tx_bundle_manifest_offset;
+    int bytes =
+      sync_append_some_bundle_bytes(bundle_number,start_offset,
+				    cached_manifest_encoded_len,
+				    &cached_manifest_encoded[start_offset],1,
+				    offset,mtu,msg,peer);
+    if (bytes>0)
+      peer_records[peer]->tx_bundle_manifest_offset+=bytes;
+    
+    // Announce the length of the body if we have finished sending the manifest,
+    // but not yet started on the body.  This is really just to help monitoring
+    // the progress of transfers for debugging.  The transfer process will automatically
+    // detect the end of the bundle when the last piece is received.
+    if (peer_records[peer]->tx_bundle_manifest_offset>=cached_manifest_encoded_len) {
+      // Send length of body?
+      if (((!peer_records[peer]->tx_bundle_body_offset)
+	   ||(peer_records[peer]->tx_bundle_body_offset
+	      ==peer_records[peer]->tx_bundle_body_offset_hard_lower_bound)
+	   )
+	  ||(peer_records[peer]->tx_bundle_body_offset>=cached_body_len))
+	{
+	  fprintf(stderr,"T+%lldms : Sending length of bundle %s (bundle #%d, version %lld, cached_version %lld)\n",
+		  gettime_ms()-start_time,
+		  bundles[bundle_number].bid_hex,
+		  bundle_number,bundles[bundle_number].version,
+		  cached_version);
+	  announce_bundle_length(mtu,msg,offset,bundles[bundle_number].bid_bin,cached_version,bundles[bundle_number].length);
+	}
     }
   }
 
-  // Announce the length of the body if we have finished sending the manifest,
-  // but not yet started on the body.  This is really just to help monitoring
-  // the progress of transfers for debugging.  The transfer process will automatically
-  // detect the end of the bundle when the last piece is received.
-  if (peer_records[peer]->tx_bundle_manifest_offset>=cached_manifest_encoded_len) {
-    // Send length of body?
-    if (((!peer_records[peer]->tx_bundle_body_offset)
-	 ||(peer_records[peer]->tx_bundle_body_offset
-	    ==peer_records[peer]->tx_bundle_body_offset_hard_lower_bound)
-	 )
-	||(peer_records[peer]->tx_bundle_body_offset>=cached_body_len))
-      {
-	fprintf(stderr,"T+%lldms : Sending length of bundle %s (bundle #%d, version %lld, cached_version %lld)\n",
-		gettime_ms()-start_time,
-		bundles[bundle_number].bid_hex,
-		bundle_number,bundles[bundle_number].version,
-		cached_version);
-	announce_bundle_length(mtu,msg,offset,bundles[bundle_number].bid_bin,cached_version,bundles[bundle_number].length);
-      }
-  }
+  // If not sending manifest bytes, or if there is space, send some payload
   {
     // Send some of the body
     // (but never from an offset before the hard lower bound communicated in an ACK('A') message
