@@ -22,6 +22,8 @@ extern struct sync_state *sync_state;
 #define INITIAL_AVG_PACKET_TX_INTERVAL 1000
 #define INITIAL_PACKET_TX_INTERVAL_RANDOMNESS 250
 
+extern int last_partial_number;
+
 /* Ideal number of packets per 4 second period.
    128K air interface with 256 byte (=2K bit) packets = 64 packets per second.
    But we don't want to go that high for a few reasons:
@@ -668,6 +670,12 @@ int peer_clear_posession_of_bundle(struct peer_state *p,int bundle_index);
 int peer_mark_posession_of_bundle(struct peer_state *p,int bundle_index);
 int peer_already_possesses_bundle(struct peer_state *p,int bundle_index);
 
+int record_bundle_piece(int i, // partial number
+			int peer,
+			long long piece_offset,int piece_bytes,int is_end_piece,
+			int is_manifest_piece,unsigned char *piece,
+			
+			char *prefix, char *servald_server, char *credential);
 
 
 

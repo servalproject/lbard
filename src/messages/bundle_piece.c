@@ -42,6 +42,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "sync.h"
 #include "lbard.h"
 
+int last_partial_number=-1;
+
 int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 				  unsigned char *p, int is_manifest,
 				  int *offset,int mtu,unsigned char *msg,
@@ -182,10 +184,7 @@ int saw_piece(char *peer_prefix,int for_me,
 	      int is_manifest_piece,unsigned char *piece,
 
 	      char *prefix, char *servald_server, char *credential)
-{
-  int next_byte_would_be_useful=0;
-  int new_bytes_in_piece=0;
-  
+{  
   int peer=find_peer_by_prefix(peer_prefix);
   if (peer<0) {
     printf(">>> %s Saw a piece from unknown SID=%s* -- ignoring.\n",
@@ -202,6 +201,8 @@ int saw_piece(char *peer_prefix,int for_me,
   
   int bundle_number=-1;
 
+  last_partial_number=-1;
+  
   // Send an ack immediately if we already have this bundle (or newer), so that the
   // sender knows that they can start sending something else.
   // This in effect provides a positive ACK for reception of a new bundle.
@@ -294,6 +295,8 @@ int saw_piece(char *peer_prefix,int for_me,
     } else {
       if (!strcasecmp(partials[i].bid_prefix,bid_prefix))
 	{
+	  last_partial_number=i;
+	  
 	  if (debug_pieces) printf("Saw another piece for BID=%s* from SID=%s: ",
 			 bid_prefix,peer_prefix);
 	  if (debug_pieces) printf("[%lld..%lld)\n",
@@ -339,6 +342,8 @@ int saw_piece(char *peer_prefix,int for_me,
     partials[i].bundle_version=version;
     partials[i].manifest_length=-1;
     partials[i].body_length=-1;
+
+    last_partial_number=i;    
   }
 
   partial_update_recent_senders(&partials[i],peer_prefix);
@@ -382,6 +387,20 @@ int saw_piece(char *peer_prefix,int for_me,
     }
   }
 
+  return record_bundle_piece(i,peer,piece_offset,piece_bytes,is_end_piece,is_manifest_piece,piece,prefix,servald_server,credential);
+}
+
+int record_bundle_piece(int i, // partial number
+			int peer,
+			long long piece_offset,int piece_bytes,int is_end_piece,
+			int is_manifest_piece,unsigned char *piece,
+			
+			char *prefix, char *servald_server, char *credential)
+{
+  int next_byte_would_be_useful=0;
+  int new_bytes_in_piece=0;
+  int piece_end=piece_offset+piece_bytes;
+  
   // Now we have the right partial, we need to look for the right segment to add this
   // piece to, if any.
   struct segment_list **s;
@@ -457,12 +476,12 @@ int saw_piece(char *peer_prefix,int for_me,
 	message_buffer_length+=
 	  snprintf(&message_buffer[message_buffer_length],
 		   message_buffer_size-message_buffer_length,
-		   "Received %s",bid_prefix);
+		   "Received %s",partials[i].bid_prefix);
 	message_buffer_length+=
 	  snprintf(&message_buffer[message_buffer_length],
 		   message_buffer_size-message_buffer_length,
 		   "* version %lld %s segment [%d,%d)\n",
-		   version,
+		   partials[i].bundle_version,
 		   is_manifest_piece?"manifest":"payload",
 		   piece_start,piece_start+piece_bytes);
       }
@@ -525,7 +544,7 @@ int saw_piece(char *peer_prefix,int for_me,
       // We have a single segment for body and manifest that span the complete
       // size.
       printf(">>> %s We have the entire bundle %s*/%lld now.\n",
-	     timestamp_str(),bid_prefix,version);
+	     timestamp_str(),partials[i].bid_prefix,partials[i].bundle_version);
 
       // First, reconstitute the manifest from the binary encoded format
       unsigned char manifest[1024];

@@ -213,7 +213,7 @@ int hfcodan3012_process_line(char *l)
   return 0;
 }
 
-unsigned char packet_rx_buffer[2+256];
+unsigned char packet_rx_buffer[512];
 int rx_len=0;
 int rx_esc=0;
 
@@ -223,11 +223,12 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
   int i;
   if (hf_state==HF_DATAONLINE) {
     // Online mode, so decode packets
-    for(i=0;i<count;i++) {
+    for(i=0;i<count;i++) {      
+      
       if (rx_esc) {
 	switch(bytes[i]) {
 	case '.': // escaped !
-	  if (rx_len<258) {
+	  if (rx_len<500) {
 	    packet_rx_buffer[rx_len++]='!';
 	  }
 	  break;
@@ -252,6 +253,29 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	case 'C': // clear RX buffer
 	  rx_len=0;
 	  break;
+	case 'D': // Check for data packet
+	  {
+	    int payload_ofs=packet_rx_buffer[0]+(packet_rx_buffer[1]<<8)+(packet_rx_buffer[2]<<16)+(packet_rx_buffer[3]<<24);
+	    int encoded_len=packet_rx_buffer[4]+(packet_rx_buffer[5]<<8);
+	    if (encoded_len==(rx_len-4-2)) {
+	      fprintf(stderr,"Saw %d bytes of data for bundle offset %d in a data packet.\n",
+		      encoded_len,payload_ofs);
+	      // Ah, yes, now we should actually record that we received the data. That would be a good idea.
+	      // Here its a bit interesting, because we rely on whatever bundle was referenced in the main packet.
+	      // We don't currently keep a sense of "last rx bundle piece", but we need to for this.
+	      if (last_partial_number>-1) {
+		record_bundle_piece(last_partial_number,
+				    0, // XXX ugly: we assume it has come from peer #0, because we should have only one peer
+				    payload_ofs,encoded_len,0,0,&packet_rx_buffer[6],
+				    prefix,servald_server,credential);
+	      }
+	    } else {
+	      fprintf(stderr,"CORRUPT DATA PACKET: %d bytes of data for bundle offset %d in a data packet, but rx_len=%d.\n",
+		      encoded_len,payload_ofs,rx_len);
+	      dump_bytes(stderr,"Received data",packet_rx_buffer,rx_len);
+	    }	    
+	    rx_len=0;
+	  }
 	default:
 	  break;
 	}
@@ -317,7 +341,8 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
   int packets_unacknowledged=(tx_seq&0xff)-last_tx_reflected_seq;
   if (packets_unacknowledged<0) packets_unacknowledged+=256;
   if (packets_unacknowledged>32) packets_unacknowledged=32;
-  message_update_interval=packets_unacknowledged*250;
+  if (packets_unacknowledged<3) message_update_interval=250*packets_unacknowledged;
+  else message_update_interval=500*packets_unacknowledged;
   fprintf(stderr,"Sending packet #$%02x, len=%d, packet interval=%d ms, unackd packets=%d\n",
 	  tx_seq,len,message_update_interval,packets_unacknowledged);
   
@@ -334,12 +359,70 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
   }  
 
   if (write_all(serialfd,escaped,elen)==-1) {
+    fprintf(stderr,"Serial error. Returning early.\n");
     serial_errors++;
     return -1;
   } else {
     serial_errors=0;
-    return 0;
   }
+
+  /* 
+     Follow up with a data-only packet with very light encapsulation, so that we 
+     can make more effective use of the modem interface.
+     It will always be payload bytes from the tx_bundle of peer 0, since we should
+     only have one peer on the link.
+     
+  */
+  fprintf(stderr,"peer_count=%d, peer_records[0]->tx_bundle=%d\n",peer_count,peer_count?peer_records[0]->tx_bundle:-1);
+  if ((peer_count>0)&&(peer_records[0]->tx_bundle>0)&&cached_body)
+    {
+      unsigned char data_packet[1024];
+      int ofs=0;
+
+      // XXX We assume bundle cache has already been primed
+      int body_offset=peer_records[0]->tx_bundle_body_offset;
+      int bytes_to_send=cached_body_len-body_offset;
+      // 256 bytes seems to fill the buffer up and results in lost characters
+      if (bytes_to_send>192) bytes_to_send=192;
+
+      if (bytes_to_send>0) {
+	fprintf(stderr,"Sending pure data packet with %d bytes\n",bytes_to_send);
+	// Write offset
+	
+	data_packet[ofs++]=(body_offset>>0)&0xff;
+	data_packet[ofs++]=(body_offset>>8)&0xff;
+	data_packet[ofs++]=(body_offset>>16)&0xff;
+	data_packet[ofs++]=(body_offset>>24)&0xff;
+	// Length of data
+	data_packet[ofs++]=(bytes_to_send>>0)&0xff;
+	data_packet[ofs++]=(bytes_to_send>>8)&0xff;
+	// Write bytes
+	for(int j=0;j<bytes_to_send;j++) {
+	  if (cached_body[body_offset+j]!='!')
+	    data_packet[ofs++]=cached_body[body_offset+j];
+	  else {
+	    data_packet[ofs++]='!'; data_packet[ofs++]='.';
+	  }
+	}
+	
+	// And end of packet marker
+	data_packet[ofs++]='!';
+	data_packet[ofs++]='D';
+	
+	dump_bytes(stderr,"Data packet to send",data_packet,ofs);
+	
+	if (write_all(serialfd,data_packet,ofs)==-1) {
+	  serial_errors++;
+	  return -1;
+	} else {
+	  serial_errors=0;
+	  peer_records[0]->tx_bundle_body_offset+=bytes_to_send;	
+	  return 0;
+	}
+      }
+      
+    }
+  
   
   return 0;
 }
