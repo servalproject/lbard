@@ -236,8 +236,17 @@ int saw_piece(char *peer_prefix,int for_me,
 	  sync_tell_peer_we_have_this_bundle(peer,i);
 	}
 
-	// Even if it wasn't addressed to us, we now know that this peer doesn't have the bundle.
-	sync_queue_bundle(peer_records[peer],i);
+	if (version==bundles[i].version) {
+	  // Even if it wasn't addressed to us, we now know that this peer has this bundle
+	  // So dequeue it, and mark it as being in their posession
+	  sync_dequeue_bundle(peer_records[peer],i);
+	  peer_mark_posession_of_bundle(peer_records[peer],i);
+	} else {
+	  // So they have an older version than us, so we should queue sending it
+	  sync_queue_bundle(peer_records[peer],i);
+	  peer_clear_posession_of_bundle(peer_records[peer],i);
+	}
+      
 	
 	// Update progress bitmaps for all peers whenver we see a piece received that we
 	// think that they might want.  This stops us from resending the same piece later.
@@ -250,12 +259,15 @@ int saw_piece(char *peer_prefix,int for_me,
 	
 	return 0;
       } else {
-	// We have an older version.
+	// We have an older version, so don't go trying to send it to them
+	sync_dequeue_bundle(peer_records[peer],i);
+	peer_mark_posession_of_bundle(peer_records[peer],i);
+	
 	// Remember the bundle number so that we can pre-fetch the body we have
 	// for incremental journal transfers
 	if (version<0x100000000LL) {
 	  bundle_number=i;
-	}	
+	}
       }
     }
   }
