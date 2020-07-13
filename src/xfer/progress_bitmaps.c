@@ -297,14 +297,17 @@ int peer_update_send_point(int peer)
     if (j&1) is_odd=1; else is_odd=0;
     if (j*64<cached_manifest_encoded_len) {
       if (!(peer_records[peer]->request_manifest_bitmap[j>>3]&(1<<(j&7)))) {
+	printf("j=%d, odd=%d\n",j,is_odd);
 	if ((peer_records[peer]->request_bitmap_manifest_counts[j]+is_odd)<count_num) {
 	  printf("Discarding %d candidates, due to lower count of %d (vs %d)\n",
 		 candidate_count,peer_records[peer]->request_bitmap_manifest_counts[j],count_num);
 	  count_num=peer_records[peer]->request_bitmap_manifest_counts[j]+is_odd;
 	  candidate_count=0;
 	}
-	candidates[candidate_count]=j*64;
-	candidate_is_manifest[candidate_count++]=1;
+	if ((peer_records[peer]->request_bitmap_manifest_counts[j]+is_odd)==count_num) {
+	  candidates[candidate_count]=j*64;
+	  candidate_is_manifest[candidate_count++]=1;
+	}
       }
     }
   }
@@ -318,8 +321,10 @@ int peer_update_send_point(int peer)
 	  count_num=peer_records[peer]->request_bitmap_counts[j]+is_odd;
 	  candidate_count=0;
 	}
-	candidates[candidate_count]=peer_records[peer]->request_bitmap_offset+j*64;
-	candidate_is_manifest[candidate_count++]=0;
+	if ((peer_records[peer]->request_bitmap_counts[j]+is_odd)==count_num) {
+	  candidates[candidate_count]=peer_records[peer]->request_bitmap_offset+j*64;
+	  candidate_is_manifest[candidate_count++]=0;
+	}
       }
     }
   }
