@@ -271,7 +271,6 @@ int peer_update_send_point(int peer)
       }
   }
 
-  
   // Only update if the bundle ID of the bitmap and the bundle being sent match  
   if (peer_records[peer]->request_bitmap_bundle!=peer_records[peer]->tx_bundle)
     {
@@ -293,11 +292,16 @@ int peer_update_send_point(int peer)
   // blocks, so that we don't end up with 1/2 packets of unsent stuff at the end.
   int is_odd=0;
 
+  printf("Looking for candidate pieces for bundle %d (M=%d,P=%d)\n",
+	 peer_records[peer]->tx_bundle,cached_manifest_encoded_len,cached_body_len);
+  for(int j=0;j<16;j++)
+    if (j*64<cached_manifest_encoded_len) 
+      printf("  M%dx%d",j*64,peer_records[peer]->request_bitmap_manifest_counts[j]);
+  printf("\n");
   for(int j=0;j<16;j++) {
     if (j&1) is_odd=1; else is_odd=0;
     if (j*64<cached_manifest_encoded_len) {
       if (!(peer_records[peer]->request_manifest_bitmap[j>>3]&(1<<(j&7)))) {
-	printf("j=%d, odd=%d\n",j,is_odd);
 	if ((peer_records[peer]->request_bitmap_manifest_counts[j]+is_odd)<count_num) {
 	  printf("Discarding %d candidates, due to lower count of %d (vs %d)\n",
 		 candidate_count,peer_records[peer]->request_bitmap_manifest_counts[j],count_num);
@@ -381,10 +385,52 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
   else
     printf(">>> %s Saw manifest piece [%d,%d) of bundle #%d (%s)\n",
 	   timestamp_str(),start_offset,start_offset+bytes,bundle_number,bundles[bundle_number].bid_hex);
-  
+
+
   for(int i=0;i<MAX_PEERS;i++)
     {
       if (!peer_records[i]) continue;
+
+      if (peer_records[i]->request_bitmap_bundle==bundle_number) {
+	if (is_manifest) {
+	  // Manifest progress is easier to update, as the bitmap is a fixed 16 bits
+	  for(int j=0;j<16;j++)
+	    // We only check if the start of the block overlaps, as blocks are assumed to be whole,
+	    // or the last block in a manifest or payload
+	    if ((start_offset<=(64*j))
+		&&(start_offset+bytes>=(64*j))) {
+	      peer_records[i]->request_manifest_bitmap[j>>3]|=1<<(j&7);
+	      if (peer_records[i]->request_bitmap_manifest_counts[j]<255)
+		peer_records[i]->request_bitmap_manifest_counts[j]++;
+	    }
+	} else {
+	  if (start_offset>=peer_records[i]->request_bitmap_offset)
+	    {
+	      int offset=start_offset-peer_records[i]->request_bitmap_offset;
+	      int block_offset=start_offset;
+	      int trim=offset&64;
+	      int bytes_remaining=bytes;
+	      // Trim final partial piece from length, but only if it isn't
+	      // the last few bytes of the bundle.
+	      if (trim&&((start_offset+bytes)<(bundles[bundle_number].length)))
+		{ offset+=64-trim; bytes_remaining-=trim; }
+	      int bit=offset/64;
+	      if (bit>=0)
+		while((bytes_remaining>=64)&&(bit<(32*8))) {
+		  if (peer_records[i]->request_bitmap_counts[bit]<255) {
+		    printf("Incrementing sent count for bitmap position %d\n",bit);
+		    peer_records[i]->request_bitmap_counts[bit]++;
+		  }
+		  
+		  bit++; bytes_remaining-=64; block_offset+=64;
+		}
+	    }
+	}
+      }
+
+  
+
+      
       if (
 	  // We have no bitmap, so start accumulating
 	  (peer_records[i]->request_bitmap_bundle==-1)
@@ -408,8 +454,10 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	  if (is_manifest) {
 	    // Manifest progress is easier to update, as the bitmap is a fixed 16 bits
 	    for(int j=0;j<16;j++)
+	      // We only check if the start of the block overlaps, as blocks are assumed to be whole,
+	      // or the last block in a manifest or payload
 	      if ((start_offset<=(64*j))
-		  &&(start_offset+bytes>=(64+64*j))) {
+		  &&(start_offset+bytes>=(64*j))) {
 		peer_records[i]->request_manifest_bitmap[j>>3]|=1<<(j&7);
 		if (peer_records[i]->request_bitmap_manifest_counts[j]<255)
 		  peer_records[i]->request_bitmap_manifest_counts[j]++;
