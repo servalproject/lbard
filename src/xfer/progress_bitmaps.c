@@ -289,14 +289,18 @@ int peer_update_send_point(int peer)
   int candidates[MAX_CANDIDATES];
   int candidate_count=0;
   int count_num=255;
+  // We want to know if a piece is odd or even, as we want to perfer sending on even
+  // blocks, so that we don't end up with 1/2 packets of unsent stuff at the end.
+  int is_odd=0;
 
   for(int j=0;j<16;j++) {
+    if (j&1) is_odd=1; else is_odd=0;
     if (j*64<cached_manifest_encoded_len) {
       if (!(peer_records[peer]->request_manifest_bitmap[j>>3]&(1<<(j&7)))) {
-	if (peer_records[peer]->request_bitmap_manifest_counts[j]<count_num) {
+	if ((peer_records[peer]->request_bitmap_manifest_counts[j]+is_odd)<count_num) {
 	  printf("Discarding %d candidates, due to lower count of %d (vs %d)\n",
 		 candidate_count,peer_records[peer]->request_bitmap_manifest_counts[j],count_num);
-	  count_num=peer_records[peer]->request_bitmap_manifest_counts[j];
+	  count_num=peer_records[peer]->request_bitmap_manifest_counts[j]+is_odd;
 	  candidate_count=0;
 	}
 	candidates[candidate_count]=j*64;
@@ -305,12 +309,13 @@ int peer_update_send_point(int peer)
     }
   }
   for(int j=0;j<32*8;j++) {
+    if (j&1) is_odd=1; else is_odd=0;
     if (j*64+peer_records[peer]->request_bitmap_offset<cached_body_len) {
       if (!(peer_records[peer]->request_bitmap[j>>3]&(1<<(j&7)))) {      
-	if (peer_records[peer]->request_bitmap_counts[j]<count_num) {
+	if ((peer_records[peer]->request_bitmap_counts[j]+is_odd)<count_num) {
 	  printf("Discarding %d candidates, due to lower count of %d (vs %d)\n",
 		 candidate_count,peer_records[peer]->request_bitmap_manifest_counts[j],count_num);
-	  count_num=peer_records[peer]->request_bitmap_counts[j];
+	  count_num=peer_records[peer]->request_bitmap_counts[j]+is_odd;
 	  candidate_count=0;
 	}
 	candidates[candidate_count]=peer_records[peer]->request_bitmap_offset+j*64;
@@ -319,6 +324,12 @@ int peer_update_send_point(int peer)
     }
   }
 
+  printf("I have %d candidates: ",candidate_count);
+  for(int j=0;j<candidate_count;j++) {
+    printf(" %c%d,",candidate_is_manifest[j]?'M':'B',candidates[j]);
+  }
+  printf("\n");
+  
   if (candidate_count) {
     int candidate=random()%candidate_count;
     int selection=candidates[candidate];
