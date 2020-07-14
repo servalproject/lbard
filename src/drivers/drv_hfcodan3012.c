@@ -261,25 +261,26 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	    int is_manifest=payload_ofs&0x80000000;
 	    int is_endpiece=payload_ofs&0x40000000;
 	    payload_ofs&=0x3fffffff;
-	    if (payload_len==(rx_len-4-2-6-8)) {
+	    if (payload_len==(rx_len-4-2-8-8)) {
 	      // Ah, yes, now we should actually record that we received the data. That would be a good idea.
 	      // Here its a bit interesting, because we rely on whatever bundle was referenced in the main packet.
 	      // We don't currently keep a sense of "last rx bundle piece", but we need to for this.
-	      char bid_prefix[16];
-	      snprintf(bid_prefix,16,"%02x%02x%02x%02x%02x%02x",
+	      char bid_prefix[20];
+	      snprintf(bid_prefix,20,"%02x%02x%02x%02x%02x%02x%02x%02x",
 		       packet_rx_buffer[6],packet_rx_buffer[7],packet_rx_buffer[8],
-		       packet_rx_buffer[9],packet_rx_buffer[10],packet_rx_buffer[11]);
+		       packet_rx_buffer[9],packet_rx_buffer[10],packet_rx_buffer[11],
+		       packet_rx_buffer[12],packet_rx_buffer[13]);		       
 	      unsigned char *bid_prefix_bin=&packet_rx_buffer[6];
 	      int for_me=1;
 	      char *peer_prefix=peer_records[0]->sid_prefix;
 	      long long version=0;
-	      for(int j=0;j<8;j++) { version=version<<8; version|=packet_rx_buffer[12+j]; } 
+	      for(int j=0;j<8;j++) { version=version<<8; version|=packet_rx_buffer[14+j]; } 
 	      fprintf(stderr,"Saw %d bytes of data for %s*/%lld offset %d in a data packet, M=%d, E=%d.\n",
 		      payload_len,bid_prefix,version,
 		      payload_ofs,is_manifest?1:0,is_endpiece?1:0);
 	      saw_piece(peer_prefix,for_me,bid_prefix,bid_prefix_bin,
 			version, payload_ofs, payload_len, is_endpiece,
-			is_manifest,&packet_rx_buffer[4+2+6+8],
+			is_manifest,&packet_rx_buffer[4+2+8+8],
 			prefix,servald_server,credential);
 	    } else {
 	      fprintf(stderr,"CORRUPT DATA PACKET: %d bytes of data for bundle offset %d in a data packet, but rx_len=%d.\n",
@@ -442,12 +443,13 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
 	data_packet[ofs++]=(bytes_to_send>>0)&0xff;
 	data_packet[ofs++]=(bytes_to_send>>8)&0xff;
 	// BID prefix
-	sscanf(bid_of_cached_bundle,"%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+	sscanf(bid_of_cached_bundle,"%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
 	       &data_packet[ofs+0],&data_packet[ofs+1],&data_packet[ofs+2],
-	       &data_packet[ofs+3],&data_packet[ofs+4],&data_packet[ofs+5]);
-	ofs+=6;
+	       &data_packet[ofs+3],&data_packet[ofs+4],&data_packet[ofs+5],
+	       &data_packet[ofs+6],&data_packet[ofs+7]);
+	ofs+=8;
 	// Version
-	for(int j=0;j<8;j++) data_packet[ofs++]=(cached_version>>(j*8))&0xff;	
+	for(int j=7;j>=0;j--) data_packet[ofs++]=(cached_version>>(j*8))&0xff;	
 	
 	// Write bytes
 	if (data_packet_manifestP) {
