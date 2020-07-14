@@ -333,11 +333,11 @@ int peer_update_send_point(int peer)
     }
   }
 
-  printf("I have %d candidates: ",candidate_count);
+  fprintf(stderr,"I have %d candidates: ",candidate_count);
   for(int j=0;j<candidate_count;j++) {
-    printf(" %c%d,",candidate_is_manifest[j]?'M':'B',candidates[j]);
+    fprintf(stderr," %c%d,",candidate_is_manifest[j]?'M':'B',candidates[j]);
   }
-  printf("\n");
+  fprintf(stderr,"\n");
   
   if (candidate_count) {
     int candidate=random()%candidate_count;
@@ -354,6 +354,7 @@ int peer_update_send_point(int peer)
       
     } else {
       peer_records[peer]->tx_bundle_body_offset=selection;    
+      fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",peer_records[peer]->tx_bundle_body_offset,__FILE__,__LINE__);
       peer_records[peer]->tx_next_from_manifest=0;
       if (debug_bitmap)
 	printf(">>> %s BITMAP based payload send point for peer #%d(%s*) = %d (candidate %d/%d = offset %d)\n",

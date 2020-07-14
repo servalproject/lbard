@@ -258,7 +258,8 @@ int sync_parse_ack(struct peer_state *p,unsigned char *msg,
       fprintf(stderr,"SYNC ACK: %s* is asking for us to send from m=%d, p=%d\n",
 	      p->sid_prefix,manifest_offset,body_offset);
     p->tx_bundle_manifest_offset=manifest_offset;
-    p->tx_bundle_body_offset=body_offset;      
+    p->tx_bundle_body_offset=body_offset;
+    fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",p->tx_bundle_body_offset,__FILE__,__LINE__);
   } else {
     fprintf(stderr,"SYNC ACK: Ignoring, because we are sending bundle #%d, and request is for bundle #%d\n",p->tx_bundle,bundle);
     fprintf(stderr,"          Requested BID/version = %s/%lld\n",

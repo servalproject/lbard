@@ -146,6 +146,7 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 		     start_offset,(start_offset+actual_bytes)
 		     );
 	    peer_records[pn]->tx_bundle_body_offset=(start_offset+actual_bytes);
+	    fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",peer_records[pn]->tx_bundle_body_offset,__FILE__,__LINE__);
 	  }
 	}
       }
@@ -296,6 +297,7 @@ int saw_piece(char *peer_prefix,int for_me,
       if (!strcasecmp(partials[i].bid_prefix,bid_prefix))
 	{
 	  last_partial_number=i;
+	  fprintf(stderr,"setting last_partial_number to %d (bid_prefix already set)\n",i);
 	  
 	  if (debug_pieces) printf("Saw another piece for BID=%s* from SID=%s: ",
 			 bid_prefix,peer_prefix);
@@ -344,6 +346,7 @@ int saw_piece(char *peer_prefix,int for_me,
     partials[i].body_length=-1;
 
     last_partial_number=i;    
+    fprintf(stderr,"setting last_partial_number to %d (b)\n",i);
   }
 
   partial_update_recent_senders(&partials[i],peer_prefix);
@@ -471,12 +474,12 @@ int record_bundle_piece(int i, // partial number
       assert( ((segment_start>=piece_start)&&(segment_start<=piece_end))
 	      ||((segment_end>=piece_start)&&(segment_end<=piece_end))
 	      );      
-      if (0)
+      if (1)
       {
 	message_buffer_length+=
 	  snprintf(&message_buffer[message_buffer_length],
 		   message_buffer_size-message_buffer_length,
-		   "Received %s",partials[i].bid_prefix);
+		   "Received in partial #%d : %s",i,partials[i].bid_prefix);
 	message_buffer_length+=
 	  snprintf(&message_buffer[message_buffer_length],
 		   message_buffer_size-message_buffer_length,
@@ -546,6 +549,8 @@ int record_bundle_piece(int i, // partial number
       printf(">>> %s We have the entire bundle %s*/%lld now.\n",
 	     timestamp_str(),partials[i].bid_prefix,partials[i].bundle_version);
 
+      if (i==last_partial_number) last_partial_number=-1;
+      
       // First, reconstitute the manifest from the binary encoded format
       unsigned char manifest[1024];
       int manifest_len;

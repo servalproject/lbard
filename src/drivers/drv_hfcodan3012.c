@@ -239,14 +239,15 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	  last_tx_reflected_seq=packet_rx_buffer[1];
 	  rx_seq=packet_rx_buffer[0];
 
-	  fprintf(stderr,"Saw packet #$%02x, reflecting reception of packet #$%02x from us.\n",
-		  rx_seq,last_tx_reflected_seq);
+	  fprintf(stderr,"Saw packet #$%02x, reflecting reception of packet #$%02x from us (last_partial_number=%d)\n",
+		  rx_seq,last_tx_reflected_seq,last_partial_number);
 	  
 	  if (saw_packet(&packet_rx_buffer[2],rx_len-2,0,
 			 my_sid_hex,prefix,
 			 servald_server,credential)) {
 	  } else {
 	  }
+	  fprintf(stderr,"  After parsing, last_partial_number=%d\n",last_partial_number);
 	  rx_len=0;
 
 	  break;
@@ -257,6 +258,9 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	  {
 	    int payload_ofs=packet_rx_buffer[0]+(packet_rx_buffer[1]<<8)+(packet_rx_buffer[2]<<16)+(packet_rx_buffer[3]<<24);
 	    int encoded_len=packet_rx_buffer[4]+(packet_rx_buffer[5]<<8);
+	    int is_manifest=payload_ofs&0x80000000;
+	    int is_endpiece=payload_ofs&0x40000000;
+	    payload_ofs&=0x3fffffff;
 	    if (encoded_len==(rx_len-4-2)) {
 	      fprintf(stderr,"Saw %d bytes of data for bundle offset %d in a data packet.\n",
 		      encoded_len,payload_ofs);
@@ -266,7 +270,10 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	      if (last_partial_number>-1) {
 		record_bundle_piece(last_partial_number,
 				    0, // XXX ugly: we assume it has come from peer #0, because we should have only one peer
-				    payload_ofs,encoded_len,0,0,&packet_rx_buffer[6],
+				    payload_ofs,encoded_len,
+				    is_endpiece, // end packet
+				    is_manifest, // is manifest
+				    &packet_rx_buffer[6],
 				    prefix,servald_server,credential);
 	      }
 	    } else {
@@ -306,6 +313,9 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
   
   return 0;
 }
+
+int data_packet_ofs=0;
+int data_packet_manifestP=1;
 
 int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
 {
@@ -379,35 +389,65 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
       unsigned char data_packet[1024];
       int ofs=0;
 
+      // Start sending blocks in order, including the manifest, so tht we can get bundles through
+      // faster.
+
+      // We send linearly through both manifest and body, since the HF modem is, in theory at least,
+      // providing reliable transport.
+      if (data_packet_manifestP&&data_packet_ofs>=cached_manifest_encoded_len) {
+	data_packet_ofs=0; data_packet_manifestP=0;
+      }
+      if ((!data_packet_manifestP)&&data_packet_ofs>=cached_body_len) {
+	data_packet_ofs=0; data_packet_manifestP=1;
+      }
+      
       // XXX We assume bundle cache has already been primed
-      int body_offset=peer_records[0]->tx_bundle_body_offset;
-      int bytes_to_send=cached_body_len-body_offset;
+      int end_piece=0;
+      int bytes_to_send=cached_body_len-data_packet_ofs;
+      if (data_packet_manifestP) bytes_to_send=cached_manifest_encoded_len-data_packet_ofs;
+
       // 256 bytes seems to fill the buffer up and results in lost characters
       if (bytes_to_send>192) bytes_to_send=192;
 
+      if (data_packet_manifestP&&((data_packet_ofs+bytes_to_send)>=cached_manifest_encoded_len)) end_piece=1;
+      if ((!data_packet_manifestP)&&((data_packet_ofs+bytes_to_send)>=cached_body_len)) end_piece=1;
+
       if (bytes_to_send>0) {
-	fprintf(stderr,"Sending pure data packet with %d bytes\n",bytes_to_send);
+	fprintf(stderr,"Sending pure data packet with %d bytes: %d..%d, M=%d\n",bytes_to_send,
+	        data_packet_ofs,data_packet_ofs+bytes_to_send-1,data_packet_manifestP);
 	// Write offset
 	
-	data_packet[ofs++]=(body_offset>>0)&0xff;
-	data_packet[ofs++]=(body_offset>>8)&0xff;
-	data_packet[ofs++]=(body_offset>>16)&0xff;
-	data_packet[ofs++]=(body_offset>>24)&0xff;
+	data_packet[ofs++]=(data_packet_ofs>>0)&0xff;
+	data_packet[ofs++]=(data_packet_ofs>>8)&0xff;
+	data_packet[ofs++]=(data_packet_ofs>>16)&0xff;
+	data_packet[ofs++]=((data_packet_ofs>>24)&0x3f)|(data_packet_manifestP?0x80:0x00)|(end_piece?0x40:0x00);
 	// Length of data
 	data_packet[ofs++]=(bytes_to_send>>0)&0xff;
 	data_packet[ofs++]=(bytes_to_send>>8)&0xff;
 	// Write bytes
-	for(int j=0;j<bytes_to_send;j++) {
-	  if (cached_body[body_offset+j]!='!')
-	    data_packet[ofs++]=cached_body[body_offset+j];
-	  else {
-	    data_packet[ofs++]='!'; data_packet[ofs++]='.';
+	if (data_packet_manifestP) {
+	  for(int j=0;j<bytes_to_send;j++) {
+	    if (cached_manifest_encoded[data_packet_ofs+j]!='!')
+	      data_packet[ofs++]=cached_manifest_encoded[data_packet_ofs+j];
+	    else {
+	      data_packet[ofs++]='!'; data_packet[ofs++]='.';
+	    }
+	  }
+	} else {       
+	  for(int j=0;j<bytes_to_send;j++) {
+	    if (cached_body[data_packet_ofs+j]!='!')
+	      data_packet[ofs++]=cached_body[data_packet_ofs+j];
+	    else {
+	      data_packet[ofs++]='!'; data_packet[ofs++]='.';
+	    }
 	  }
 	}
 	
 	// And end of packet marker
 	data_packet[ofs++]='!';
 	data_packet[ofs++]='D';
+
+	data_packet_ofs+=bytes_to_send;
 	
 	dump_bytes(stderr,"Data packet to send",data_packet,ofs);
 	
@@ -416,7 +456,6 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
 	  return -1;
 	} else {
 	  serial_errors=0;
-	  peer_records[0]->tx_bundle_body_offset+=bytes_to_send;	
 	  return 0;
 	}
       }

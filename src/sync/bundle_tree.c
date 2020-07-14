@@ -243,6 +243,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 		    peer_records[peer]->tx_bundle_body_offset_hard_lower_bound);
 	  peer_records[peer]->tx_bundle_body_offset
 	    =peer_records[peer]->tx_bundle_body_offset_hard_lower_bound;
+	  fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",peer_records[peer]->tx_bundle_body_offset,__FILE__,__LINE__);
 	}
     }
     
@@ -260,8 +261,12 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 				    &cached_body[start_offset],0,
 				    offset,mtu,msg,peer);
     
-    if (bytes>0)
-      peer_records[peer]->tx_bundle_body_offset+=bytes;      
+    if (bytes>0) {
+      peer_records[peer]->tx_bundle_body_offset+=bytes;
+      fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",peer_records[peer]->tx_bundle_body_offset,__FILE__,__LINE__);
+      fprintf(stderr,"Advancing tx_bundle_body_offset to %d in response to sent bytes.\n",
+	      peer_records[peer]->tx_bundle_body_offset);
+    }
   }
   
   // If we have sent to the end of the bundle, then start again from the beginning,
@@ -274,6 +279,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
       &&(peer_records[peer]->tx_bundle_manifest_offset>=cached_manifest_encoded_len))
     {
       peer_records[peer]->tx_bundle_body_offset=0;
+      fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",peer_records[peer]->tx_bundle_body_offset,__FILE__,__LINE__);
       peer_records[peer]->tx_bundle_manifest_offset=0;
       fprintf(stderr,"T+%lldms : Resending bundle %s from the start.\n",
 	      gettime_ms()-start_time,
@@ -569,6 +575,7 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
 	// it in sync
 	p->tx_bundle=bundle;
 	p->tx_bundle_body_offset=peer_records[i]->tx_bundle_body_offset;
+	fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",p->tx_bundle_body_offset,__FILE__,__LINE__);
 	p->tx_bundle_manifest_offset=peer_records[i]->tx_bundle_manifest_offset;
 	p->tx_bundle_priority=priority;
 	fprintf(stderr,"Beginning transmission from same offset as for another peer (m=%d, b= %d)\n",
@@ -584,19 +591,30 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     }
     p->tx_bundle_manifest_offset_hard_lower_bound=0;
     p->tx_bundle_body_offset_hard_lower_bound=0;
-    if (bundles[bundle].length)
+    if (bundles[bundle].length) {
       p->tx_bundle_body_offset=(random()%bundles[bundle].length)&0xffffff00;
-    else
+      fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",p->tx_bundle_body_offset,__FILE__,__LINE__);
+    }
+    else {
       p->tx_bundle_body_offset=0;
-    if (option_flags&FLAG_NO_RANDOMIZE_START_OFFSET)
+      fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",p->tx_bundle_body_offset,__FILE__,__LINE__);
+    }
+    if (option_flags&FLAG_NO_RANDOMIZE_START_OFFSET) {
       p->tx_bundle_body_offset=0;
+      fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",p->tx_bundle_body_offset,__FILE__,__LINE__);
+    }
     // ... but start from the beginning if it will take only one packet
-    if (bundles[bundle].length<150) p->tx_bundle_body_offset=0;
+    if (bundles[bundle].length<64) {
+      p->tx_bundle_body_offset=0;
+      fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",p->tx_bundle_body_offset,__FILE__,__LINE__);
+    }
     prime_bundle_cache(bundle,p->sid_prefix,servald_server,credential);
     if (cached_manifest_encoded_len)
       p->tx_bundle_manifest_offset=(random()%cached_manifest_encoded_len)&0xffffff80;
-    if (option_flags&FLAG_NO_RANDOMIZE_START_OFFSET)
+    if (option_flags&FLAG_NO_RANDOMIZE_START_OFFSET) {
       p->tx_bundle_manifest_offset=0;
+      fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",p->tx_bundle_body_offset,__FILE__,__LINE__);
+    }
     p->tx_bundle_priority=priority;
     fprintf(stderr,"Beginning transmission from random offset (m=%d, p=%d), flags=%d\n",
 	    p->tx_bundle_manifest_offset,p->tx_bundle_body_offset,
@@ -639,6 +657,7 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
       p->tx_bundle_priority=p->tx_queue_priorities[0];
       p->tx_bundle_manifest_offset=0;
       p->tx_bundle_body_offset=0;      
+      fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",p->tx_bundle_body_offset,__FILE__,__LINE__);
       p->tx_bundle_manifest_offset_hard_lower_bound=0;
       p->tx_bundle_body_offset_hard_lower_bound=0;
       if (!(option_flags&FLAG_NO_HARD_LOWER)) {
