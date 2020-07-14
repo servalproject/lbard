@@ -257,28 +257,33 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	case 'D': // Check for data packet
 	  {
 	    int payload_ofs=packet_rx_buffer[0]+(packet_rx_buffer[1]<<8)+(packet_rx_buffer[2]<<16)+(packet_rx_buffer[3]<<24);
-	    int encoded_len=packet_rx_buffer[4]+(packet_rx_buffer[5]<<8);
+	    int payload_len=packet_rx_buffer[4]+(packet_rx_buffer[5]<<8);
 	    int is_manifest=payload_ofs&0x80000000;
 	    int is_endpiece=payload_ofs&0x40000000;
 	    payload_ofs&=0x3fffffff;
-	    if (encoded_len==(rx_len-4-2)) {
-	      fprintf(stderr,"Saw %d bytes of data for bundle offset %d in a data packet.\n",
-		      encoded_len,payload_ofs);
+	    if (payload_len==(rx_len-4-2-6-8)) {
 	      // Ah, yes, now we should actually record that we received the data. That would be a good idea.
 	      // Here its a bit interesting, because we rely on whatever bundle was referenced in the main packet.
 	      // We don't currently keep a sense of "last rx bundle piece", but we need to for this.
-	      if (last_partial_number>-1) {
-		record_bundle_piece(last_partial_number,
-				    0, // XXX ugly: we assume it has come from peer #0, because we should have only one peer
-				    payload_ofs,encoded_len,
-				    is_endpiece, // end packet
-				    is_manifest, // is manifest
-				    &packet_rx_buffer[6],
-				    prefix,servald_server,credential);
-	      }
+	      char bid_prefix[16];
+	      snprintf(bid_prefix,16,"%02x%02x%02x%02x%02x%02x",
+		       packet_rx_buffer[6],packet_rx_buffer[7],packet_rx_buffer[8],
+		       packet_rx_buffer[9],packet_rx_buffer[10],packet_rx_buffer[11]);
+	      unsigned char *bid_prefix_bin=&packet_rx_buffer[6];
+	      int for_me=1;
+	      char *peer_prefix=peer_records[0]->sid_prefix;
+	      long long version=0;
+	      for(int j=0;j<8;j++) { version=version<<8; version|=packet_rx_buffer[12+j]; } 
+	      fprintf(stderr,"Saw %d bytes of data for %s*/%lld offset %d in a data packet, M=%d, E=%d.\n",
+		      payload_len,bid_prefix,version,
+		      payload_ofs,is_manifest?1:0,is_endpiece?1:0);
+	      saw_piece(peer_prefix,for_me,bid_prefix,bid_prefix_bin,
+			version, payload_ofs, payload_len, is_endpiece,
+			is_manifest,&packet_rx_buffer[4+2+6+8],
+			prefix,servald_server,credential);
 	    } else {
 	      fprintf(stderr,"CORRUPT DATA PACKET: %d bytes of data for bundle offset %d in a data packet, but rx_len=%d.\n",
-		      encoded_len,payload_ofs,rx_len);
+		      payload_len,payload_ofs,rx_len);
 	      dump_bytes(stderr,"Received data",packet_rx_buffer,rx_len);
 	    }	    
 	    rx_len=0;
@@ -400,6 +405,16 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
       if ((!data_packet_manifestP)&&data_packet_ofs>=cached_body_len) {
 	data_packet_ofs=0; data_packet_manifestP=1;
       }
+      // Honour hard lower limits, so that we don't waste time sending content the other
+      // side has already acknowledged
+      // XXX Ideally we should also honour current sending bitmap
+      if (data_packet_manifestP) {
+	if (data_packet_ofs<peer_records[0]->tx_bundle_manifest_offset_hard_lower_bound)
+	  data_packet_ofs=peer_records[0]->tx_bundle_manifest_offset_hard_lower_bound;
+      } else {
+	if (data_packet_ofs<peer_records[0]->tx_bundle_body_offset_hard_lower_bound)
+	  data_packet_ofs=peer_records[0]->tx_bundle_body_offset_hard_lower_bound;
+      }
       
       // XXX We assume bundle cache has already been primed
       int end_piece=0;
@@ -407,13 +422,15 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
       if (data_packet_manifestP) bytes_to_send=cached_manifest_encoded_len-data_packet_ofs;
 
       // 256 bytes seems to fill the buffer up and results in lost characters
-      if (bytes_to_send>192) bytes_to_send=192;
+      if (bytes_to_send>128) bytes_to_send=128;
 
       if (data_packet_manifestP&&((data_packet_ofs+bytes_to_send)>=cached_manifest_encoded_len)) end_piece=1;
       if ((!data_packet_manifestP)&&((data_packet_ofs+bytes_to_send)>=cached_body_len)) end_piece=1;
 
       if (bytes_to_send>0) {
-	fprintf(stderr,"Sending pure data packet with %d bytes: %d..%d, M=%d\n",bytes_to_send,
+	fprintf(stderr,"Sending pure data packet of %s with %d bytes: %d..%d, M=%d\n",
+		bid_of_cached_bundle,
+		bytes_to_send,
 	        data_packet_ofs,data_packet_ofs+bytes_to_send-1,data_packet_manifestP);
 	// Write offset
 	
@@ -424,6 +441,14 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
 	// Length of data
 	data_packet[ofs++]=(bytes_to_send>>0)&0xff;
 	data_packet[ofs++]=(bytes_to_send>>8)&0xff;
+	// BID prefix
+	sscanf(bid_of_cached_bundle,"%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+	       &data_packet[ofs+0],&data_packet[ofs+1],&data_packet[ofs+2],
+	       &data_packet[ofs+3],&data_packet[ofs+4],&data_packet[ofs+5]);
+	ofs+=6;
+	// Version
+	for(int j=0;j<8;j++) data_packet[ofs++]=(cached_version>>(j*8))&0xff;	
+	
 	// Write bytes
 	if (data_packet_manifestP) {
 	  for(int j=0;j<bytes_to_send;j++) {
