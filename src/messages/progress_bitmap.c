@@ -44,6 +44,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 int sync_schedule_progress_report_bitmap(int peer, int partial)
 {
+  if (!partials[partial].bid_prefix) {
+    printf(">>> %s Partial %d for peer %d is not properly prepared.  This should not happen.\n",
+	   timestamp_str(),partial,peer);
+    return 0;
+  }
+  
   printf(">>> %s Scheduling bitmap report.\n",timestamp_str());
 
   // find first required body offset
