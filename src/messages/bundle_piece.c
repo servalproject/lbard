@@ -79,17 +79,27 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
     }
     if (actual_bytes<1) return 0;
   }
+
+  // If we are at the end of a region of interest, try including
+  // blocks from earlier in the file. This is mostly helpful for small
+  // bundles, where random selection of starting point in manifest or payload might
+  // cause only <64 bytes to be sent, when there are more bytes we could be sending.
+  while(start_offset>0&&((max_bytes-actual_bytes)>=64)) {
+    start_offset-=64; actual_bytes+=64;
+  }
+  
   
   // Make sure byte count fits in 11 bits.
   if (actual_bytes>0x7ff) actual_bytes=0x7ff;
 
   if (actual_bytes<0) return -1;
 
-  printf(">>> %s I just sent %s piece [%d,%d) of %s* for %s*.\n",
+  printf(">>> %s I just sent %s piece [%d,%d) of %s* for %s* (filling %d of the %d remaining packet bytes).\n",
 	 timestamp_str(),is_manifest?"manifest":"body",
 	 start_offset,start_offset+actual_bytes,
 	 bundles[bundle_number].bid_hex,
-	 peer_records[target_peer]->sid_prefix);
+	 peer_records[target_peer]->sid_prefix,
+	 actual_bytes+21,max_bytes+21);
   peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,is_manifest,
 						       start_offset,actual_bytes);
   dump_peer_tx_bitmap(target_peer);
