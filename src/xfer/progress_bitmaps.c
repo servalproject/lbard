@@ -292,7 +292,8 @@ int peer_update_send_point(int peer)
   // blocks, so that we don't end up with 1/2 packets of unsent stuff at the end.
   int is_odd=0;
 
-  printf("Looking for candidate pieces for bundle %d (M=%d,P=%d)\n",
+  printf(">>> %s Looking for candidate pieces for bundle %d (M=%d,P=%d): ",
+	 timestamp_str(),
 	 peer_records[peer]->tx_bundle,cached_manifest_encoded_len,cached_body_len);
   for(int j=0;j<16;j++)
     if (j*64<cached_manifest_encoded_len) 
@@ -303,7 +304,8 @@ int peer_update_send_point(int peer)
     if (j*64<cached_manifest_encoded_len) {
       if (!(peer_records[peer]->request_manifest_bitmap[j>>3]&(1<<(j&7)))) {
 	if ((peer_records[peer]->request_bitmap_manifest_counts[j]+is_odd)<count_num) {
-	  printf("Discarding %d candidates, due to lower count of %d (vs %d)\n",
+	  printf(">>> %s Discarding %d candidates, due to lower count of %d (vs %d)\n",
+		 timestamp_str(),
 		 candidate_count,peer_records[peer]->request_bitmap_manifest_counts[j],count_num);
 	  count_num=peer_records[peer]->request_bitmap_manifest_counts[j]+is_odd;
 	  candidate_count=0;
