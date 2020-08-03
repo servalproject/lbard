@@ -217,12 +217,23 @@ unsigned char packet_rx_buffer[512];
 int rx_len=0;
 int rx_esc=0;
 
+int rx_byte_count=0;
+time_t first_rx_time=0;
 
 int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 { 
-  int i;
+  int i;  
+  
   if (hf_state==HF_DATAONLINE) {
     // Online mode, so decode packets
+    rx_byte_count+=count;
+    if (!first_rx_time) first_rx_time=time(0);
+    else {
+      fprintf(stderr,"%d bytes received in %ld seconds.  Average %3.2f bytes per second.\n",
+	      rx_byte_count,time(0)-first_rx_time,
+	      rx_byte_count*1.0/(time(0)-first_rx_time));
+    }
+    
     for(i=0;i<count;i++) {      
       
       if (rx_esc) {
