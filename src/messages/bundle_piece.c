@@ -90,6 +90,7 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   // cause only <64 bytes to be sent, when there are more bytes we could be sending.
   while(start_offset>0&&((max_bytes-actual_bytes)>=64)) {
     start_offset-=64; actual_bytes+=64;
+    p-=64;
   }
   
   // Make sure byte count fits in 11 bits.
@@ -103,6 +104,7 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 	 bundles[bundle_number].bid_hex,
 	 peer_records[target_peer]->sid_prefix,
 	 actual_bytes+21,max_bytes+21);
+
   peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,is_manifest,
 						       start_offset,actual_bytes);
   dump_peer_tx_bitmap(target_peer);
@@ -140,6 +142,13 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   bcopy(p,&msg[(*offset)],actual_bytes);
   (*offset)+=actual_bytes;
 
+  if (is_manifest) {
+    fflush(stderr);
+    dump_bytes(stdout,"Manifest piece message",
+	       p,actual_bytes);
+    fflush(stdout);
+  } 
+  
   /* Advance the cursor for sending this bundle to all other peers if their cursor
      sits within the window we have just sent. */
   for(int pn=0;pn<peer_count;pn++) {
