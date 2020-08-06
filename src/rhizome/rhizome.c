@@ -91,6 +91,8 @@ int load_rhizome_db_async_start(char *servald_server,
     
   load_rhizome_db_socket=http_get_async(servald_server,credential,path,5000);
 
+  printf(">>> %s load_rhizome_db_socket=%d\n",timestamp_str(),load_rhizome_db_socket);
+  
   return load_rhizome_db_socket;
 }
 
@@ -106,15 +108,22 @@ int load_rhizome_db_async(char *servald_server,
   if (load_rhizome_db_socket_timeout<gettime_ms()) {
     if (load_rhizome_db_socket>=0) close(load_rhizome_db_socket);
     load_rhizome_db_socket=-1;
+    printf(">>> %s Marking load_rhizome_db_socket stale.\n",timestamp_str());    
   }
   if (load_rhizome_db_socket<0) {
+    printf(">>> %s Trying to re-open load_rhizome_db_socket.\n",timestamp_str());    
     if (gettime_ms()>(load_rhizome_db_last_socket_open+5000)) {
       load_rhizome_db_last_socket_open=gettime_ms();
-      if (load_rhizome_db_async_start(servald_server,credential,token)<0)
+      if (load_rhizome_db_async_start(servald_server,credential,token)<0) {
+	printf(">>> %s Failed to reopen load_rhizome_db_socket.\n",timestamp_str());    
 	return -1;
+      }
       else
 	load_rhizome_db_socket_timeout=gettime_ms()+5000;
-    } else return -1;
+    } else {
+      printf(">>> %s Waiting before reopening load_rhizome_db_socket.\n",timestamp_str());    
+      return -1;
+    }
   }
   
   while (1) {
@@ -124,6 +133,7 @@ int load_rhizome_db_async(char *servald_server,
 
     if (load_rhizome_db_line[0]=='}') {
       // End of JSON
+      printf(">>> %s Hit end of JSON load_rhizome_db_socket. Closing socket\n",timestamp_str());    
       close(load_rhizome_db_socket);
       load_rhizome_db_socket=-1;
       return 0;
@@ -133,6 +143,7 @@ int load_rhizome_db_async(char *servald_server,
     case 0: // Got a line
       {
 	last_servald_contact=gettime_ms();
+	printf(">>> %s Read line via load_rhizome_db_socket.\n",timestamp_str());    
 
 	char fields[14][8192];
 	int n=parse_json_line(load_rhizome_db_line,fields,14);
@@ -144,6 +155,7 @@ int load_rhizome_db_async(char *servald_server,
 	    strcpy(token,fields[0]);
 
 	  }
+	  printf(">>> %s Discovered bundle via load_rhizome_db_socket.\n",timestamp_str());    
 	  
 	  // Now we have the fields, so register the bundles into our internal list.
 	  register_bundle(fields[2] // service (file/meshms1/meshsm2)
@@ -157,20 +169,25 @@ int load_rhizome_db_async(char *servald_server,
 			  ,fields[12] // recipient
 			  ,fields[13] // Name
 			  );
-	} 
+	} else {
+	  printf(">>> %s Invalid line via load_rhizome_db_socket: n=%d\n",timestamp_str(),n);    
+	}
       }
       // Reset timeout
       load_rhizome_db_socket_timeout=gettime_ms()+5000;
       break;
     case 1: // end of connection, socket already closed
+      printf(">>> %s Closing load_rhizome_db_socket due to result 1 from read line.\n",timestamp_str());    
       load_rhizome_db_socket=-1;
       return 0;
       break;
     case -1: // EAGAIN, so keep trying, but return for now
+      printf(">>> %s EAGAIN on load_rhizome_db_socket due.\n",timestamp_str());    
       return 0;
       break;
     }
   }
+  printf(">>> %s Exiting load_rhizome_db_socket async poll.\n",timestamp_str());    
   
 }
 
