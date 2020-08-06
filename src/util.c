@@ -637,9 +637,9 @@ char *timestamp_str(void)
   struct timeval tv;
   gettimeofday(&tv, NULL);
   localtime_r(&now,&tm);
-  snprintf(timestamp_str_out,1024,"[%02d:%02d.%02d.%03d %c%c%c%c*]",
-          tm.tm_hour,tm.tm_min,tm.tm_sec,(int)tv.tv_usec/1000,
-          my_sid_hex[0],my_sid_hex[1],my_sid_hex[2],my_sid_hex[3]);
+  snprintf(timestamp_str_out,1024,"[%02d:%02d.%02d.%06d %c%c%c%c*]",
+	   tm.tm_hour,tm.tm_min,tm.tm_sec,(int)tv.tv_usec,
+	   my_sid_hex[0],my_sid_hex[1],my_sid_hex[2],my_sid_hex[3]);
 
   LOG_EXIT;
 

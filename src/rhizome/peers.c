@@ -72,11 +72,11 @@ int peer_note_bar(struct peer_state *p,
 
   if (0) {
     for(int i=0;i<p->bundle_count;i++)
-      printf("  bundle #%d/%d: %s* version %lld\n",
+      printf(">>> %s  bundle #%d/%d: %s* version %lld\n",timestamp_str(),
 	      i,p->bundle_count,
 	      p&&p->bid_prefixes&&p->bid_prefixes[i]?p->bid_prefixes[i]:"<bad>",
 	      p&&p->versions&&p->versions[i]?p->versions[i]:-1);
-    printf("  bundle list end.\n");
+    printf(">>> %s  bundle list end.\n",timestamp_str());
   }
   
   // XXX Argh! Another linear search! Replace with something civilised
@@ -109,7 +109,7 @@ int peer_note_bar(struct peer_state *p,
       assert(p->insert_failures);
     }
     b=p->bundle_count;
-    if (debug_pieces) printf("Peer %s* bundle %s* will go in index %d (current count = %d)\n",
+    if (debug_pieces) printf(">>> %s Peer %s* bundle %s* will go in index %d (current count = %d)\n",timestamp_str(),
 	    p->sid_prefix,bid_prefix,b,p->bundle_count);
     p->bid_prefixes[b]=strdup(bid_prefix);
     if (b>=p->bundle_count) p->bundle_count++;
@@ -327,7 +327,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 		if ((!s)||(s->start_offset||(s->length<peer_records[peer]->partials[i].manifest_length)||peer_records[peer]->partials[i].manifest_length<0))
 		  {
 		    if (debug_pull) {
-		      printf("We need manifest bytes...\n");
+		      printf(">>> %s We need manifest bytes...\n",timestamp_str());
 		      dump_segment_list(peer_records[peer]->partials[i].manifest_segments);
 		    }
 		    if ((!s)||s->start_offset) {
@@ -338,7 +338,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 					     0,1 /* manifest */,offset,mtu,msg_out);
 		    } else if (s) {
 		      if (debug_pull) {
-			printf("We need manifest bytes...\n");
+			printf(">>> %s We need manifest bytes...\n",timestamp_str());
 			dump_segment_list(peer_records[peer]->partials[i].manifest_segments);
 		      }
 		      return request_segment(peer,
@@ -355,7 +355,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 		if ((!s)||s->start_offset) {
 		  // We are missing bytes at the beginning
 		  if (debug_pull) {
-		    printf("We need body bytes at the start (start_offset=%d)...\n",
+		    printf(">>> %s We need body bytes at the start (start_offset=%d)...\n",timestamp_str(),
 			    s?s->start_offset:-1);
 		    dump_segment_list(peer_records[peer]->partials[i].body_segments);
 		  }
@@ -366,7 +366,7 @@ int request_wanted_content_from_peers(int *offset,int mtu, unsigned char *msg_ou
 					 0 /* not manifest */,offset,mtu,msg_out);
 		} else if (s) {
 		  if (debug_pull) {
-		    printf("We need body bytes @ %d...\n",
+		    printf(">>> %s We need body bytes @ %d...\n",timestamp_str(),
 			    s->start_offset+s->length);
 		    dump_segment_list(peer_records[peer]->partials[i].body_segments);
 		  }
@@ -421,11 +421,11 @@ int peer_queue_list_dump(struct peer_state *p)
 	 (p->tx_bundle>-1)?
 	 bundles[p->tx_bundle].bid_hex:"",
 	 p->tx_bundle_priority);
-  printf("& %d more queued\n",p->tx_queue_len);
+  printf(">>> %s & %d more queued\n",timestamp_str(),p->tx_queue_len);
   for(int i=0;i<p->tx_queue_len;i++) {
     int bundle=p->tx_queue_bundles[i];
     int priority=p->tx_queue_priorities[i];
-    printf("  & bundle=%d, bid=%s*, priority=%d\n",	   
+    printf(">>> %s  & bundle=%d, bid=%s*, priority=%d\n",timestamp_str(),
 	   bundle,bundles[bundle].bid_hex,priority);
 
   }
@@ -475,14 +475,14 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
 
   for(i=0;i<pn;i++) if (p==peer_records[i]) pn=i;
 
-  printf("Queueing bundle #%d (%s)",b->index,b->bid_hex);
+  printf(">>> %s Queueing bundle #%d (%s)",timestamp_str(),b->index,b->bid_hex);
   
   if (pn>-1)
     describe_bundle(RESOLVE_SIDS,stdout,NULL,b->index,pn,-1,-1);
   printf(" for transmission to %s*\n",p->sid_prefix);
 
   if (peer_already_possesses_bundle(p,b->index)) {
-    printf("But that peer already has that bundle. Refusing to queue bundle.\n");
+    printf(">>> %s But that peer already has that bundle. Refusing to queue bundle.\n",timestamp_str());
     return 0;
   }
   
@@ -490,11 +490,11 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
   for(i=0;i<p->tx_queue_len;i++) 
     {
       if (p->tx_queue_bundles[i]==b->index) {
-	printf("Bundle #%d is already in the queue.\n",b->index);
+	printf(">>> %s Bundle #%d is already in the queue.\n",timestamp_str(),b->index);
 	return 0;
       }
     }
-  printf("Bundle #%d is not yet in the queue, so inserting it\n",b->index);
+  printf(">>> %s Bundle #%d is not yet in the queue, so inserting it\n",timestamp_str(),b->index);
   
   // Find point of insertion
   for(i=0;i<p->tx_queue_len;i++) 
@@ -516,7 +516,7 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
     p->tx_queue_priorities[i]=priority;
     if (p->tx_queue_len<MAX_TXQUEUE_LEN) p->tx_queue_len++;
 
-    printf("After queueing new bundle:\n"); fflush(stdout);
+    printf(">>> %s After queueing new bundle:\n",timestamp_str()); fflush(stdout);
     peer_queue_list_dump(p);
     
     return 0;

@@ -126,7 +126,7 @@ int partial_update_request_bitmap(struct partial_bundle *p)
       int length=l->length;
 
       if (debug_bitmap)
-	printf("  manifest_bitmap: applying segment [%d,%d)\n",start,start+length);
+	printf(">>> %s  manifest_bitmap: applying segment [%d,%d)\n",timestamp_str(),start,start+length);
       
       // If the segment covers the last part of the manifest, but isn't a multiple of 64
       // bytes, then we still need to mark the last piece as received.
@@ -137,7 +137,7 @@ int partial_update_request_bitmap(struct partial_bundle *p)
 	  int block=(start+length)/64;
 	  if (block>=0&&block<16) {
 	    if (debug_bitmap)
-	      { fflush(stderr); printf(">>> BITMAP marking manifest from end-piece #%d onwards as received\n",block); fflush(stdout); }
+	      { fflush(stderr); printf(">>> %s BITMAP marking manifest from end-piece #%d onwards as received\n",timestamp_str(),block); fflush(stdout); }
 	    while(block<16) {
 	      manifest_bitmap[block>>3]|=(1<<(block&7));
 	      block++;
@@ -267,7 +267,7 @@ int peer_update_send_point(int peer)
 	bzero(peer_records[peer]->request_bitmap,32);
 	bzero(peer_records[peer]->request_manifest_bitmap,2);
 	peer_records[peer]->request_bitmap_offset=0;
-	fprintf(stderr,"Setting request_bitmap_bundle to %d\n",peer_records[peer]->tx_bundle);
+	printf(">>> %s Setting request_bitmap_bundle to %d\n",timestamp_str(),peer_records[peer]->tx_bundle);
       }
   }
 
@@ -324,7 +324,7 @@ int peer_update_send_point(int peer)
     if (j*64+peer_records[peer]->request_bitmap_offset<cached_body_len) {
       if (!(peer_records[peer]->request_bitmap[j>>3]&(1<<(j&7)))) {      
 	if ((peer_records[peer]->request_bitmap_counts[j]+is_odd)<count_num) {
-	  printf("Discarding %d candidates, due to lower count of %d (vs %d)\n",
+	  printf(">>> %s Discarding %d candidates, due to lower count of %d (vs %d)\n",timestamp_str(),
 		 candidate_count,peer_records[peer]->request_bitmap_manifest_counts[j],count_num);
 	  count_num=peer_records[peer]->request_bitmap_counts[j]+is_odd;
 	  candidate_count=0;
@@ -337,13 +337,11 @@ int peer_update_send_point(int peer)
     }
   }
 
-  fflush(stdout);
-  fprintf(stderr,"I have %d candidates: ",candidate_count);
+  printf(">>> %s I have %d candidates: ",timestamp_str(),candidate_count);
   for(int j=0;j<candidate_count;j++) {
-    fprintf(stderr," %c%d,",candidate_is_manifest[j]?'M':'B',candidates[j]);
+    printf(">>> %s  %c%d,",timestamp_str(),candidate_is_manifest[j]?'M':'B',candidates[j]);
   }
-  fprintf(stderr,"\n");
-  fflush(stderr);
+  printf("\n");
   
   if (candidate_count) {
     int candidate=random()%candidate_count;
@@ -360,7 +358,7 @@ int peer_update_send_point(int peer)
       
     } else {
       peer_records[peer]->tx_bundle_body_offset=selection;    
-      fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",peer_records[peer]->tx_bundle_body_offset,__FILE__,__LINE__);
+      printf(">>> %s p->tx_bundle_body_offset=%d at %s:%d\n",timestamp_str(),peer_records[peer]->tx_bundle_body_offset,__FILE__,__LINE__);
       peer_records[peer]->tx_next_from_manifest=0;
       if (debug_bitmap)
 	printf(">>> %s BITMAP based payload send point for peer #%d(%s*) = %d (candidate %d/%d = offset %d)\n",
@@ -425,7 +423,7 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	      if (bit>=0)
 		while((bytes_remaining>=64)&&(bit<(32*8))) {
 		  if (peer_records[i]->request_bitmap_counts[bit]<255) {
-		    printf("Incrementing sent count for bitmap position %d\n",bit);
+		    printf(">>> %s Incrementing sent count for bitmap position %d\n",timestamp_str(),bit);
 		    peer_records[i]->request_bitmap_counts[bit]++;
 		  }
 		  
@@ -575,7 +573,7 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 			printf(">>> %s BITMAP: Bit %d already set!\n",timestamp_str(),bit);
 
 		    if (peer_records[i]->request_bitmap_counts[bit]<255) {
-		      printf("Incrementing sent count for bitmap position %d\n",bit);
+		      printf(">>> %s Incrementing sent count for bitmap position %d\n",timestamp_str(),bit);
 		      peer_records[i]->request_bitmap_counts[bit]++;
 		    }
 		    

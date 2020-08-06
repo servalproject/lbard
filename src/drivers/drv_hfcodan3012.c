@@ -250,15 +250,16 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	  last_tx_reflected_seq=packet_rx_buffer[1];
 	  rx_seq=packet_rx_buffer[0];
 
-	  fprintf(stderr,"Saw packet #$%02x, reflecting reception of packet #$%02x from us (last_partial_number=%d)\n",
-		  rx_seq,last_tx_reflected_seq,last_partial_number);
+	  printf(">>> %s Saw packet #$%02x, reflecting reception of packet #$%02x from us (last_partial_number=%d)\n",
+		 timestamp_str(),
+		 rx_seq,last_tx_reflected_seq,last_partial_number);
 	  
 	  if (saw_packet(&packet_rx_buffer[2],rx_len-2,0,
 			 my_sid_hex,prefix,
 			 servald_server,credential)) {
 	  } else {
 	  }
-	  fprintf(stderr,"  After parsing, last_partial_number=%d\n",last_partial_number);
+	  printf(">>> %s  After parsing, last_partial_number=%d\n",timestamp_str(),last_partial_number);
 	  rx_len=0;
 
 	  break;
@@ -286,16 +287,18 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	      char *peer_prefix=peer_records[0]->sid_prefix;
 	      long long version=0;
 	      for(int j=0;j<8;j++) { version=version<<8; version|=packet_rx_buffer[14+j]; } 
-	      fprintf(stderr,"Saw %d bytes of data for %s*/%lld offset %d in a data packet, M=%d, E=%d.\n",
-		      payload_len,bid_prefix,version,
-		      payload_ofs,is_manifest?1:0,is_endpiece?1:0);
+	      printf(">>> %s Saw %d bytes of data for %s*/%lld offset %d in a data packet, M=%d, E=%d.\n",
+		     timestamp_str(),
+		     payload_len,bid_prefix,version,
+		     payload_ofs,is_manifest?1:0,is_endpiece?1:0);
 	      saw_piece(peer_prefix,for_me,bid_prefix,bid_prefix_bin,
 			version, payload_ofs, payload_len, is_endpiece,
 			is_manifest,&packet_rx_buffer[4+2+8+8],
 			prefix,servald_server,credential);
 	    } else {
-	      fprintf(stderr,"CORRUPT DATA PACKET: %d bytes of data for bundle offset %d in a data packet, but rx_len=%d.\n",
-		      payload_len,payload_ofs,rx_len);
+	      printf(">>> %s CORRUPT DATA PACKET: %d bytes of data for bundle offset %d in a data packet, but rx_len=%d.\n",
+		     timestamp_str(),
+		     payload_len,payload_ofs,rx_len);
 	      dump_bytes(stderr,"Received data",packet_rx_buffer,rx_len);
 	    }	    
 	    rx_len=0;

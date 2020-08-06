@@ -173,7 +173,7 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 	   timestamp_str(), gettime_ms()-start_time,
 	   peer_records[target_peer]->sid_prefix);
     for(int i=0;i<8;i++) printf("%c",bundles[bundle_number].bid_hex[i]);
-    printf("* (priority=0x%llx) version %lld %s segment [%d,%d)\n",
+    printf(">>> %s * (priority=0x%llx) version %lld %s segment [%d,%d)\n",timestamp_str(),
 	   bundles[bundle_number].last_priority,
 	   bundles[bundle_number].version,
 	   is_manifest?"manifest":"payload",
