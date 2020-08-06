@@ -1,5 +1,5 @@
 BINDIR=.
-EXECS = $(BINDIR)/lbard $(BINDIR)/manifesttest $(BINDIR)/fakecsmaradio $(BINDIR)/fakeouternet
+EXECS = $(BINDIR)/lbard $(BINDIR)/manifesttest $(BINDIR)/fakecsmaradio $(BINDIR)/fakeouternet $(BINDIR)/mktestfile
 
 all:	$(EXECS)
 
@@ -106,6 +106,9 @@ $(INCLUDEDIR)/version.h:	$(SRCS) $(HDRS)
 
 lbard:	$(SRCS) $(HDRS) $(INCLUDEDIR)/version.h
 	$(CC) $(CFLAGS) -o lbard $(SRCS) $(LDFLAGS)
+
+mktestfile:	src/mktestfile.c Makefile
+	$(CC) $(CFLAGS) -o $(BINDIR)/mktestfile src/mktestfile.c $(LDFLAGS)
 
 echotest:	Makefile echotest.c
 	$(CC) $(CFLAGS) -o echotest echotest.c
