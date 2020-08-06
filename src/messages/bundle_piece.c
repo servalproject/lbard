@@ -581,6 +581,9 @@ int record_bundle_piece(int i, // partial number
 	   manifest,&manifest_len)) {
 
 	// Display decompressed manifest
+	dump_bytes(stdout,"Compressed Manifest",
+		   partials[i].manifest_segments->data,
+		   partials[i].manifest_length);
 	dump_bytes(stdout,"Decompressed Manifest",manifest,manifest_len);
 	
 	insert_result=
@@ -644,6 +647,7 @@ int record_bundle_piece(int i, // partial number
       if (insert_result) {
 	// Failed to insert, so mark this bundle for deprioritisation, so that we
 	// don't just keep asking for it.
+	fflush(stderr);
 	printf(">>> %s Failed to insert bundle %s*/%lld (result=%d)\n",timestamp_str(),
 		partials[i].bid_prefix,
 		partials[i].bundle_version,insert_result);
@@ -651,7 +655,8 @@ int record_bundle_piece(int i, // partial number
 	dump_bytes(stdout,"payload",
 		   partials[i].body_segments->data,
 		   partials[i].body_length);
-
+	fflush(stdout);
+	
 	char bid[32*2+1];
 	if (!manifest_extract_bid(partials[i].manifest_segments->data,
 				  bid)) {

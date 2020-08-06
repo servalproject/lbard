@@ -151,7 +151,10 @@ int prime_bundle_cache(int bundle_number,char *sid_prefix_hex,
       // Failed to binary encode manifest, so just copy it
       bcopy(cached_manifest,cached_manifest_encoded,cached_manifest_len);
       cached_manifest_encoded_len = cached_manifest_len;	
-    }        
+    }
+    fflush(stderr);    
+    dump_bytes(stdout,"Compressed manifest for sending",cached_manifest_encoded,cached_manifest_encoded_len);
+    fflush(stdout);
     
     snprintf(path,8192,"/restful/rhizome/%s/raw.bin",
 	     bundles[bundle_number].bid_hex);
