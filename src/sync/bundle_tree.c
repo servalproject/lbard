@@ -255,7 +255,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 	      peer_records[peer]->tx_bundle_body_offset_hard_lower_bound
 	      );
     int start_offset=peer_records[peer]->tx_bundle_body_offset;
-    
+
     int bytes =
       sync_append_some_bundle_bytes(bundle_number,start_offset,cached_body_len,
 				    &cached_body[start_offset],0,

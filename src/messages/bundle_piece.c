@@ -69,6 +69,8 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
     not_end_of_item=1;
   }
 
+  if (actual_bytes<0) return -1;
+
   // If not sending last piece, limit to 64 byte segment boundary.
   // This is partly to aid debugging, but also avoids wasting bytes when we are
   // using the request bitmap for transfers, where accounting is in 64 byte units.
@@ -80,6 +82,8 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
     if (actual_bytes<1) return 0;
   }
 
+  if (actual_bytes<0) return -1;
+  
   // If we are at the end of a region of interest, try including
   // blocks from earlier in the file. This is mostly helpful for small
   // bundles, where random selection of starting point in manifest or payload might
@@ -87,7 +91,6 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   while(start_offset>0&&((max_bytes-actual_bytes)>=64)) {
     start_offset-=64; actual_bytes+=64;
   }
-  
   
   // Make sure byte count fits in 11 bits.
   if (actual_bytes>0x7ff) actual_bytes=0x7ff;
@@ -156,7 +159,9 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 		     start_offset,(start_offset+actual_bytes)
 		     );
 	    peer_records[pn]->tx_bundle_body_offset=(start_offset+actual_bytes);
-	    fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",peer_records[pn]->tx_bundle_body_offset,__FILE__,__LINE__);
+	    printf(">>> %s p->tx_bundle_body_offset=%d at %s:%d\n",
+		   timestamp_str(),
+		   peer_records[pn]->tx_bundle_body_offset,__FILE__,__LINE__);
 	  }
 	}
       }
@@ -164,7 +169,8 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   }
   
   if (debug_announce) {
-    printf("T+%lldms : Announcing for %s* ",gettime_ms()-start_time,
+    printf(">>> %s T+%lldms : Announcing for %s* ",
+	   timestamp_str(), gettime_ms()-start_time,
 	   peer_records[target_peer]->sid_prefix);
     for(int i=0;i<8;i++) printf("%c",bundles[bundle_number].bid_hex[i]);
     printf("* (priority=0x%llx) version %lld %s segment [%d,%d)\n",
@@ -225,16 +231,16 @@ int saw_piece(char *peer_prefix,int for_me,
     if (sync_is_bundle_recently_received(bid_prefix,version)) {
       // We have this version already: mark it for announcement to sender,
       // and then return immediately.
-      fprintf(stderr,
-	      "We recently received %s* version %lld - ignoring piece.\n",
-	      bid_prefix,version);
+      printf(">>> %s We recently received %s* version %lld - ignoring piece.\n",
+	     timestamp_str(),bid_prefix,version);
       sync_tell_peer_we_have_bundle_by_id(peer,bid_prefix_bin,version);
       return 0;      
     }
   }
   for(int i=0;i<bundle_count;i++) {
     if (!strncasecmp(bid_prefix,bundles[i].bid_hex,strlen(bid_prefix))) {
-      if (debug_pieces) printf("We have version %lld of BID=%s*.  %s is offering %s version %lld\n",
+      if (debug_pieces) printf(">>> %s We have version %lld of BID=%s*.  %s is offering %s version %lld\n",
+			       timestamp_str(),
 			       bundles[i].version,bid_prefix,peer_prefix,for_me?"us":"someone else",version);
       if (version<=bundles[i].version) {
 	// We have this version already: mark it for announcement to sender,
@@ -243,7 +249,7 @@ int saw_piece(char *peer_prefix,int for_me,
 	bundles[i].announce_bar_now=1;
 #endif
 	if (for_me) {
-	  fprintf(stderr,"We already have %s* version %lld - ignoring piece.\n",
+	  printf(">>> %s We already have %s* version %lld - ignoring piece.\n",timestamp_str(),
 		  bid_prefix,version);
 	  sync_tell_peer_we_have_this_bundle(peer,i);
 	}
@@ -307,7 +313,7 @@ int saw_piece(char *peer_prefix,int for_me,
       if (!strcasecmp(partials[i].bid_prefix,bid_prefix))
 	{
 	  last_partial_number=i;
-	  fprintf(stderr,"setting last_partial_number to %d (bid_prefix already set)\n",i);
+	  printf(">>> %s setting last_partial_number to %d (bid_prefix already set)\n",timestamp_str(),i);
 	  
 	  if (debug_pieces) printf("Saw another piece for BID=%s* from SID=%s: ",
 			 bid_prefix,peer_prefix);
@@ -318,8 +324,8 @@ int saw_piece(char *peer_prefix,int for_me,
 	}
       else {
 	if (debug_pieces) {
-	  printf("  this isn't the partial we are looking for.\n");
-	  printf("  piece is of %s*, but slot #%d has %s*\n",
+	  printf(">>> %s  this isn't the partial we are looking for.\n",timestamp_str());
+	  printf(">>> %s  piece is of %s*, but slot #%d has %s*\n",timestamp_str(),
 		 bid_prefix,i,
 		 partials[i].bid_prefix);
 	}
@@ -328,13 +334,14 @@ int saw_piece(char *peer_prefix,int for_me,
   }
 
   if (debug_pieces)
-    printf("Saw a piece of interesting bundle BID=%s*/%lld from SID=%s\n",
+    printf(">>> %s Saw a piece of interesting bundle BID=%s*/%lld from SID=%s\n",
+	   timestamp_str(),
 	    bid_prefix,version, peer_prefix);
   
   if (i==MAX_BUNDLES_IN_FLIGHT) {
     if (spare_record>0) i=spare_record;
     if (debug_pieces)
-      printf("Didn't find bundle in partials for this peer. first spare slot =%d\n",spare_record);
+      printf(">>> %s Didn't find bundle in partials for this peer. first spare slot =%d\n",timestamp_str(),spare_record);
     // Didn't find bundle in the progress list.
     // Abort one of the ones in the list at random, and replace, unless there is
     // a spare record slot to use.
@@ -347,7 +354,7 @@ int saw_piece(char *peer_prefix,int for_me,
       clear_partial(&partials[i]);
     }
     if (debug_pieces)
-      printf("@@@   Using slot %d\n",i);
+      printf(">>> %s   Using slot %d\n",timestamp_str(),i);
 
     // Now prepare the partial record
     partials[i].bid_prefix=strdup(bid_prefix);
@@ -356,7 +363,7 @@ int saw_piece(char *peer_prefix,int for_me,
     partials[i].body_length=-1;
 
     last_partial_number=i;    
-    fprintf(stderr,"setting last_partial_number to %d (b)\n",i);
+    printf(">>> %s setting last_partial_number to %d (b)\n",timestamp_str(),i);
   }
 
   partial_update_recent_senders(&partials[i],peer_prefix);
@@ -380,7 +387,7 @@ int saw_piece(char *peer_prefix,int for_me,
     // This is a bundle that for which we already have a previous version, and
     // for which we as yet have no body segments.  So fetch from Rhizome the content
     // that we do have, and prepopulate the body segment.
-    fprintf(stderr,"%s:%d:My SID as hex is %s\n",__FILE__,__LINE__,my_sid_hex);
+    printf(">>> %s %s:%d:My SID as hex is %s\n",timestamp_str(),__FILE__,__LINE__,my_sid_hex);
     if (!prime_bundle_cache(bundle_number,my_sid_hex,servald_server,credential)) {
       struct segment_list *s=calloc(1,sizeof(struct segment_list));
       assert(s);
@@ -391,11 +398,12 @@ int saw_piece(char *peer_prefix,int for_me,
       s->length=cached_body_len;
       partials[i].body_segments=s;
       if (debug_pieces)
-	printf("Preloaded %d bytes from old version of journal bundle.\n",
+	printf(">>> %s Preloaded %d bytes from old version of journal bundle.\n",timestamp_str(),
 		cached_body_len);
     } else {
       if (debug_pieces)
-	printf("Failed to preload bytes from old version of journal bundle. XFER will likely fail due to far end thinking it can skip the bytes we already have, so ignoring current piece.\n");
+	printf(">>> %s Failed to preload bytes from old version of journal bundle. XFER will likely fail due to far end thinking it can skip the bytes we already have, so ignoring current piece.\n",
+	       timestamp_str());
       return -1;
     }
   }
@@ -438,7 +446,7 @@ int record_bundle_piece(int i, // partial number
       // Create a new segment before the current one
       new_bytes_in_piece=piece_bytes;
 
-      if (debug_pieces) printf("Inserting piece [%lld..%lld) before [%d..%d)\n",
+      if (debug_pieces) printf(">>> %s Inserting piece [%lld..%lld) before [%d..%d)\n",timestamp_str(),
 		     piece_offset,piece_offset+piece_bytes,
 		     segment_start,segment_end);
 
@@ -469,7 +477,7 @@ int record_bundle_piece(int i, // partial number
     } else if (piece_end<segment_start) {
       // Piece ends before this segment starts, so proceed down the list further.
       if (debug_pieces)
-	printf("Piece [%lld..%lld) comes before [%d..%d)\n",
+	printf(">>> %s Piece [%lld..%lld) comes before [%d..%d)\n",timestamp_str(),
 		piece_offset,piece_offset+piece_bytes,
 		segment_start,segment_end);
       
@@ -537,7 +545,7 @@ int record_bundle_piece(int i, // partial number
   merge_segments(&partials[i].manifest_segments);
   merge_segments(&partials[i].body_segments);
   partial_update_request_bitmap(&partials[i]);
-  fprintf(stderr,"(Piece was [%lld,%lld)\n",piece_offset,piece_offset+piece_bytes);
+  printf(">>> %s (Piece was [%lld,%lld)\n",timestamp_str(),piece_offset,piece_offset+piece_bytes);
 
   partials[i].recent_bytes += piece_bytes;
   
@@ -586,7 +594,7 @@ int record_bundle_piece(int i, // partial number
 	  // This is used for rhizome velocity experiments.  For that purpose,
 	  // we like to know the name of the bundle we are looking for, so we include
 	  // it in the message.
-	  fprintf(stderr,"Logging new bundle...\n");
+	  printf(">>> %s Logging new bundle...\n",timestamp_str());
 	  FILE *bundlelogfile=fopen(bundlelog_filename,"a");
 	  if (bundlelogfile) {
 	    char bid[1024];
@@ -611,7 +619,7 @@ int record_bundle_piece(int i, // partial number
 	    fprintf(bundlelogfile,"%s",message);
 	    fclose(bundlelogfile);
 	  }
-	  fprintf(stderr,"Done logging new bundle.\n");
+	  printf(">>> %s Done logging new bundle.\n",timestamp_str());
 	}
 
 	// Take note of the bundle, so that we can tell any peer who is trying to
@@ -636,7 +644,7 @@ int record_bundle_piece(int i, // partial number
       if (insert_result) {
 	// Failed to insert, so mark this bundle for deprioritisation, so that we
 	// don't just keep asking for it.
-	fprintf(stderr,"Failed to insert bundle %s*/%lld (result=%d)\n",
+	printf(">>> %s Failed to insert bundle %s*/%lld (result=%d)\n",timestamp_str(),
 		partials[i].bid_prefix,
 		partials[i].bundle_version,insert_result);
 	dump_bytes(stdout,"manifest",manifest,manifest_len);
@@ -687,7 +695,7 @@ int record_bundle_piece(int i, // partial number
       else if (!next_byte_would_be_useful)
 	sync_schedule_progress_report(peer,i,0 /* send from first required byte */);
     } else {
-      fprintf(stderr,"Sending BITMAP\n");
+      printf(">>> %s Sending BITMAP\n",timestamp_str());
       sync_schedule_progress_report_bitmap(peer,i);
     }
   }

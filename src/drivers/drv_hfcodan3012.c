@@ -223,7 +223,7 @@ time_t first_rx_time=0;
 int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 { 
   int i;  
-  
+
   if (hf_state==HF_DATAONLINE) {
     // Online mode, so decode packets
     rx_byte_count+=count;

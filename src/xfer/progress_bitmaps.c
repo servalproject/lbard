@@ -137,7 +137,7 @@ int partial_update_request_bitmap(struct partial_bundle *p)
 	  int block=(start+length)/64;
 	  if (block>=0&&block<16) {
 	    if (debug_bitmap)
-	      printf(">>> BITMAP marking manifest from end-piece #%d onwards as received\n",block);
+	      { fflush(stderr); printf(">>> BITMAP marking manifest from end-piece #%d onwards as received\n",block); fflush(stdout); }
 	    while(block<16) {
 	      manifest_bitmap[block>>3]|=(1<<(block&7));
 	      block++;
@@ -156,7 +156,7 @@ int partial_update_request_bitmap(struct partial_bundle *p)
 
       // Then mark as received all those we already have
       while (length>=64&&(block<16)) {
-	if (debug_bitmap) printf("    marking block #%d as received.\n",block);
+	if (debug_bitmap) { fflush(stderr); printf(">>> %s    marking block #%d as received.\n",timestamp_str(),block); fflush(stdout); }
 	manifest_bitmap[block>>3]|=(1<<(block&7));
 	block++; length-=64;
       }
@@ -292,6 +292,7 @@ int peer_update_send_point(int peer)
   // blocks, so that we don't end up with 1/2 packets of unsent stuff at the end.
   int is_odd=0;
 
+  fflush(stderr);
   printf(">>> %s Looking for candidate pieces for bundle %d (M=%d,P=%d): ",
 	 timestamp_str(),
 	 peer_records[peer]->tx_bundle,cached_manifest_encoded_len,cached_body_len);
@@ -299,6 +300,7 @@ int peer_update_send_point(int peer)
     if (j*64<cached_manifest_encoded_len) 
       printf("  M%dx%d",j*64,peer_records[peer]->request_bitmap_manifest_counts[j]);
   printf("\n");
+  fflush(stdout);
   for(int j=0;j<16;j++) {
     if (j&1) is_odd=1; else is_odd=0;
     if (j*64<cached_manifest_encoded_len) {
@@ -335,11 +337,13 @@ int peer_update_send_point(int peer)
     }
   }
 
+  fflush(stdout);
   fprintf(stderr,"I have %d candidates: ",candidate_count);
   for(int j=0;j<candidate_count;j++) {
     fprintf(stderr," %c%d,",candidate_is_manifest[j]?'M':'B',candidates[j]);
   }
   fprintf(stderr,"\n");
+  fflush(stderr);
   
   if (candidate_count) {
     int candidate=random()%candidate_count;

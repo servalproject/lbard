@@ -156,14 +156,15 @@ int show_progress(FILE *f, int verbose)
 	char progress_string[80];
 	if (!count) {
 	  fprintf(f,
-		  ">> List of bundles currently being received"
+		  ">>> %s List of bundles currently being received"
 		  " (%d in rhizome store)\n",
+		  timestamp_str(),
 		  bundle_count);
 	}
 	count++;
 	generate_progress_string(&partials[i],
 				 progress_string,sizeof(progress_string));
-	fprintf(f,"   %s* version %-18lld: [%s]\n",
+	fprintf(f,">>> %s   %s* version %-18lld: [%s]\n",timestamp_str(),
 		bid_prefix,version,progress_string);
 	}
     }

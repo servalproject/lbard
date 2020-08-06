@@ -61,14 +61,14 @@ int partial_recent_sender_report(struct partial_bundle *p)
     }
 #endif
 
-    fprintf(
-      stderr,
-      "Recent senders for bundle %c%c%c%c*/%lld:\n",
-      p->bid_prefix[0],
-      p->bid_prefix[1],
-      p->bid_prefix[2],
-      p->bid_prefix[3],
-      p->bundle_version);
+    printf(
+	   ">>> %s Recent senders for bundle %c%c%c%c*/%lld:\n",
+	   timestamp_str(),
+	   p->bid_prefix[0],
+	   p->bid_prefix[1],
+	   p->bid_prefix[2],
+	   p->bid_prefix[3],
+	   p->bundle_version);
 
     int i;
     time_t t = time(0);
@@ -76,9 +76,9 @@ int partial_recent_sender_report(struct partial_bundle *p)
     {
       if ((t - p->senders.r[i].last_time) < 10)
       {
-        fprintf(
-          stderr,
-          "  #%02d : %02X%02X* (T-%d sec)\n",
+        printf(
+          ">>> %s  #%02d : %02X%02X* (T-%d sec)\n",
+	  timestamp_str(),
           i,
           p->senders.r[i].sid_prefix[0],
           p->senders.r[i].sid_prefix[1],
@@ -250,9 +250,9 @@ int dump_segment_list(struct segment_list *s)
 
     while (s) 
     {
-      fprintf(
-        stderr,
-        "    [%d,%d)\n", 
+      printf(
+        ">>> %s    [%d,%d)\n",
+	timestamp_str(),
         s->start_offset, 
         s->start_offset+s->length);
       s = s->next;
@@ -316,14 +316,13 @@ int dump_partial(struct partial_bundle *p)
 
     if (0) 
     {
-      fprintf(stderr,"  Manifest pieces received:\n");
+      printf(">>> %s  Manifest pieces received:\n",timestamp_str());
       dump_segment_list(p->manifest_segments);
-      fprintf(stderr,"  Body pieces received:\n");
+      printf(">>> %s  Body pieces received:\n",timestamp_str());
       dump_segment_list(p->body_segments);
-      fprintf(
-        stderr,
-        "  Request bitmap: start=%d, bits=\n    ",
-        p->request_bitmap_start);
+      printf(
+	     ">>> %s  Request bitmap: start=%d, bits=\n    ",timestamp_str(),
+	     p->request_bitmap_start);
     }
 
     retVal = 0;
@@ -371,13 +370,12 @@ int merge_segments(struct segment_list **s)
         // Merge this piece onto the end of the next piece
         if (debug_pieces)
         {
-          fprintf(
-            stderr, 
-            "Merging [%d..%d) and [%d..%d)\n",
-            me->start_offset,
-            me->start_offset + me->length,
-            next->start_offset,
-            next->start_offset + next->length);
+          printf(
+		 ">>> %s Merging [%d..%d) and [%d..%d)\n",timestamp_str(),
+		 me->start_offset,
+		 me->start_offset + me->length,
+		 next->start_offset,
+		 next->start_offset + next->length);
         }
 
         int extra_bytes = 

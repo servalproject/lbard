@@ -76,7 +76,7 @@ int saw_length(char *peer_prefix,char *bid_prefix,long long version,
     int i;    
     for(i=0;i<bundle_count;i++) {
       if (!strncasecmp(bundles[i].bid_hex,bid_prefix,strlen(bid_prefix))) {
-	fprintf(stderr,"   (For this reason we are de-queuing it.)\n");
+	printf(">>> %s   (For this reason we are de-queuing it.)\n",timestamp_str());
 	sync_dequeue_bundle(peer_records[peer],i);
 	  if (peer>=0) {
 

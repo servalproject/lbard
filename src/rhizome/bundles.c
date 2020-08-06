@@ -141,7 +141,7 @@ int register_bundle(char *service,
   
   // Is it the OTA bundle?
   if (otabid&&(!strcasecmp(bid,otabid))) {
-    printf(">>>>>> OTA bundle spotted.\n");
+    printf(">>> %s OTA bundle spotted.\n",timestamp_str());
     process_ota_bundle(bid,version);
   }
   
@@ -180,7 +180,7 @@ int register_bundle(char *service,
       if (versionll>=bid_version)
 	if (!strncasecmp(bid,bid_prefix,strlen(bid_prefix)))
 	  {
-	    fprintf(stderr,"--- Culling in-progress transfer for bundle that has shown up in Rhizome.\n");
+	    printf(">>> %s Culling in-progress transfer for bundle that has shown up in Rhizome.\n",timestamp_str());
 	    clear_partial(&partials[i]);
 	    break;
 	  }
@@ -220,8 +220,8 @@ int register_bundle(char *service,
     free(bundles[bundle_number].recipient);
     bundles[bundle_number].recipient=NULL;
 
-    fprintf(stderr,">>> %s We have updated bundle %s/%lld\n",
-	    timestamp_str(),bid,versionll);
+    printf(">>> %s We have updated bundle %s/%lld\n",
+	   timestamp_str(),bid,versionll);
 
     // Now clear flags that indicate if any peer posesses this bundle.
     for(int pp=0;pp<peer_count;pp++) peer_clear_posession_of_bundle(peer_records[pp],bundle_number);
@@ -240,8 +240,8 @@ int register_bundle(char *service,
     bundles[bundle_number].last_version_of_manifest_announced=0;
     bundles[bundle_number].last_announced_time=0;
     bundle_count++;
-    fprintf(stderr,">>> %s We have new bundle %s/%lld\n",
-	    timestamp_str(),bid,versionll);
+    printf(">>> %s We have new bundle %s/%lld\n",
+	   timestamp_str(),bid,versionll);
 
     // printf("There are now %d bundles.\n",bundle_count);
   }
@@ -268,7 +268,7 @@ int register_bundle(char *service,
   // Add bundle to the sync tree WITHOUT making us forget that other peers
   // might already have it
   sync_add_key_from_peer(sync_state,&bundle_sync_key,&bundles[bundle_number]);
-  printf("Called sync_add_key() for newly received bundle.\n");
+  printf(">>> %s Called sync_add_key() for newly received bundle.\n",timestamp_str());
   
   if (debug_sync_keys) {
     char filename[1024];
@@ -285,7 +285,8 @@ int register_bundle(char *service,
   }
 
   
-  printf("  >> Inserted %s*/%lld into the tree: key=%02X%02X%02X (this is bundle #%d, now total of %d bundles, %d ignored)\n",
+  printf(">>> %s Inserted %s*/%lld into the tree: key=%02X%02X%02X (this is bundle #%d, now total of %d bundles, %d ignored)\n",
+	 timestamp_str(),
 	 bundles[bundle_number].bid_hex,
 	 bundles[bundle_number].version,
 	 bundle_sync_key.key[0],
