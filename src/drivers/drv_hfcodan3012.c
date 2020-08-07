@@ -36,7 +36,7 @@ int hfselfidseen=0;
 
 int tx_seq=0;
 int last_tx_reflected_seq;
-int rx_seq=0;
+int rx_seq=0xFF;
 
 extern int serialfd;
 
@@ -300,11 +300,11 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	    ack_seq_nybl=0;
 	    ack_seq_num|=(bytes[i]&0x0f);
 	    //	    printf(">>> %s ACK low nybl from $%02x\n",timestamp_str(),bytes[i]);
-	    printf(">>> %s Saw ack of our packet $%02x\n",timestamp_str(),ack_seq_num);
 	    last_tx_reflected_seq=ack_seq_num;
-	    int packets_unacknowledged=(tx_seq&0xff)-last_tx_reflected_seq;
+	    int packets_unacknowledged=((tx_seq-1)&0xff)-last_tx_reflected_seq;
 	    if (packets_unacknowledged<0) packets_unacknowledged+=256;
 	    if (packets_unacknowledged>32) packets_unacknowledged=32;
+	    printf(">>> %s Saw ack of our packet $%02x (leaves %d unacknowledged)\n",timestamp_str(),ack_seq_num,packets_unacknowledged);
 	    message_update_interval=0+PACKET_TIMEOUT*packets_unacknowledged;	    
 	    next_message_update_time = gettime_ms() + message_update_interval;
 	  } else {
@@ -417,7 +417,7 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
   }
 
   // Modulate TX rate based on the number of outstanding packets we have
-  int packets_unacknowledged=(tx_seq&0xff)-last_tx_reflected_seq;
+  int packets_unacknowledged=((tx_seq-1)&0xff)-last_tx_reflected_seq;
   if (packets_unacknowledged<0) packets_unacknowledged+=256;
   if (packets_unacknowledged>32) packets_unacknowledged=32;
   packets_unacknowledged++; // The new packet is also unacknowledged
@@ -463,12 +463,14 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
      only have one peer on the link.
      
   */
-  fprintf(stderr,"peer_count=%d, peer_records[0]->tx_bundle=%d\n",peer_count,peer_count?peer_records[0]->tx_bundle:-1);
-  if ((peer_count>0)&&(peer_records[0]->tx_bundle>0)&&cached_body)
+  fprintf(stderr,"peer_count=%d, peer_records[0]->tx_bundle=%d, cached_body=%p\n",peer_count,peer_count?peer_records[0]->tx_bundle:-1,cached_body);
+  if ((peer_count>0)&&(peer_records[0]->tx_bundle>0))
     {
       unsigned char data_packet[1024];
       int ofs=0;
 
+      prime_bundle_cache(peer_records[0]->tx_bundle,my_sid_hex,servald_server,credential);
+      
       // Start sending blocks in order, including the manifest, so tht we can get bundles through
       // faster.
 
@@ -502,8 +504,10 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
       if (data_packet_manifestP&&((data_packet_ofs+bytes_to_send)>=cached_manifest_encoded_len)) end_piece=1;
       if ((!data_packet_manifestP)&&((data_packet_ofs+bytes_to_send)>=cached_body_len)) end_piece=1;
 
+      printf(">>> %s There are %d eligible bytes for a pure data packet.\n",timestamp_str(),bytes_to_send);
       if (bytes_to_send>0) {
-	fprintf(stderr,"Sending pure data packet of %s with %d bytes: %d..%d, M=%d\n",
+	fprintf(stderr,">>> %s Sending pure data packet of %s with %d bytes: %d..%d, M=%d\n",
+		timestamp_str(),
 		bid_of_cached_bundle,
 		bytes_to_send,
 	        data_packet_ofs,data_packet_ofs+bytes_to_send-1,data_packet_manifestP);
