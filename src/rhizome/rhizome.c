@@ -111,7 +111,7 @@ int load_rhizome_db_async(char *servald_server,
     printf(">>> %s Marking load_rhizome_db_socket stale.\n",timestamp_str());    
   }
   if (load_rhizome_db_socket<0) {
-    printf(">>> %s Trying to re-open load_rhizome_db_socket.\n",timestamp_str());    
+    //    printf(">>> %s Trying to re-open load_rhizome_db_socket.\n",timestamp_str());    
     if (gettime_ms()>(load_rhizome_db_last_socket_open+5000)) {
       load_rhizome_db_last_socket_open=gettime_ms();
       if (load_rhizome_db_async_start(servald_server,credential,token)<0) {
@@ -121,7 +121,7 @@ int load_rhizome_db_async(char *servald_server,
       else
 	load_rhizome_db_socket_timeout=gettime_ms()+5000;
     } else {
-      printf(">>> %s Waiting before reopening load_rhizome_db_socket.\n",timestamp_str());    
+      //      printf(">>> %s Waiting before reopening load_rhizome_db_socket.\n",timestamp_str());    
       return -1;
     }
   }

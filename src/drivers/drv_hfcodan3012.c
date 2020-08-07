@@ -40,6 +40,7 @@ int rx_seq=0;
 
 extern int serialfd;
 
+#define PACKET_TIMEOUT 12000
 
 int hfcodan3012_initialise(int serialfd)
 {
@@ -228,6 +229,8 @@ int ack_seq_num=0;
 int rx_byte_count=0;
 time_t first_rx_time=0;
 
+time_t last_rate_report_time=0;
+
 int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 { 
   int i;  
@@ -237,9 +240,12 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
     rx_byte_count+=count;
     if (!first_rx_time) first_rx_time=time(0);
     else {
-      fprintf(stderr,"%d bytes received in %ld seconds.  Average %3.2f bytes per second.\n",
-	      rx_byte_count,time(0)-first_rx_time,
-	      rx_byte_count*1.0/(time(0)-first_rx_time));
+      if (time(0)!=last_rate_report_time) {
+        last_rate_report_time=time(0);
+	fprintf(stderr,"%d bytes received in %ld seconds.  Average %3.2f bytes per second.\n",
+		rx_byte_count,time(0)-first_rx_time,
+		rx_byte_count*1.0/(time(0)-first_rx_time));
+      }
     }
     
     for(i=0;i<count;i++) {      
@@ -267,12 +273,16 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	  {
 	    unsigned char ack[3]={'!',0x60+(rx_seq>>4),0x60+(rx_seq&0x0f)};
 	    write_all(serialfd,ack,3);
+	    printf(">>> %s Sending ack of sequence #$%02x\n",timestamp_str(),rx_seq);
 	  }
 	  
-	  int packets_unacknowledged=(tx_seq&0xff)-last_tx_reflected_seq;
+	  int packets_unacknowledged=((tx_seq-1)&0xff)-last_tx_reflected_seq;
 	  if (packets_unacknowledged<0) packets_unacknowledged+=256;
 	  if (packets_unacknowledged>32) packets_unacknowledged=32;
-	  message_update_interval=500+8000*packets_unacknowledged;
+	  message_update_interval=500+PACKET_TIMEOUT*packets_unacknowledged;
+	  next_message_update_time = gettime_ms() + message_update_interval;
+	  printf(">>> %s %d unacked packets remain. Interval set to %d ms\n",
+		 timestamp_str(),packets_unacknowledged,message_update_interval);
   
 	  if (saw_packet(&packet_rx_buffer[2],rx_len-2,0,
 			 my_sid_hex,prefix,
@@ -285,15 +295,24 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	  break;
 	case 0x60: case 0x61: case 0x62: case 0x63: case 0x64: case 0x65: case 0x66: case 0x67:
 	case 0x68: case 0x69: case 0x6a: case 0x6b: case 0x6c: case 0x6d: case 0x6e: case 0x6f:
-	  break;
 	  // First char of 2-byte ACK sequence number
 	  if (ack_seq_nybl) {
+	    ack_seq_nybl=0;
 	    ack_seq_num|=(bytes[i]&0x0f);
-	  } else {
-	    ack_seq_nybl=1;
-	    ack_seq_num=(bytes[i]&0x0f)<<4;
+	    //	    printf(">>> %s ACK low nybl from $%02x\n",timestamp_str(),bytes[i]);
 	    printf(">>> %s Saw ack of our packet $%02x\n",timestamp_str(),ack_seq_num);
+	    last_tx_reflected_seq=ack_seq_num;
+	    int packets_unacknowledged=(tx_seq&0xff)-last_tx_reflected_seq;
+	    if (packets_unacknowledged<0) packets_unacknowledged+=256;
+	    if (packets_unacknowledged>32) packets_unacknowledged=32;
+	    message_update_interval=0+PACKET_TIMEOUT*packets_unacknowledged;	    
+	    next_message_update_time = gettime_ms() + message_update_interval;
+	  } else {
+	    //	    printf(">>> %s ACK high nybl from $%02x\n",timestamp_str(),bytes[i]);
+	    ack_seq_nybl=1;
+	    ack_seq_num=(bytes[i]&0x0f)<<4;	    
 	  }
+	  break;
 	case 'C': // clear RX buffer
 	  rx_len=0;
 	  break;
@@ -337,7 +356,7 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	default:
 	  break;
 	}
-	rx_esc=0;
+	if (!ack_seq_nybl) rx_esc=0;
       } else {
 	// Not in escape mode
 	if (bytes[i]=='!') { rx_esc=1; ack_seq_nybl=0; }
@@ -396,22 +415,26 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
   if (rx_seq==0x21) write(serialfd,"!.",2); else {
     char s=rx_seq; write(serialfd,&s,1);
   }
-  tx_seq++;
 
   // Modulate TX rate based on the number of outstanding packets we have
   int packets_unacknowledged=(tx_seq&0xff)-last_tx_reflected_seq;
   if (packets_unacknowledged<0) packets_unacknowledged+=256;
   if (packets_unacknowledged>32) packets_unacknowledged=32;
+  packets_unacknowledged++; // The new packet is also unacknowledged
 #if 0
   if (packets_unacknowledged<3) message_update_interval=250*packets_unacknowledged;
   else message_update_interval=500*packets_unacknowledged;
 #else
   // Really try to avoid unacknowledged packets
-  message_update_interval=500+8000*packets_unacknowledged;
+  message_update_interval=500+PACKET_TIMEOUT*packets_unacknowledged;
 #endif
+  next_message_update_time = gettime_ms() + message_update_interval;
+  
   printf(">>> %s Sending packet #$%02x, len=%d, packet interval=%d ms, unackd packets=%d\n",
 	 timestamp_str(),
 	 tx_seq,len,message_update_interval,packets_unacknowledged);
+
+  tx_seq++;
   
   // Then stuff the escaped bytes to send
   for(i=0;i<len;i++) {
