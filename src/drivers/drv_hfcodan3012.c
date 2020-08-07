@@ -38,6 +38,8 @@ int tx_seq=0;
 int last_tx_reflected_seq;
 int rx_seq=0;
 
+extern int serialfd;
+
 
 int hfcodan3012_initialise(int serialfd)
 {
@@ -54,6 +56,10 @@ int hfcodan3012_initialise(int serialfd)
   // Slow message rate, so that we don't have overruns all the time,
   // and so that we don't end up with lots of missed packets which messes with the
   // sync algorithm
+  // Actually, the sync algorithm gets upset if it sees responses to older packets
+  // it seems. So we have to be a bit fancy and change the interval whenever we send a packet
+  // to wait a long time before we try sending another (in case of lost packets), but resetting
+  // the interval to 0 when we receive a packet from the other end.
   message_update_interval = 1000;
   return 0;
 }
@@ -216,6 +222,8 @@ int hfcodan3012_process_line(char *l)
 unsigned char packet_rx_buffer[512];
 int rx_len=0;
 int rx_esc=0;
+int ack_seq_nybl=0;
+int ack_seq_num=0;
 
 int rx_byte_count=0;
 time_t first_rx_time=0;
@@ -253,7 +261,19 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	  printf(">>> %s Saw packet #$%02x, reflecting reception of packet #$%02x from us (last_partial_number=%d)\n",
 		 timestamp_str(),
 		 rx_seq,last_tx_reflected_seq,last_partial_number);
+
+	  // Send ack to the other side
+	  // !<2 chars 0x60-0x6f>
+	  {
+	    unsigned char ack[3]={'!',0x60+(rx_seq>>4),0x60+(rx_seq&0x0f)};
+	    write_all(serialfd,ack,3);
+	  }
 	  
+	  int packets_unacknowledged=(tx_seq&0xff)-last_tx_reflected_seq;
+	  if (packets_unacknowledged<0) packets_unacknowledged+=256;
+	  if (packets_unacknowledged>32) packets_unacknowledged=32;
+	  message_update_interval=500+8000*packets_unacknowledged;
+  
 	  if (saw_packet(&packet_rx_buffer[2],rx_len-2,0,
 			 my_sid_hex,prefix,
 			 servald_server,credential)) {
@@ -263,6 +283,17 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	  rx_len=0;
 
 	  break;
+	case 0x60: case 0x61: case 0x62: case 0x63: case 0x64: case 0x65: case 0x66: case 0x67:
+	case 0x68: case 0x69: case 0x6a: case 0x6b: case 0x6c: case 0x6d: case 0x6e: case 0x6f:
+	  break;
+	  // First char of 2-byte ACK sequence number
+	  if (ack_seq_nybl) {
+	    ack_seq_num|=(bytes[i]&0x0f);
+	  } else {
+	    ack_seq_nybl=1;
+	    ack_seq_num=(bytes[i]&0x0f)<<4;
+	    printf(">>> %s Saw ack of our packet $%02x\n",timestamp_str(),ack_seq_num);
+	  }
 	case 'C': // clear RX buffer
 	  rx_len=0;
 	  break;
@@ -309,7 +340,7 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	rx_esc=0;
       } else {
 	// Not in escape mode
-	if (bytes[i]=='!') rx_esc=1;
+	if (bytes[i]=='!') { rx_esc=1; ack_seq_nybl=0; }
 	else {
 	  if (rx_len<258) {
 	    packet_rx_buffer[rx_len++]=bytes[i];
@@ -371,10 +402,16 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
   int packets_unacknowledged=(tx_seq&0xff)-last_tx_reflected_seq;
   if (packets_unacknowledged<0) packets_unacknowledged+=256;
   if (packets_unacknowledged>32) packets_unacknowledged=32;
+#if 0
   if (packets_unacknowledged<3) message_update_interval=250*packets_unacknowledged;
   else message_update_interval=500*packets_unacknowledged;
-  fprintf(stderr,"Sending packet #$%02x, len=%d, packet interval=%d ms, unackd packets=%d\n",
-	  tx_seq,len,message_update_interval,packets_unacknowledged);
+#else
+  // Really try to avoid unacknowledged packets
+  message_update_interval=500+8000*packets_unacknowledged;
+#endif
+  printf(">>> %s Sending packet #$%02x, len=%d, packet interval=%d ms, unackd packets=%d\n",
+	 timestamp_str(),
+	 tx_seq,len,message_update_interval,packets_unacknowledged);
   
   // Then stuff the escaped bytes to send
   for(i=0;i<len;i++) {

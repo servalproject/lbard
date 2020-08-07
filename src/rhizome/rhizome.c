@@ -182,7 +182,7 @@ int load_rhizome_db_async(char *servald_server,
       return 0;
       break;
     case -1: // EAGAIN, so keep trying, but return for now
-      printf(">>> %s EAGAIN on load_rhizome_db_socket due.\n",timestamp_str());    
+      //      printf(">>> %s EAGAIN on load_rhizome_db_socket due.\n",timestamp_str());    
       return 0;
       break;
     }
