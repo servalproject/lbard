@@ -321,7 +321,9 @@ int peer_update_send_point(int peer)
   }
   for(int j=0;j<32*8;j++) {
     if (j&1) is_odd=1; else is_odd=0;
-    if (j*64+peer_records[peer]->request_bitmap_offset<cached_body_len) {
+    // We use <= here instead of <, so that we can reliably indicate the bundle length
+    // with a zero byte block, if necessary.
+    if (j*64+peer_records[peer]->request_bitmap_offset<=cached_body_len) {
       if (!(peer_records[peer]->request_bitmap[j>>3]&(1<<(j&7)))) {      
 	if ((peer_records[peer]->request_bitmap_counts[j]+is_odd)<count_num) {
 	  printf(">>> %s Discarding %d candidates, due to lower count of %d (vs %d)\n",timestamp_str(),

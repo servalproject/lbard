@@ -560,6 +560,8 @@ int record_bundle_piece(int i, // partial number
   
   // Check if we have the whole bundle now
   // XXX - this breaks when we have nothing about the bundle, because then we think the length is zero, so we think we have it all, when really we have none.
+  // BUT for bundles with no payload, we should stop as soon as we have the manifest as a whole, which lets us work out that we need no payload.
+  // Alternatively, we need to make sure that the sending side at least occassionally sends the zero length indication for the payload
   if (partials[i].manifest_segments
       &&partials[i].body_segments
       &&(!partials[i].manifest_segments->next)
@@ -569,7 +571,7 @@ int record_bundle_piece(int i, // partial number
       &&(partials[i].manifest_segments->length
 	 ==partials[i].manifest_length)
       &&(partials[i].body_segments->length
-	 ==partials[i].body_length))
+	 ==partials[i].body_length))    
     {
       // We have a single segment for body and manifest that span the complete
       // size.

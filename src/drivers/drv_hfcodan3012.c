@@ -6,6 +6,8 @@ See radios.h target in Makefile to see how this comment is used to register supp
 
 RADIO TYPE: HFCODAN3012,"hfcodan3012","Codan HF with 3012 Data Modem",hfcodan3012_radio_detect,hfcodan3012_serviceloop,hfcodan3012_receive_bytes,hfcodan3012_send_packet,hf_radio_check_if_ready,10
 
+qwertyuiopasdfghjklzxcvbnm1234567890QWERTYUIOPASDFGHJKLZXCVBNM
+
 */
 
 #include <unistd.h>
@@ -53,6 +55,14 @@ int hfcodan3012_initialise(int serialfd)
   snprintf(cmd,1024,"at&k=3\r\n");
   write_all(serialfd,cmd,strlen(cmd));
   fprintf(stderr,"Enabling hardware flow control.\n");
+
+  snprintf(cmd,1024,"at%%C0\r\n");
+  write_all(serialfd,cmd,strlen(cmd));
+  fprintf(stderr,"Disabling compression.\n");
+
+  snprintf(cmd,1024,"at&M=5\r\n");
+  write_all(serialfd,cmd,strlen(cmd));
+  fprintf(stderr,"Selecting interactive mode.\n");
 
   // Slow message rate, so that we don't have overruns all the time,
   // and so that we don't end up with lots of missed packets which messes with the
@@ -117,9 +127,126 @@ int hfcodan3012_radio_detect(int fd)
 }
 
 time_t call_timeout=0;
-
+time_t data_packet_timeout=0;
 
 int last_hf_state=0;
+
+int data_packet_ofs=0;
+int data_packet_manifestP=1;
+
+void send_pure_data_packet(int pure_packet_max)
+{
+  /* 
+     Follow up with a data-only packet with very light encapsulation, so that we 
+     can make more effective use of the modem interface.
+     It will always be payload bytes from the tx_bundle of peer 0, since we should
+     only have one peer on the link.
+     
+  */
+  fprintf(stderr,"peer_count=%d, peer_records[0]->tx_bundle=%d, cached_body=%p\n",peer_count,peer_count?peer_records[0]->tx_bundle:-1,cached_body);
+  if ((peer_count>0)&&(peer_records[0]->tx_bundle>0))
+    {
+      unsigned char data_packet[1024];
+      int ofs=0;
+      
+      prime_bundle_cache(peer_records[0]->tx_bundle,my_sid_hex,servald_server,credential);
+      
+      // Start sending blocks in order, including the manifest, so tht we can get bundles through
+      // faster.
+      
+      // We send linearly through both manifest and body, since the HF modem is, in theory at least,
+      // providing reliable transport.
+      if (data_packet_manifestP&&data_packet_ofs>=cached_manifest_encoded_len) {
+	data_packet_ofs=0; data_packet_manifestP=0;
+      }
+      if ((!data_packet_manifestP)&&data_packet_ofs>=cached_body_len) {
+	data_packet_ofs=0; data_packet_manifestP=1;
+      }
+      // Honour hard lower limits, so that we don't waste time sending content the other
+      // side has already acknowledged
+      // XXX Ideally we should also honour current sending bitmap
+      if (data_packet_manifestP) {
+	if (data_packet_ofs<peer_records[0]->tx_bundle_manifest_offset_hard_lower_bound)
+	  data_packet_ofs=peer_records[0]->tx_bundle_manifest_offset_hard_lower_bound;
+      } else {
+	if (data_packet_ofs<peer_records[0]->tx_bundle_body_offset_hard_lower_bound)
+	  data_packet_ofs=peer_records[0]->tx_bundle_body_offset_hard_lower_bound;
+      }
+      
+      // XXX We assume bundle cache has already been primed
+      int end_piece=0;
+      int bytes_to_send=cached_body_len-data_packet_ofs;
+      if (data_packet_manifestP) bytes_to_send=cached_manifest_encoded_len-data_packet_ofs;
+
+      // 256 bytes seems to fill the buffer up and results in lost characters
+      if (bytes_to_send>pure_packet_max) bytes_to_send=pure_packet_max;
+
+      if (data_packet_manifestP&&((data_packet_ofs+bytes_to_send)>=cached_manifest_encoded_len)) end_piece=1;
+      if ((!data_packet_manifestP)&&((data_packet_ofs+bytes_to_send)>=cached_body_len)) end_piece=1;
+
+      printf(">>> %s There are %d eligible bytes for a pure data packet.\n",timestamp_str(),bytes_to_send);
+      if (bytes_to_send>0) {
+	fprintf(stderr,">>> %s Sending pure data packet of %s with %d bytes: %d..%d, M=%d\n",
+		timestamp_str(),
+		bid_of_cached_bundle,
+		bytes_to_send,
+	        data_packet_ofs,data_packet_ofs+bytes_to_send-1,data_packet_manifestP);
+	// Write offset
+	
+	data_packet[ofs++]=(data_packet_ofs>>0)&0xff;
+	data_packet[ofs++]=(data_packet_ofs>>8)&0xff;
+	data_packet[ofs++]=(data_packet_ofs>>16)&0xff;
+	data_packet[ofs++]=((data_packet_ofs>>24)&0x3f)|(data_packet_manifestP?0x80:0x00)|(end_piece?0x40:0x00);
+	// Length of data
+	data_packet[ofs++]=(bytes_to_send>>0)&0xff;
+	data_packet[ofs++]=(bytes_to_send>>8)&0xff;
+	// BID prefix
+	sscanf(bid_of_cached_bundle,"%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+	       &data_packet[ofs+0],&data_packet[ofs+1],&data_packet[ofs+2],
+	       &data_packet[ofs+3],&data_packet[ofs+4],&data_packet[ofs+5],
+	       &data_packet[ofs+6],&data_packet[ofs+7]);
+	ofs+=8;
+	// Version
+	for(int j=7;j>=0;j--) data_packet[ofs++]=(cached_version>>(j*8))&0xff;	
+	
+	// Write bytes
+	if (data_packet_manifestP) {
+	  for(int j=0;j<bytes_to_send;j++) {
+	    if (cached_manifest_encoded[data_packet_ofs+j]!='!')
+	      data_packet[ofs++]=cached_manifest_encoded[data_packet_ofs+j];
+	    else {
+	      data_packet[ofs++]='!'; data_packet[ofs++]='.';
+	    }
+	  }
+	} else {       
+	  for(int j=0;j<bytes_to_send;j++) {
+	    if (cached_body[data_packet_ofs+j]!='!')
+	      data_packet[ofs++]=cached_body[data_packet_ofs+j];
+	    else {
+	      data_packet[ofs++]='!'; data_packet[ofs++]='.';
+	    }
+	  }
+	}
+	
+	// And end of packet marker
+	data_packet[ofs++]='!';
+	data_packet[ofs++]='D';
+
+	data_packet_ofs+=bytes_to_send;
+	
+	dump_bytes(stderr,"Data packet to send",data_packet,ofs);
+	
+	if (write_all(serialfd,data_packet,ofs)==-1) {
+	  serial_errors++;
+	  return;
+	} else {
+	  serial_errors=0;
+	  return;
+	}
+      }
+      
+    }
+}
 
 int hfcodan3012_serviceloop(int serialfd)
 {
@@ -187,6 +314,14 @@ int hfcodan3012_serviceloop(int serialfd)
       sleep(2);
       write_all(serialfd,"ath0\r\n",5);
       hf_state=HF_DISCONNECTED;
+    } else {
+      if (time(0)>=data_packet_timeout) {
+	data_packet_timeout=time(0)+2;
+	printf(">>> %s Getting ready to send a pure data packet.\n",timestamp_str());
+
+	//	send_pure_data_packet(256);
+	
+      }
     }
     break;
   case HF_DISCONNECTING:
@@ -384,9 +519,6 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
   return 0;
 }
 
-int data_packet_ofs=0;
-int data_packet_manifestP=1;
-
 int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
 {
   // Now escape any ! characters, and append !! to the end to mark the 
@@ -456,117 +588,7 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
     serial_errors=0;
   }
 
-  /* 
-     Follow up with a data-only packet with very light encapsulation, so that we 
-     can make more effective use of the modem interface.
-     It will always be payload bytes from the tx_bundle of peer 0, since we should
-     only have one peer on the link.
-     
-  */
-  fprintf(stderr,"peer_count=%d, peer_records[0]->tx_bundle=%d, cached_body=%p\n",peer_count,peer_count?peer_records[0]->tx_bundle:-1,cached_body);
-  if ((peer_count>0)&&(peer_records[0]->tx_bundle>0))
-    {
-      unsigned char data_packet[1024];
-      int ofs=0;
-
-      prime_bundle_cache(peer_records[0]->tx_bundle,my_sid_hex,servald_server,credential);
-      
-      // Start sending blocks in order, including the manifest, so tht we can get bundles through
-      // faster.
-
-      // We send linearly through both manifest and body, since the HF modem is, in theory at least,
-      // providing reliable transport.
-      if (data_packet_manifestP&&data_packet_ofs>=cached_manifest_encoded_len) {
-	data_packet_ofs=0; data_packet_manifestP=0;
-      }
-      if ((!data_packet_manifestP)&&data_packet_ofs>=cached_body_len) {
-	data_packet_ofs=0; data_packet_manifestP=1;
-      }
-      // Honour hard lower limits, so that we don't waste time sending content the other
-      // side has already acknowledged
-      // XXX Ideally we should also honour current sending bitmap
-      if (data_packet_manifestP) {
-	if (data_packet_ofs<peer_records[0]->tx_bundle_manifest_offset_hard_lower_bound)
-	  data_packet_ofs=peer_records[0]->tx_bundle_manifest_offset_hard_lower_bound;
-      } else {
-	if (data_packet_ofs<peer_records[0]->tx_bundle_body_offset_hard_lower_bound)
-	  data_packet_ofs=peer_records[0]->tx_bundle_body_offset_hard_lower_bound;
-      }
-      
-      // XXX We assume bundle cache has already been primed
-      int end_piece=0;
-      int bytes_to_send=cached_body_len-data_packet_ofs;
-      if (data_packet_manifestP) bytes_to_send=cached_manifest_encoded_len-data_packet_ofs;
-
-      // 256 bytes seems to fill the buffer up and results in lost characters
-      if (bytes_to_send>128) bytes_to_send=128;
-
-      if (data_packet_manifestP&&((data_packet_ofs+bytes_to_send)>=cached_manifest_encoded_len)) end_piece=1;
-      if ((!data_packet_manifestP)&&((data_packet_ofs+bytes_to_send)>=cached_body_len)) end_piece=1;
-
-      printf(">>> %s There are %d eligible bytes for a pure data packet.\n",timestamp_str(),bytes_to_send);
-      if (bytes_to_send>0) {
-	fprintf(stderr,">>> %s Sending pure data packet of %s with %d bytes: %d..%d, M=%d\n",
-		timestamp_str(),
-		bid_of_cached_bundle,
-		bytes_to_send,
-	        data_packet_ofs,data_packet_ofs+bytes_to_send-1,data_packet_manifestP);
-	// Write offset
-	
-	data_packet[ofs++]=(data_packet_ofs>>0)&0xff;
-	data_packet[ofs++]=(data_packet_ofs>>8)&0xff;
-	data_packet[ofs++]=(data_packet_ofs>>16)&0xff;
-	data_packet[ofs++]=((data_packet_ofs>>24)&0x3f)|(data_packet_manifestP?0x80:0x00)|(end_piece?0x40:0x00);
-	// Length of data
-	data_packet[ofs++]=(bytes_to_send>>0)&0xff;
-	data_packet[ofs++]=(bytes_to_send>>8)&0xff;
-	// BID prefix
-	sscanf(bid_of_cached_bundle,"%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
-	       &data_packet[ofs+0],&data_packet[ofs+1],&data_packet[ofs+2],
-	       &data_packet[ofs+3],&data_packet[ofs+4],&data_packet[ofs+5],
-	       &data_packet[ofs+6],&data_packet[ofs+7]);
-	ofs+=8;
-	// Version
-	for(int j=7;j>=0;j--) data_packet[ofs++]=(cached_version>>(j*8))&0xff;	
-	
-	// Write bytes
-	if (data_packet_manifestP) {
-	  for(int j=0;j<bytes_to_send;j++) {
-	    if (cached_manifest_encoded[data_packet_ofs+j]!='!')
-	      data_packet[ofs++]=cached_manifest_encoded[data_packet_ofs+j];
-	    else {
-	      data_packet[ofs++]='!'; data_packet[ofs++]='.';
-	    }
-	  }
-	} else {       
-	  for(int j=0;j<bytes_to_send;j++) {
-	    if (cached_body[data_packet_ofs+j]!='!')
-	      data_packet[ofs++]=cached_body[data_packet_ofs+j];
-	    else {
-	      data_packet[ofs++]='!'; data_packet[ofs++]='.';
-	    }
-	  }
-	}
-	
-	// And end of packet marker
-	data_packet[ofs++]='!';
-	data_packet[ofs++]='D';
-
-	data_packet_ofs+=bytes_to_send;
-	
-	dump_bytes(stderr,"Data packet to send",data_packet,ofs);
-	
-	if (write_all(serialfd,data_packet,ofs)==-1) {
-	  serial_errors++;
-	  return -1;
-	} else {
-	  serial_errors=0;
-	  return 0;
-	}
-      }
-      
-    }
-  
+  send_pure_data_packet(128);  
   
   return 0;
 }
