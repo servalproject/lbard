@@ -588,7 +588,7 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
     serial_errors=0;
   }
 
-  send_pure_data_packet(128);  
+  //  send_pure_data_packet(128);  
   
   return 0;
 }

@@ -236,6 +236,10 @@ int saw_piece(char *peer_prefix,int for_me,
   // an adversary could purposely refuse to acknowledge bundles (that it might have
   // introduced for this special purpose) addressed to itself, so that the priority
   // scheme gets stuck trying to send these bundles to them forever.
+
+  if (for_me) printf(">>> %s Piece is for me.\n",timestamp_str());
+  if (sync_is_bundle_recently_received(bid_prefix,version)) printf(">>> %s bundle is recently received.\n",timestamp_str());
+  
   if (for_me) {
     if (sync_is_bundle_recently_received(bid_prefix,version)) {
       // We have this version already: mark it for announcement to sender,
@@ -275,13 +279,15 @@ int saw_piece(char *peer_prefix,int for_me,
 	}
       
 	
-	// Update progress bitmaps for all peers whenver we see a piece received that we
-	// think that they might want.  This stops us from resending the same piece later.
-	if (bundle_number>=0) {
-	  printf(">>> %s Examining transmitted piece for bitmap updates.\n",
-		 timestamp_str());
-	  peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,is_manifest_piece,
-							       piece_offset,piece_bytes);
+	if (!sync_is_bundle_recently_received(bid_prefix,version)) {
+	  // Update progress bitmaps for all peers whenver we see a piece received that we
+	  // think that they might want.  This stops us from resending the same piece later.
+	  if (bundle_number>=0) {
+	    printf(">>> %s Examining transmitted piece for bitmap updates.\n",
+		   timestamp_str());
+	    peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,is_manifest_piece,
+								 piece_offset,piece_bytes);
+	  }
 	}
 	
 	return 0;
@@ -312,6 +318,9 @@ int saw_piece(char *peer_prefix,int for_me,
     // This sender has this bundle, so we should never try sending it to them
     peer_mark_posession_of_bundle(peer_records[peer],bundle_number);
   }
+
+  // Don't further process it if is part of a bundle we already have
+  if (sync_is_bundle_recently_received(bid_prefix,version)) return 0;
   
   int i;
   int spare_record=random()%MAX_BUNDLES_IN_FLIGHT;
@@ -562,6 +571,124 @@ int record_bundle_piece(int i, // partial number
   // XXX - this breaks when we have nothing about the bundle, because then we think the length is zero, so we think we have it all, when really we have none.
   // BUT for bundles with no payload, we should stop as soon as we have the manifest as a whole, which lets us work out that we need no payload.
   // Alternatively, we need to make sure that the sending side at least occassionally sends the zero length indication for the payload
+
+  // We have the whole manifest, so see if it contains \nFILESIZE=0\n.  If so, we are done.
+  if (partials[i].manifest_segments
+      &&(!partials[i].manifest_segments->next)
+      &&(partials[i].manifest_segments->start_offset==0)
+      &&(partials[i].manifest_segments->length
+	 ==partials[i].manifest_length)) {
+    unsigned char manifest[1024];
+    int manifest_len=0;
+    if (!manifest_binary_to_text
+	(partials[i].manifest_segments->data,
+	 partials[i].manifest_length,
+	 manifest,&manifest_len)) {
+      if (strstr((char *)manifest,"\nFILESIZE=0\n")||strstr((char *)manifest,"\nfilesize=0\n")) {
+	printf(">>> %s Received manifest of payload-less bundle.\n",timestamp_str());
+
+	int insert_result=
+	  rhizome_update_bundle(manifest,manifest_len,
+				NULL,0,
+				servald_server,credential);
+	
+	if (debug_bundlelog) {
+	  // Write details of bundle to a log file for monitoring
+	  // This is used for rhizome velocity experiments.  For that purpose,
+	  // we like to know the name of the bundle we are looking for, so we include
+	  // it in the message.
+	  printf(">>> %s Logging new bundle...\n",timestamp_str());
+	  FILE *bundlelogfile=fopen(bundlelog_filename,"a");
+	  if (bundlelogfile) {
+	    char bid[1024];
+	    char version[1024];
+	    char filename[1024];
+	    char message[8192];
+	    char filesize[1024];
+	    char service[1024];
+	    char sender[1024];
+	    char recipient[1024];
+	    time_t now=time(0);
+	    manifest_get_field(manifest,manifest_len,"name",filename);
+	    manifest_get_field(manifest,manifest_len,"id",bid);
+	    manifest_get_field(manifest,manifest_len,"version",version);
+	    manifest_get_field(manifest,manifest_len,"filesize",filesize);
+	    manifest_get_field(manifest,manifest_len,"service",service);	    
+	    manifest_get_field(manifest,manifest_len,"sender",sender);
+	    manifest_get_field(manifest,manifest_len,"recipient",recipient);
+	    snprintf(message,8192,"%lld:T+%lldms:BUNDLERX:%s:%s/%s:%s:%s:%s:%s:%s:%s",
+		     (long long)now,(long long)(gettime_ms()-start_time),
+		     my_sid_hex,bid,version,filename,filesize,service,sender,recipient,ctime(&now));
+	    fprintf(bundlelogfile,"%s",message);
+	    fclose(bundlelogfile);
+	  }
+	  printf(">>> %s Done logging new bundle.\n",timestamp_str());
+	}
+
+	// Take note of the bundle, so that we can tell any peer who is trying to
+	// send it to us, that we have recently received it.  This is irrespective
+	// of whether it inserted correctly. The reasoning behind this, is that we
+	// don't want a peer to get stuck sending the same bundle over and over
+	// again.  It is better to send something else, and work through all the
+	// bundles that need sending first. Then after that, if we restart our sync
+	// process periodically, we will catch any straglers. It still isn't perfect,
+	// but it's a start.
+	sync_remember_recently_received_bundle
+	  (partials[i].bid_prefix,
+	   partials[i].bundle_version);
+
+	if (insert_result) {
+	  // Failed to insert, so mark this bundle for deprioritisation, so that we
+	  // don't just keep asking for it.
+	  fflush(stderr);
+	  printf(">>> %s Failed to insert bundle %s*/%lld (result=%d)\n",timestamp_str(),
+		 partials[i].bid_prefix,
+		 partials[i].bundle_version,insert_result);
+	  dump_bytes(stdout,"manifest",manifest,manifest_len);
+	  dump_bytes(stdout,"payload",
+		     partials[i].body_segments->data,
+		     partials[i].body_length);
+	  fflush(stdout);
+	  
+	  char bid[32*2+1];
+	  if (!manifest_extract_bid(partials[i].manifest_segments->data,
+				    bid)) {
+#ifdef SYNC_BY_BAR
+	    int bundle=bid_to_peer_bundle_index(peer,bid);
+	    if (peer_records[peer]->insert_failures[bundle]<255)
+	      peer_records[peer]->insert_failures[bundle]++;
+#endif
+	  }
+	} else {
+	  // Insert succeeded, so clear any failure deprioritisation (although it
+	  // shouldn't matter).
+	  char bid[32*2+1];
+	  if (!manifest_extract_bid(partials[i].manifest_segments->data,
+				    bid)) {
+#ifdef SYNC_BY_BAR
+	    int bundle=bid_to_peer_bundle_index(peer,bid);
+	    peer_records[peer]->insert_failures[bundle]=0;
+#endif
+	  }
+	  progress_log_bundle_receipt(partials[i].bid_prefix,
+				      partials[i].bundle_version);
+	}
+	
+	// Tell peer we have the whole thing now.
+	// (next_byte_would_be_useful is asserted so that we don't send two
+	// reports).
+	next_byte_would_be_useful=1;
+	sync_tell_peer_we_have_the_bundle_of_this_partial(peer,i);
+	
+	// Now release this partial.
+	clear_partial(&partials[i]);		
+	
+      }
+    }
+  }
+
+  
+  
   if (partials[i].manifest_segments
       &&partials[i].body_segments
       &&(!partials[i].manifest_segments->next)
