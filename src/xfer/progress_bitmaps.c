@@ -386,6 +386,47 @@ int peer_update_send_point(int peer)
   return 0;
 }
 
+void update_request_bitmap_counters(int i /* peer */,int bundle_number,
+				    int start_offset, int bytes)
+{
+  if (start_offset>=peer_records[i]->request_bitmap_offset)
+    {
+      int offset=start_offset-peer_records[i]->request_bitmap_offset;
+      int block_offset=start_offset;
+      int trim=offset&64;
+      int bytes_remaining=bytes;
+      // Trim final partial piece from length, but only if it isn't
+      // the last few bytes of the bundle.
+      if (trim&&((start_offset+bytes)<(bundles[bundle_number].length)))
+	{ offset+=64-trim; bytes_remaining-=trim; }
+      int bit_position=offset/64;
+      
+      int last_offset=offset+bytes;
+      
+      if (bit_position>=0) {
+	while((bytes_remaining>0)&&(bit_position<(32*8))) {
+	  if (peer_records[i]->request_bitmap_counts[bit_position]<255) {
+	    printf(">>> %s Incrementing sent count for bitmap position %d\n",timestamp_str(),bit_position);
+	    peer_records[i]->request_bitmap_counts[bit_position]++;
+	  }
+	  
+	  bit_position++; bytes_remaining-=64; block_offset+=64;
+	}
+	// Work out if we are covering to the end of the file.
+	if (last_offset>=cached_body_len) {
+	  // Make sure we mark the last partial block as sent, including if the payload is
+	  // zero bytes long.
+	  bit_position=last_offset/64;
+	  if (bit_position<(32*8)) {
+	    printf(">>> %s Incrementing sent count for bitmap position %d (end of payload)\n",timestamp_str(),bit_position);
+	    peer_records[i]->request_bitmap_counts[bit_position]++;
+	  }
+	}
+      }
+    }
+}
+  
+
 int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 							 int is_manifest,
 							 int start_offset,
@@ -416,46 +457,9 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 		peer_records[i]->request_bitmap_manifest_counts[j]++;
 	    }
 	} else {
-	  if (start_offset>=peer_records[i]->request_bitmap_offset)
-	    {
-	      int offset=start_offset-peer_records[i]->request_bitmap_offset;
-	      int block_offset=start_offset;
-	      int trim=offset&64;
-	      int bytes_remaining=bytes;
-	      // Trim final partial piece from length, but only if it isn't
-	      // the last few bytes of the bundle.
-	      if (trim&&((start_offset+bytes)<(bundles[bundle_number].length)))
-		{ offset+=64-trim; bytes_remaining-=trim; }
-	      int bit_position=offset/64;
-
-	      int last_offset=offset+bytes;
-	      
-	      if (bit_position>=0) {
-		while((bytes_remaining>0)&&(bit_position<(32*8))) {
-		  if (peer_records[i]->request_bitmap_counts[bit_position]<255) {
-		    printf(">>> %s Incrementing sent count for bitmap position %d\n",timestamp_str(),bit_position);
-		    peer_records[i]->request_bitmap_counts[bit_position]++;
-		  }
-		  
-		  bit_position++; bytes_remaining-=64; block_offset+=64;
-		}
-		// Work out if we are covering to the end of the file.
-		if (last_offset>=cached_body_len) {
-		  // Make sure we mark the last partial block as sent, including if the payload is
-		  // zero bytes long.
-		  bit_position=last_offset/64;
-		  if (bit_position<(32*8)) {
-		    printf(">>> %s Incrementing sent count for bitmap position %d (end of payload)\n",timestamp_str(),bit_position);
-		    peer_records[i]->request_bitmap_counts[bit_position]++;
-		  }
-		}
-	      }
-	    }
+	  update_request_bitmap_counters(i /* peer */, bundle_number, start_offset, bytes);	  
 	}
-      }
-
-  
-
+      } 
       
       if (
 	  // We have no bitmap, so start accumulating
@@ -512,46 +516,9 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	    else
 	      peer_records[i]->request_bitmap_offset=0;
 	  }
+	  
 	  if (peer_records[i]->request_bitmap_bundle==bundle_number) {
-	    if (start_offset>=peer_records[i]->request_bitmap_offset)
-	      {
-		int offset=start_offset-peer_records[i]->request_bitmap_offset;
-		int block_offset=start_offset;
-		int trim=offset&64;
-		int bytes_remaining=bytes;
-		// Trim final partial piece from length, but only if it isn't
-		// the last few bytes of the bundle.
-		if (trim&&((start_offset+bytes)<(bundles[bundle_number].length)))
-		  { offset+=64-trim; bytes_remaining-=trim; }
-		int bit=offset/64;
-		if (bit>=0)
-		  while((bytes_remaining>=64)&&(bit<(32*8))) {
-		    if (debug_bitmap)
-		      printf(">>> %s Marking [%d,%d) sent to peer #%d(%s*) due to transmitted piece.\n",
-			     timestamp_str(),block_offset,block_offset+64,i,peer_records[i]->sid_prefix);
-		    if (!(peer_records[i]->request_bitmap[bit>>3]&(1<<(bit&7))))
-		      {
-			if (debug_bitmap)
-			  printf(">>> %s BITMAP: Setting bit %d due to transmitted piece.\n",
-				 timestamp_str(),bit);
-		      }
-		    else
-		      if (debug_bitmap)
-			printf(">>> %s BITMAP: Bit %d already set!\n",timestamp_str(),bit);
-
-		    if (peer_records[i]->request_bitmap_counts[bit]<255) {
-		      printf("Incrementing sent count for bitmap position %d\n",bit);
-		      peer_records[i]->request_bitmap_counts[bit]++;
-		    }
-		    
-		    peer_records[i]->request_bitmap[bit>>3]|=(1<<(bit&7));
-		    bit++; bytes_remaining-=64; block_offset+=64;
-		  }
-	      } else {
-	      if (debug_bitmap)
-		printf(">>> %s NOT Marking [%d,%d) sent (start_offset<bitmap offset).\n",
-		       timestamp_str(),start_offset,start_offset+bytes);
-	    }
+	    update_request_bitmap_counters(i,bundle_number,start_offset,bytes);
 	  } else {
 	    if (peer_records[i]) {
 	      if (debug_bitmap) printf(">>> %s NOT Marking [%d,%d) sent to peer #%d(%s*) (no matching bitmap: %d vs %d).\n",
@@ -559,7 +526,7 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 			    i,peer_records[i]->sid_prefix,
 			    peer_records[i]->request_bitmap_bundle,bundle_number);
 	      if (peer_records[i]->tx_bundle==bundle_number) {
-		if (debug_bitmap) printf(">>> %s ... but I should care about marking it, because it matches the bundle I am sending.\n",timestamp_str());
+		if (debug_bitmap) printf(">>> %s ... but I should care about marking it, because it matches the bundle I am sending. So doing it anyway\n",timestamp_str());
 
 		bzero(peer_records[i]->request_bitmap_manifest_counts,16);
 		bzero(peer_records[i]->request_bitmap_counts,32*8);
@@ -567,40 +534,9 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 		bzero(peer_records[i]->request_manifest_bitmap,2);
 		peer_records[i]->request_bitmap_offset=0;
 		peer_records[i]->request_bitmap_bundle=bundle_number;
-
+		
 		// Now mark off the bits
-		int offset=start_offset-peer_records[i]->request_bitmap_offset;
-		int block_offset=start_offset;
-		int trim=offset&64;
-		int bytes_remaining=bytes;
-		// Trim final partial piece from length, but only if it isn't
-		// the last few bytes of the bundle.
-		if (trim&&((start_offset+bytes)<(bundles[bundle_number].length)))
-		  { offset+=64-trim; bytes_remaining-=trim; }
-		int bit=offset/64;
-		if (bit>=0)
-		  while((bytes_remaining>=64)&&(bit<(32*8))) {
-		    if (debug_bitmap)
-		      printf(">>> %s Marking [%d,%d) sent to peer #%d(%s*) due to transmitted piece.\n",
-			     timestamp_str(),block_offset,block_offset+64,i,peer_records[i]->sid_prefix);
-		    if (!(peer_records[i]->request_bitmap[bit>>3]&(1<<(bit&7))))
-		      {
-			if (debug_bitmap)
-			  printf(">>> %s BITMAP: Setting bit %d due to transmitted piece.\n",
-				 timestamp_str(),bit);
-		      }
-		    else
-		      if (debug_bitmap)
-			printf(">>> %s BITMAP: Bit %d already set!\n",timestamp_str(),bit);
-
-		    if (peer_records[i]->request_bitmap_counts[bit]<255) {
-		      printf(">>> %s Incrementing sent count for bitmap position %d\n",timestamp_str(),bit);
-		      peer_records[i]->request_bitmap_counts[bit]++;
-		    }
-		    
-		    peer_records[i]->request_bitmap[bit>>3]|=(1<<(bit&7));
-		    bit++; bytes_remaining-=64; block_offset+=64;
-		  }				
+		update_request_bitmap_counters(i,bundle_number,start_offset,bytes);
 	      }
 	      if (peer_records[i]->tx_bundle==-1)
 		{
