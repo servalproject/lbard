@@ -241,6 +241,20 @@ int dump_peer_tx_bitmap(int peer)
   return 0;
 }
 
+void reset_progress_bitmap(int i,int bundle_number)
+{
+  printf(">>> %s reset_progress_bitmap bundle=%d (old was %d)\n",
+	 timestamp_str(),bundle_number,
+	 peer_records[i]->request_bitmap_bundle);
+  bzero(peer_records[i]->request_bitmap_counts,32*8);
+  bzero(peer_records[i]->request_bitmap_manifest_counts,16);
+  bzero(peer_records[i]->request_bitmap,32);
+  bzero(peer_records[i]->request_manifest_bitmap,2);
+  peer_records[i]->request_bitmap_offset=0;
+  peer_records[i]->request_bitmap_bundle=bundle_number;
+}
+
+
 /*
   Update the point we intend to send from in the current bundle based on the
   request bitmap.
@@ -251,22 +265,12 @@ int peer_update_send_point(int peer)
   // we are sending to a given peer.  Similarly, if we are sending them something we already know
   // them to have, then stop keeping track of that.
   if (peer_already_possesses_bundle(peer_records[peer],peer_records[peer]->request_bitmap_bundle)) {    
-    peer_records[peer]->request_bitmap_bundle=-1;
-    bzero(peer_records[peer]->request_bitmap_manifest_counts,16);
-    bzero(peer_records[peer]->request_bitmap_counts,32*8);
-    bzero(peer_records[peer]->request_bitmap,32);
-    bzero(peer_records[peer]->request_manifest_bitmap,2);
-    peer_records[peer]->request_bitmap_offset=0;
+    reset_progress_bitmap(peer,-1);
   }
   if (peer_records[peer]->request_bitmap_bundle==-1) {
     if (!peer_already_possesses_bundle(peer_records[peer],peer_records[peer]->tx_bundle))
       {
-	peer_records[peer]->request_bitmap_bundle=peer_records[peer]->tx_bundle;
-	bzero(peer_records[peer]->request_bitmap_manifest_counts,16);
-	bzero(peer_records[peer]->request_bitmap_counts,32*8);
-	bzero(peer_records[peer]->request_bitmap,32);
-	bzero(peer_records[peer]->request_manifest_bitmap,2);
-	peer_records[peer]->request_bitmap_offset=0;
+	reset_progress_bitmap(peer,peer_records[peer]->tx_bundle);
 	printf(">>> %s Setting request_bitmap_bundle to %d\n",timestamp_str(),peer_records[peer]->tx_bundle);
       }
   }
@@ -425,7 +429,6 @@ void update_request_bitmap_counters(int i /* peer */,int bundle_number,
       }
     }
 }
-  
 
 int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 							 int is_manifest,
@@ -495,12 +498,7 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	    
 	  } else {	  
 	    // Reset bitmap and start accumulating
-	    bzero(peer_records[i]->request_bitmap_counts,32*8);
-	    bzero(peer_records[i]->request_bitmap_manifest_counts,16);
-	    bzero(peer_records[i]->request_bitmap,32);
-	    bzero(peer_records[i]->request_manifest_bitmap,2);
-	    peer_records[i]->request_bitmap_offset=0;
-	    peer_records[i]->request_bitmap_bundle=bundle_number;
+	    reset_progress_bitmap(i,bundle_number);
 	    // The only tricky part is working out the start offset for the bitmap.
 	    // If the offset of the piece is near the start, we will assume we have
 	    // joined the conversation recently, and that the bitmap start is still
@@ -528,12 +526,7 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	      if (peer_records[i]->tx_bundle==bundle_number) {
 		if (debug_bitmap) printf(">>> %s ... but I should care about marking it, because it matches the bundle I am sending. So doing it anyway\n",timestamp_str());
 
-		bzero(peer_records[i]->request_bitmap_manifest_counts,16);
-		bzero(peer_records[i]->request_bitmap_counts,32*8);
-		bzero(peer_records[i]->request_bitmap,32);
-		bzero(peer_records[i]->request_manifest_bitmap,2);
-		peer_records[i]->request_bitmap_offset=0;
-		peer_records[i]->request_bitmap_bundle=bundle_number;
+		reset_progress_bitmap(i,bundle_number);
 		
 		// Now mark off the bits
 		update_request_bitmap_counters(i,bundle_number,start_offset,bytes);
