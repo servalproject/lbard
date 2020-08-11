@@ -877,7 +877,7 @@ int message_parser_50(struct peer_state *sender,char *sender_prefix,
   else for_me=1;
   offset+=2;
   
-  if (length-offset<(1+8+8+4+1)) return -3;
+  if ((length-offset)<(1+8+8+4)) return -3;
   unsigned char *bid_prefix_bin=&msg[offset];
   snprintf(bid_prefix,8*2+1,"%02x%02x%02x%02x%02x%02x%02x%02x",
 	   msg[offset+0],msg[offset+1],msg[offset+2],msg[offset+3],
