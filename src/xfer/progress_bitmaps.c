@@ -428,7 +428,7 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 		{ offset+=64-trim; bytes_remaining-=trim; }
 	      int bit=offset/64;
 	      if (bit>=0)
-		while((bytes_remaining>=64)&&(bit<(32*8))) {
+		while((bytes_remaining>0)&&(bit<(32*8))) {
 		  if (peer_records[i]->request_bitmap_counts[bit]<255) {
 		    printf(">>> %s Incrementing sent count for bitmap position %d\n",timestamp_str(),bit);
 		    peer_records[i]->request_bitmap_counts[bit]++;
