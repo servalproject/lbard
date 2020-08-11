@@ -426,16 +426,30 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	      // the last few bytes of the bundle.
 	      if (trim&&((start_offset+bytes)<(bundles[bundle_number].length)))
 		{ offset+=64-trim; bytes_remaining-=trim; }
-	      int bit=offset/64;
-	      if (bit>=0)
-		while((bytes_remaining>0)&&(bit<(32*8))) {
-		  if (peer_records[i]->request_bitmap_counts[bit]<255) {
-		    printf(">>> %s Incrementing sent count for bitmap position %d\n",timestamp_str(),bit);
-		    peer_records[i]->request_bitmap_counts[bit]++;
+	      int bit_position=offset/64;
+
+	      int last_offset=offset+bytes;
+	      
+	      if (bit_position>=0) {
+		while((bytes_remaining>0)&&(bit_position<(32*8))) {
+		  if (peer_records[i]->request_bitmap_counts[bit_position]<255) {
+		    printf(">>> %s Incrementing sent count for bitmap position %d\n",timestamp_str(),bit_position);
+		    peer_records[i]->request_bitmap_counts[bit_position]++;
 		  }
 		  
-		  bit++; bytes_remaining-=64; block_offset+=64;
+		  bit_position++; bytes_remaining-=64; block_offset+=64;
 		}
+		// Work out if we are covering to the end of the file.
+		if (last_offset>=cached_body_len) {
+		  // Make sure we mark the last partial block as sent, including if the payload is
+		  // zero bytes long.
+		  bit_position=last_offset/64;
+		  if (bit_position<(32*8)) {
+		    printf(">>> %s Incrementing sent count for bitmap position %d (end of payload)\n",timestamp_str(),bit_position);
+		    peer_records[i]->request_bitmap_counts[bit_position]++;
+		  }
+		}
+	      }
 	    }
 	}
       }
