@@ -158,9 +158,11 @@ int update_my_message(int serialfd,
 
     append_timestamp(msg_out,&offset);
   }
-  if (!(random()%10)) {
-    // Occassionally announce our instance (generation) ID
-    append_generationid(msg_out,&offset);
+  if ((offset+5)<mtu) {
+    if (!(random()%10)) {
+      // Occassionally announce our instance (generation) ID
+      append_generationid(msg_out,&offset);
+    }
   }
   
 #ifdef SYNC_BY_BAR

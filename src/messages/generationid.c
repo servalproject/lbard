@@ -50,6 +50,7 @@ int append_generationid(unsigned char *msg_out,int *offset)
   
   msg_out[(*offset)++]='G';
   for(int i=0;i<4;i++) msg_out[(*offset)++]=(my_instance_id>>(i*8))&0xff;
+  printf(">>> %s Sending my generation ID: %08x\n",timestamp_str(),my_instance_id);
   return 0;
 }
 
@@ -82,7 +83,10 @@ int message_parser_47(struct peer_state *sender,char *sender_prefix,
       sender->last_message_number=-1;
       sender->tx_bundle=-1;
       sender->instance_id=peer_instance_id;
-      printf("Peer %s* has restarted -- discarding stale knowledge of its state.\n",sender->sid_prefix);
+      printf(">>> %s Peer %s* has restarted -- discarding stale knowledge of its state.\n",
+	     timestamp_str(),sender->sid_prefix);
+      printf(">>> %s Peer %s* has new generation ID: %02x%02x%02x%02x\n",
+	     timestamp_str(),sender->sid_prefix,msg[0],msg[1],msg[2],msg[3]);
       peer_records[peer_index]=sender;
 #endif
     }

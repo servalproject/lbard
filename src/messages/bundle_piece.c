@@ -132,10 +132,12 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   // Intended recipient
   msg[(*offset)++]=peer_records[target_peer]->sid_prefix_bin[0];
   msg[(*offset)++]=peer_records[target_peer]->sid_prefix_bin[1];
-  printf(">>> %s Addressing piece to %02x%02x*\n",
+  printf(">>> %s Addressing piece to %02x%02x* (Peer SID hex = '%s'*)\n",
 	 timestamp_str(),
 	 peer_records[target_peer]->sid_prefix_bin[0],
-	 peer_records[target_peer]->sid_prefix_bin[1]);
+	 peer_records[target_peer]->sid_prefix_bin[1],
+	 peer_records[target_peer]->sid_prefix
+	 );
   
   for(int i=0;i<8;i++) msg[(*offset)++]=bundles[bundle_number].bid_bin[i];
   // Bundle version (8 bytes)
