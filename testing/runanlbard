@@ -19,5 +19,5 @@ end
 #setenv MallocCheckHeapEach 1
     
 echo ./lbard 127.0.0.1:`cat testing/serval${1}/proc/http_port` lbard:lbard `cat testing/serval${1}/self.id | cut -f 1 -d:` `cat testing/serval${1}/self.id | cut -f 2 -d:` $theradio bundlelog=bundlelog${1}.txt "$2" "$3" "$4" "$5"
-./lbard 127.0.0.1:`cat testing/serval${1}/proc/http_port` lbard:lbard `cat testing/serval${1}/self.id | cut -f 1 -d:` `cat testing/serval${1}/self.id | cut -f 2 -d:`  $theradio bundlelog=bundlelog${1}.txt "$2" "$3" "$4" "$5"
-#gdb ./lbard 
+#./lbard 127.0.0.1:`cat testing/serval${1}/proc/http_port` lbard:lbard `cat testing/serval${1}/self.id | cut -f 1 -d:` `cat testing/serval${1}/self.id | cut -f 2 -d:`  $theradio bundlelog=bundlelog${1}.txt "$2" "$3" "$4" "$5"
+gdb ./lbard 

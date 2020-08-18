@@ -78,6 +78,7 @@ int message_parser_47(struct peer_state *sender,char *sender_prefix,
       
       free_peer(peer_records[peer_index]);
       sender=calloc(1,sizeof(struct peer_state));
+      sender->sid_prefix=strdup(sender_prefix);
       for(int i=0;i<4;i++) {
 	char hex[3];
 	hex[0]=sender->sid_prefix[i*2+0];
@@ -86,7 +87,6 @@ int message_parser_47(struct peer_state *sender,char *sender_prefix,
 	int b=strtoll(hex,NULL,16);
 	sender->sid_prefix_bin[i]=b;
       }
-      sender->sid_prefix=strdup(sender_prefix);
       sender->last_message_number=-1;
       sender->tx_bundle=-1;
       sender->instance_id=peer_instance_id;
