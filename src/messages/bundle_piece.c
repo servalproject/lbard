@@ -91,6 +91,12 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   while(start_offset>0&&((max_bytes-actual_bytes)>=64)) {
     start_offset-=64; actual_bytes+=64;
     p-=64;
+    if (start_offset<0) {
+      start_offset+=64;
+      actual_bytes+=64;
+      p+=64;
+      break;
+    }
   }
   
   // Make sure byte count fits in 11 bits.
@@ -126,6 +132,10 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
   // Intended recipient
   msg[(*offset)++]=peer_records[target_peer]->sid_prefix_bin[0];
   msg[(*offset)++]=peer_records[target_peer]->sid_prefix_bin[1];
+  printf(">>> %s Addressing piece to %02x%02x*\n",
+	 timestamp_str(),
+	 peer_records[target_peer]->sid_prefix_bin[0],
+	 peer_records[target_peer]->sid_prefix_bin[1]);
   
   for(int i=0;i<8;i++) msg[(*offset)++]=bundles[bundle_number].bid_bin[i];
   // Bundle version (8 bytes)
@@ -873,6 +883,9 @@ int message_parser_50(struct peer_state *sender,char *sender_prefix,
   offset++;
   
   // Work out from target SID, if this is intended for us
+  printf(">>> %s Packet is addressed to %02x%02x* (I am %02x%02x*)\n",
+	 timestamp_str(),msg[offset+0],msg[offset+1],
+	 my_sid[0],my_sid[1]);
   if ((my_sid[0]!=msg[offset])||(my_sid[1]!=msg[offset+1])) for_me=0;
   else for_me=1;
   offset+=2;

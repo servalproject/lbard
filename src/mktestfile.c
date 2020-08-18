@@ -16,7 +16,7 @@ int main(int argc,char **argv)
   msg[64]=0;
   printf("%s",msg);
   
-  for(int i=0;i<n;n++) {
+  for(int i=0;i<n;i++) {
     snprintf(msg,1024,"Data block %d of file %s/%s                                                                      ",
 	     i,argv[1],argv[2]);
     msg[63]='\n';
