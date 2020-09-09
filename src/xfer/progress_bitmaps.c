@@ -362,10 +362,12 @@ int peer_update_send_point(int peer)
       peer_records[peer]->tx_bundle_manifest_offset=selection;
       peer_records[peer]->tx_next_from_manifest=1;
       if (debug_bitmap)
-	printf(">>> %s BITMAP based manifest send point for peer #%d(%s*) = %d (candidate %d/%d = block %d)\n",
+	printf(">>> %s BITMAP based manifest send point for peer #%d(%s*) = %d (candidate %d/%d = block %d). Manifest hard lower bound = %d\n",
 	       timestamp_str(),peer,peer_records[peer]->sid_prefix,
 	       peer_records[peer]->tx_bundle_manifest_offset,
-	       candidate,candidate_count,selection>>6);
+	       candidate,candidate_count,selection>>6,
+	       peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound
+	       );
       
     } else {
       peer_records[peer]->tx_bundle_body_offset=selection;    
@@ -403,7 +405,7 @@ void update_request_manifest_bitmap_counters(int i /* peer */ ,int bundle_number
       if (peer_records[i]->request_bitmap_manifest_counts[j]<255) {
 	peer_records[i]->request_bitmap_manifest_counts[j]++;
 	fprintf(stderr,">>> %s BITMAP Incrementing send count for manifest block #%d due to piece [%d,%d)\n",
-		timestamp_str(),j,start_offset,bytes);
+		timestamp_str(),j,start_offset,start_offset+bytes);
       }
     }
 }
@@ -429,7 +431,7 @@ void update_request_body_bitmap_counters(int i /* peer */,int bundle_number,
 	while((bytes_remaining>0)&&(bit_position<(32*8))) {
 	  if (peer_records[i]->request_bitmap_counts[bit_position]<255) {
 	    fprintf(stderr,">>> %s BITMAP Incrementing send count for body block #%d due to piece [%d,%d)\n",
-		timestamp_str(),bit_position,start_offset,bytes);
+		timestamp_str(),bit_position,start_offset,start_offset+bytes);
 	    peer_records[i]->request_bitmap_counts[bit_position]++;
 	  }
 	  

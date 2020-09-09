@@ -186,14 +186,20 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
   if (!(option_flags&FLAG_NO_HARD_LOWER))
     if (peer_records[peer]->tx_bundle_manifest_offset
 	<peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound) {
-      fprintf(stderr,"HARD_LOWER: Advancing manifest tx offset from %d to %d\n",
+      fprintf(stderr,"HARDLOWER: Advancing manifest tx offset from %d to %d\n",
 	      peer_records[peer]->tx_bundle_manifest_offset,
 	      peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound);
       peer_records[peer]->tx_bundle_manifest_offset
 	=peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound;
     }
 
-  if ((peer_records[peer]->tx_next_from_manifest>0)&&
+  fprintf(stderr,">>> %s About to consider sending a piece of the manifest. from_manifest=%d, lower_bound=%d, encoded_len=%d\n",
+	  timestamp_str(),
+	  peer_records[peer]->tx_next_from_manifest,
+	  peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound,
+	  cached_manifest_encoded_len);
+	  
+  if ((peer_records[peer]->tx_next_from_manifest>0)&&      
       (peer_records[peer]->tx_bundle_manifest_offset_hard_lower_bound<cached_manifest_encoded_len)) {
     fprintf(stderr,"  manifest_offset=%d, manifest_len=%d\n",
 	    peer_records[peer]->tx_bundle_manifest_offset,
