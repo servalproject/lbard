@@ -390,7 +390,25 @@ int peer_update_send_point(int peer)
   return 0;
 }
 
-void update_request_bitmap_counters(int i /* peer */,int bundle_number,
+void update_request_manifest_bitmap_counters(int i /* peer */ ,int bundle_number,
+					     int start_offset,int bytes)
+{
+  // Manifest progress is easier to update, as the bitmap is a fixed 16 bits
+  for(int j=0;j<16;j++)
+    // We only check if the start of the block overlaps, as blocks are assumed to be whole,
+    // or the last block in a manifest or payload.
+    if ((start_offset<=(64*j))
+	&&(start_offset+bytes>=(64*j))) {
+      peer_records[i]->request_manifest_bitmap[j>>3]|=1<<(j&7);
+      if (peer_records[i]->request_bitmap_manifest_counts[j]<255) {
+	peer_records[i]->request_bitmap_manifest_counts[j]++;
+	fprintf(stderr,">>> %s BITMAP Incrementing send count for manifest block #%d due to piece [%d,%d)\n",
+		timestamp_str(),j,start_offset,bytes);
+      }
+    }
+}
+
+void update_request_body_bitmap_counters(int i /* peer */,int bundle_number,
 				    int start_offset, int bytes)
 {
   if (start_offset>=peer_records[i]->request_bitmap_offset)
@@ -410,7 +428,8 @@ void update_request_bitmap_counters(int i /* peer */,int bundle_number,
       if (bit_position>=0) {
 	while((bytes_remaining>0)&&(bit_position<(32*8))) {
 	  if (peer_records[i]->request_bitmap_counts[bit_position]<255) {
-	    printf(">>> %s Incrementing sent count for bitmap position %d\n",timestamp_str(),bit_position);
+	    fprintf(stderr,">>> %s BITMAP Incrementing send count for body block #%d due to piece [%d,%d)\n",
+		timestamp_str(),bit_position,start_offset,bytes);
 	    peer_records[i]->request_bitmap_counts[bit_position]++;
 	  }
 	  
@@ -449,18 +468,9 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 
       if (peer_records[i]->request_bitmap_bundle==bundle_number) {
 	if (is_manifest) {
-	  // Manifest progress is easier to update, as the bitmap is a fixed 16 bits
-	  for(int j=0;j<16;j++)
-	    // We only check if the start of the block overlaps, as blocks are assumed to be whole,
-	    // or the last block in a manifest or payload
-	    if ((start_offset<=(64*j))
-		&&(start_offset+bytes>=(64*j))) {
-	      peer_records[i]->request_manifest_bitmap[j>>3]|=1<<(j&7);
-	      if (peer_records[i]->request_bitmap_manifest_counts[j]<255)
-		peer_records[i]->request_bitmap_manifest_counts[j]++;
-	    }
+	  update_request_manifest_bitmap_counters(i,bundle_number,start_offset,bytes);
 	} else {
-	  update_request_bitmap_counters(i /* peer */, bundle_number, start_offset, bytes);	  
+	  update_request_body_bitmap_counters(i /* peer */, bundle_number, start_offset, bytes);	  
 	}
       } 
       
@@ -490,7 +500,8 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	      // We only check if the start of the block overlaps, as blocks are assumed to be whole,
 	      // or the last block in a manifest or payload
 	      if ((start_offset<=(64*j))
-		  &&(start_offset+bytes>=(64*j))) {
+		  // Must be > here, not >=, as otherwise we mark the next block after the end as sent, which is incorrect.
+		  &&(start_offset+bytes>(64*j))) {
 		peer_records[i]->request_manifest_bitmap[j>>3]|=1<<(j&7);
 		if (peer_records[i]->request_bitmap_manifest_counts[j]<255)
 		  peer_records[i]->request_bitmap_manifest_counts[j]++;
@@ -516,7 +527,8 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	  }
 	  
 	  if (peer_records[i]->request_bitmap_bundle==bundle_number) {
-	    update_request_bitmap_counters(i,bundle_number,start_offset,bytes);
+	    if (!is_manifest) update_request_body_bitmap_counters(i,bundle_number,start_offset,bytes);
+	    else update_request_manifest_bitmap_counters(i,bundle_number,start_offset,bytes);
 	  } else {
 	    if (peer_records[i]) {
 	      if (debug_bitmap) printf(">>> %s NOT Marking [%d,%d) sent to peer #%d(%s*) (no matching bitmap: %d vs %d).\n",
@@ -528,8 +540,9 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 
 		reset_progress_bitmap(i,bundle_number);
 		
-		// Now mark off the bits
-		update_request_bitmap_counters(i,bundle_number,start_offset,bytes);
+		// Now mark off the bits in the bitmap
+		if (!is_manifest) update_request_body_bitmap_counters(i,bundle_number,start_offset,bytes);
+		else update_request_manifest_bitmap_counters(i,bundle_number,start_offset,bytes);
 	      }
 	      if (peer_records[i]->tx_bundle==-1)
 		{
