@@ -398,7 +398,7 @@ void update_request_manifest_bitmap_counters(int i /* peer */ ,int bundle_number
     // We only check if the start of the block overlaps, as blocks are assumed to be whole,
     // or the last block in a manifest or payload.
     if ((start_offset<=(64*j))
-	&&(start_offset+bytes>=(64*j))) {
+	&&(start_offset+bytes>(64*j))) {
       peer_records[i]->request_manifest_bitmap[j>>3]|=1<<(j&7);
       if (peer_records[i]->request_bitmap_manifest_counts[j]<255) {
 	peer_records[i]->request_bitmap_manifest_counts[j]++;
@@ -494,20 +494,7 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 		   peer_records[i]->tx_bundle,bundle_number,
 		   peer_records[i]->request_bitmap_bundle);
 
-	  if (is_manifest) {
-	    // Manifest progress is easier to update, as the bitmap is a fixed 16 bits
-	    for(int j=0;j<16;j++)
-	      // We only check if the start of the block overlaps, as blocks are assumed to be whole,
-	      // or the last block in a manifest or payload
-	      if ((start_offset<=(64*j))
-		  // Must be > here, not >=, as otherwise we mark the next block after the end as sent, which is incorrect.
-		  &&(start_offset+bytes>(64*j))) {
-		peer_records[i]->request_manifest_bitmap[j>>3]|=1<<(j&7);
-		if (peer_records[i]->request_bitmap_manifest_counts[j]<255)
-		  peer_records[i]->request_bitmap_manifest_counts[j]++;
-	      }
-	    
-	  } else {	  
+	  if (!is_manifest) {
 	    // Reset bitmap and start accumulating
 	    reset_progress_bitmap(i,bundle_number);
 	    // The only tricky part is working out the start offset for the bitmap.
