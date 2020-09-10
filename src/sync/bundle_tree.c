@@ -533,6 +533,59 @@ int lookup_bundle_by_prefix_bin_and_version_or_older(unsigned char *prefix, long
   return -1;
 }
 
+void txbundle_stash_progress(struct peer_state *p)
+{
+  int i=0;
+  int candidate=-1;
+
+  // Nothing to do if no bundle being sent
+  if (p->tx_bundle==-1) return;
+
+  fprintf(stderr,">>> %s TXBUNDLE Stashing progress sending bundle #%d\n",
+	  timestamp_str(),p->tx_bundle);   
+  
+  for(i=0;i<MAX_STASHED_PROGRESS;i++) {
+    if (p->tx_bundle==p->stashed_counts_bundles[i]) {
+      fprintf(stderr,">>> %s TXBUNDLE Updating progress in slot #%d\n",
+	      timestamp_str(),i);
+      break;
+    }
+    if (p->stashed_counts_bundles[i]==-1) candidate=i;
+  }
+  if (candidate<MAX_STASHED_PROGRESS) {
+    fprintf(stderr,">>> %s TXBUNDLE Stashing in free slot #%d\n",
+	    timestamp_str(),i);
+  } else {
+    i=random()%MAX_STASHED_PROGRESS;
+    fprintf(stderr,">>> %s TXBUNDLE Stashing in occupied slot #%d (displacing progress on bundle #%d)\n",
+	    timestamp_str(),i,p->stashed_counts_bundles[i]);    
+  }
+  bcopy(&p->current,&p->stashed_counts[i],sizeof(struct bitmap_counts));
+  p->stashed_counts_bundles[i]=p->tx_bundle;
+  
+}
+
+void txbundle_restore_progress(struct peer_state *p)
+{
+  int i;
+  
+  // Nothing to do if no bundle being sent
+  if (p->tx_bundle==-1) return;
+
+  fprintf(stderr,">>> %s TXBUNDLE Restoring progress sending bundle #%d\n",
+	  timestamp_str(),p->tx_bundle);
+
+  for(i=0;i<MAX_STASHED_PROGRESS;i++) {
+    if (p->tx_bundle==p->stashed_counts_bundles[i]) {
+      fprintf(stderr,">>> %s TXBUNDLE Updating progress in slot #%d\n",
+	      timestamp_str(),i);
+
+      bcopy(&p->stashed_counts[i],&p->current,sizeof(struct bitmap_counts));
+      
+    }
+  }
+}
+
 
 int sync_queue_bundle(struct peer_state *p,int bundle)
 {
@@ -557,6 +610,7 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
       }
       peer_queue_bundle_tx(p,&bundles[p->tx_bundle],
 			   p->tx_bundle_priority);
+      txbundle_stash_progress(p);
       p->tx_bundle=-1;
     } else {
       // Bump new bundle to TX queue
@@ -585,6 +639,7 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
 	fprintf(stderr,"p->tx_bundle_body_offset=%d at %s:%d\n",p->tx_bundle_body_offset,__FILE__,__LINE__);
 	p->tx_bundle_manifest_offset=peer_records[i]->tx_bundle_manifest_offset;
 	p->tx_bundle_priority=priority;
+	txbundle_restore_progress(p);	
 	fprintf(stderr,"Beginning transmission from same offset as for another peer (m=%d, b= %d)\n",
 		p->tx_bundle_manifest_offset,p->tx_bundle_body_offset);
 	return 0;
@@ -626,6 +681,7 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
     fprintf(stderr,"Beginning transmission from random offset (m=%d, p=%d), flags=%d\n",
 	    p->tx_bundle_manifest_offset,p->tx_bundle_body_offset,
 	    option_flags);
+    txbundle_restore_progress(p);	
   }
 
   // peer_queue_list_dump(p);
@@ -649,6 +705,9 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
   
   
   if (bundle==p->tx_bundle) {
+
+    txbundle_stash_progress(p);
+    
     // Delete this entry in queue
     p->tx_bundle=-1;
     // Advance next in queue, if there is anything
@@ -671,6 +730,7 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
 	if (debug_ack)
 	  fprintf(stderr,"HARDLOWER: Resetting hard lower start point to 0,0\n");
       }
+      txbundle_restore_progress(p);
       bcopy(&p->tx_queue_bundles[1],
 	    &p->tx_queue_bundles[0],
 	    sizeof(int)*p->tx_queue_len-1);

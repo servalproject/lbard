@@ -88,6 +88,12 @@ struct partial_bundle {
 #define DEFAULT_PEER_KEEPALIVE_INTERVAL 20
 extern int peer_keepalive_interval;
 
+struct bitmap_counts {  
+  unsigned char request_bitmap_counts[32*8];
+  unsigned char request_bitmap_manifest_counts[16];
+};
+
+
 struct peer_state {
   char *sid_prefix;
   unsigned char sid_prefix_bin[4];
@@ -171,8 +177,11 @@ struct peer_state {
      A set bit means that we have received that 64 byte piece. */
   int request_bitmap_bundle;
   int request_bitmap_offset;
-  unsigned char request_bitmap_counts[32*8];
-  unsigned char request_bitmap_manifest_counts[16];
+  struct bitmap_counts current;
+#define MAX_STASHED_PROGRESS 8
+  struct bitmap_counts stashed_counts[MAX_STASHED_PROGRESS];
+  int stashed_counts_bundles[MAX_STASHED_PROGRESS];
+  
   unsigned char request_bitmap[32];
   unsigned char request_manifest_bitmap[2];
 };

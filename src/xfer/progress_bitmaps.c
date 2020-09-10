@@ -246,8 +246,8 @@ void reset_progress_bitmap(int i,int bundle_number)
   printf(">>> %s reset_progress_bitmap bundle=%d (old was %d)\n",
 	 timestamp_str(),bundle_number,
 	 peer_records[i]->request_bitmap_bundle);
-  bzero(peer_records[i]->request_bitmap_counts,32*8);
-  bzero(peer_records[i]->request_bitmap_manifest_counts,16);
+  bzero(peer_records[i]->current.request_bitmap_counts,32*8);
+  bzero(peer_records[i]->current.request_bitmap_manifest_counts,16);
   bzero(peer_records[i]->request_bitmap,32);
   bzero(peer_records[i]->request_manifest_bitmap,2);
   peer_records[i]->request_bitmap_offset=0;
@@ -302,10 +302,10 @@ int peer_update_send_point(int peer)
 	 peer_records[peer]->tx_bundle,cached_manifest_encoded_len,cached_body_len);
   for(int j=0;j<16;j++)
     if (j*64<cached_manifest_encoded_len) 
-      printf("  M%dx%d",j*64,peer_records[peer]->request_bitmap_manifest_counts[j]);
+      printf("  M%dx%d",j*64,peer_records[peer]->current.request_bitmap_manifest_counts[j]);
   for(int j=0;j<(32*8);j++)
     if (j*64+peer_records[peer]->request_bitmap_offset<=cached_body_len) {    
-      printf("  B%dx%d",j*64+peer_records[peer]->request_bitmap_offset,peer_records[peer]->request_bitmap_counts[j]);
+      printf("  B%dx%d",j*64+peer_records[peer]->request_bitmap_offset,peer_records[peer]->current.request_bitmap_counts[j]);
     }
   printf("\n");
   fflush(stdout);
@@ -314,14 +314,14 @@ int peer_update_send_point(int peer)
     if (j&1) is_odd=1; else is_odd=0;
     if (j*64<cached_manifest_encoded_len) {
       if (!(peer_records[peer]->request_manifest_bitmap[j>>3]&(1<<(j&7)))) {
-	if ((peer_records[peer]->request_bitmap_manifest_counts[j]+is_odd)<count_num) {
+	if ((peer_records[peer]->current.request_bitmap_manifest_counts[j]+is_odd)<count_num) {
 	  printf(">>> %s Discarding %d candidates, due to lower count of %d (vs %d) (M)\n",
 		 timestamp_str(),
-		 candidate_count,peer_records[peer]->request_bitmap_manifest_counts[j],count_num);
-	  count_num=peer_records[peer]->request_bitmap_manifest_counts[j]+is_odd;
+		 candidate_count,peer_records[peer]->current.request_bitmap_manifest_counts[j],count_num);
+	  count_num=peer_records[peer]->current.request_bitmap_manifest_counts[j]+is_odd;
 	  candidate_count=0;
 	}
-	if ((peer_records[peer]->request_bitmap_manifest_counts[j]+is_odd)==count_num) {
+	if ((peer_records[peer]->current.request_bitmap_manifest_counts[j]+is_odd)==count_num) {
 	  candidates[candidate_count]=j*64;
 	  candidate_is_manifest[candidate_count++]=1;
 	}
@@ -334,13 +334,13 @@ int peer_update_send_point(int peer)
     // with a zero byte block, if necessary.
     if (j*64+peer_records[peer]->request_bitmap_offset<=cached_body_len) {
       if (!(peer_records[peer]->request_bitmap[j>>3]&(1<<(j&7)))) {      
-	if ((peer_records[peer]->request_bitmap_counts[j]+is_odd)<count_num) {
+	if ((peer_records[peer]->current.request_bitmap_counts[j]+is_odd)<count_num) {
 	  printf(">>> %s Discarding %d candidates, due to lower count of %d (vs %d) (B)\n",timestamp_str(),
-		 candidate_count,peer_records[peer]->request_bitmap_manifest_counts[j],count_num);
-	  count_num=peer_records[peer]->request_bitmap_counts[j]+is_odd;
+		 candidate_count,peer_records[peer]->current.request_bitmap_manifest_counts[j],count_num);
+	  count_num=peer_records[peer]->current.request_bitmap_counts[j]+is_odd;
 	  candidate_count=0;
 	}
-	if ((peer_records[peer]->request_bitmap_counts[j]+is_odd)==count_num) {
+	if ((peer_records[peer]->current.request_bitmap_counts[j]+is_odd)==count_num) {
 	  candidates[candidate_count]=peer_records[peer]->request_bitmap_offset+j*64;
 	  candidate_is_manifest[candidate_count++]=0;
 	}
@@ -402,8 +402,8 @@ void update_request_manifest_bitmap_counters(int i /* peer */ ,int bundle_number
     if ((start_offset<=(64*j))
 	&&(start_offset+bytes>(64*j))) {
       peer_records[i]->request_manifest_bitmap[j>>3]|=1<<(j&7);
-      if (peer_records[i]->request_bitmap_manifest_counts[j]<255) {
-	peer_records[i]->request_bitmap_manifest_counts[j]++;
+      if (peer_records[i]->current.request_bitmap_manifest_counts[j]<255) {
+	peer_records[i]->current.request_bitmap_manifest_counts[j]++;
 	fprintf(stderr,">>> %s BITMAP Incrementing send count for manifest block #%d due to piece [%d,%d)\n",
 		timestamp_str(),j,start_offset,start_offset+bytes);
       }
@@ -429,10 +429,10 @@ void update_request_body_bitmap_counters(int i /* peer */,int bundle_number,
       
       if (bit_position>=0) {
 	while((bytes_remaining>0)&&(bit_position<(32*8))) {
-	  if (peer_records[i]->request_bitmap_counts[bit_position]<255) {
+	  if (peer_records[i]->current.request_bitmap_counts[bit_position]<255) {
 	    fprintf(stderr,">>> %s BITMAP Incrementing send count for body block #%d due to piece [%d,%d)\n",
 		timestamp_str(),bit_position,start_offset,start_offset+bytes);
-	    peer_records[i]->request_bitmap_counts[bit_position]++;
+	    peer_records[i]->current.request_bitmap_counts[bit_position]++;
 	  }
 	  
 	  bit_position++; bytes_remaining-=64; block_offset+=64;
@@ -444,7 +444,7 @@ void update_request_body_bitmap_counters(int i /* peer */,int bundle_number,
 	  bit_position=last_offset/64;
 	  if (bit_position<(32*8)) {
 	    printf(">>> %s Incrementing sent count for bitmap position %d (end of payload)\n",timestamp_str(),bit_position);
-	    peer_records[i]->request_bitmap_counts[bit_position]++;
+	    peer_records[i]->current.request_bitmap_counts[bit_position]++;
 	  }
 	}
       }
