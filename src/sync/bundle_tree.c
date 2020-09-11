@@ -543,7 +543,7 @@ void txbundle_stash_progress(struct peer_state *p)
 
   fprintf(stderr,">>> %s TXBUNDLE Stashing progress sending bundle #%d\n",
 	  timestamp_str(),p->tx_bundle);   
-  
+
   for(i=0;i<MAX_STASHED_PROGRESS;i++) {
     if (p->tx_bundle==p->stashed_counts_bundles[i]) {
       fprintf(stderr,">>> %s TXBUNDLE Updating progress in slot #%d\n",
@@ -552,7 +552,8 @@ void txbundle_stash_progress(struct peer_state *p)
     }
     if (p->stashed_counts_bundles[i]==-1) candidate=i;
   }
-  if (candidate<MAX_STASHED_PROGRESS) {
+  if (candidate<MAX_STASHED_PROGRESS&&(candidate>=0)) {
+    i=candidate;
     fprintf(stderr,">>> %s TXBUNDLE Stashing in free slot #%d\n",
 	    timestamp_str(),i);
   } else {
@@ -574,7 +575,7 @@ void txbundle_restore_progress(struct peer_state *p)
 
   fprintf(stderr,">>> %s TXBUNDLE Restoring progress sending bundle #%d\n",
 	  timestamp_str(),p->tx_bundle);
-
+  
   for(i=0;i<MAX_STASHED_PROGRESS;i++) {
     if (p->tx_bundle==p->stashed_counts_bundles[i]) {
       fprintf(stderr,">>> %s TXBUNDLE Updating progress in slot #%d\n",
