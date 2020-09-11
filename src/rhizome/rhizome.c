@@ -108,7 +108,7 @@ int load_rhizome_db_async(char *servald_server,
   if (load_rhizome_db_socket_timeout<gettime_ms()) {
     if (load_rhizome_db_socket>=0) close(load_rhizome_db_socket);
     load_rhizome_db_socket=-1;
-    printf(">>> %s Marking load_rhizome_db_socket stale.\n",timestamp_str());    
+    //    printf(">>> %s Marking load_rhizome_db_socket stale.\n",timestamp_str());    
   }
   if (load_rhizome_db_socket<0) {
     //    printf(">>> %s Trying to re-open load_rhizome_db_socket.\n",timestamp_str());    
