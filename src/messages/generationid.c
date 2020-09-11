@@ -88,7 +88,10 @@ int message_parser_47(struct peer_state *sender,char *sender_prefix,
 	sender->sid_prefix_bin[i]=b;
       }
       sender->last_message_number=-1;
-      sender->tx_bundle=-1;
+      // Actually DONT stop sending the same bundle, as in all likelihood, we will start sending it again
+      // anyway. This is especially important on slow high-latency transports like HF, where synchronisation can take
+      // many minutes.
+      //      sender->tx_bundle=-1;
       sender->instance_id=peer_instance_id;
       printf(">>> %s Peer %s* has restarted -- discarding stale knowledge of its state.\n",
 	     timestamp_str(),sender->sid_prefix);
