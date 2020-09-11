@@ -112,7 +112,8 @@ int sync_append_some_bundle_bytes(int bundle_number,int start_offset,int len,
 	 actual_bytes+21,max_bytes+21);
 
   peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,is_manifest,
-						       start_offset,actual_bytes);
+						       start_offset,actual_bytes,
+						       not_end_of_item?0:1);
   dump_peer_tx_bitmap(target_peer);
   
   // Generate 4 byte offset block (and option 2-byte extension for big bundles)
@@ -298,7 +299,8 @@ int saw_piece(char *peer_prefix,int for_me,
 	    printf(">>> %s Examining transmitted piece for bitmap updates.\n",
 		   timestamp_str());
 	    peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,is_manifest_piece,
-								 piece_offset,piece_bytes);
+								 piece_offset,piece_bytes,
+								 is_end_piece?1:0);
 	  }
 	}
 	
@@ -323,7 +325,8 @@ int saw_piece(char *peer_prefix,int for_me,
     printf(">>> %s Examining transmitted piece for bitmap updates.\n",
 	   timestamp_str());
     peer_update_request_bitmaps_due_to_transmitted_piece(bundle_number,is_manifest_piece,
-							 piece_offset,piece_bytes);
+							 piece_offset,piece_bytes,
+							 is_end_piece?1:0);
   }
 
   if (peer>=0&&bundle_number>=0) {

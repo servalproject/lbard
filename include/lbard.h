@@ -635,7 +635,7 @@ int dump_progress_bitmap(FILE *f, unsigned char *b,int blocks);
 int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 							 int is_manifest,
 							 int start_offset,
-							 int bytes);
+							 int bytes, int endPiece);
 int peer_update_send_point(int peer);
 int process_ota_bundle(char *bid,char *version);
 int setup_periodic_requests(char *filename);

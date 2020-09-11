@@ -411,7 +411,7 @@ void update_request_manifest_bitmap_counters(int i /* peer */ ,int bundle_number
 }
 
 void update_request_body_bitmap_counters(int i /* peer */,int bundle_number,
-				    int start_offset, int bytes)
+					 int start_offset, int bytes, int endPiece)
 {
   if (start_offset>=peer_records[i]->request_bitmap_offset)
     {
@@ -428,7 +428,7 @@ void update_request_body_bitmap_counters(int i /* peer */,int bundle_number,
       int last_offset=offset+bytes;
       
       if (bit_position>=0) {
-	while((bytes_remaining>0)&&(bit_position<(32*8))) {
+	while(((bytes_remaining+endPiece)>0)&&(bit_position<(32*8))) {
 	  if (peer_records[i]->current.request_bitmap_counts[bit_position]<255) {
 	    fprintf(stderr,">>> %s BITMAP Incrementing send count for body block #%d due to piece [%d,%d)\n",
 		timestamp_str(),bit_position,start_offset,start_offset+bytes);
@@ -454,7 +454,7 @@ void update_request_body_bitmap_counters(int i /* peer */,int bundle_number,
 int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 							 int is_manifest,
 							 int start_offset,
-							 int bytes)
+							 int bytes, int endPiece)
 {
   if (!is_manifest)
     printf(">>> %s Saw body piece [%d,%d) of bundle #%d (%s)\n",
@@ -472,7 +472,7 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	if (is_manifest) {
 	  update_request_manifest_bitmap_counters(i,bundle_number,start_offset,bytes);
 	} else {
-	  update_request_body_bitmap_counters(i /* peer */, bundle_number, start_offset, bytes);	  
+	  update_request_body_bitmap_counters(i /* peer */, bundle_number, start_offset, bytes, endPiece);	  
 	}
       } 
       
@@ -516,7 +516,7 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 	  }
 	  
 	  if (peer_records[i]->request_bitmap_bundle==bundle_number) {
-	    if (!is_manifest) update_request_body_bitmap_counters(i,bundle_number,start_offset,bytes);
+	    if (!is_manifest) update_request_body_bitmap_counters(i,bundle_number,start_offset,bytes,endPiece);
 	    else update_request_manifest_bitmap_counters(i,bundle_number,start_offset,bytes);
 	  } else {
 	    if (peer_records[i]) {
@@ -530,7 +530,7 @@ int peer_update_request_bitmaps_due_to_transmitted_piece(int bundle_number,
 		reset_progress_bitmap(i,bundle_number);
 		
 		// Now mark off the bits in the bitmap
-		if (!is_manifest) update_request_body_bitmap_counters(i,bundle_number,start_offset,bytes);
+		if (!is_manifest) update_request_body_bitmap_counters(i,bundle_number,start_offset,bytes,endPiece);
 		else update_request_manifest_bitmap_counters(i,bundle_number,start_offset,bytes);
 	      }
 	      if (peer_records[i]->tx_bundle==-1)
