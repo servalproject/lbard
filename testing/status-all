@@ -13,6 +13,7 @@ foreach instance ( serval? )
  echo "---------------------------------------------------------------------"
  echo "Instance $instance"
  echo "---------------------------------------------------------------------"
+ ../../serval-dna/servald status
  ../../serval-dna/servald rhizome list
  ../../serval-dna/servald keyring list
  cd ..
