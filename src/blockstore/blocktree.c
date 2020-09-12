@@ -131,13 +131,16 @@ int blocktree_unpack_node(unsigned char *block,int len,struct blocktree_node_unp
   
   int ofs=1;
 
+  //  fprintf(stderr,"pointers=%d, leaves=%d\n",n->pointer_count,n->leaf_count);
+  //  dump_bytes(stderr,"data block",block,len);
+  
   while(ofs<len) {
     if (p<n->pointer_count) {
       // Extract pointer to sub-child
       n->pointers[l].child_bits=block[ofs++];
       memcpy(n->pointers[p].child_hash,&block[ofs],BS_HASH_SIZE); ofs+=BS_HASH_SIZE;
       p++;
-    } else if (l) {
+    } else if (l<n->leaf_count) {
       // Extract bundle leaf node
       memcpy(n->leaves[p].bid,&block[ofs],32); ofs+=32;
       n->leaves[p].version=0;
@@ -151,7 +154,7 @@ int blocktree_unpack_node(unsigned char *block,int len,struct blocktree_node_unp
     } else break;
   }
   if (ofs!=len) {
-    fprintf(stderr,"ERROR: Corrupt block.\n");
+    fprintf(stderr,"ERROR: Corrupt block: Len=%d, but offset only got to %d\n",len,ofs);
     return BTERR_TREE_CORRUPT;
   }
 
@@ -314,6 +317,8 @@ int blocktree_node_write(void *blocktree,struct blocktree_node *n)
   struct blocktree *bt=blocktree;
   if (!bt) return BTERR_TREE_CORRUPT;
 
+  fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
+  
   /*
     We assume that the node has been re-packed.
     We need to calculate its hash, and write it to the store.
@@ -343,9 +348,11 @@ int blocktree_node_write(void *blocktree,struct blocktree_node *n)
 	break;
       }
     }
+  fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
   if (i==bt->blockstore_count) {
     return BTERR_NO_SPACE;
   }
+  fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
 
   // Now update the parent node
   while(n->depth) {
@@ -353,6 +360,7 @@ int blocktree_node_write(void *blocktree,struct blocktree_node *n)
   }
   memcpy(bt->top_hash,hash,BS_HASH_SIZE);
   
+  fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
   return BTOK_SUCCESS;
   
 }
@@ -374,6 +382,7 @@ int blocktree_node_insert_leaf(void *blocktree,struct blocktree_node *n, struct 
      efficiency of storage (and thus transmission), but it simplifies the algorithm quite a bit.
   */
 
+  fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
   if (n->unpacked.pointer_count) {
     // We need to put our leaf onto the right child, by drilling down to the bottom of the tree.
     fprintf(stderr,"UNIMPLEMENTED: Inserting leaf into node with pointers.\n");
@@ -388,6 +397,7 @@ int blocktree_node_insert_leaf(void *blocktree,struct blocktree_node *n, struct 
   memcpy(&n->unpacked.leaves[n->unpacked.leaf_count],leaf,sizeof(struct blocktree_bundle_leaf));
   n->unpacked.leaf_count++;
 
+  fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
   return BTOK_SUCCESS;
   
 }
@@ -403,6 +413,7 @@ int blocktree_insert_bundle(void *blocktree,
 
   struct blocktree_bundle_leaf leaf;
   
+  fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
   // Parse hex BID to binary
   for(i=0;i<32;i++) {
     hex[0]=bid_hex[i*2+0];
@@ -418,6 +429,7 @@ int blocktree_insert_bundle(void *blocktree,
   n=blocktree_find_bundle_record(blocktree,leaf.bid);
   printf("n->status=%d @ depth %d\n",n->status,n->depth);
 
+  fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
   switch(n->status) {
   case BTERR_NOT_IN_TREE:
     // Its not in the tree, so we can just add it into this node,
@@ -451,9 +463,11 @@ int blocktree_insert_bundle(void *blocktree,
   case BTERR_TREE_CORRUPT: 
   case BTERR_INTERMEDIATE_MISSING:
   default:
+    fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
       return n->status;      
   }
   
   // Completed successfully
+  fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
   return BTOK_SUCCESS;
 }
