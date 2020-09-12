@@ -238,7 +238,7 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 				   15000);  
   
   if(result_code<200||result_code>202) {
-    printf("POST bundle to rhizome failed: http result = %d\n",result_code);
+    fprintf(stderr,">>> %s POST bundle to rhizome failed: http result = %d\n",timestamp_str(),result_code);
 
     if (debug_insert) {
       char filename[1024];
@@ -258,7 +258,7 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
     return result_code;
   }
   else
-    printf("http result code = %d\n",result_code);
+    fprintf(stderr,">>> %s http result code = %d\n",timestamp_str(),result_code);
 
   last_servald_contact=gettime_ms();
   

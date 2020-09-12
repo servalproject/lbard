@@ -1,0 +1,1 @@
+( egrep "Saw a piece of BID|http" lbard2.log ; egrep "I just sent|Looking for candidate" lbard8.log  ) | sort -n | less
