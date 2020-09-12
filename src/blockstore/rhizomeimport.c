@@ -239,13 +239,10 @@ int register_bundle(char *service,
 
   fetch_bundle(bid,version,servald_server,credential);
 
-#if 0
-  blockify_bundle(&blocktree,
-		  blockstore,
-		  bid,version,
-		  cached_manifest_encoded,cached_manifest_encoded_len,
-		  cached_body,cached_body_len);
-#endif  
+  blocktree_insert_bundle(blocktree,
+			  bid,version,
+			  cached_manifest_encoded,cached_manifest_encoded_len,
+			  cached_body,cached_body_len);
   
   return 0;
 }

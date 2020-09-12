@@ -31,7 +31,12 @@ struct blocktree_node_unpacked {
 struct blocktree_node {
   // Status of operation returning this node
   int status;
+  // Depth in the tree where the problem was encountered
+  int depth;
 
+  // Which leaf entry is indicated?
+  int leaf_num;
+  
   // The node ID relevant to the response
   // (meaning varies with response code)
   unsigned char node[BS_MAX_HASH_SIZE];
@@ -53,3 +58,7 @@ int blocktree_hash_block(unsigned char *salt_in,int salt_len,
 void *blocktree_open(void *blockstore,
 		     unsigned char *salt, int salt_len,
 		     unsigned char *hash,int hash_len);
+int blocktree_insert_bundle(void *blocktree,
+			    char *bid_hex,char *version,
+			    unsigned char *manifest_encoded,int manifest_encoded_len,
+			    unsigned char *body,int body_len);

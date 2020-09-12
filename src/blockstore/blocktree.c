@@ -156,6 +156,8 @@ struct blocktree_node *blocktree_find_bundle_record(void *blocktree,unsigned cha
   
   if (!bt) return NULL;
 
+  fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
+  
   // Start at the top of the tree
   int bit_offset=0;
 
@@ -163,9 +165,14 @@ struct blocktree_node *blocktree_find_bundle_record(void *blocktree,unsigned cha
   int node_hash_len=bt->top_hash_len;
   unsigned char node_hash[BS_MAX_HASH_SIZE];
   memcpy(node_hash,bt->top_hash,bt->top_hash_len);
+
+  fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
   
   // Limit search to maximum depth implied by by 256-bit BIDs
   while(bit_offset<=256) {
+
+    fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
+    
     unsigned char found_node=0;
     for(i=0;i<bt->blockstore_count;i++) {
       if (!blockstore_retrieve(bt->blockstores[i],node_hash,node_hash_len,res.block,&res.block_len)) {
@@ -176,6 +183,7 @@ struct blocktree_node *blocktree_find_bundle_record(void *blocktree,unsigned cha
     if (!found_node) {
       // We are missing part of the tree required to get to the node.
       res.status=BTERR_INTERMEDIATE_MISSING;
+      res.depth=bit_offset/3;
       memcpy(res.node,node_hash,node_hash_len);
       return &res;
     }
@@ -184,6 +192,7 @@ struct blocktree_node *blocktree_find_bundle_record(void *blocktree,unsigned cha
     if (blocktree_unpack_node(res.block,res.block_len,&res.unpacked)) {
       // Found it, but can't unpack the node
       res.status=BTERR_TREE_CORRUPT;
+      res.depth=bit_offset/3;
       memcpy(res.node,node_hash,node_hash_len);
       return &res;
     }
@@ -193,6 +202,8 @@ struct blocktree_node *blocktree_find_bundle_record(void *blocktree,unsigned cha
       if (!memcmp(res.unpacked.leaves[i].bid,bid,32)) {
 	// Found it!
 	res.status=BTOK_FOUND;
+	res.leaf_num=i;
+	res.depth=bit_offset/3;
 	memcpy(res.node,node_hash,node_hash_len);
 	return &res;
       }
@@ -216,6 +227,7 @@ struct blocktree_node *blocktree_find_bundle_record(void *blocktree,unsigned cha
     }
     if (i==res.unpacked.pointer_count) {
       res.status=BTERR_NOT_IN_TREE;
+      res.depth=bit_offset/3;
       return &res;
     }
     
@@ -223,5 +235,76 @@ struct blocktree_node *blocktree_find_bundle_record(void *blocktree,unsigned cha
 
   // Searched to base of tree, and still can't find it, so it isn't there.
   res.status=BTERR_NOT_IN_TREE;
+  res.depth=bit_offset/3;
   return &res;  
+}
+
+void blocktree_hash_data(void *blocktree,unsigned char *hash_out,unsigned char *data,int len)
+{
+  struct blocktree *bt=blocktree;
+  blocktree_hash_block(bt->salt,bt->salt_len,hash_out,BS_HASH_SIZE,data,len);
+}
+
+int blocktree_insert_bundle(void *blocktree,
+			    char *bid_hex,char *version_asc,
+			    unsigned char *manifest_encoded,int manifest_encoded_len,
+			    unsigned char *body,int body_len)
+{
+  struct blocktree_node *n;
+  unsigned char i;
+  char hex[3];
+
+  struct blocktree_bundle_leaf leaf;
+  
+  // Parse hex BID to binary
+  for(i=0;i<32;i++) {
+    hex[0]=bid_hex[i*2+0];
+    hex[1]=bid_hex[i*2+1];
+    hex[2]=0;
+    leaf.bid[i]=atoi(hex);
+  }
+  leaf.version=strtoll(version_asc,NULL,10);
+  blocktree_hash_data(blocktree,leaf.manifest_hash,manifest_encoded,manifest_encoded_len);
+  blocktree_hash_data(blocktree,leaf.payload_hash,body,body_len);
+  
+  // Now find out if it is in the tree
+  n=blocktree_find_bundle_record(blocktree,leaf.bid);
+  printf("n->status=%d @ depth %d\n",n->status,n->depth);
+
+  switch(n->status) {
+  case BTERR_NOT_IN_TREE:
+    // Its not in the tree, so we can just add it into this node,
+    // possibly causing this node to split.
+    blocktree_node_insert_leaf(blocktree,n,&leaf);
+    blocktree_node_pack(blocktree,n);
+    blocktree_node_write(blocktree,n);
+    break;
+  case BTOK_FOUND:
+    // Check the version of the stored one. If the same or older, then
+    // we can just return with nothing to do.
+    // If its older, then we need to delete it and update the tree back up
+    // to the root.
+    // XXX This might also result in the node unsplitting.
+    if (leaf.version>n->unpacked.leaves[n->leaf_num].version) {
+      // Update the leaf entry and write back
+      // (No need to worry about node splitting, since we are only replacing
+      // content.)
+      memcpy(n->unpacked.leaves[n->leaf_num].manifest_hash,leaf.manifest_hash,BS_HASH_SIZE);
+      memcpy(n->unpacked.leaves[n->leaf_num].payload_hash,leaf.payload_hash,BS_HASH_SIZE);
+      n->unpacked.leaves[n->leaf_num].version = leaf.version;
+      blocktree_node_pack(blocktree,n);
+      blocktree_node_write(blocktree,n);
+    } else {
+      // We are trying to insert an older version, so nothing to do. We keep
+      // the newer version.
+    }
+    break;
+  case BTERR_TREE_CORRUPT: 
+  case BTERR_INTERMEDIATE_MISSING:
+  default:
+      return n->status;      
+  }
+  
+  // Completed successfully
+  return BTOK_SUCCESS;
 }
