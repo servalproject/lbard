@@ -42,6 +42,8 @@ void usage(void)
 
 char *servald_server=NULL;
 char *credential=NULL;
+void *blockstore=NULL;
+void *blocktree=NULL;
 
 int main(int argc,char **argv)
 {
@@ -53,6 +55,22 @@ int main(int argc,char **argv)
   credential=argv[2];
   char *blockstore_descriptor=argv[3];
   char token[1024]="";
+
+  blockstore = blockstore_create(64*1024*1024,64*1024*1024,blockstore_descriptor);
+  if (!blockstore) {
+    fprintf(stderr,"ERROR: Failed to create/open block store.\n");
+    exit(-1);
+  }
+
+  // Make sure the empty block is stored
+  unsigned char zeroes[200];
+  unsigned char hash[24];
+  int hash_len=24;
+  blocktree_hash_block(hash,hash_len,zeroes,0);
+  blockstore_store(blockstore,hash,hash_len,zeroes,0);
+  
+  // Start with blocktree pointing to an empty tree.  
+
 
   // Re-use normal LBARD rhizome async fetch.
   // It doesn't tell us explicitly when done, so we have to infer a bit
@@ -72,6 +90,7 @@ int cached_manifest_encoded_len=0;
 unsigned char *cached_manifest_encoded=NULL;
 int cached_body_len=0;
 unsigned char *cached_body=NULL;
+
 
 int fetch_bundle(char *bid_hex,char *version,
 		 char *servald_server, char *credential)
@@ -216,6 +235,14 @@ int register_bundle(char *service,
 {
 
   fetch_bundle(bid,version,servald_server,credential);
+
+#if 0
+  blockify_bundle(&blocktree,
+		  blockstore,
+		  bid,version,
+		  cached_manifest_encoded,cached_manifest_encoded_len,
+		  cached_body,cached_body_len);
+#endif  
   
   return 0;
 }
