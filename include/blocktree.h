@@ -5,6 +5,7 @@
 #define BTERR_NOT_IN_TREE 1
 #define BTERR_INTERMEDIATE_MISSING 2
 #define BTERR_TREE_CORRUPT 3
+#define BTERR_NO_SPACE 4
 
 struct blocktree_bundle_leaf {
   unsigned char bid[32];
@@ -31,7 +32,7 @@ struct blocktree_node_unpacked {
 struct blocktree_node {
   // Status of operation returning this node
   int status;
-  // Depth in the tree where the problem was encountered
+  // Depth of the returned node in the tree
   int depth;
 
   // Which leaf entry is indicated?

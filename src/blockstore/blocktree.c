@@ -7,7 +7,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
+#include "sync.h"
+#include "lbard.h"
 #include "blockstore.h"
 #include "blocktree.h"
 
@@ -38,6 +42,65 @@ struct blocktree {
 };
 
 #include "sha3.h"
+
+int compare_node_child_pointer(const void *a,const void *b)
+{
+  const struct blocktree_child_pointer *aa=a;
+  const struct blocktree_child_pointer *bb=b;
+
+  if (aa->child_bits<bb->child_bits) return -1;
+  if (aa->child_bits>bb->child_bits) return 1;
+  return 0;  
+}
+
+int compare_bundle_leaf(const void *a,const void *b)
+{
+  const struct blocktree_bundle_leaf *aa=a;
+  const struct blocktree_bundle_leaf *bb=b;
+
+  for(int i=0;i<BS_HASH_SIZE;i++) {
+    if (aa->bid[i]<bb->bid[i]) return -1;
+    if (aa->bid[i]>bb->bid[i]) return 1;
+  }
+  return 0;
+}
+
+
+int blocktree_pack_node(struct blocktree_node *n)
+{
+  struct blocktree_node_unpacked *up=&n->unpacked;
+
+  n->block_len=0;
+
+  // Key is that we have to produce a canonical representation, so that we can reliably infer things
+  // at each end of a link.
+  
+  // Sort pointers by hash
+  qsort(&up->pointers[0],up->pointer_count,sizeof(struct blocktree_child_pointer),compare_node_child_pointer);
+  
+  // Sort leaves by hash
+  qsort(&up->leaves[0],up->leaf_count,sizeof(struct blocktree_bundle_leaf),compare_bundle_leaf);
+
+  n->block[n->block_len++]=(up->leaf_count<<4)+up->pointer_count;
+
+  for(int i=0;i<up->pointer_count;i++) {
+    n->block[n->block_len++]=up->pointers[i].child_bits;
+    memcpy(&n->block[n->block_len],up->pointers[i].child_hash,BS_HASH_SIZE);
+    n->block_len+=BS_HASH_SIZE;
+  }
+  for(int i=0;i<up->leaf_count;i++) {
+    memcpy(&n->block[n->block_len],up->leaves[i].bid,32);
+    n->block_len+=32;
+    for(int j=0;j<8;j++)
+      n->block[n->block_len++]=up->leaves[i].version>>(56-j*8);
+    memcpy(&n->block[n->block_len],up->leaves[i].manifest_hash,BS_HASH_SIZE);
+    n->block_len+=BS_HASH_SIZE;
+    memcpy(&n->block[n->block_len],up->leaves[i].payload_hash,BS_HASH_SIZE);
+    n->block_len+=BS_HASH_SIZE;          
+  } 
+
+  return BTOK_SUCCESS;  
+}
 
 int blocktree_unpack_node(unsigned char *block,int len,struct blocktree_node_unpacked *n)
 {
@@ -245,6 +308,90 @@ void blocktree_hash_data(void *blocktree,unsigned char *hash_out,unsigned char *
   blocktree_hash_block(bt->salt,bt->salt_len,hash_out,BS_HASH_SIZE,data,len);
 }
 
+int blocktree_node_write(void *blocktree,struct blocktree_node *n)
+{
+  unsigned char i;
+  struct blocktree *bt=blocktree;
+  if (!bt) return BTERR_TREE_CORRUPT;
+
+  /*
+    We assume that the node has been re-packed.
+    We need to calculate its hash, and write it to the store.
+    Then we need to replace the pointer to the old version in 
+    the parent block with the new value, and write that back out,
+    as well.
+    XXX Delete the old versions as we go?
+
+    For embedded systems, we don't really want to have upto 256 / 3 = ~85 node blocks
+    hanging around in memory for a worse-case situation.  So we instead iterate through
+    the tree from the top each time when doing the update. On non-embedded systems, the
+    performance of the block store compared with data transfer speeds should be more than
+    ample.  Various caching strategies can be used in that case, anyway, to speed things
+    up if required.  For now we will just focus on getting it working.
+  */
+
+  unsigned char hash[BS_HASH_SIZE];
+  blocktree_hash_data(blocktree,hash,n->block,n->block_len);
+  fprintf(stderr,">>> %s Updated block hash is %02x%02x%02x%02x...\n",
+	  timestamp_str(),
+	  hash[0],hash[1],hash[2],hash[3]);
+
+  // Try each writeable blockstore in turn
+  for(i=0;i<bt->blockstore_count;i++)
+    if (bt->blockstore_writeable[i]) {
+      if (!blockstore_store(bt->blockstores[i],hash,BS_HASH_SIZE,n->block,n->block_len)) {
+	break;
+      }
+    }
+  if (i==bt->blockstore_count) {
+    return BTERR_NO_SPACE;
+  }
+
+  // Now update the parent node
+  while(n->depth) {
+    fprintf(stderr,"NOTIMPLEMENTED: Update intermediate nodes in tree.\n");
+  }
+  memcpy(bt->top_hash,hash,BS_HASH_SIZE);
+  
+  return BTOK_SUCCESS;
+  
+}
+
+int blocktree_node_insert_leaf(void *blocktree,struct blocktree_node *n, struct blocktree_bundle_leaf *leaf)
+{
+  //  int size=n->unpacked.pointer_count*(1+BS_HASH_SIZE)+(n->unpacked.leaf_count+1)*(32+8+BS_HASH_SIZE+BS_HASH_SIZE);
+  /* Block would be too big, so write out leaf, plus any other leaves already in the block out
+     into separate blocks, then put their pointers in place.
+     
+     We then have a couple of cases to worry about:
+     1. If there was no pointer to the relevant sub-tree, then our life is easy, as we can just add a pointer
+     to the newly inserted leaf block.
+     2. If there is already a pointer to the relevant sub-tree, then we need to traverse down to work out
+     where it goes.
+     
+     We can simplify this by simply always splitting a block whenever it has > 2 leaves into only pointers,
+     so that we should never have a block with pointers AND leaves at the same time.  This loses a bit of
+     efficiency of storage (and thus transmission), but it simplifies the algorithm quite a bit.
+  */
+
+  if (n->unpacked.pointer_count) {
+    // We need to put our leaf onto the right child, by drilling down to the bottom of the tree.
+    fprintf(stderr,"UNIMPLEMENTED: Inserting leaf into node with pointers.\n");
+    exit(-1);
+  }
+  if (n->unpacked.leaf_count>1) {
+    fprintf(stderr,"UNIMPLEMENTED: Splitting over-full leaf node block.\n");
+    exit(-1);
+  }
+
+  // Node is currently empty, or contains only one leaf, so we can just stuff it in
+  memcpy(&n->unpacked.leaves[n->unpacked.leaf_count],leaf,sizeof(struct blocktree_bundle_leaf));
+  n->unpacked.leaf_count++;
+
+  return BTOK_SUCCESS;
+  
+}
+
 int blocktree_insert_bundle(void *blocktree,
 			    char *bid_hex,char *version_asc,
 			    unsigned char *manifest_encoded,int manifest_encoded_len,
@@ -276,7 +423,9 @@ int blocktree_insert_bundle(void *blocktree,
     // Its not in the tree, so we can just add it into this node,
     // possibly causing this node to split.
     blocktree_node_insert_leaf(blocktree,n,&leaf);
-    blocktree_node_pack(blocktree,n);
+    // After it has been split, the result should pack fine. If not, we have a terrible bug
+    if (blocktree_pack_node(n)) return BTERR_TREE_CORRUPT;
+    // Finally, write it back, perculating the change back up to the top of the tree
     blocktree_node_write(blocktree,n);
     break;
   case BTOK_FOUND:
@@ -292,7 +441,7 @@ int blocktree_insert_bundle(void *blocktree,
       memcpy(n->unpacked.leaves[n->leaf_num].manifest_hash,leaf.manifest_hash,BS_HASH_SIZE);
       memcpy(n->unpacked.leaves[n->leaf_num].payload_hash,leaf.payload_hash,BS_HASH_SIZE);
       n->unpacked.leaves[n->leaf_num].version = leaf.version;
-      blocktree_node_pack(blocktree,n);
+      blocktree_pack_node(n);
       blocktree_node_write(blocktree,n);
     } else {
       // We are trying to insert an older version, so nothing to do. We keep
