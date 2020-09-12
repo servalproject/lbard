@@ -699,7 +699,7 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
     if (p==peer_records[peer]) break;
   if (peer>=peer_count) return -1;
   
-  printf("Dequeuing TX of bundle #%d (",bundle);
+  fprintf(stderr,">>> %s DEQUEUE TX of bundle #%d (",timestamp_str(),bundle);
   describe_bundle(RESOLVE_SIDS,stdout,NULL,bundle,
 		  peer,-1,-1);
   printf(") to %s*\n",p->sid_prefix);
@@ -732,6 +732,8 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
 	  fprintf(stderr,"HARDLOWER: Resetting hard lower start point to 0,0\n");
       }
       txbundle_restore_progress(p);
+      fprintf(stderr,">>> %s DEQUEUE Before deletion from in queue due to queue pop:\n",timestamp_str());
+      peer_queue_list_dump(p);
       bcopy(&p->tx_queue_bundles[1],
 	    &p->tx_queue_bundles[0],
 	    sizeof(int)*p->tx_queue_len-1);
@@ -739,6 +741,8 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
 	    &p->tx_queue_priorities[0],
 	    sizeof(int)*p->tx_queue_len-1);
       p->tx_queue_len--;
+      fprintf(stderr,">>> %s DEQUEUE After deletion from in queue:\n",timestamp_str());
+      peer_queue_list_dump(p);
     } else {
       if (p->tx_queue_overflow) {
 	/* TX queue overflowed at some point, and now we have
@@ -760,8 +764,8 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
     // Wasn't the bundle being transmitted right now, so delete from in list.
     for(int i=0;i<p->tx_queue_len;i++) {
       if (bundle==p->tx_queue_bundles[i]) {
-	// printf("Before deletion from in queue:\n");
-	// peer_queue_list_dump(p);
+	fprintf(stderr,">>> %s DEQUEUE Before deletion from in queue:\n",timestamp_str());
+	peer_queue_list_dump(p);
 	// Delete this entry in queue
 	bcopy(&p->tx_queue_bundles[i+1],
 	      &p->tx_queue_bundles[i],
@@ -770,7 +774,7 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
 	      &p->tx_queue_priorities[i],
 	      sizeof(int)*p->tx_queue_len-i-1);
 	p->tx_queue_len--;
-	printf("After deletion from in queue:\n");
+	fprintf(stderr,">>> %s DEQUEUE After deletion from in queue:\n",timestamp_str());
 	peer_queue_list_dump(p);
 	return 0;
       }
