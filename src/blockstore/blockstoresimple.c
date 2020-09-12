@@ -11,15 +11,7 @@
 #include <strings.h>
 #include <unistd.h>
 
-#define MAX_HASH_SIZE 32
-#define MAX_BLOCKSIZE 200
-
-struct block {
-  unsigned char hash[MAX_HASH_SIZE];
-  unsigned char data[MAX_BLOCKSIZE];
-  unsigned char data_len;
-  unsigned char hash_len;
-};
+#include "blockstore.h"
 
 struct blockstore_simple {
   int blocks_used;

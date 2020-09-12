@@ -64,13 +64,14 @@ int main(int argc,char **argv)
 
   // Make sure the empty block is stored
   unsigned char zeroes[200];
-  unsigned char hash[24];
-  int hash_len=24;
-  blocktree_hash_block(hash,hash_len,zeroes,0);
+  unsigned char hash[BS_MAX_HASH_SIZE];
+  int hash_len=BS_HASH_SIZE;
+  blocktree_hash_block(zeroes,0, // no salt
+		       hash,hash_len,zeroes,0);
   blockstore_store(blockstore,hash,hash_len,zeroes,0);
   
   // Start with blocktree pointing to an empty tree.  
-
+  blocktree = blocktree_open(blockstore,hash,hash_len);
 
   // Re-use normal LBARD rhizome async fetch.
   // It doesn't tell us explicitly when done, so we have to infer a bit
