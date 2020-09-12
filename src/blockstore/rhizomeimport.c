@@ -21,7 +21,7 @@
 // Satisfy dependencies of code pulled in from LBARD
 #include "radio_type.h"
 int debug_insert=1;
-char *my_sid_hex="NOT SET";
+char *my_sid_hex="UTILS";
 radio_type radio_types[]={
 			  {-1,NULL,NULL,NULL,NULL,NULL,NULL,NULL,-1}
 };
