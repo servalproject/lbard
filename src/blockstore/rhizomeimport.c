@@ -71,7 +71,9 @@ int main(int argc,char **argv)
   blockstore_store(blockstore,hash,hash_len,zeroes,0);
   
   // Start with blocktree pointing to an empty tree.  
-  blocktree = blocktree_open(blockstore,hash,hash_len);
+  blocktree = blocktree_open(blockstore,
+			     zeroes,0, // no salt
+			     hash,hash_len);
 
   // Re-use normal LBARD rhizome async fetch.
   // It doesn't tell us explicitly when done, so we have to infer a bit

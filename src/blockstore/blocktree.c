@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "blockstore.h"
+#include "blocktree.h"
 
 // Allow a block tree to have more than one block store.
 // Blocks will be preferentially stored into the first store,
@@ -25,6 +26,10 @@ struct blocktree {
   // The top node of the tree
   unsigned char top_hash[BS_MAX_HASH_SIZE];
   int top_hash_len;
+
+  // The salt that is used in this block tree for hashing
+  unsigned char salt[BT_MAX_SALT_LEN];
+  int salt_len;
   
   // Block stores that hold the blocks
   void *blockstores[BT_MAX_BLOCKSTORES];
@@ -33,6 +38,62 @@ struct blocktree {
 };
 
 #include "sha3.h"
+
+int blocktree_unpack_node(unsigned char *block,int len,struct blocktree_node_unpacked *n)
+{
+  /*
+    The packed format of the a node is:
+
+    1 byte - low nybl = pointer count, high nybl = leaf count
+    Then pointers follow.
+    Then leaves follow.
+   */
+
+  if (len<1) {
+    n->pointer_count=0;
+    n->leaf_count=0;
+    return 0;
+  }
+
+  // Get counts of fields
+  n->pointer_count=block[0]&0xf;
+  n->leaf_count=block[0]>>4;
+
+  // Make sure the block doesn't have invalidly large entry counts
+  if (n->pointer_count>8) return BTERR_TREE_CORRUPT;
+  if (n->leaf_count>2) return BTERR_TREE_CORRUPT;
+  
+  int p=0;
+  int l=0;
+  
+  int ofs=1;
+
+  while(ofs<len) {
+    if (p<n->pointer_count) {
+      // Extract pointer to sub-child
+      n->pointers[l].child_bits=block[ofs++];
+      memcpy(n->pointers[p].child_hash,&block[ofs],BS_HASH_SIZE); ofs+=BS_HASH_SIZE;
+      p++;
+    } else if (l) {
+      // Extract bundle leaf node
+      memcpy(n->leaves[p].bid,&block[ofs],32); ofs+=32;
+      n->leaves[p].version=0;
+      for(int i=0;i<8;i++) {
+	n->leaves[p].version<<=8;
+	n->leaves[p].version|=block[ofs++];	
+      }
+      memcpy(n->leaves[p].manifest_hash,&block[ofs],BS_HASH_SIZE); ofs+=BS_HASH_SIZE;
+      memcpy(n->leaves[p].payload_hash,&block[ofs],BS_HASH_SIZE); ofs+=BS_HASH_SIZE;      
+      l++;
+    } else break;
+  }
+  if (ofs!=len) {
+    fprintf(stderr,"ERROR: Corrupt block.\n");
+    return BTERR_TREE_CORRUPT;
+  }
+
+  return BTOK_SUCCESS;
+}
 
 int blocktree_hash_block(unsigned char *salt,int salt_len,
 			 unsigned char *hash_out,int hash_len,unsigned char *data,int len)  
@@ -47,13 +108,120 @@ int blocktree_hash_block(unsigned char *salt,int salt_len,
   
 }
 
-void *blocktree_open(void *blockstore,unsigned char *hash,int hash_len)
+void *blocktree_open(void *blockstore,
+		     unsigned char *salt, int salt_len,
+		     unsigned char *hash,int hash_len)
 {
+  // Sanity check parameters
+  if (salt_len<0||salt_len>BT_MAX_SALT_LEN) return NULL;
+  if (hash_len<1||hash_len>BS_MAX_HASH_SIZE) return NULL;
+  
   struct blocktree *bt=calloc(sizeof(struct blocktree),1);
   bt->blockstore_count=1;
   bt->blockstore_writeable[0]=1;
   bt->blockstores[0]=blockstore;
   memcpy(bt->top_hash,hash,hash_len);
   bt->top_hash_len=hash_len;
+  memcpy(bt->salt,salt,salt_len);
+  bt->salt_len=salt_len;
   return bt;
+}
+
+// Used for returning results in blocktree_find_bundle_record()
+struct blocktree_node res;
+
+struct blocktree_node *blocktree_find_bundle_record(void *blocktree,unsigned char *bid)
+{
+  /*
+    Look up a node in the block tree.
+
+    Each node potentially contains a mix of pointers to child-nodes and/or 
+    leaf-node entries.  (struct blocktree_child_pointer and struct blocktree_bundle_leaf,
+    respectively.
+
+    The first byte of the block indicates how many of each, using a single byte that 
+    contains the number of each in each nybl.
+
+    In order to optimise transfers, the blocks have a canonical representation, where
+    pointers come before leaf nodes, and entries are sorted by the BID space that the
+    correspond to.
+
+    If a block has become too full to fit everything, then the leaf node with lowest
+    BID is ejected into a child node. This is repeated until such time as the block is
+    no longer over full.
+  */
+
+  unsigned char i;
+  struct blocktree *bt=blocktree;
+  
+  if (!bt) return NULL;
+
+  // Start at the top of the tree
+  int bit_offset=0;
+
+  // Start with top node
+  int node_hash_len=bt->top_hash_len;
+  unsigned char node_hash[BS_MAX_HASH_SIZE];
+  memcpy(node_hash,bt->top_hash,bt->top_hash_len);
+  
+  // Limit search to maximum depth implied by by 256-bit BIDs
+  while(bit_offset<=256) {
+    unsigned char found_node=0;
+    for(i=0;i<bt->blockstore_count;i++) {
+      if (!blockstore_retrieve(bt->blockstores[i],node_hash,node_hash_len,res.block,&res.block_len)) {
+	found_node=1;
+	break;
+      }
+    }
+    if (!found_node) {
+      // We are missing part of the tree required to get to the node.
+      res.status=BTERR_INTERMEDIATE_MISSING;
+      memcpy(res.node,node_hash,node_hash_len);
+      return &res;
+    }
+
+    // Ok, we have the node, so now take a look in it
+    if (blocktree_unpack_node(res.block,res.block_len,&res.unpacked)) {
+      // Found it, but can't unpack the node
+      res.status=BTERR_TREE_CORRUPT;
+      memcpy(res.node,node_hash,node_hash_len);
+      return &res;
+    }
+
+    // Ok, we have the node.
+    for(i=0;i<res.unpacked.leaf_count;i++) {
+      if (!memcmp(res.unpacked.leaves[i].bid,bid,32)) {
+	// Found it!
+	res.status=BTOK_FOUND;
+	memcpy(res.node,node_hash,node_hash_len);
+	return &res;
+      }
+    }
+    // Nope, its not in a leaf node in this block.
+    // Find the correct pointer, and follow that, or return
+    // BTERR_NOT_IN_TREE if it is definitely not there.
+    unsigned char next_bits=0;
+    for(i=0;i<3;i++) {
+      next_bits=next_bits<<1;
+      if (bid[(bit_offset+i)>>3]&(0x80>>(i&7))) next_bits|=1;
+    }
+
+    for(i=0;i<res.unpacked.pointer_count;i++) {
+      if (res.unpacked.pointers[i].child_bits==next_bits) {
+	// Found pointer
+	memcpy(node_hash,res.unpacked.pointers[i].child_hash,BS_HASH_SIZE);
+	bit_offset+=3;
+	break;
+      }
+    }
+    if (i==res.unpacked.pointer_count) {
+      res.status=BTERR_NOT_IN_TREE;
+      return &res;
+    }
+    
+  }
+
+  // Searched to base of tree, and still can't find it, so it isn't there.
+  res.status=BTERR_NOT_IN_TREE;
+  return &res;  
 }
