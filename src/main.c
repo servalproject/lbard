@@ -895,6 +895,8 @@ int main(int argc, char **argv)
 
       // Refresh our instance ID every four minutes, so that any bundle list sync bugs
       // can only block transmission for a few minutes.
+      // DISABLED as we shouldn't need it anymore, and it really messes with HF transfers
+#if 0
       if ((time(0) - last_instance_time) > 240) 
       {
         my_instance_id = 0;
@@ -905,6 +907,7 @@ int main(int argc, char **argv)
 
         last_instance_time = time(0);
       }
+#endif
       
       account_time("radio_read_bytes()");
       
