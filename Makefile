@@ -1,5 +1,5 @@
 BINDIR=.
-EXECS = $(BINDIR)/lbard $(BINDIR)/manifesttest $(BINDIR)/fakecsmaradio $(BINDIR)/fakeouternet $(BINDIR)/mktestfile
+EXECS = $(BINDIR)/lbard $(BINDIR)/manifesttest $(BINDIR)/fakecsmaradio $(BINDIR)/fakeouternet $(BINDIR)/mktestfile $(BINDIR)/rhizomeimport
 
 all:	$(EXECS)
 
@@ -106,6 +106,13 @@ $(INCLUDEDIR)/version.h:	$(SRCS) $(HDRS)
 
 lbard:	$(SRCS) $(HDRS) $(INCLUDEDIR)/version.h
 	$(CC) $(CFLAGS) -o lbard $(SRCS) $(LDFLAGS)
+
+IMPORTSRCS=src/blockstore/rhizomeimport.c src/blockstore/blockstoresimple.c \
+	src/rhizome/rhizome.c src/util.c src/code_instrumentation.c \
+	src/http/httpclient.c src/xfer/serial.c src/rhizome/json.c
+
+rhizomeimport: include/lbard.h include/blockstore.h $(IMPORTSRCS)
+	$(CC) $(CFLAGS) -o rhizomeimport $(IMPORTSRCS)  $(LDFLAGS)
 
 mktestfile:	src/mktestfile.c Makefile
 	$(CC) $(CFLAGS) -o $(BINDIR)/mktestfile src/mktestfile.c $(LDFLAGS)
