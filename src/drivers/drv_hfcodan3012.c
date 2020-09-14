@@ -319,7 +319,7 @@ int hfcodan3012_serviceloop(int serialfd)
 	data_packet_timeout=time(0)+2;
 	printf(">>> %s Getting ready to send a pure data packet.\n",timestamp_str());
 
-	//	send_pure_data_packet(200);
+	send_pure_data_packet(200);
 	
       }
     }
@@ -588,7 +588,7 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
     serial_errors=0;
   }
 
-  //  send_pure_data_packet(256);
+  send_pure_data_packet(256);
   
   return 0;
 }
