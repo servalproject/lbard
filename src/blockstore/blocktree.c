@@ -390,6 +390,20 @@ int blocktree_node_insert_leaf(void *blocktree,struct blocktree_node *n, struct 
   }
   if (n->unpacked.leaf_count>1) {
     fprintf(stderr,"UNIMPLEMENTED: Splitting over-full leaf node block.\n");
+
+    // Make two blocks that have just each leaf.  They need to be formatted as nodes with the pointer/leaf counter byte
+    // in them, so that this all works recursivelly.
+    // Make a block that has just two pointers to these leaves in them.
+
+    struct  blocktree_node c1,c2;
+    bzero(&c1,sizeof(struct blocktree_node));
+    bzero(&c2,sizeof(struct blocktree_node));
+    c1.leaf_count=1;
+    memcpy(&c1.unpacked.leaves[0],n->unpacked.leaves[0],sizeof(struct blocktree_bundle_leaf));
+    c2.leaf_count=1;
+    memcpy(&c2.unpacked.leaves[0],n->unpacked.leaves[1],sizeof(struct blocktree_bundle_leaf));
+    
+    
     exit(-1);
   }
 
