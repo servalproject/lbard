@@ -91,7 +91,7 @@ int load_rhizome_db_async_start(char *servald_server,
     
   load_rhizome_db_socket=http_get_async(servald_server,credential,path,5000);
 
-  printf(">>> %s load_rhizome_db_socket=%d\n",timestamp_str(),load_rhizome_db_socket);
+  //  printf(">>> %s load_rhizome_db_socket=%d\n",timestamp_str(),load_rhizome_db_socket);
   
   return load_rhizome_db_socket;
 }
@@ -143,7 +143,7 @@ int load_rhizome_db_async(char *servald_server,
     case 0: // Got a line
       {
 	last_servald_contact=gettime_ms();
-	printf(">>> %s Read line via load_rhizome_db_socket.\n",timestamp_str());    
+	//	printf(">>> %s Read line via load_rhizome_db_socket.\n",timestamp_str());    
 
 	char fields[14][8192];
 	int n=parse_json_line(load_rhizome_db_line,fields,14);
@@ -170,7 +170,7 @@ int load_rhizome_db_async(char *servald_server,
 			  ,fields[13] // Name
 			  );
 	} else {
-	  printf(">>> %s Invalid line via load_rhizome_db_socket: n=%d\n",timestamp_str(),n);    
+	  // printf(">>> %s Invalid line via load_rhizome_db_socket: n=%d\n",timestamp_str(),n);    
 	}
       }
       // Reset timeout
