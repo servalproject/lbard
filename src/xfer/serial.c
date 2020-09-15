@@ -92,19 +92,32 @@ ssize_t read_nonblock(int fd, void *buf, size_t len)
 
 ssize_t write_all(int fd, const void *buf, size_t len)
 {
-  ssize_t written = write(fd, buf, len);
-  if (written == -1)
-    { perror("write_all(): written == -1");
-      fprintf(stderr,"(fd=%d)\n",fd);
-      return -1; }
+  // We use a small amount, so that FTDI USB serial adapters have a chance to
+  // assert hardware flowcontrol
+#define MAX_SER_CHARS 16
 
-  if ((size_t)written != len)
-    { perror("write_all(): written != len"); return -1; }
-
-  if (0) fprintf(stderr,"write_all(%d) sent %d bytes.\n",
-		 (int)len,(int)written);
+  const unsigned char *b=buf;
   
-  return written;
+  int ofs=0;
+ 
+  while(ofs<len) {
+    int num=MAX_SER_CHARS;
+    if (ofs+num>len) num=len-ofs;
+    ssize_t written = write(fd, &b[ofs], num);
+    if (written == -1)
+      { perror("write_all(): written == -1");
+	fprintf(stderr,"(fd=%d)\n",fd);
+	return -1; }
+    else ofs+=written;
+  }   
+
+  //    if ((size_t)written != len)
+  //      { perror("write_all(): written != len"); return -1; }
+  
+  if (0) fprintf(stderr,"write_all(%d) sent %d bytes.\n",
+		   (int)len,(int)ofs);
+  
+  return ofs;
 }
 
 int serial_setup_port_with_speed(int fd,int speed)
