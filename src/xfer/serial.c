@@ -108,6 +108,11 @@ ssize_t write_all(int fd, const void *buf, size_t len)
       { perror("write_all(): written == -1");
 	fprintf(stderr,"(fd=%d)\n",fd);
 	return -1; }
+    // Yield if writing all bytes failed.
+    if (written<num) {
+      fprintf(stderr,">>> %s write_all could only write %d of %d bytes.\n",timestamp_str(),(int)written,num);
+      usleep(0);
+    }
     else ofs+=written;
   }   
 
