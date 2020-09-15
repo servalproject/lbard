@@ -306,6 +306,13 @@ int hfcodan3012_serviceloop(int serialfd)
     // Modem is connected
     write_all(serialfd,"ato\r\n",5);
     fprintf(stderr,">>> %s HFCALL going online.\n",timestamp_str());
+
+    // Reset TX sequence management
+    tx_seq=0;
+    last_tx_reflected_seq=0;
+    message_update_interval=500;
+    next_message_update_time = gettime_ms() + message_update_interval;
+    	  
     hf_state=HF_DATAONLINE;
     call_timeout=time(0)+120;
     break;
@@ -325,7 +332,9 @@ int hfcodan3012_serviceloop(int serialfd)
 	data_packet_timeout=time(0)+2;
 	printf(">>> %s Getting ready to send a pure data packet.\n",timestamp_str());
 
-	send_pure_data_packet(200);
+	// Don't congest the link if it is >30 seconds since we last received a normal packet
+	if ((call_timeout-time(0))<(120-30))
+	  send_pure_data_packet(200);
 	
       }
     }
@@ -594,7 +603,9 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
     serial_errors=0;
   }
 
-  send_pure_data_packet(256);
+  // Don't congest the link if it is >30 seconds since we last received a normal packet
+  if ((call_timeout-time(0))<(120-30))
+    send_pure_data_packet(256);
   
   return 0;
 }
