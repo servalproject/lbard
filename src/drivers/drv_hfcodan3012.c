@@ -143,7 +143,8 @@ void send_pure_data_packet(int pure_packet_max)
      only have one peer on the link.
      
   */
-  fprintf(stderr,"peer_count=%d, peer_records[0]->tx_bundle=%d, cached_body=%p\n",peer_count,peer_count?peer_records[0]->tx_bundle:-1,cached_body);
+  fprintf(stderr,">>> %s send_pure_data_packet: peer_count=%d, peer_records[0]->tx_bundle=%d, cached_body=%p\n",
+	  timestamp_str(),peer_count,peer_count?peer_records[0]->tx_bundle:-1,cached_body);
   if ((peer_count>0)&&(peer_records[0]->tx_bundle>0))
     {
       unsigned char data_packet[1024];
@@ -332,11 +333,11 @@ int hfcodan3012_serviceloop(int serialfd)
 	data_packet_timeout=time(0)+2;
 
 	// Don't congest the link if it is >30 seconds since we last received a normal packet
-	if ((call_timeout-time(0))<(120-30)) {
+	if ((call_timeout-time(0))>(120-30)) {
 	  fprintf(stderr,">>> %s Getting ready to send a pure data packet.\n",timestamp_str());
 	  send_pure_data_packet(200);
 	} else
-	  fprintf(stderr,">>> %s Not sending a pure data packet due to call timeout: call_timeout=T+%dsec\n",
+	  fprintf(stderr,">>> %s Not sending a pure data packet due to call timeout: call_timeout=T+%ld sec\n",
 		  timestamp_str(),call_timeout-time(0));	  	
       }
     }
@@ -648,7 +649,7 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
   }
 
   // Don't congest the link if it is >30 seconds since we last received a normal packet
-  if ((call_timeout-time(0))<(120-30)) {
+  if ((call_timeout-time(0))>(120-30)) {
     fprintf(stderr,">>> %s Getting ready to send a pure data packet.\n",timestamp_str());
     send_pure_data_packet(256);
   }
