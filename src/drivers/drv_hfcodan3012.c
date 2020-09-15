@@ -134,6 +134,23 @@ int last_hf_state=0;
 int data_packet_ofs=0;
 int data_packet_manifestP=1;
 
+int rx_bytes=0;
+int tx_bytes=0;
+
+int log_tx(unsigned char *bytes,int count)
+{
+  char log[1024];
+  snprintf(log,1024,"txlog.%d",getpid());
+  FILE *f=fopen(log,"a");
+  if (f) {
+    for(int i=0;i<count;i++) {
+      fprintf(f,"%08x %02x\n",tx_bytes++,bytes[i]);
+    }
+    fclose(f);
+  }
+  return 0;
+}
+
 void send_pure_data_packet(int pure_packet_max)
 {
   /* 
@@ -238,7 +255,8 @@ void send_pure_data_packet(int pure_packet_max)
 	data_packet_ofs+=bytes_to_send;
 	
 	dump_bytes(stderr,"Data packet to send",data_packet,ofs);
-	
+
+	log_tx(data_packet,ofs);
 	if (write_all(serialfd,data_packet,ofs)==-1) {
 	  serial_errors++;
 	  return;
@@ -278,7 +296,7 @@ int hfcodan3012_serviceloop(int serialfd)
 	hfcallplan_pos+=n;
 	fprintf(stderr,">>> HFCALL %s Calling station '%s'\n",timestamp_str(),remoteid);
 	char cmd[2048];
-	snprintf(cmd,2048,"atd%s\r\n",remoteid);
+	snprintf(cmd,2048,"atd%s\r\n",remoteid);	
 	write_all(serialfd,cmd,strlen(cmd));
 	call_timeout=time(0)+300;
 	hf_state=HF_CALLREQUESTED;
@@ -385,23 +403,6 @@ int rx_byte_count=0;
 time_t first_rx_time=0;
 
 time_t last_rate_report_time=0;
-
-int rx_bytes=0;
-int tx_bytes=0;
-
-int log_tx(unsigned char *bytes,int count)
-{
-  char log[1024];
-  snprintf(log,1024,"txlog.%d",getpid());
-  FILE *f=fopen(log,"a");
-  if (f) {
-    for(int i=0;i<count;i++) {
-      fprintf(f,"%08x %02x\n",tx_bytes++,bytes[i]);
-    }
-    fclose(f);
-  }
-  return 0;
-}
 
 int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 { 
@@ -591,7 +592,7 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
   // accidentally doing !!, which will send a packet.
   write(serialfd,"C!C",3);
   log_tx((unsigned char *)"C!C",3);
-
+  
   // Then sequence # and the last sequence # we have seen from the remote
   if (tx_seq==0x21) {
     write(serialfd,"!.",2);
