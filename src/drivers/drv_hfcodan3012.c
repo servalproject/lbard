@@ -273,7 +273,7 @@ int hfcodan3012_serviceloop(int serialfd)
 		   remoteid,&n);
       if (f==1) {
 	hfcallplan_pos+=n;
-	fprintf(stderr,"Calling station '%s'\n",remoteid);
+	fprintf(stderr,">>> HFCALL %s Calling station '%s'\n",timestamp_str(),remoteid);
 	char cmd[2048];
 	snprintf(cmd,2048,"atd%s\r\n",remoteid);
 	write_all(serialfd,cmd,strlen(cmd));
@@ -288,9 +288,13 @@ int hfcodan3012_serviceloop(int serialfd)
     }    
     break;
   case HF_CALLREQUESTED:
-    if (time(0)>=call_timeout) hf_state=HF_DISCONNECTED;
+    if (time(0)>=call_timeout) {
+      fprintf(stderr,">>> %s HFCALL disconnected: Call establishment timeout.\n",timestamp_str());
+      hf_state=HF_DISCONNECTED;
+    }
     break;
   case HF_ANSWERCALL:
+    fprintf(stderr,">>> %s HFCALL incoming call seen.\n",timestamp_str());
     write_all(serialfd,"ata\r\n",5);
     hf_state=HF_CONNECTING;
     call_timeout=300;
@@ -301,6 +305,7 @@ int hfcodan3012_serviceloop(int serialfd)
   case HF_DATALINK:
     // Modem is connected
     write_all(serialfd,"ato\r\n",5);
+    fprintf(stderr,">>> %s HFCALL going online.\n",timestamp_str());
     hf_state=HF_DATAONLINE;
     call_timeout=time(0)+120;
     break;
@@ -313,6 +318,7 @@ int hfcodan3012_serviceloop(int serialfd)
       write_all(serialfd,"+++",3);
       sleep(2);
       write_all(serialfd,"ath0\r\n",5);
+      fprintf(stderr,">>> %s HFCALL disconnecting due to packet RX timeout.\n",timestamp_str());
       hf_state=HF_DISCONNECTED;
     } else {
       if (time(0)>=data_packet_timeout) {
