@@ -330,12 +330,14 @@ int hfcodan3012_serviceloop(int serialfd)
     } else {
       if (time(0)>=data_packet_timeout) {
 	data_packet_timeout=time(0)+2;
-	printf(">>> %s Getting ready to send a pure data packet.\n",timestamp_str());
 
 	// Don't congest the link if it is >30 seconds since we last received a normal packet
-	if ((call_timeout-time(0))<(120-30))
+	if ((call_timeout-time(0))<(120-30)) {
+	  fprintf(stderr,">>> %s Getting ready to send a pure data packet.\n",timestamp_str());
 	  send_pure_data_packet(200);
-	
+	} else
+	  fprintf(stderr,">>> %s Not sending a pure data packet due to call timeout: call_timeout=T+%dsec\n",
+		  timestamp_str(),call_timeout-time(0));	  	
       }
     }
     break;
@@ -391,7 +393,7 @@ int log_tx(unsigned char *bytes,int count)
   FILE *f=fopen(log,"a");
   if (f) {
     for(int i=0;i<count;i++) {
-      fprintf(f,"%08x %02x\n",tx_bytes++,bytes[count]);
+      fprintf(f,"%08x %02x\n",tx_bytes++,bytes[i]);
     }
     fclose(f);
   }
@@ -411,7 +413,7 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
       FILE *f=fopen(log,"a");
       if (f) {
 	for(int i=0;i<count;i++) {
-	  fprintf(f,"%08x %02x\n",rx_bytes++,bytes[count]);
+	  fprintf(f,"%08x %02x\n",rx_bytes++,bytes[i]);
 	}
 	fclose(f);
       }
@@ -646,8 +648,10 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
   }
 
   // Don't congest the link if it is >30 seconds since we last received a normal packet
-  if ((call_timeout-time(0))<(120-30))
+  if ((call_timeout-time(0))<(120-30)) {
+    fprintf(stderr,">>> %s Getting ready to send a pure data packet.\n",timestamp_str());
     send_pure_data_packet(256);
+  }
   
   return 0;
 }
