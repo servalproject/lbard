@@ -52,7 +52,7 @@ int hfcodan3012_initialise(int serialfd)
   write_all(serialfd,cmd,strlen(cmd));
   fprintf(stderr,"Set HF station ID in modem to '%s'\n",hfselfid?hfselfid:"1");
 
-  snprintf(cmd,1024,"at&k=3\r\n");
+  snprintf(cmd,1024,"at&K=3\r\n");
   write_all(serialfd,cmd,strlen(cmd));
   fprintf(stderr,"Enabling hardware flow control.\n");
 
@@ -143,6 +143,8 @@ void send_pure_data_packet(int pure_packet_max)
      only have one peer on the link.
      
   */
+  if (!bid_of_cached_bundle) return;
+  
   fprintf(stderr,">>> %s send_pure_data_packet: peer_count=%d, peer_records[0]->tx_bundle=%d, cached_body=%p\n",
 	  timestamp_str(),peer_count,peer_count?peer_records[0]->tx_bundle:-1,cached_body);
   if ((peer_count>0)&&(peer_records[0]->tx_bundle>0))
