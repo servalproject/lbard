@@ -110,8 +110,8 @@ int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
   char to[128];
   char fromname[128];
   char toname[128];
-  strncpy(from,bundles[bn].sender,127);
-  strncpy(to,bundles[bn].recipient,127);
+  strncpy(from,bundles[bn].sender?bundles[bn].sender:"<no sender>",127);
+  strncpy(to,bundles[bn].recipient?bundles[bn].recipient:"<no recipient>",127);
 
   if (!from[0]) strcpy(from,"unknown");
   if (!to[0]) strcpy(to,"unknown");
