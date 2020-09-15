@@ -309,7 +309,7 @@ int hfcodan3012_serviceloop(int serialfd)
 
     // Reset TX sequence management
     tx_seq=0;
-    last_tx_reflected_seq=0;
+    last_tx_reflected_seq=0xff;  // i.e., one less than 0x00, meaning no unacknowledged packets
     message_update_interval=500;
     next_message_update_time = gettime_ms() + message_update_interval;
     	  
@@ -381,12 +381,42 @@ time_t first_rx_time=0;
 
 time_t last_rate_report_time=0;
 
+int rx_bytes=0;
+int tx_bytes=0;
+
+int log_tx(unsigned char *bytes,int count)
+{
+  char log[1024];
+  snprintf(log,1024,"txlog.%d",getpid());
+  FILE *f=fopen(log,"a");
+  if (f) {
+    for(int i=0;i<count;i++) {
+      fprintf(f,"%08x %02x\n",tx_bytes++,bytes[count]);
+    }
+    fclose(f);
+  }
+  return 0;
+}
+
 int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 { 
   int i;  
 
   if (hf_state==HF_DATAONLINE) {
     // Online mode, so decode packets
+ 
+    {
+      char log[1024];
+      snprintf(log,1024,"rxlog.%d",getpid());
+      FILE *f=fopen(log,"a");
+      if (f) {
+	for(int i=0;i<count;i++) {
+	  fprintf(f,"%08x %02x\n",rx_bytes++,bytes[count]);
+	}
+	fclose(f);
+      }
+    }
+   
     rx_byte_count+=count;
     if (!first_rx_time) first_rx_time=time(0);
     else {
@@ -423,6 +453,7 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	  {
 	    unsigned char ack[3]={'!',0x60+(rx_seq>>4),0x60+(rx_seq&0x0f)};
 	    write_all(serialfd,ack,3);
+	    log_tx(ack,3);
 	    printf(">>> %s Sending ack of sequence #$%02x\n",timestamp_str(),rx_seq);
 	  }
 	  
@@ -487,7 +518,7 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	      char *peer_prefix=peer_records[0]->sid_prefix;
 	      long long version=0;
 	      for(int j=0;j<8;j++) { version=version<<8; version|=packet_rx_buffer[14+j]; } 
-	      printf(">>> %s Saw %d bytes of data for %s*/%lld offset %d in a data packet, M=%d, E=%d.\n",
+	      fprintf(stderr,">>> %s Saw %d bytes of data for %s*/%lld offset %d in a data packet, M=%d, E=%d.\n",
 		     timestamp_str(),
 		     payload_len,bid_prefix,version,
 		     payload_ofs,is_manifest?1:0,is_endpiece?1:0);
@@ -496,7 +527,7 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 			is_manifest,&packet_rx_buffer[4+2+8+8],
 			prefix,servald_server,credential);
 	    } else {
-	      printf(">>> %s CORRUPT DATA PACKET: %d bytes of data for bundle offset %d in a data packet, but rx_len=%d.\n",
+	      fprintf(stderr,">>> %s CORRUPT DATA PACKET: %d bytes of data for bundle offset %d in a data packet, but rx_len=%d.\n",
 		     timestamp_str(),
 		     payload_len,payload_ofs,rx_len);
 	      dump_bytes(stderr,"Received data",packet_rx_buffer,rx_len);
@@ -554,13 +585,23 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
   // is set, all works properly.  this will also stop us
   // accidentally doing !!, which will send a packet.
   write(serialfd,"C!C",3);
+  log_tx((unsigned char *)"C!C",3);
 
   // Then sequence # and the last sequence # we have seen from the remote
-  if (tx_seq==0x21) write(serialfd,"!.",2); else {
-    char s=tx_seq; write(serialfd,&s,1);
+  if (tx_seq==0x21) {
+    write(serialfd,"!.",2);
+    log_tx((unsigned char *)"!.",2);
   }
-  if (rx_seq==0x21) write(serialfd,"!.",2); else {
+  else {
+    char s=tx_seq; write(serialfd,&s,1);
+    log_tx((unsigned char *)&s,1);
+  }
+  if (rx_seq==0x21) {
+    write(serialfd,"!.",2);
+    log_tx((unsigned char *)"!.",2);
+  } else {
     char s=rx_seq; write(serialfd,&s,1);
+    log_tx((unsigned char *)&s,1);
   }
 
   // Modulate TX rate based on the number of outstanding packets we have
@@ -595,6 +636,7 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
     dump_bytes(stdout,"sending packet",escaped,elen);    
   }  
 
+  log_tx(escaped,elen);
   if (write_all(serialfd,escaped,elen)==-1) {
     fprintf(stderr,"Serial error. Returning early.\n");
     serial_errors++;
