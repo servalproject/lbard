@@ -170,6 +170,12 @@ void send_pure_data_packet(int pure_packet_max)
       int ofs=0;
       
       prime_bundle_cache(peer_records[0]->tx_bundle,my_sid_hex,servald_server,credential);
+
+      if (!bid_of_cached_bundle) {
+	fprintf(stderr,">>> %s Could not load bundle %d into cache. Not sending pure data packet.\n",
+		timestamp_str(),peer_records[0]->tx_bundle);
+	return;
+      }
       
       // Start sending blocks in order, including the manifest, so tht we can get bundles through
       // faster.
@@ -206,9 +212,9 @@ void send_pure_data_packet(int pure_packet_max)
 
       printf(">>> %s There are %d eligible bytes for a pure data packet.\n",timestamp_str(),bytes_to_send);
       if (bytes_to_send>0) {
-	fprintf(stderr,">>> %s Sending pure data packet of %s with %d bytes: %d..%d, M=%d\n",
+	fprintf(stderr,">>> %s Sending pure data packet of %s(%p) with %d bytes: %d..%d, M=%d\n",
 		timestamp_str(),
-		bid_of_cached_bundle,
+		bid_of_cached_bundle,bid_of_cached_bundle,
 		bytes_to_send,
 	        data_packet_ofs,data_packet_ofs+bytes_to_send-1,data_packet_manifestP);
 	// Write offset
@@ -393,7 +399,7 @@ int hfcodan3012_process_line(char *l)
   return 0;
 }
 
-unsigned char packet_rx_buffer[512];
+unsigned char packet_rx_buffer[1024];
 int rx_len=0;
 int rx_esc=0;
 int ack_seq_nybl=0;
@@ -439,7 +445,7 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
       if (rx_esc) {
 	switch(bytes[i]) {
 	case '.': // escaped !
-	  if (rx_len<500) {
+	  if (rx_len<1000) {
 	    packet_rx_buffer[rx_len++]='!';
 	  }
 	  break;
@@ -548,7 +554,7 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	// Not in escape mode
 	if (bytes[i]=='!') { rx_esc=1; ack_seq_nybl=0; }
 	else {
-	  if (rx_len<258) {
+	  if (rx_len<1000) {
 	    packet_rx_buffer[rx_len++]=bytes[i];
 	  }
 	}
