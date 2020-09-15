@@ -238,32 +238,32 @@ void send_pure_data_packet(int pure_packet_max)
 	// Write bytes
 	if (data_packet_manifestP) {
 	  for(int j=0;j<bytes_to_send;j++) {
-	    if (cached_manifest_encoded[data_packet_ofs+j]!='!')
-	      data_packet[ofs++]=cached_manifest_encoded[data_packet_ofs+j];
-	    else {
-	      data_packet[ofs++]='!'; data_packet[ofs++]='.';
-	    }
+	    data_packet[ofs++]=cached_manifest_encoded[data_packet_ofs+j];
 	  }
 	} else {       
 	  for(int j=0;j<bytes_to_send;j++) {
-	    if (cached_body[data_packet_ofs+j]!='!')
-	      data_packet[ofs++]=cached_body[data_packet_ofs+j];
-	    else {
-	      data_packet[ofs++]='!'; data_packet[ofs++]='.';
-	    }
+	    data_packet[ofs++]=cached_body[data_packet_ofs+j];
 	  }
 	}
-	
+
+	// Then handle escaping of ! bytes
+	unsigned char escaped[ofs*2+2];
+	int elen=0;
+	for(int i=0;i<ofs;i++) {
+	  if (data_packet[i]=='!') {
+	    escaped[elen++]='!'; escaped[elen++]='.';
+	  } else escaped[elen++]=data_packet[i];
+	}	
 	// And end of packet marker
-	data_packet[ofs++]='!';
-	data_packet[ofs++]='D';
+	escaped[elen++]='!';
+        escaped[elen++]='D';
 
 	data_packet_ofs+=bytes_to_send;
 	
-	dump_bytes(stderr,"Data packet to send",data_packet,ofs);
+	dump_bytes(stderr,"Data packet to send",escaped,elen);
 
-	log_tx(data_packet,ofs);
-	if (write_all(serialfd,data_packet,ofs)==-1) {
+	log_tx(escaped,elen);
+	if (write_all(serialfd,escaped,elen)==-1) {
 	  serial_errors++;
 	  return;
 	} else {
