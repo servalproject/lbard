@@ -435,6 +435,7 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
 int radio_send_message(int serialfd, unsigned char *msg_out,int offset);
 int radio_receive_bytes(unsigned char *buffer, int bytes, int monitor_mode);
 ssize_t write_all(int fd, const void *buf, size_t len);
+ssize_t write_all_serial(int fd, const void *buf, size_t len);
 int radio_read_bytes(int serialfd, int monitor_mode);
 ssize_t read_nonblock(int fd, void *buf, size_t len);
 

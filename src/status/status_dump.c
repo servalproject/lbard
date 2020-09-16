@@ -135,7 +135,7 @@ int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
     if (!safechar(to[i])) { strcpy(to,"CENSORED"); break; }
   }
   
-  if (!strncasecmp(bundles[bn].service,"MeshMS",6)) {
+  if (bundles[bn].service&&(!strncasecmp(bundles[bn].service,"MeshMS",6))) {
     // We show both from and to fields
   } else if (!strncasecmp(bundles[bn].service,"MeshMB",6)) {
     // Recipient is "public"
