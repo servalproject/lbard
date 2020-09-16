@@ -525,6 +525,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
 
+  if (0)
   {
     char filename[1024];
     snprintf(filename,1024,"/tmp/lbard.post.request.%ld",time(0));
