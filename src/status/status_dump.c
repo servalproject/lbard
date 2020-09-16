@@ -146,17 +146,20 @@ int describe_bundle(int fn, FILE *f,FILE *bundlelogfile,int bn,int peerid,
     to[0]=0;
   }
   int j;
-  for(j=0;j<8;j++) bid[j]=bundles[bn].bid_hex[j];
-  bid[8]='*'; bid[9]=0;
+  if (bundles[bn].bid_hex) {
+    for(j=0;j<8;j++) bid[j]=bundles[bn].bid_hex[j];
+    bid[8]='*'; bid[9]=0;
+  } else bid[0]=0;
+  
   {
     fprintf(f,"%s/%lld ",
 	    bid,bundles[bn].version);
     if (from[0]&&to[0]&&(fn&RESOLVE_SIDS)) {
       if (fromname[0]||toname[0]) {
-	fprintf(f,"(%s '%s' -> '%s')",bundles[bn].service,fromname[0]?fromname:from,toname[0]?toname:to);
+	fprintf(f,"(%s '%s' -> '%s')",bundles[bn].service?bundles[bn].service:"<no service>",fromname[0]?fromname:from,toname[0]?toname:to);
 	fprintf(f,"<br>(%s -> %s)",from,to);
       } else 
-	fprintf(f,"(%s %s -> %s)",bundles[bn].service,from,to);
+	fprintf(f,"(%s %s -> %s)",bundles[bn].service?bundles[bn].service:"<no service>",from,to);
     }
     if (manifest_offset>=0)
       fprintf(f," (from M=%d/P=%d)",manifest_offset,body_offset);
