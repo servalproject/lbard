@@ -407,6 +407,8 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   char server_name[1024];
   int server_port=-1;
 
+  fprintf(stderr,">>> %s http_post_bundle() entered.\n",timestamp_str());
+  
   // Limit bundle size to 5MB via this transport, to limit memory consumption.
   if (body_length>(5*1024*1024)) return -1;
   
@@ -523,6 +525,16 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   int sock=connect_to_port(server_name,server_port);
   if (sock<0) return -1;
 
+  {
+    char filename[1024];
+    snprintf(filename,1024,"/tmp/lbard.post.request.%ld",time(0));
+    FILE *f=fopen(filename,"w");
+    if (f) {
+      fwrite(request,total_len,1,f);
+      fclose(f);
+    }
+  }
+  
   // Write request
   write_all(sock,request,total_len);
 
@@ -533,6 +545,7 @@ int http_post_bundle(char *server_and_port, char *auth_token,
   int empty_count=0;
   set_nonblock(sock);
   int r;
+  char http_error_message[1024]="<unknown>";
   while(len<1024) {
     r=read_nonblock(sock,&line[len],1);
     if (r==1) {
@@ -540,15 +553,21 @@ int http_post_bundle(char *server_and_port, char *auth_token,
 	if (len) empty_count=0; else empty_count++;
 	line[len+1]=0;
 	// if (len) printf("Line of response: %s\n",line);
-	if (sscanf(line,"HTTP/1.0 %d",&http_response)==1) {
+	if (sscanf(line,"HTTP/1.0 %d %[^\n]",&http_response,http_error_message)>=1) {
 	  // got http response
-	  if (http_response<200 || http_response > 209)
+	  if (http_response<200 || http_response > 209){
 	    fprintf(stderr,"HTTP Error: %s\n     (URL: '%s')\n",line,path);
+	    fprintf(stderr,">>> %s HTTP Error %d (%s)\n",
+		    timestamp_str(),http_response,http_error_message);
+	  }
 	}
-	if (sscanf(line,"HTTP/1.1 %d",&http_response)==1) {
+	if (sscanf(line,"HTTP/1.1 %d %[^\n]",&http_response,http_error_message)>=1) {
 	  // got http response
-	  if (http_response<200 || http_response > 209)
+	  if (http_response<200 || http_response > 209) {
 	    fprintf(stderr,"HTTP Error: %s\n     (URL: '%s')\n",line,path);
+	    fprintf(stderr,">>> %s HTTP Error %d (%s)\n",
+		    timestamp_str(),http_response,http_error_message);
+	  }
 	}
 	len=0;
 	// Have we found end of headers?
@@ -561,6 +580,8 @@ int http_post_bundle(char *server_and_port, char *auth_token,
       return -1;
     }
   }
+  fprintf(stderr,">>> %s HTTP Result is %d (%s)\n",
+	  timestamp_str(),http_response,http_error_message);
   close(sock);
   return http_response;  
 }

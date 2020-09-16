@@ -242,13 +242,13 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 
     if (debug_insert) {
       char filename[1024];
-      snprintf(filename,1024,"/tmp/lbard.rejected.manifest");
+      snprintf(filename,1024,"/tmp/lbard.rejected.manifest.%ld",time(0));
       FILE *f=fopen(filename,"w");
       if (f) { fwrite(manifest_data,manifest_length,1,f); fclose(f); }
-      snprintf(filename,1024,"/tmp/lbard.rejected.body");
+      snprintf(filename,1024,"/tmp/lbard.rejected.body.%ld",time(0));
       f=fopen(filename,"w");
       if (f) { fwrite(body_data,body_length,1,f); fclose(f); }
-      snprintf(filename,1024,"/tmp/lbard.rejected.result");
+      snprintf(filename,1024,"/tmp/lbard.rejected.result.%ld",time(0));
       f=fopen(filename,"w");
       if (f) {
 	fprintf(f,"http result code = %d\n",result_code);

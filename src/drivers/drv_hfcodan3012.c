@@ -263,7 +263,7 @@ void send_pure_data_packet(int pure_packet_max)
 	dump_bytes(stderr,"Data packet to send",escaped,elen);
 
 	log_tx(escaped,elen);
-	if (write_all(serialfd,escaped,elen)==-1) {
+	if (write_all_serial(serialfd,escaped,elen)==-1) {
 	  serial_errors++;
 	  return;
 	} else {
@@ -303,7 +303,7 @@ int hfcodan3012_serviceloop(int serialfd)
 	fprintf(stderr,">>> HFCALL %s Calling station '%s'\n",timestamp_str(),remoteid);
 	char cmd[2048];
 	snprintf(cmd,2048,"atd%s\r\n",remoteid);	
-	write_all(serialfd,cmd,strlen(cmd));
+	write_all_serial(serialfd,cmd,strlen(cmd));
 	call_timeout=time(0)+300;
 	hf_state=HF_CALLREQUESTED;
       } else {
@@ -322,7 +322,7 @@ int hfcodan3012_serviceloop(int serialfd)
     break;
   case HF_ANSWERCALL:
     fprintf(stderr,">>> %s HFCALL incoming call seen.\n",timestamp_str());
-    write_all(serialfd,"ata\r\n",5);
+    write_all_serial(serialfd,"ata\r\n",5);
     hf_state=HF_CONNECTING;
     call_timeout=300;
     break;
@@ -331,7 +331,7 @@ int hfcodan3012_serviceloop(int serialfd)
     break;
   case HF_DATALINK:
     // Modem is connected
-    write_all(serialfd,"ato\r\n",5);
+    write_all_serial(serialfd,"ato\r\n",5);
     fprintf(stderr,">>> %s HFCALL going online.\n",timestamp_str());
 
     // Reset TX sequence management
@@ -349,9 +349,9 @@ int hfcodan3012_serviceloop(int serialfd)
     if (time(0)>call_timeout) {
       // Nothing for too long, so hang up
       sleep(2);
-      write_all(serialfd,"+++",3);
+      write_all_serial(serialfd,"+++",3);
       sleep(2);
-      write_all(serialfd,"ath0\r\n",5);
+      write_all_serial(serialfd,"ath0\r\n",5);
       fprintf(stderr,">>> %s HFCALL disconnecting due to packet RX timeout.\n",timestamp_str());
       hf_state=HF_DISCONNECTED;
     } else {
@@ -464,7 +464,7 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	  // !<2 chars 0x60-0x6f>
 	  {
 	    unsigned char ack[3]={'!',0x60+(rx_seq>>4),0x60+(rx_seq&0x0f)};
-	    write_all(serialfd,ack,3);
+	    write_all_serial(serialfd,ack,3);
 	    log_tx(ack,3);
 	    printf(">>> %s Sending ack of sequence #$%02x\n",timestamp_str(),rx_seq);
 	  }
@@ -649,7 +649,7 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
   }  
 
   log_tx(escaped,elen);
-  if (write_all(serialfd,escaped,elen)==-1) {
+  if (write_all_serial(serialfd,escaped,elen)==-1) {
     fprintf(stderr,"Serial error. Returning early.\n");
     serial_errors++;
     return -1;
