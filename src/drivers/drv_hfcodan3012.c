@@ -397,6 +397,12 @@ int hfcodan3012_process_line(char *l)
     // And announce ourselves as ready for the first packet of the connection
     hf_radio_mark_ready();
     call_timeout=time(0)+120;
+    // Reset message update interval to something sensible, in case it has ended up silly.
+    message_update_interval=2000;
+    next_message_update_time=0;
+
+    tx_seq=0;
+    last_tx_reflected_seq=0xff;  // i.e., one less than 0x00, meaning no unacknowledged packets
   }
   if (!strncmp(l,"RING",4)) {
     fprintf(stderr,">>> %s Saw incoming call. Answering.\n",timestamp_str());
@@ -480,8 +486,8 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	  if (packets_unacknowledged>32) packets_unacknowledged=32;
 	  message_update_interval=500+PACKET_TIMEOUT*packets_unacknowledged;
 	  next_message_update_time = gettime_ms() + message_update_interval;
-	  printf(">>> %s %d unacked packets remain. Interval set to %d ms\n",
-		 timestamp_str(),packets_unacknowledged,message_update_interval);
+	  fprintf(stderr,">>> %s %d unacked packets remain. Interval set to %d ms\n",
+		  timestamp_str(),packets_unacknowledged,message_update_interval);
   
 	  if (saw_packet(&packet_rx_buffer[2],rx_len-2,0,
 			 my_sid_hex,prefix,
@@ -503,9 +509,11 @@ int hfcodan3012_receive_bytes(unsigned char *bytes,int count)
 	    int packets_unacknowledged=((tx_seq-1)&0xff)-last_tx_reflected_seq;
 	    if (packets_unacknowledged<0) packets_unacknowledged+=256;
 	    if (packets_unacknowledged>32) packets_unacknowledged=32;
-	    printf(">>> %s Saw ack of our packet $%02x (leaves %d unacknowledged)\n",timestamp_str(),ack_seq_num,packets_unacknowledged);
+	    fprintf(stderr,">>> %s Saw ack of our packet $%02x (leaves %d unacknowledged)\n",timestamp_str(),ack_seq_num,packets_unacknowledged);
 	    message_update_interval=0+PACKET_TIMEOUT*packets_unacknowledged;	    
 	    next_message_update_time = gettime_ms() + message_update_interval;
+	    fprintf(stderr,">>> %s %d unacked packets remain. Interval set to %d ms\n",
+		    timestamp_str(),packets_unacknowledged,message_update_interval);
 	  } else {
 	    //	    printf(">>> %s ACK high nybl from $%02x\n",timestamp_str(),bytes[i]);
 	    ack_seq_nybl=1;
@@ -633,10 +641,12 @@ int hfcodan3012_send_packet(int serialfd,unsigned char *out, int len)
 #else
   // Really try to avoid unacknowledged packets
   message_update_interval=500+PACKET_TIMEOUT*packets_unacknowledged;
+  fprintf(stderr,">>> %s %d unacked packets remain. Interval set to %d ms\n",
+	  timestamp_str(),packets_unacknowledged,message_update_interval);
 #endif
   next_message_update_time = gettime_ms() + message_update_interval;
   
-  printf(">>> %s Sending packet #$%02x, len=%d, packet interval=%d ms, unackd packets=%d\n",
+  fprintf(stderr,">>> %s Sending packet #$%02x, len=%d, packet interval=%d ms, unackd packets=%d\n",
 	 timestamp_str(),
 	 tx_seq,len,message_update_interval,packets_unacknowledged);
 
