@@ -161,6 +161,38 @@ int blocktree_unpack_node(unsigned char *block,int len,struct blocktree_node_unp
   return BTOK_SUCCESS;
 }
 
+char *space_string="                                                                                                                                   ";
+char *spaces(int num)
+{
+  return &space_string[strlen(space_string)-num];
+}
+
+char hex_string[1024];
+char *to_hex(unsigned char *b,int len)
+{
+  if (len>500) return "<string too long>";
+  for(int i=0;i<len;i++)
+    snprintf(&hex_string[i*2],3,"%02X",b[i]);
+  hex_string[len*2]=0;
+  return hex_string;
+}
+
+void blocktree_dump_node(void *blockstore,int depth,unsigned char *hash)
+{
+  fprintf(stderr,">>> %s %s node hash %s\n",timestamp_str(),spaces(depth*3),to_hex(hash,BS_HASH_SIZE));
+	  
+}
+
+void blocktree_dump(void *blockstore,char *msg)
+{
+  fprintf(stderr,">>> %s Blocktree contents: %s\n",
+	  timestamp_str(),msg);
+  struct blocktree *bt=blockstore;
+  blocktree_dump_node(blockstore,0,bt->top_hash);
+  
+  return;
+}
+
 int blocktree_hash_block(unsigned char *salt,int salt_len,
 			 unsigned char *hash_out,int hash_len,unsigned char *data,int len)  
 {
@@ -192,6 +224,17 @@ void *blocktree_open(void *blockstore,
   bt->salt_len=salt_len;
   return bt;
 }
+
+int blocktree_bid_depth_bits(int depth,unsigned char *bid)  
+{
+  int next_bits=0;
+  for(int i=0;i<3;i++) {
+    next_bits=next_bits<<1;
+    if (bid[(depth+i)>>3]&(0x80>>(i&7))) next_bits|=1;
+    }
+  return next_bits;
+}
+
 
 // Used for returning results in blocktree_find_bundle_record()
 struct blocktree_node res;
@@ -277,11 +320,7 @@ struct blocktree_node *blocktree_find_bundle_record(void *blocktree,unsigned cha
     // Nope, its not in a leaf node in this block.
     // Find the correct pointer, and follow that, or return
     // BTERR_NOT_IN_TREE if it is definitely not there.
-    unsigned char next_bits=0;
-    for(i=0;i<3;i++) {
-      next_bits=next_bits<<1;
-      if (bid[(bit_offset+i)>>3]&(0x80>>(i&7))) next_bits|=1;
-    }
+    unsigned char next_bits=blocktree_bid_depth_bits(bit_offset,bid);
 
     for(i=0;i<res.unpacked.pointer_count;i++) {
       if (res.unpacked.pointers[i].child_bits==next_bits) {
@@ -391,18 +430,65 @@ int blocktree_node_insert_leaf(void *blocktree,struct blocktree_node *n, struct 
   if (n->unpacked.leaf_count>1) {
     fprintf(stderr,"UNIMPLEMENTED: Splitting over-full leaf node block.\n");
 
-    // Make two blocks that have just each leaf.  They need to be formatted as nodes with the pointer/leaf counter byte
-    // in them, so that this all works recursivelly.
-    // Make a block that has just two pointers to these leaves in them.
-
-    struct  blocktree_node c1,c2;
-    bzero(&c1,sizeof(struct blocktree_node));
-    bzero(&c2,sizeof(struct blocktree_node));
-    c1.leaf_count=1;
-    memcpy(&c1.unpacked.leaves[0],n->unpacked.leaves[0],sizeof(struct blocktree_bundle_leaf));
-    c2.leaf_count=1;
-    memcpy(&c2.unpacked.leaves[0],n->unpacked.leaves[1],sizeof(struct blocktree_bundle_leaf));
+    blocktree_dump(blocktree,"Before splitting node");
     
+    /*
+      There are two cases here as well:
+      1. The two leaves already in the node should belong to the same sub-tree after the split.
+         In this case, the node doesn't need splitting, but rather demotion deeper into the tree,
+	 and to be replaced with a pointer to it.
+      2. The two leaves already in the node belong in different sub-trees after the split.
+         In this case, we need to split the node, and then re-try the insert, which will then put
+	 the new leaf into the right place.
+    */
+    
+    if (blocktree_bid_depth_bits(n->depth,n->unpacked.leaves[0].bid)
+	!=blocktree_bid_depth_bits(n->depth,n->unpacked.leaves[0].bid))
+      {
+	// Build the two leaf nodes
+	struct  blocktree_node c1,c2;
+	bzero(&c1,sizeof(struct blocktree_node));
+	bzero(&c2,sizeof(struct blocktree_node));
+	c1.unpacked.leaf_count=1;
+	memcpy(&c1.unpacked.leaves[0],&n->unpacked.leaves[0],sizeof(struct blocktree_bundle_leaf));
+	c2.unpacked.leaf_count=1;
+	memcpy(&c2.unpacked.leaves[0],&n->unpacked.leaves[1],sizeof(struct blocktree_bundle_leaf));
+	
+	// Pack and store them
+	c1.depth=0;
+	c2.depth=0;
+	blocktree_pack_node(&c1);
+	blocktree_pack_node(&c2);
+	blocktree_node_write(blocktree,&c1);    
+	blocktree_node_write(blocktree,&c2);
+
+	unsigned char c1hash[BS_HASH_SIZE];
+	unsigned char c2hash[BS_HASH_SIZE];
+	blocktree_hash_data(blocktree,c1hash,c1.block,c1.block_len);	
+	blocktree_hash_data(blocktree,c2hash,c2.block,c2.block_len);	
+	
+	
+	// Then put the hashes of the leaf nodes into the node, and write it back, too.
+	// These should be in canonical order.
+	memcpy(&n->unpacked.pointers[0],c1hash,BS_HASH_SIZE);
+	memcpy(&n->unpacked.pointers[1],c2hash,BS_HASH_SIZE);
+	n->unpacked.pointer_count=2;
+	n->unpacked.leaf_count=0;
+	blocktree_node_write(blocktree,n);
+      }
+    else
+      {
+	// Demote the leaf by making it contain a pointer to itself
+	unsigned char hash[BS_HASH_SIZE];
+	n->unpacked.leaf_count=0;
+	n->unpacked.pointer_count=1;
+	blocktree_pack_node(n);
+	blocktree_hash_data(blocktree,hash,n->block,n->block_len);	
+	memcpy(&n->unpacked.pointers[0],hash,BS_HASH_SIZE);
+      }
+
+    // Now in either case we have a node containing either <2 leaves or some pointers.
+    blocktree_dump(blocktree,"After splitting node");
     
     exit(-1);
   }
@@ -411,6 +497,7 @@ int blocktree_node_insert_leaf(void *blocktree,struct blocktree_node *n, struct 
   memcpy(&n->unpacked.leaves[n->unpacked.leaf_count],leaf,sizeof(struct blocktree_bundle_leaf));
   n->unpacked.leaf_count++;
 
+  
   fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
   return BTOK_SUCCESS;
   
@@ -446,6 +533,7 @@ int blocktree_insert_bundle(void *blocktree,
   fprintf(stderr,"CHECKPOINT:%s:%d:%s()\n",__FILE__,__LINE__,__FUNCTION__);
   switch(n->status) {
   case BTERR_NOT_IN_TREE:
+    blocktree_dump(blocktree,"Before insert");
     // Its not in the tree, so we can just add it into this node,
     // possibly causing this node to split.
     blocktree_node_insert_leaf(blocktree,n,&leaf);
@@ -453,6 +541,7 @@ int blocktree_insert_bundle(void *blocktree,
     if (blocktree_pack_node(n)) return BTERR_TREE_CORRUPT;
     // Finally, write it back, perculating the change back up to the top of the tree
     blocktree_node_write(blocktree,n);
+    blocktree_dump(blocktree,"After insert");
     break;
   case BTOK_FOUND:
     // Check the version of the stored one. If the same or older, then
