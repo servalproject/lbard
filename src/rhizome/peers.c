@@ -412,6 +412,7 @@ int bid_to_peer_bundle_index(int peer,char *bid_hex)
 
 int peer_queue_list_dump(struct peer_state *p)
 {
+  fflush(stdout);
   fprintf(stderr,">>> %s & TX QUEUE TO %s*\n",
 	 timestamp_str(),
 	 p->sid_prefix);
@@ -475,7 +476,12 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
 
   for(i=0;i<pn;i++) if (p==peer_records[i]) pn=i;
 
-  printf(">>> %s Queueing bundle #%d (%s)",timestamp_str(),b->index,b->bid_hex);
+  fprintf(stderr,">>> %s Queueing bundle #%d (%s)",timestamp_str(),b->index,b->bid_hex);
+
+  if (b->index==p->tx_bundle) {
+    fprintf(stderr,">>> %s Bundle is already being sent, so doing nothing.\n",timestamp_str());
+    return 0;
+  }
   
   if (pn>-1)
     describe_bundle(RESOLVE_SIDS,stdout,NULL,b->index,pn,-1,-1);
@@ -490,11 +496,11 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
   for(i=0;i<p->tx_queue_len;i++) 
     {
       if (p->tx_queue_bundles[i]==b->index) {
-	printf(">>> %s Bundle #%d is already in the queue.\n",timestamp_str(),b->index);
+	fprintf(stderr,">>> %s Bundle #%d is already in the queue.\n",timestamp_str(),b->index);
 	return 0;
       }
     }
-  printf(">>> %s Bundle #%d is not yet in the queue, so inserting it\n",timestamp_str(),b->index);
+  fprintf(stderr,">>> %s Bundle #%d is not yet in the queue, so inserting it\n",timestamp_str(),b->index);
   
   // Find point of insertion
   for(i=0;i<p->tx_queue_len;i++) 
@@ -510,13 +516,19 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
 	    &p->tx_queue_bundles[i+1],
 	    sizeof(int)*(p->tx_queue_len-i-1));
     }
+
+    if (p->tx_queue_len<MAX_TXQUEUE_LEN) p->tx_queue_len++;
+    
+    fprintf(stderr,">>> %s after shuffling to make space, before putting bundle #%d priority %d in slot %d. Shuffled %d slots.\n",
+	    timestamp_str(),b->index,priority,i,p->tx_queue_len-i-1);
+    peer_queue_list_dump(p);
     
     // Write new entry
     p->tx_queue_bundles[i]=b->index;
     p->tx_queue_priorities[i]=priority;
-    if (p->tx_queue_len<MAX_TXQUEUE_LEN) p->tx_queue_len++;
 
-    printf(">>> %s After queueing new bundle:\n",timestamp_str()); fflush(stdout);
+
+    fprintf(stderr,">>> %s After queueing new bundle:\n",timestamp_str()); fflush(stdout);
     peer_queue_list_dump(p);
     
     return 0;

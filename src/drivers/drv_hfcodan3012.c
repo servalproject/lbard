@@ -161,6 +161,12 @@ void send_pure_data_packet(int pure_packet_max)
      
   */
   if (!bid_of_cached_bundle) return;
+
+  if (peer_records[0]->tx_bundle<0) return;
+  if (peer_records[0]->tx_bundle>=bundle_count) {
+    fprintf(stderr,">>> %s ERROR: tx_bundle > bundle_count\n",timestamp_str());
+    return;
+  }
   
   fprintf(stderr,">>> %s send_pure_data_packet: peer_count=%d, peer_records[0]->tx_bundle=%d, cached_body=%p\n",
 	  timestamp_str(),peer_count,peer_count?peer_records[0]->tx_bundle:-1,cached_body);
