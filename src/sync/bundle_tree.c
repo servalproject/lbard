@@ -115,7 +115,7 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
   int len=msg[1];
 
   if (debug_sync)
-    printf("Receiving sync tree message of %d bytes\n",len);
+    fprintf(stderr,">>> %s Receiving sync tree message of %d bytes\n",timestamp_str(),len);
       
   // Pull out the sync tree message for processing.
   int sync_bytes=len-SYNC_MSG_HEADER_LEN;
@@ -131,14 +131,14 @@ int sync_tree_receive_message(struct peer_state *p,unsigned char *msg)
   }
 
   if (debug_sync) {
-    printf(">>> %s Calling sync_recv_message(len=%d)\n",
+    fprintf(stderr,">>> %s Calling sync_recv_message(len=%d)\n",
 	   timestamp_str(),sync_bytes);
     dump_bytes(stdout,"Sync message",&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
   }
   
   sync_recv_message(sync_state,(void *)p,&msg[SYNC_MSG_HEADER_LEN], sync_bytes);
   if (debug_sync) 
-    printf(">>> %s sync_recv_message() returned.\n",timestamp_str());
+    fprintf(stderr,">>> %s sync_recv_message() returned.\n",timestamp_str());
   
   return 0;
 }
@@ -169,7 +169,7 @@ int sync_announce_bundle_piece(int peer,int *offset,int mtu,
 
   if (peer_already_possesses_bundle(peer_records[peer],peer_records[peer]->tx_bundle))
     {
-      printf("dequeuing TX bundle, as the peer already has it.\n");
+      fprintf(stderr,">>> %s dequeuing TX bundle, as the peer already has it.\n",timestamp_str());
       sync_dequeue_bundle(peer_records[peer],peer_records[peer]->tx_bundle);
     }
   
@@ -474,9 +474,10 @@ int lookup_bundle_by_prefix(const unsigned char *prefix,int len)
     }
   }
   if (0)
-    printf("  %02X%02X%02X%02x* is bundle #%d of %d\n",
-	   prefix[0],prefix[1],prefix[2],prefix[3],
-	   best_bundle,bundle_count);
+    fprintf(stderr,">>> %s  %02X%02X%02X%02x* is bundle #%d of %d\n",
+	    timestamp_str(),
+	    prefix[0],prefix[1],prefix[2],prefix[3],
+	    best_bundle,bundle_count);
   return best_bundle;
 }
 
@@ -702,7 +703,7 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
   fprintf(stderr,">>> %s DEQUEUE TX of bundle #%d (",timestamp_str(),bundle);
   describe_bundle(RESOLVE_SIDS,stdout,NULL,bundle,
 		  peer,-1,-1);
-  printf(") to %s*\n",p->sid_prefix);
+  fprintf(stderr,") to %s*\n",p->sid_prefix);
   
   
   if (bundle==p->tx_bundle) {
@@ -716,7 +717,8 @@ int sync_dequeue_bundle(struct peer_state *p,int bundle)
       if (debug_ack)
 	fprintf(stderr,"HARDLOWER: DEQUEUING:\n     %d more bundles in the queue. Next is bundle #%d\n",
 		p->tx_queue_len,p->tx_queue_bundles[0]);
-      printf("%d more bundles in the queue. Next is bundle #%d (%s)\n",
+      fprintf(stderr,">>> %s %d more bundles in the queue. Next is bundle #%d (%s)\n",
+	      timestamp_str(),
 	     p->tx_queue_len,p->tx_queue_bundles[0],bundles[p->tx_queue_bundles[0]].bid_hex);
       peer_queue_list_dump(p);
       
@@ -791,7 +793,7 @@ void peer_has_this_key(void *context, void *peer_context, const sync_key_t *key)
   struct peer_state *p=(struct peer_state *)peer_context;
 
   // Peer has something that we want.
-  if (1) printf(">>> %s Peer %s* HAS some bundle that we don't have (key prefix=%02X%02X*).\n",
+  if (1) fprintf(stderr,">>> %s Peer %s* HAS some bundle that we don't have (key prefix=%02X%02X*).\n",
 		timestamp_str(),p->sid_prefix,
 		((unsigned char *)key)[0],((unsigned char *)key)[1]);
 
@@ -809,7 +811,7 @@ void peer_now_has_this_key(void *context, void *peer_context,void *key_context,
   // Verify that the bundle we are pointing to is still the correct bundle, and
   // that it's version hasn't changed.
   if (memcmp(&b->sync_key,key,sizeof(sync_key_t))) {
-    printf(">>> %s Peer %s* now has older version of bundle %s* (key prefix=%02X%02x*)\n",
+    fprintf(stderr,">>> %s Peer %s* now has older version of bundle %s* (key prefix=%02X%02x*)\n",
 	   timestamp_str(),
 	   p->sid_prefix,
 	   b->bid_hex,
@@ -818,7 +820,7 @@ void peer_now_has_this_key(void *context, void *peer_context,void *key_context,
   }
   
   if (1)
-    printf(">>> %s Peer %s* now has bundle %s* (key prefix=%02X%02x*),"
+    fprintf(stderr,">>> %s Peer %s* now has bundle %s* (key prefix=%02X%02x*),"
 	   " service=%s, version=%lld\n"
 	   "    sender=%s,\n"
 	   "    recipient=%s\n",
@@ -842,7 +844,7 @@ void peer_does_not_have_this_key(void *context, void *peer_context,void *key_con
   struct bundle_record *b=(struct bundle_record*)key_context;
 
   if (debug_bundles)
-    printf(">>> %s Peer %s* is missing bundle %s* (key prefix=%02X%02X*), "
+    fprintf(stderr,">>> %s Peer %s* is missing bundle %s* (key prefix=%02X%02X*), "
 	   "service=%s, version=%lld,"
 	   " sender=%s,"
 	   " recipient=%s\n",
@@ -920,10 +922,11 @@ int sync_is_bundle_recently_received(char *bid_prefix, long long version)
     if (!strcasecmp(bid_prefix,recent_bundles[i].bid_prefix)) {
       if (version<=recent_bundles[i].bundle_version)
 	if (recent_bundles[i].timeout>=time(0)) {
-	  printf("Ignoring %s*/%lld because we recently received %s*/%lld\n",
-		 bid_prefix,version,
-		 recent_bundles[i].bid_prefix,
-		 recent_bundles[i].bundle_version);
+	  fprintf(stderr,">>> %s Ignoring %s*/%lld because we recently received %s*/%lld\n",
+		  timestamp_str(),
+		  bid_prefix,version,
+		  recent_bundles[i].bid_prefix,
+		  recent_bundles[i].bundle_version);
 	  return 1;
 	} else
 	  return 0;

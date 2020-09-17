@@ -155,7 +155,7 @@ int load_rhizome_db_async(char *servald_server,
 	    strcpy(token,fields[0]);
 
 	  }
-	  printf(">>> %s Discovered bundle via load_rhizome_db_socket.\n",timestamp_str());    
+	  fprintf(stderr,">>> %s Discovered bundle via load_rhizome_db_socket.\n",timestamp_str());    
 	  
 	  // Now we have the fields, so register the bundles into our internal list.
 	  register_bundle(fields[2] // service (file/meshms1/meshsm2)
@@ -177,7 +177,7 @@ int load_rhizome_db_async(char *servald_server,
       load_rhizome_db_socket_timeout=gettime_ms()+5000;
       break;
     case 1: // end of connection, socket already closed
-      printf(">>> %s Closing load_rhizome_db_socket due to result 1 from read line.\n",timestamp_str());    
+      fprintf(stderr,">>> %s Closing load_rhizome_db_socket due to result 1 from read line.\n",timestamp_str());    
       load_rhizome_db_socket=-1;
       return 0;
       break;
@@ -187,7 +187,7 @@ int load_rhizome_db_async(char *servald_server,
       break;
     }
   }
-  printf(">>> %s Exiting load_rhizome_db_socket async poll.\n",timestamp_str());    
+  fprintf(stderr,">>> %s Exiting load_rhizome_db_socket async poll.\n",timestamp_str());    
   
 }
 
@@ -218,7 +218,7 @@ int rhizome_update_bundle(unsigned char *manifest_data,int manifest_length,
 #ifdef NOT_DEFINED
   char filename[1024];
   snprintf(filename,1024,"%08lx.manifest",time(0));
-  printf(">>> %s Writing manifest to %s\n",timestamp_str(),filename);
+  fprintf(stderr,">>> %s Writing manifest to %s\n",timestamp_str(),filename);
   FILE *f=fopen(filename,"w");
   fwrite(manifest_data,manifest_length,1,f);
   fclose(f);

@@ -279,7 +279,7 @@ int hfcodan3012_serviceloop(int serialfd)
 {
   // XXX DEBUG show when state changes
   if (hf_state!=last_hf_state) {
-    fprintf(stderr,"Codan 3012 modem is in state %d, callplan='%s':%d\n",hf_state,hfcallplan,hfcallplan_pos);
+    fprintf(stderr,">>> %s Codan 3012 modem is in state %d, callplan='%s':%d\n",timestamp_str(),hf_state,hfcallplan,hfcallplan_pos);
     last_hf_state=hf_state;
   }
 
@@ -379,7 +379,7 @@ int hfcodan3012_serviceloop(int serialfd)
 
 int hfcodan3012_process_line(char *l)
 {
-  fprintf(stderr,"Saw line from modem: '%s'\n",l);
+  fprintf(stderr,">>> %s Saw line from modem: '%s'\n",timestamp_str(),l);
   if (!strncmp(l,"NO CARRIER",10)) {
     hf_state=HF_DISCONNECTED;
   }
@@ -393,7 +393,7 @@ int hfcodan3012_process_line(char *l)
     call_timeout=time(0)+120;
   }
   if (!strncmp(l,"RING",4)) {
-    fprintf(stderr,"Saw incoming call. Answering.\n");
+    fprintf(stderr,">>> %s Saw incoming call. Answering.\n",timestamp_str());
     hf_state=HF_ANSWERCALL;
   }
   return 0;

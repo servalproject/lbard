@@ -412,20 +412,20 @@ int bid_to_peer_bundle_index(int peer,char *bid_hex)
 
 int peer_queue_list_dump(struct peer_state *p)
 {
-  printf(">>> %s & TX QUEUE TO %s*\n",
+  fprintf(stderr,">>> %s & TX QUEUE TO %s*\n",
 	 timestamp_str(),
 	 p->sid_prefix);
-  printf(">>> %s & tx_bundle=%d, tx_bundle_bid=%s*, priority=%d\n",
+  fprintf(stderr,">>> %s & tx_bundle=%d, tx_bundle_bid=%s*, priority=%d\n",
 	 timestamp_str(),
 	 p->tx_bundle,
 	 (p->tx_bundle>-1)?
 	 bundles[p->tx_bundle].bid_hex:"",
 	 p->tx_bundle_priority);
-  printf(">>> %s & %d more queued\n",timestamp_str(),p->tx_queue_len);
+  fprintf(stderr,">>> %s & %d more queued\n",timestamp_str(),p->tx_queue_len);
   for(int i=0;i<p->tx_queue_len;i++) {
     int bundle=p->tx_queue_bundles[i];
     int priority=p->tx_queue_priorities[i];
-    printf(">>> %s  & bundle=%d, bid=%s*, priority=%d\n",timestamp_str(),
+    fprintf(stderr,">>> %s  & bundle=%d, bid=%s*, priority=%d\n",timestamp_str(),
 	   bundle,bundles[bundle].bid_hex,priority);
 
   }
