@@ -191,8 +191,20 @@ void blocktree_dump_node(struct blocktree *bt,int depth,unsigned char *hash)
     }
   }
   if (!found_node) {
+    fprintf(stderr,">>> %s %s BLOCK NOT FOUND IN STORE!\n",
+	    timestamp_str(),spaces(depth*3+3));
+    return;
+  }
+  struct blocktree_node node;
+  if (!blocktree_unpack_node(block,block_len,&node.unpacked)) {   
+    fprintf(stderr,">>> %s %s Node contains %d children and %d leaves\n",
+	    timestamp_str(),spaces(depth*3),node.unpacked.leaf_count,node.unpacked.pointer_count);
+  } else {
+    fprintf(stderr,">>> %s %s BLOCK CORRUPT!\n",
+	    timestamp_str(),spaces(depth*3+3));
     
   }
+  
   
 }
 
