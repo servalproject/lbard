@@ -500,24 +500,28 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
 	return 0;
       }
     }
+  fflush(stdout);
   fprintf(stderr,">>> %s Bundle #%d is not yet in the queue, so inserting it\n",timestamp_str(),b->index);
+  fprintf(stderr,">>> %s Before shuffling to make space:\n",timestamp_str());
+  peer_queue_list_dump(p);
   
   // Find point of insertion
   for(i=0;i<p->tx_queue_len;i++) 
     if (p->tx_queue_priorities[i]<priority) { break; }
 
-  if (i<MAX_TXQUEUE_LEN) {    
+  if (i<MAX_TXQUEUE_LEN-1) {    
     // Shift rest of list down
     if (i<(p->tx_queue_len-1)) {
       bcopy(&p->tx_queue_priorities[i],
 	    &p->tx_queue_priorities[i+1],
-	    sizeof(int)*(p->tx_queue_len-i-1));
+	    sizeof(int)*(p->tx_queue_len-i));
       bcopy(&p->tx_queue_bundles[i],
 	    &p->tx_queue_bundles[i+1],
-	    sizeof(int)*(p->tx_queue_len-i-1));
+	    sizeof(int)*(p->tx_queue_len-i));
     }
 
     if (p->tx_queue_len<MAX_TXQUEUE_LEN) p->tx_queue_len++;
+
     
     fprintf(stderr,">>> %s after shuffling to make space, before putting bundle #%d priority %d in slot %d. Shuffled %d slots.\n",
 	    timestamp_str(),b->index,priority,i,p->tx_queue_len-i-1);
