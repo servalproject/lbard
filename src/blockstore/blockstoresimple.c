@@ -39,7 +39,7 @@ int blockstore_retrieve(void *bs_in,unsigned char *hash,int hash_len,unsigned ch
   struct blockstore_simple *bs=bs_in;
   if (!bs) return -1;
 
-  for(int i=0;bs->blocks_used;i++) {
+  for(int i=0;i<bs->blocks_used;i++) {
     if (hash_len==bs->blocks[i].hash_len)
       if (!memcmp(hash,bs->blocks[i].hash,hash_len)) {
 	// Found

@@ -177,10 +177,23 @@ char *to_hex(unsigned char *b,int len)
   return hex_string;
 }
 
-void blocktree_dump_node(void *blockstore,int depth,unsigned char *hash)
+void blocktree_dump_node(struct blocktree *bt,int depth,unsigned char *hash)
 {
+  unsigned char node_hash[BS_HASH_SIZE];
+  int node_hash_len=BS_HASH_SIZE;
+  unsigned char block[BS_MAX_BLOCKSIZE];
+  int block_len=BS_MAX_BLOCKSIZE;
   fprintf(stderr,">>> %s %s node hash %s\n",timestamp_str(),spaces(depth*3),to_hex(hash,BS_HASH_SIZE));
-	  
+  int found_node=0;
+  for(int i=0;i<bt->blockstore_count;i++) {
+    if (!blockstore_retrieve(bt->blockstores[i],node_hash,node_hash_len,block,&block_len)) {
+      found_node=1; break;
+    }
+  }
+  if (!found_node) {
+    
+  }
+  
 }
 
 void blocktree_dump(void *blockstore,char *msg)
@@ -188,7 +201,7 @@ void blocktree_dump(void *blockstore,char *msg)
   fprintf(stderr,">>> %s Blocktree contents: %s\n",
 	  timestamp_str(),msg);
   struct blocktree *bt=blockstore;
-  blocktree_dump_node(blockstore,0,bt->top_hash);
+  blocktree_dump_node(blockstore,1,bt->top_hash);
   
   return;
 }
@@ -293,7 +306,7 @@ struct blocktree_node *blocktree_find_bundle_record(void *blocktree,unsigned cha
       // We are missing part of the tree required to get to the node.
       res.status=BTERR_INTERMEDIATE_MISSING;
       res.depth=bit_offset/3;
-      memcpy(res.node,node_hash,node_hash_len);
+      memcpy(res.hash,node_hash,node_hash_len);
       return &res;
     }
 
@@ -302,7 +315,7 @@ struct blocktree_node *blocktree_find_bundle_record(void *blocktree,unsigned cha
       // Found it, but can't unpack the node
       res.status=BTERR_TREE_CORRUPT;
       res.depth=bit_offset/3;
-      memcpy(res.node,node_hash,node_hash_len);
+      memcpy(res.hash,node_hash,node_hash_len);
       return &res;
     }
 
@@ -313,7 +326,7 @@ struct blocktree_node *blocktree_find_bundle_record(void *blocktree,unsigned cha
 	res.status=BTOK_FOUND;
 	res.leaf_num=i;
 	res.depth=bit_offset/3;
-	memcpy(res.node,node_hash,node_hash_len);
+	memcpy(res.hash,node_hash,node_hash_len);
 	return &res;
       }
     }

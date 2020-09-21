@@ -40,7 +40,7 @@ struct blocktree_node {
   
   // The node ID relevant to the response
   // (meaning varies with response code)
-  unsigned char node[BS_MAX_HASH_SIZE];
+  unsigned char hash[BS_MAX_HASH_SIZE];
 
   // The raw block body relevant to the response
   // (meaning varies with response code)
