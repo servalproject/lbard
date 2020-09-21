@@ -514,7 +514,7 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
     int from=i;
     int to=i+1;
     int count=p->tx_queue_len-from;
-    if ((count+to)>=MAX_TXQUEUE_LEN) count = MAX_TXQUEUE_LEN - to - 1;
+    if ((count+to)>MAX_TXQUEUE_LEN) count = MAX_TXQUEUE_LEN - to;
     fprintf(stderr,">>> %s from=%d, to=%d, count=%d, so copying %d..%d to %d..%d\n",
 	    timestamp_str(),from,to,count,from,from+count,to,to+count);
     if (count>0) {
