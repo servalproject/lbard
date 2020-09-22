@@ -479,13 +479,13 @@ int peer_queue_bundle_tx(struct peer_state *p,struct bundle_record *b, int prior
   fprintf(stderr,">>> %s Queueing bundle #%d (%s)",timestamp_str(),b->index,b->bid_hex);
 
   if (b->index==p->tx_bundle) {
-    fprintf(stderr,">>> %s Bundle is already being sent, so doing nothing.\n",timestamp_str());
+    fprintf(stderr,"\n>>> %s Bundle is already being sent, so doing nothing.\n",timestamp_str());
     return 0;
   }
   
   if (pn>-1)
     describe_bundle(RESOLVE_SIDS,stdout,NULL,b->index,pn,-1,-1);
-  printf(" for transmission to %s*\n",p->sid_prefix);
+  fprintf(stderr," for transmission to %s*\n",p->sid_prefix);
 
   if (peer_already_possesses_bundle(p,b->index)) {
     printf(">>> %s But that peer already has that bundle. Refusing to queue bundle.\n",timestamp_str());

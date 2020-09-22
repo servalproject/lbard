@@ -610,10 +610,15 @@ int sync_queue_bundle(struct peer_state *p,int bundle)
 		p->tx_bundle,bundles[p->tx_bundle].index);
 	bundles[p->tx_bundle].index=p->tx_bundle;
       }
+      int tx_bundle=p->tx_bundle;
+      fprintf(stderr,">>> %s putting tx_bundle=%d back into the TX queue\n",
+	      timestamp_str(),tx_bundle);
+      txbundle_stash_progress(p);
+      // We have to set p->tx_bundle to -1 before calling peer_queue_bundle_tx, else it
+      // will think we are still sending that bundle, and won't actually queue it.
+      p->tx_bundle=-1;
       peer_queue_bundle_tx(p,&bundles[p->tx_bundle],
 			   p->tx_bundle_priority);
-      txbundle_stash_progress(p);
-      p->tx_bundle=-1;
     } else {
       // Bump new bundle to TX queue
       peer_queue_bundle_tx(p,b,priority);
